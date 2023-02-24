@@ -1,0 +1,50 @@
+akhq:
+  enabled: true
+  configuration:
+    akhq:
+      connections:
+        my-cluster: # url friendly name for the cluster (letter, number, _, -, ... dot are not allowed here)
+          properties: # standard kafka properties (optional)
+            bootstrap.servers: "my-cluster-kafka-bootstrap:9092"
+
+hapi-fhir-jpaserver:
+  postgresql:
+    auth:
+      postgresPassword: fhir
+
+stream-processors:
+  enabled: true
+  strimziClusterName: my-cluster
+  processors:
+    fhir-to-server:
+      replicaCount: 1
+      container:
+        image:
+          registry: ghcr.io
+          repository: miracum/kafka-fhir-to-server
+          tag: v1.2.3
+          # @sha256:22c4d20b9130059875598a74bc20377cc262485c65ce6d9507dd267dd400a5f5
+          pullPolicy: IfNotPresent
+        env:
+          - name: FHIR_URL
+            value: http://diz-in-a-box-hapi-fhir-jpaserver:8080/fhir
+          - name: DISABLE_AUTO_COMMIT
+            value: "false"
+          - name: TOPIC
+            value: fhir-msg,fhir-msg-1
+          - name: JAVA_TOOL_OPTIONS
+            value: "-XX:MaxRAMPercentage=70"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
