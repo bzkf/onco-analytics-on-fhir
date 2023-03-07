@@ -17,7 +17,6 @@ hapi-fhir-jpaserver:
     - name: HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_WRITE
       value: "false"
 
-
 stream-processors:
   enabled: true
   strimziClusterName: bzkf-dizbox-cluster
@@ -28,8 +27,7 @@ stream-processors:
         image:
           registry: ghcr.io
           repository: miracum/kafka-fhir-to-server
-          tag: v1.2.3
-          # @sha256:22c4d20b9130059875598a74bc20377cc262485c65ce6d9507dd267dd400a5f5
+          tag: v1.2.3@sha256:22c4d20b9130059875598a74bc20377cc262485c65ce6d9507dd267dd400a5f5
           pullPolicy: IfNotPresent
         env:
           - name: FHIR_URL
@@ -60,7 +58,7 @@ stream-processors:
         image:
           registry: harbor.miracum.org
           repository: streams-ume/onkoadt-to-fhir
-          tag: v1.6.0
+          tag: v1.6.0@sha256:c9da1be625627ff0b169bc544aec5e91f7b599dd11334a10e5e732bc6389b9a8
           pullPolicy: IfNotPresent
         env:
           - name: OPENTRACING_JAEGER_ENABLED

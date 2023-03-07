@@ -1,0 +1,38 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - master
+
+permissions: read-all
+
+jobs:
+  release-please:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: google-github-actions/release-please-action@e0b9d1885d92e9a93d5ce8656de60e3b806e542c # v3.7.5
+        with:
+          # TODO: should be a dedicated token
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: simple
+          pull-request-title-pattern: "chore: release ${version}"
+          extra-files: |
+            charts/diz-in-a-box/Chart.yaml
+          changelog-types: |
+            [
+              { "type": "feat", "section": "Features" },
+              { "type": "fix", "section": "Bug Fixes" },
+              { "type": "perf", "section": "Performance Improvements" },
+              { "type": "docs", "section": "Documentation", "hidden": false },
+              {
+                "type": "chore",
+                "section": "Miscellaneous Chores",
+                "hidden": false
+              },
+              { "type": "build", "section": "Build", "hidden": false },
+              { "type": "ci", "section": "CI/CD", "hidden": false }
+            ]

@@ -12,12 +12,11 @@ dependencies:
   - condition: stream-processors.enabled
     name: stream-processors
     repository: https://miracum.github.io/charts
-    version: 1.1.8
+    version: 1.1.9
   - condition: hapi-fhir-jpaserver.enabled
     name: hapi-fhir-jpaserver
     repository: https://hapifhir.github.io/hapi-fhir-jpaserver-starter
     version: 0.11.0
-
 # x-release-please-start-version
 version: 0.1.0
 appVersion: 0.1.0
