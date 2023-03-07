@@ -3,9 +3,9 @@ akhq:
   configuration:
     akhq:
       connections:
-        my-cluster: # url friendly name for the cluster (letter, number, _, -, ... dot are not allowed here)
+        bzkf-dizbox-cluster: # url friendly name for the cluster (letter, number, _, -, ... dot are not allowed here)
           properties: # standard kafka properties (optional)
-            bootstrap.servers: "my-cluster-kafka-bootstrap:9092"
+            bootstrap.servers: "bzkf-dizbox-cluster-kafka-bootstrap:9092"
 
 hapi-fhir-jpaserver:
   postgresql:
@@ -17,9 +17,10 @@ hapi-fhir-jpaserver:
     - name: HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_WRITE
       value: "false"
 
+
 stream-processors:
   enabled: true
-  strimziClusterName: my-cluster
+  strimziClusterName: bzkf-dizbox-cluster
   processors:
     fhir-to-server:
       replicaCount: 1
@@ -36,7 +37,7 @@ stream-processors:
           - name: DISABLE_AUTO_COMMIT
             value: "false"
           - name: TOPIC
-            value: fhir.onkoadt.Observation,fhir.onkoadt.Procedure,fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition
+            value: fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure
           - name: JAVA_TOOL_OPTIONS
             value: "-XX:MaxRAMPercentage=70"
         resources:

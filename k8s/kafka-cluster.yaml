@@ -1,7 +1,7 @@
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
-  name: my-cluster
+  name: bzkf-dizbox-cluster
 spec:
   kafka:
     version: 3.3.1
