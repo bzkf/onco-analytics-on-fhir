@@ -33,7 +33,7 @@ jobs:
           helm install strimzi-kafka-operator strimzi/strimzi-kafka-operator
 
           kubectl apply -f k8s/kafka-cluster.yaml
-          kubectl wait kafka/my-cluster --for=condition=Ready --timeout=300s
+          kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
 
           kubectl get all -A
 
