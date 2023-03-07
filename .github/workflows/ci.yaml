@@ -33,7 +33,7 @@ jobs:
           helm install strimzi-kafka-operator strimzi/strimzi-kafka-operator
 
           kubectl apply -f k8s/kafka-cluster.yaml
-          kubectl wait kafka/my-cluster --for=condition=Ready --timeout=300s
+          kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
 
           kubectl get all -A
 
@@ -44,6 +44,6 @@ jobs:
           helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
 
           helm dependency build charts/diz-in-a-box
-          helm upgrade --install diz-in-a-box charts/diz-in-a-box
+          helm upgrade --install --create-namespace --namespace=bzkf-dizbox diz-in-a-box charts/diz-in-a-box
 
           kubectl get all -A

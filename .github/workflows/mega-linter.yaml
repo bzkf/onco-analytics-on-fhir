@@ -27,13 +27,9 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      # Git Checkout
-      - name: Checkout Code
-        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
         with:
-          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-
       # MegaLinter
       - name: MegaLinter
         id: ml
