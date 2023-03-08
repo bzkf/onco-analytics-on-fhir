@@ -1,4 +1,4 @@
-# adtgekid-to-fhir
+# diz-in-a-box for onkoadt-to-fhir delivery
 
 ## TODO
 
