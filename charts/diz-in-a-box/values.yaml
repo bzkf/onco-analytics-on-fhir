@@ -1,16 +1,37 @@
 akhq:
+  # -- whether the included [Kafka UI AKHQ](https://akhq.io/) should be installed
   enabled: true
   configuration:
     akhq:
       connections:
-        bzkf-dizbox-cluster: # url friendly name for the cluster (letter, number, _, -, ... dot are not allowed here)
-          properties: # standard kafka properties (optional)
+        bzkf-dizbox-cluster:
+          properties:
+            # -- the Kafka bootstrap server. Needs to be changed if the
+            # chart release name is changed from the default `bzkf-dizbox`
             bootstrap.servers: "bzkf-dizbox-cluster-kafka-bootstrap:9092"
+  # @ignore
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    privileged: false
+    capabilities:
+      drop:
+        - ALL
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    readOnlyRootFilesystem: true
+    seccompProfile:
+      type: RuntimeDefault
 
 hapi-fhir-jpaserver:
+  # -- whether the included [HAPI FHIR JPA Server](https://github.com/hapifhir/hapi-fhir-jpaserver-starter) should be installed
+  enabled: true
   postgresql:
     auth:
+      # -- the postgres database root (`postgres`) user.
+      # this should be changed for improved security.
       postgresPassword: fhir
+  # @ignore
   extraEnv:
     - name: HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_DELETE
       value: "false"
@@ -18,8 +39,12 @@ hapi-fhir-jpaserver:
       value: "false"
 
 stream-processors:
+  # -- whether the included [stream processors](https://github.com/miracum/charts/tree/master/charts/stream-processors) chart should be installed
   enabled: true
+  # -- name of the Kafka cluster deployed by the Strimzi Operator. This should
+  # be the same as the name in the [Kafka custom resource](../../k8s/kafka-cluster.yaml).
   strimziClusterName: bzkf-dizbox-cluster
+  # @ignore
   processors:
     fhir-to-server:
       replicaCount: 1

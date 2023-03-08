@@ -1,7 +1,7 @@
 apiVersion: v2
 name: diz-in-a-box
 type: application
-description: TODO
+description: Datenintegrationszentrum in einer Box.
 deprecated: false
 kubeVersion: ">= 1.21.0"
 dependencies:
