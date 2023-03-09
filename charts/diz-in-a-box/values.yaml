@@ -8,7 +8,52 @@ akhq:
           properties:
             # -- the Kafka bootstrap server. Needs to be changed if the
             # chart release name is changed from the default `bzkf-dizbox`
-            bootstrap.servers: "bzkf-dizbox-cluster-kafka-bootstrap:9092"
+            bootstrap.servers: "bzkf-dizbox-cluster-kafka-bootstrap:9093"
+            security.protocol: SSL
+            ssl.truststore.location: /opt/kafka-certs/ca.p12
+            ssl.truststore.password: ${SSL_TRUST_STORE_PASSWORD}
+            ssl.keystore.location: /opt/kafka-certs/user.p12
+            ssl.keystore.password: ${SSL_KEY_STORE_PASSWORD}
+  # @ignore
+  extraEnv:
+    - name: SSL_KEY_STORE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: diz-in-a-box-akhq
+          key: user.password
+    - name: SSL_TRUST_STORE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: bzkf-dizbox-cluster-cluster-ca-cert
+          key: ca.password
+    - name: JAVA_OPTS
+      value: "-Duser.timezone=Europe/Berlin"
+  # @ignore
+  extraVolumes:
+    - name: kafka-certs
+      projected:
+        sources:
+          - secret:
+              name: bzkf-dizbox-cluster-cluster-ca-cert
+              items:
+                - key: ca.crt
+                  path: ca.crt
+                - key: ca.p12
+                  path: ca.p12
+          - secret:
+              name: diz-in-a-box-akhq
+              items:
+                - key: user.crt
+                  path: user.crt
+                - key: user.p12
+                  path: user.p12
+                - key: user.key
+                  path: user.key
+  # @ignore
+  extraVolumeMounts:
+    - name: kafka-certs
+      mountPath: "/opt/kafka-certs"
+      readOnly: true
   # @ignore
   containerSecurityContext:
     allowPrivilegeEscalation: false
@@ -31,6 +76,10 @@ hapi-fhir-jpaserver:
       # -- the postgres database root (`postgres`) user.
       # this should be changed for improved security.
       postgresPassword: fhir
+    primary:
+      persistence:
+        # -- size for the HAPI FHIR server's PostgreSQL database
+        size: 32Gi
   # @ignore
   extraEnv:
     - name: HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_DELETE
@@ -81,8 +130,6 @@ stream-processors:
           pullPolicy: IfNotPresent
         env:
           - name: OPENTRACING_JAEGER_ENABLED
-            value: "false"
-          - name: SPRING_CLOUD_STREAM_KAFKA_BINDER_AUTOCREATETOPICS
             value: "false"
           - name: "FHIR_OUTPUT_TOPIC_PARTITION_COUNT"
             value: "12"
