@@ -41,13 +41,10 @@ kubectl get all -A
 
 #### Install DIZ-in-a-box
 
-```sh
-helm repo add miracum https://miracum.github.io/charts
-helm repo add akhq https://akhq.io/
-helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
+<!-- x-release-please-start-version -->
 
-helm dependency build charts/diz-in-a-box
-helm upgrade --install --wait diz-in-a-box charts/diz-in-a-box
+```sh
+helm upgrade --install --wait --timeout=10m --version=1.0.0 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
 
 # test the installation
 helm test diz-in-a-box
@@ -55,6 +52,8 @@ helm test diz-in-a-box
 kubectl wait deployment/diz-in-a-box-stream-processors-onkoadt-to-fhir --for=condition=Available --timeout=300s
 kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
 ```
+
+<!-- x-release-please-end -->
 
 ## TODOs
 
