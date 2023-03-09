@@ -60,4 +60,3 @@ kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=cond
 
 - <https://docs.k3s.io/security/hardening-guide>
 - set ACL for KafkaUsers to relevant topics
-- use a dedicated token/bot-account for release-please workflow
