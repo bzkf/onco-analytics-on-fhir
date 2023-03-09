@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  release:
+    types:
+      # If you want a workflow to run when stable and pre-releases publish, subscribe to published instead of released and prereleased.
+      # <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#release>
+      - published
+
+permissions: read-all
+
+env:
+  DIZBOX_NAMESPACE_NAME: bzkf-dizbox
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: install k3s
+        run: |
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.26.1+k3s1 sh -
+
+      - name: setup .kube/config
+        run: |
+          mkdir ~/.kube
+          sudo k3s kubectl config view --raw > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      - name: install dependencies
+        run: |
+          kubectl get node
+
+          # via <https://stackoverflow.com/a/65411733>
+          kubectl create namespace ${DIZBOX_NAMESPACE_NAME} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl config set-context --current --namespace=${DIZBOX_NAMESPACE_NAME}
+
+          kubectl config view
+
+          helm repo add strimzi https://strimzi.io/charts/
+          helm upgrade --install --wait --timeout=10m -f k8s/strimzi-values.yaml strimzi-kafka-operator strimzi/strimzi-kafka-operator
+
+          kubectl apply -f k8s/kafka-cluster.yaml
+          kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
+
+          kubectl get all -A
+
+      - name: install diz-in-a-box
+        run: |
+          helm repo add miracum https://miracum.github.io/charts
+          helm repo add akhq https://akhq.io/
+          helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
+
+          helm dependency build charts/diz-in-a-box
+          helm upgrade --install --wait --timeout=10m diz-in-a-box charts/diz-in-a-box
+
+          kubectl get all -A
+
+      - name: test deployments
+        run: |
+          helm test diz-in-a-box
+
+          kubectl wait deployment/diz-in-a-box-stream-processors-onkoadt-to-fhir --for=condition=Available --timeout=300s
+          kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    permissions:
+      actions: read
+      contents: write # for release notes
+      id-token: write # for creating OIDC tokens for signing.
+      packages: write # for uploading container images, signatures, and attestations.
+    needs:
+      - test
+    uses: ./.github/workflows/release.yaml

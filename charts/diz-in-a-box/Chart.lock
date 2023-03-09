@@ -1,0 +1,12 @@
+dependencies:
+- name: akhq
+  repository: https://akhq.io/
+  version: 0.3.1
+- name: stream-processors
+  repository: https://miracum.github.io/charts
+  version: 1.1.9
+- name: hapi-fhir-jpaserver
+  repository: https://hapifhir.github.io/hapi-fhir-jpaserver-starter
+  version: 0.11.0
+digest: sha256:f73831a686e7b62debff0be1909b0d9ed34dce2c7e1f86bb67ad2ce26dce4e18
+generated: "2023-03-07T21:36:32.1172889+01:00"

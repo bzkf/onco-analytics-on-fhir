@@ -1,0 +1,139 @@
+akhq:
+  # -- whether the included [Kafka UI AKHQ](https://akhq.io/) should be installed
+  enabled: true
+  configuration:
+    akhq:
+      connections:
+        bzkf-dizbox-cluster:
+          properties:
+            # -- the Kafka bootstrap server. Needs to be changed if the
+            # chart release name is changed from the default `bzkf-dizbox`
+            bootstrap.servers: "bzkf-dizbox-cluster-kafka-bootstrap:9093"
+            security.protocol: SSL
+            ssl.truststore.location: /opt/kafka-certs/ca.p12
+            ssl.truststore.password: ${SSL_TRUST_STORE_PASSWORD}
+            ssl.keystore.location: /opt/kafka-certs/user.p12
+            ssl.keystore.password: ${SSL_KEY_STORE_PASSWORD}
+  # @ignore
+  extraEnv:
+    - name: SSL_KEY_STORE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: diz-in-a-box-akhq
+          key: user.password
+    - name: SSL_TRUST_STORE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: bzkf-dizbox-cluster-cluster-ca-cert
+          key: ca.password
+    - name: JAVA_OPTS
+      value: "-Duser.timezone=Europe/Berlin"
+  # @ignore
+  extraVolumes:
+    - name: kafka-certs
+      projected:
+        sources:
+          - secret:
+              name: bzkf-dizbox-cluster-cluster-ca-cert
+              items:
+                - key: ca.crt
+                  path: ca.crt
+                - key: ca.p12
+                  path: ca.p12
+          - secret:
+              name: diz-in-a-box-akhq
+              items:
+                - key: user.crt
+                  path: user.crt
+                - key: user.p12
+                  path: user.p12
+                - key: user.key
+                  path: user.key
+  # @ignore
+  extraVolumeMounts:
+    - name: kafka-certs
+      mountPath: "/opt/kafka-certs"
+      readOnly: true
+  # @ignore
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    privileged: false
+    capabilities:
+      drop:
+        - ALL
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    readOnlyRootFilesystem: true
+    seccompProfile:
+      type: RuntimeDefault
+
+hapi-fhir-jpaserver:
+  # -- whether the included [HAPI FHIR JPA Server](https://github.com/hapifhir/hapi-fhir-jpaserver-starter) should be installed
+  enabled: true
+  postgresql:
+    auth:
+      # -- the postgres database root (`postgres`) user.
+      # this should be changed for improved security.
+      postgresPassword: fhir
+    primary:
+      persistence:
+        # -- size for the HAPI FHIR server's PostgreSQL database
+        size: 32Gi
+  # @ignore
+  extraEnv:
+    - name: HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_DELETE
+      value: "false"
+    - name: HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_WRITE
+      value: "false"
+
+stream-processors:
+  # -- whether the included [stream processors](https://github.com/miracum/charts/tree/master/charts/stream-processors) chart should be installed
+  enabled: true
+  # -- name of the Kafka cluster deployed by the Strimzi Operator. This should
+  # be the same as the name in the [Kafka custom resource](../../k8s/kafka-cluster.yaml).
+  strimziClusterName: bzkf-dizbox-cluster
+  # @ignore
+  processors:
+    fhir-to-server:
+      replicaCount: 1
+      container:
+        image:
+          registry: ghcr.io
+          repository: miracum/kafka-fhir-to-server
+          tag: v1.2.3@sha256:22c4d20b9130059875598a74bc20377cc262485c65ce6d9507dd267dd400a5f5
+          pullPolicy: IfNotPresent
+        env:
+          - name: FHIR_URL
+            value: http://diz-in-a-box-hapi-fhir-jpaserver:8080/fhir
+          - name: DISABLE_AUTO_COMMIT
+            value: "false"
+          - name: TOPIC
+            value: fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure
+          - name: JAVA_TOOL_OPTIONS
+            value: "-XX:MaxRAMPercentage=70"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+    onkoadt-to-fhir:
+      replicaCount: 1
+      container:
+        image:
+          registry: harbor.miracum.org
+          repository: streams-ume/onkoadt-to-fhir
+          tag: v1.6.0@sha256:c9da1be625627ff0b169bc544aec5e91f7b599dd11334a10e5e732bc6389b9a8
+          pullPolicy: IfNotPresent
+        env:
+          - name: OPENTRACING_JAEGER_ENABLED
+            value: "false"
+          - name: "FHIR_OUTPUT_TOPIC_PARTITION_COUNT"
+            value: "12"
+          - name: "NUM_STREAM_THREADS"
+            value: "1"
+          - name: JAVA_TOOL_OPTIONS
+            value: "-XX:MaxRAMPercentage=75"

@@ -1,0 +1,14 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: {{ include "diz-in-a-box.fullname" . }}-akhq
+  labels:
+    {{- include "diz-in-a-box.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ index .Values "stream-processors" "strimziClusterName" }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  authentication:
+    type: tls
