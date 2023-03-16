@@ -1,4 +1,8 @@
-# diz-in-a-box for onkoadt-to-fhir delivery
+# diz-in-a-box
+
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bzkf/diz-in-a-box/badge)](https://api.securityscorecards.dev/projects/github.com/bzkf/diz-in-a-box)
+
+DIZ in a box.
 
 ## Installation
 
