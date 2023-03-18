@@ -14,8 +14,6 @@ jobs:
       packages: write
       # needed for cosign
       id-token: write
-    env:
-      COSIGN_EXPERIMENTAL: "true"
     steps:
       - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
 
@@ -46,7 +44,7 @@ jobs:
 
           cp "diz-in-a-box-${CHART_VERSION}.tgz" diz-in-a-box-chart.tgz
 
-          cosign sign "ghcr.io/${{ github.repository }}/charts/diz-in-a-box:${CHART_VERSION}"
+          cosign sign --yes "ghcr.io/${{ github.repository }}/charts/diz-in-a-box:${CHART_VERSION}"
 
       - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
