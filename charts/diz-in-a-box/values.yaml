@@ -110,7 +110,11 @@ stream-processors:
           - name: DISABLE_AUTO_COMMIT
             value: "false"
           - name: TOPIC
-            value: fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure
+            value: >-
+              fhir.pseudonymized.onkoadt.MedicationStatement,
+              fhir.pseudonymized.onkoadt.Condition,
+              fhir.pseudonymized.onkoadt.Observation,
+              fhir.pseudonymized.onkoadt.Procedure
           - name: JAVA_TOOL_OPTIONS
             value: "-XX:MaxRAMPercentage=70"
         livenessProbe:
