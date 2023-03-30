@@ -4,9 +4,9 @@ dependencies:
   version: 0.3.1
 - name: stream-processors
   repository: https://miracum.github.io/charts
-  version: 1.1.9
+  version: 1.1.10
 - name: hapi-fhir-jpaserver
   repository: https://hapifhir.github.io/hapi-fhir-jpaserver-starter
   version: 0.11.1
-digest: sha256:524ef4b3d3a8af59ccd4cab854a1af084f007c3c9a5ca2a5b184be83fa5da8e7
-generated: "2023-03-09T21:42:10.166202205Z"
+digest: sha256:1e8d0f8692d463caf01e1f67a4d595e0148854269d560844d7a44b65e0ea14e9
+generated: "2023-03-30T12:33:38.087466068Z"
