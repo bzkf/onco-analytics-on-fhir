@@ -72,6 +72,7 @@ hapi-fhir-jpaserver:
   # -- whether the included [HAPI FHIR JPA Server](https://github.com/hapifhir/hapi-fhir-jpaserver-starter) should be installed
   enabled: true
   postgresql:
+    nameOverride: hapi-fhir-postgres
     auth:
       # -- the postgres database root (`postgres`) user.
       # this should be changed for improved security.
@@ -109,7 +110,11 @@ stream-processors:
           - name: DISABLE_AUTO_COMMIT
             value: "false"
           - name: TOPIC
-            value: fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure
+            value: >-
+              fhir.pseudonymized.onkoadt.MedicationStatement,
+              fhir.pseudonymized.onkoadt.Condition,
+              fhir.pseudonymized.onkoadt.Observation,
+              fhir.pseudonymized.onkoadt.Procedure
           - name: JAVA_TOOL_OPTIONS
             value: "-XX:MaxRAMPercentage=70"
         livenessProbe:
@@ -133,7 +138,95 @@ stream-processors:
             value: "false"
           - name: "FHIR_OUTPUT_TOPIC_PARTITION_COUNT"
             value: "12"
+          - name: SPRING_CLOUD_STREAM_KAFKA_BINDER_MINPARTITIONCOUNT
+            value: "12"
+          - name: SPRING_CLOUD_STREAM_KAFKA_BINDER_AUTOADDPARTITIONS
+            value: "true"
           - name: "NUM_STREAM_THREADS"
             value: "1"
           - name: JAVA_TOOL_OPTIONS
             value: "-XX:MaxRAMPercentage=75"
+
+fhir-gateway:
+  enabled: true
+  sinks:
+    postgres:
+      enabled: false
+  postgresql:
+    enabled: false
+  loincConverter:
+    enabled: false
+
+  kafka:
+    enabled: true
+    inputTopics:
+      - fhir.onkoadt.MedicationStatement
+      - fhir.onkoadt.Condition
+      - fhir.onkoadt.Observation
+      - fhir.onkoadt.Procedure
+    # name of the topic to write processed resources to
+    outputTopic: fhir.post-gateway
+    # either PLAINTEXT or SSL
+    securityProtocol: SSL
+    # name of the Strimzi Kafka CRD this gateway should connect to. This is used to resolve the Kafka bootstrap service.
+    strimziClusterName: "bzkf-dizbox-cluster"
+  extraEnv:
+    - name: SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_MATCH_EXPRESSION
+      value: "^fhir\\."
+    - name: SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH
+      value: "fhir.pseudonymized."
+
+  fhir-pseudonymizer:
+    pseudonymizationService: Vfps
+    vfps:
+      enabled: true
+      postgresql:
+        auth:
+          #checkov:skip=CKV_SECRET_6:Known hard-coded password
+          postgresPassword: "vfps-postgres"
+        primary:
+          persistence:
+            size: 32Gi
+      appsettings: |
+        {
+          "Init": {
+            "v1": {
+              "Namespaces": [
+                {
+                  "Name": "patient-identifiers",
+                  "Description": "Pseudonyms for patient identifiers",
+                  "PseudonymGenerationMethod": "SecureRandomBase64UrlEncoded",
+                  "PseudonymLength": 32,
+                  "PseudonymPrefix": "pid-"
+                },
+                {
+                  "Name": "visit-identifiers",
+                  "Description": "Pseudonyms for visit/encounter identifiers",
+                  "PseudonymGenerationMethod": "SecureRandomBase64UrlEncoded",
+                  "PseudonymLength": 32,
+                  "PseudonymPrefix": "vid-"
+                }
+              ]
+            }
+          }
+        }
+    anonymizationConfig: |
+      fhirVersion: R4
+      fhirPathRules:
+        - path: nodesByType('HumanName')
+          method: redact
+        - path: nodesByType('Identifier').where(type.coding.system='http://terminology.hl7.org/CodeSystem/v2-0203' and type.coding.code='VN').value
+          method: pseudonymize
+          domain: visit-identifiers
+        - path: nodesByType('Identifier').where(type.coding.system='http://terminology.hl7.org/CodeSystem/v2-0203' and type.coding.code='MR').value
+          method: pseudonymize
+          domain: patient-identifiers
+      parameters:
+        dateShiftKey: ""
+        dateShiftScope: resource
+        cryptoHashKey: "secret"
+        encryptKey: ""
+        enablePartialAgesForRedact: true
+        enablePartialDatesForRedact: true
+        enablePartialZipCodesForRedact: true
+        restrictedZipCodeTabulationAreas: []

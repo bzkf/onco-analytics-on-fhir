@@ -63,3 +63,5 @@ kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=cond
 
 - <https://docs.k3s.io/security/hardening-guide>
 - set ACL for KafkaUsers to relevant topics
+- hardening: change existing passwords; show how to add existing secrets via kubectl.
+  `kubectl create secret generic --from-literal='GPAS__AUTH__BASIC__PASSWORD=test' gpas-basic-auth`
