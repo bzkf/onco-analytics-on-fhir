@@ -1,7 +1,7 @@
 dependencies:
 - name: akhq
   repository: https://akhq.io/
-  version: 0.3.1
+  version: 0.24.0
 - name: stream-processors
   repository: https://miracum.github.io/charts
   version: 1.1.10
@@ -11,5 +11,5 @@ dependencies:
 - name: fhir-gateway
   repository: https://miracum.github.io/charts
   version: 6.0.3
-digest: sha256:b5d7122fe223659517531ce1bc86baa9af42bbe81daec1b6c64ece803bd2bd18
-generated: "2023-03-27T21:07:24.153497034+02:00"
+digest: sha256:3dd8c28ed2354f9848ab8cd85da1a86a79924b38e90df90d89b2409abcd4ba6a
+generated: "2023-04-04T11:35:44.478504636Z"
