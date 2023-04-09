@@ -10,6 +10,6 @@ dependencies:
   version: 0.11.1
 - name: fhir-gateway
   repository: https://miracum.github.io/charts
-  version: 6.0.3
-digest: sha256:3dd8c28ed2354f9848ab8cd85da1a86a79924b38e90df90d89b2409abcd4ba6a
-generated: "2023-04-04T11:35:44.478504636Z"
+  version: 6.0.5
+digest: sha256:732de990680b383622232edb6242dae81541a0b5bebca19ba9d283931026e316
+generated: "2023-04-09T18:58:38.398651254Z"
