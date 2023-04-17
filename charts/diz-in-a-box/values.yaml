@@ -1,6 +1,8 @@
 akhq:
   # -- whether the included [Kafka UI AKHQ](https://akhq.io/) should be installed
   enabled: true
+  image:
+    tag: 0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
   configuration:
     akhq:
       connections:
