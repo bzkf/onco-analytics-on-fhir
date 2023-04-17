@@ -1,0 +1,41 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: bzkf-dizbox-bridge-user
+  labels:
+    strimzi.io/cluster: bzkf-dizbox-cluster
+spec:
+  authentication:
+    type: tls
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaBridge
+metadata:
+  name: bzkf-dizbox-bridge
+spec:
+  replicas: 1
+  bootstrapServers: bzkf-dizbox-cluster-kafka-bootstrap:9093
+  tls:
+    trustedCertificates:
+      - secretName: bzkf-dizbox-cluster-cluster-ca-cert
+        certificate: ca.crt
+  authentication:
+    type: tls
+    certificateAndKey:
+      secretName: bzkf-dizbox-bridge-user
+      certificate: user.crt
+      key: user.key
+  http:
+    port: 8080
+    config:
+      auto.offset.reset: earliest
+  producer:
+    config:
+      delivery.timeout.ms: 300000
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      cpu: "1"
+      memory: 2Gi
