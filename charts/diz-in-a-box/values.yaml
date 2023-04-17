@@ -72,6 +72,8 @@ hapi-fhir-jpaserver:
   # -- whether the included [HAPI FHIR JPA Server](https://github.com/hapifhir/hapi-fhir-jpaserver-starter) should be installed
   enabled: true
   postgresql:
+    image:
+      tag: 15.1.0-debian-11-r0@sha256:27915588d5203a10a1c23624d9c81644437f33b7c224e25f79bcd9bd09bbb8e2
     nameOverride: hapi-fhir-postgres
     auth:
       # -- the postgres database root (`postgres`) user.
@@ -80,7 +82,7 @@ hapi-fhir-jpaserver:
     primary:
       persistence:
         # -- size for the HAPI FHIR server's PostgreSQL database
-        size: 32Gi
+        size: 64Gi
   # @ignore
   extraEnv:
     - name: HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_DELETE
@@ -164,7 +166,8 @@ fhir-gateway:
       - fhir.onkoadt.Condition
       - fhir.onkoadt.Observation
       - fhir.onkoadt.Procedure
-    # name of the topic to write processed resources to
+    # name of the topic to write processed resources to.
+    # Ignored because we use `SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_MATCH_EXPRESSION`
     outputTopic: fhir.post-gateway
     # either PLAINTEXT or SSL
     securityProtocol: SSL
@@ -181,6 +184,8 @@ fhir-gateway:
     vfps:
       enabled: true
       postgresql:
+        image:
+          tag: "15.1.0-debian-11-r0@sha256:27915588d5203a10a1c23624d9c81644437f33b7c224e25f79bcd9bd09bbb8e2"
         auth:
           #checkov:skip=CKV_SECRET_6:Known hard-coded password
           postgresPassword: "vfps-postgres"

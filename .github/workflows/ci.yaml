@@ -32,7 +32,7 @@ jobs:
           sudo k3s kubectl config view --raw | tee ~/.kube/config > /dev/null
           chmod 600 ~/.kube/config
 
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: install dependencies
         run: |
@@ -48,8 +48,10 @@ jobs:
           helm dependency build charts/prerequisites
           helm upgrade --install --wait --timeout=10m diz-in-a-box-prerequisites charts/prerequisites
 
-          kubectl apply -f k8s/
+          kubectl apply -f k8s/kafka-cluster.yaml
           kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
+
+          kubectl apply -f k8s/kafka-bridge.yaml
           kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
 
           kubectl get all -A
@@ -71,6 +73,19 @@ jobs:
 
           kubectl wait deployment/diz-in-a-box-stream-processors-onkoadt-to-fhir --for=condition=Available --timeout=300s
           kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
+
+      - name: Print cluster logs
+        if: always()
+        run: |
+          kubectl cluster-info dump -o yaml | tee kind-cluster-dump.txt
+
+      - name: Upload cluster dump
+        if: always()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: kind-cluster-dump.txt
+          path: |
+            kind-cluster-dump.txt
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}

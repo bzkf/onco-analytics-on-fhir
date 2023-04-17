@@ -17,25 +17,21 @@ spec:
   bootstrapServers: bzkf-dizbox-cluster-kafka-bootstrap:9093
   tls:
     trustedCertificates:
+      # checkov:skip=CKV_SECRET_6:False positive
       - secretName: bzkf-dizbox-cluster-cluster-ca-cert
         certificate: ca.crt
   authentication:
     type: tls
     certificateAndKey:
+      # checkov:skip=CKV_SECRET_6:False positive
       secretName: bzkf-dizbox-bridge-user
       certificate: user.crt
       key: user.key
   http:
     port: 8080
+  consumer:
     config:
       auto.offset.reset: earliest
   producer:
     config:
       delivery.timeout.ms: 300000
-  resources:
-    requests:
-      cpu: "1"
-      memory: 2Gi
-    limits:
-      cpu: "1"
-      memory: 2Gi
