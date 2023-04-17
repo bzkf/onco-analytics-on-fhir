@@ -33,19 +33,22 @@ kubectl config set-context --current --namespace=${DIZBOX_NAMESPACE_NAME}
 
 #### Install Strimzi Operator and Kafka
 
+<!-- x-release-please-start-version -->
+
 ```sh
-helm repo add strimzi https://strimzi.io/charts/
-helm upgrade --install --wait -f k8s/strimzi-values.yaml strimzi-kafka-operator strimzi/strimzi-kafka-operator
+helm upgrade --install --wait --timeout=10m --version=1.0.0 prerequisites oci://ghcr.io/bzkf/diz-in-a-box/charts/prerequisites
 
 kubectl apply -f k8s/kafka-cluster.yaml
 kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
+
+# Optionally install KafkaBridge
+kubectl apply -f k8s/kafka-bridge.yaml
+kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
 
 kubectl get all -A
 ```
 
 #### Install DIZ-in-a-box
-
-<!-- x-release-please-start-version -->
 
 ```sh
 helm upgrade --install --wait --timeout=10m --version=1.0.0 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box

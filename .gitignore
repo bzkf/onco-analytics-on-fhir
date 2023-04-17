@@ -1,3 +1,5 @@
 charts/**/charts
 megalinter-reports/
 *.tgz
+*.tar
+*.tar.gz
