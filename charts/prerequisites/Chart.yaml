@@ -1,0 +1,14 @@
+apiVersion: v2
+name: prerequisites
+type: application
+description: Prerequisites for DIZ in a box.
+deprecated: false
+kubeVersion: ">= 1.21.0"
+dependencies:
+  - name: strimzi-kafka-operator
+    repository: https://strimzi.io/charts/
+    version: 0.34.0
+# x-release-please-start-version
+version: 1.0.0
+appVersion: 1.0.0
+# x-release-please-end-version

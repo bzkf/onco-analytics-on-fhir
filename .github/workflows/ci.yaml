@@ -45,10 +45,12 @@ jobs:
           kubectl config view
 
           helm repo add strimzi https://strimzi.io/charts/
-          helm upgrade --install --wait --timeout=10m -f k8s/strimzi-values.yaml strimzi-kafka-operator strimzi/strimzi-kafka-operator
+          helm dependency build charts/prerequisites
+          helm upgrade --install --wait --timeout=10m diz-in-a-box-prerequisites charts/prerequisites
 
-          kubectl apply -f k8s/kafka-cluster.yaml
+          kubectl apply -f k8s/
           kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
+          kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
 
           kubectl get all -A
 
