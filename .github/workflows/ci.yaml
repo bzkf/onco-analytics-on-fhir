@@ -48,8 +48,9 @@ jobs:
           helm dependency build charts/prerequisites
           helm upgrade --install --wait --timeout=10m diz-in-a-box-prerequisites charts/prerequisites
 
-          kubectl apply -f k8s/kafka-cluster.yaml
+          kubectl apply -f k8s/
           kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
+          kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
 
           kubectl apply -f k8s/kafka-bridge.yaml
           kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
@@ -86,6 +87,15 @@ jobs:
           name: kind-cluster-dump.txt
           path: |
             kind-cluster-dump.txt
+
+  build-air-gapped-installer:
+    runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - run: |
+          ./build-air-gapped-installer.sh
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
