@@ -22,6 +22,6 @@ dependencies:
     repository: https://miracum.github.io/charts
     version: 6.0.6
 # x-release-please-start-version
-version: 1.1.0
-appVersion: 1.1.0
+version: 1.1.1
+appVersion: 1.1.1
 # x-release-please-end-version
