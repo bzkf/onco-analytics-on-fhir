@@ -3,11 +3,11 @@ set -euox pipefail
 
 # via <https://duncanlock.net/blog/2021/06/15/good-simple-bash-slugify-function/>
 function slugify() {
-    iconv -t ascii//TRANSLIT |
-        tr -d "'" |
-        sed -E 's/[^a-zA-Z0-9]+/-/g' |
-        sed -E 's/^-+|-+$//g' |
-        tr "[:upper:]" "[:lower:]"
+  iconv -t ascii//TRANSLIT |
+    tr -d "'" |
+    sed -E 's/[^a-zA-Z0-9]+/-/g' |
+    sed -E 's/^-+|-+$//g' |
+    tr "[:upper:]" "[:lower:]"
 }
 
 AIR_GAPPED_INSTALL_DIR=${AIR_GAPPED_INSTALL_DIR:-"./dist/air-gapped"}
@@ -25,6 +25,14 @@ curl -L -o "$AIR_GAPPED_INSTALL_DIR/k3s/k3s-airgap-images-amd64.tar" "https://gi
 curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/k3s" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s"
 curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/install.sh" "https://get.k3s.io/"
 
+helm repo add miracum https://miracum.github.io/charts
+helm repo add akhq https://akhq.io/
+helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
+helm repo add strimzi https://strimzi.io/charts/
+
+helm dependency build charts/prerequisites/
+helm dependency build charts/diz-in-a-box/
+
 prereq_images_string=$(helm template charts/prerequisites/ | yq -N '..|.image? | select(.)' | sort -u)
 diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.image? | select(.)' | sort -u)
 
@@ -36,11 +44,12 @@ images+=("${prereq_images[@]}")
 images+=("${diz_in_a_box_images[@]}")
 
 for image in "${diz_in_a_box_images[@]}"; do
-    image_slug=$(echo "$image" | slugify)
-    file_name="$image_slug.tar"
+  image_slug=$(echo "$image" | slugify)
+  file_name="$image_slug.tar"
 
-    echo "Saving image $image as $AIR_GAPPED_INSTALL_DIR/images/$file_name"
-    crane pull "$image" "$AIR_GAPPED_INSTALL_DIR/images/$file_name"
+  echo "Saving image $image as $AIR_GAPPED_INSTALL_DIR/images/$file_name"
+  docker pull "$image"
+  docker save "$image" -o "$AIR_GAPPED_INSTALL_DIR/images/$file_name"
 done
 
-tar -zcvf diz-in-a-box-air-gapped.tgz "$AIR_GAPPED_INSTALL_DIR"
+tar -zcvf air-gapped-installer.tgz "$AIR_GAPPED_INSTALL_DIR"
