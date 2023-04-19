@@ -21,6 +21,7 @@ jobs:
           pull-request-title-pattern: "chore: release ${version}"
           extra-files: |
             charts/diz-in-a-box/Chart.yaml
+            charts/prerequisites/Chart.yaml
             README.md
           changelog-types: |
             [
