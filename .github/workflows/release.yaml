@@ -64,11 +64,27 @@ jobs:
             diz-in-a-box-chart.tgz
             prerequisites-chart.tgz
 
+  build-air-gapped-installer:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - run: |
+          ./build-air-gapped-installer.sh
+
+      - name: Upload air-gapped installer artifact
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: air-gapped-installer
+          path: |
+            air-gapped-installer.tgz
+
   prepare-artifacts:
     name: prepare artifacts
     runs-on: ubuntu-22.04
     needs:
       - publish-helm-chart
+      - build-air-gapped-installer
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
     permissions:
@@ -83,6 +99,12 @@ jobs:
           name: helm-charts
           path: /tmp
 
+      - name: Download air-gapped installer
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        with:
+          name: air-gapped-installer
+          path: /tmp
+
       - name: Create dist dir
         run: |
           mkdir -p dist/
@@ -92,12 +114,13 @@ jobs:
           ls -lsa /tmp
           cp /tmp/diz-in-a-box-chart.tgz dist/
           cp /tmp/prerequisites-chart.tgz dist/
+          cp /tmp/air-gapped-installer.tgz dist/
 
       - name: Generate SLSA subject for release assets
         id: hash
         working-directory: dist
         run: |
-          sha256sum diz-in-a-box-chart.tgz prerequisites-chart.tgz > checksums.sha256
+          sha256sum diz-in-a-box-chart.tgz prerequisites-chart.tgz air-gapped-installer.tgz > checksums.sha256
           echo "hashes=$(base64 -w0 < checksums.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: upload assets to release

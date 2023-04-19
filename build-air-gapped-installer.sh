@@ -10,15 +10,20 @@ function slugify() {
         tr "[:upper:]" "[:lower:]"
 }
 
-AIRGAPPED_DIST_DIR=${AIRGAPPED_DIST_DIR:-"./dist/airgapped"}
+AIR_GAPPED_INSTALL_DIR=${AIR_GAPPED_INSTALL_DIR:-"./dist/air-gapped"}
 
-mkdir -p "$AIRGAPPED_DIST_DIR"
+mkdir -p "$AIR_GAPPED_INSTALL_DIR"
+mkdir -p "$AIR_GAPPED_INSTALL_DIR/bin"
+mkdir -p "$AIR_GAPPED_INSTALL_DIR/k3s"
+mkdir -p "$AIR_GAPPED_INSTALL_DIR/images"
 
-curl -L -o "$AIRGAPPED_DIST_DIR/k3s-airgap-images-amd64.tar" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s-airgap-images-amd64.tar"
-curl -L -o "$AIRGAPPED_DIST_DIR/k3s" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s"
-curl -L -o "$AIRGAPPED_DIST_DIR/install.sh" "https://get.k3s.io/"
+curl -L "https://get.helm.sh/helm-v3.11.3-linux-amd64.tar.gz" | tar xz
+mv linux-amd64/helm "$AIR_GAPPED_INSTALL_DIR/bin/helm"
 
-images=("quay.io/strimzi/kafka-bridge:0.25.0" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0")
+curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/kubectl" "https://storage.googleapis.com/kubernetes-release/release/v1.26.0/bin/linux/amd64/kubectl"
+curl -L -o "$AIR_GAPPED_INSTALL_DIR/k3s/k3s-airgap-images-amd64.tar" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s-airgap-images-amd64.tar"
+curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/k3s" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s"
+curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/install.sh" "https://get.k3s.io/"
 
 prereq_images_string=$(helm template charts/prerequisites/ | yq -N '..|.image? | select(.)' | sort -u)
 diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.image? | select(.)' | sort -u)
@@ -26,13 +31,16 @@ diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.ima
 readarray -t prereq_images <<<"$prereq_images_string"
 readarray -t diz_in_a_box_images <<<"$diz_in_a_box_images_string"
 
+images=("quay.io/strimzi/kafka-bridge:0.25.0" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0")
 images+=("${prereq_images[@]}")
 images+=("${diz_in_a_box_images[@]}")
 
 for image in "${diz_in_a_box_images[@]}"; do
-    image_slug=$(echo $image | slugify)
+    image_slug=$(echo "$image" | slugify)
     file_name="$image_slug.tar"
 
-    echo "Saving image $image as $AIRGAPPED_DIST_DIR/$file_name"
-    crane pull "$image" "$AIRGAPPED_DIST_DIR/$file_name"
+    echo "Saving image $image as $AIR_GAPPED_INSTALL_DIR/images/$file_name"
+    crane pull "$image" "$AIR_GAPPED_INSTALL_DIR/images/$file_name"
 done
+
+tar -zcvf diz-in-a-box-air-gapped.tgz "$AIR_GAPPED_INSTALL_DIR"
