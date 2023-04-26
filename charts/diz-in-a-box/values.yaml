@@ -141,9 +141,9 @@ stream-processors:
           - name: OPENTRACING_JAEGER_ENABLED
             value: "false"
           - name: "FHIR_OUTPUT_TOPIC_PARTITION_COUNT"
-            value: "12"
+            value: "1"
           - name: SPRING_CLOUD_STREAM_KAFKA_BINDER_MINPARTITIONCOUNT
-            value: "12"
+            value: "1"
           - name: SPRING_CLOUD_STREAM_KAFKA_BINDER_AUTOADDPARTITIONS
             value: "true"
           - name: "NUM_STREAM_THREADS"
