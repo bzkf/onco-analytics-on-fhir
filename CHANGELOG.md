@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.2](https://github.com/bzkf/diz-in-a-box/compare/v1.1.1...v1.1.2) (2023-05-02)
+
+
+### Bug Fixes
+
+* default to partition count of 1 and gzip compression ([#35](https://github.com/bzkf/diz-in-a-box/issues/35)) ([4574d7a](https://github.com/bzkf/diz-in-a-box/commit/4574d7abae4051b8eb379525baf07edf6829ec7b))
+
+
+### Miscellaneous Chores
+
+* **deps:** update harbor.miracum.org/streams-ume/onkoadt-to-fhir docker tag to v1.8.1 ([#37](https://github.com/bzkf/diz-in-a-box/issues/37)) ([c9aa56b](https://github.com/bzkf/diz-in-a-box/commit/c9aa56be204750d6cffbf78d46311eae1cf98748))
+
 ## [1.1.1](https://github.com/bzkf/diz-in-a-box/compare/v1.1.0...v1.1.1) (2023-04-19)
 
 
