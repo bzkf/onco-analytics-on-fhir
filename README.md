@@ -36,7 +36,7 @@ kubectl config set-context --current --namespace=${DIZBOX_NAMESPACE_NAME}
 <!-- x-release-please-start-version -->
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=1.1.1 prerequisites oci://ghcr.io/bzkf/diz-in-a-box/charts/prerequisites
+helm upgrade --install --wait --timeout=10m --version=1.1.2 prerequisites oci://ghcr.io/bzkf/diz-in-a-box/charts/prerequisites
 
 kubectl apply -f k8s/kafka-cluster.yaml
 kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
@@ -51,7 +51,7 @@ kubectl get all -A
 #### Install DIZ-in-a-box
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=1.1.1 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
+helm upgrade --install --wait --timeout=10m --version=1.1.2 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
 
 # test the installation
 helm test diz-in-a-box
