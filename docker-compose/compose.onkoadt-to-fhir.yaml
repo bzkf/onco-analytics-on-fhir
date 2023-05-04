@@ -1,0 +1,19 @@
+services:
+  onkoadt-to-fhir:
+    image: harbor.miracum.org/streams-ume/onkoadt-to-fhir:v1.8.1@sha256:2a1217f37bec32a1d647648503989a9d11d5aa08916e70771e538220990094ca
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    user: "65532:65532"
+    environment:
+      SECURITY_PROTOCOL: PLAINTEXT
+      BOOTSTRAP_SERVERS: kafka:9092
+      FHIR_OUTPUT_TOPIC_PARTITION_COUNT: "1"
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_MINPARTITIONCOUNT: "1"
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_AUTOADDPARTITIONS: "true"
+      NUM_STREAM_THREADS: "1"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"

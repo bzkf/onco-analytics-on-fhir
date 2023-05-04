@@ -1,0 +1,33 @@
+services:
+  kafka:
+    image: docker.io/bitnami/kafka:3.4.0@sha256:3a4e079e038674dbfb14812895997110e5f2be7b1e31ccc587f6a30e089f0c77
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+
+  akhq:
+    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            kafka-server:
+              properties:
+                bootstrap.servers: "kafka:9092"
+    ports:
+      - "127.0.0.1:8084:8080"
+    depends_on:
+      - kafka
