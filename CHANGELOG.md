@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/bzkf/diz-in-a-box/compare/v1.1.2...v1.2.0) (2023-05-04)
+
+
+### Features
+
+* added docker-compose based installation method ([#39](https://github.com/bzkf/diz-in-a-box/issues/39)) ([1227a45](https://github.com/bzkf/diz-in-a-box/commit/1227a453f6c297461ae6826a76f6353f4e520f2e))
+
+
+### Miscellaneous Chores
+
+* updated fhir gw to update pseudonymizer ([#41](https://github.com/bzkf/diz-in-a-box/issues/41)) ([c5c22d5](https://github.com/bzkf/diz-in-a-box/commit/c5c22d555f524c320361e3a55beff098bc54e82f))
+
 ## [1.1.2](https://github.com/bzkf/diz-in-a-box/compare/v1.1.1...v1.1.2) (2023-05-02)
 
 
