@@ -94,8 +94,8 @@ def decompose_xml(input_folder):
                 ).append(meldung)
 
                 relevant_meldung = None
-                # loop through the newly build meldung_root and remove all meldungen with
-                # meldung_id not matching to currrent one and remove duplicates
+                # loop through the newly build meldung_root and remove all meldungen
+                # with meldung_id not matching to currrent one and remove duplicates
                 for einzelmeldung in meldung_root.findall(
                     ".//{http://www.gekid.de/namespace}Meldung"
                 ):
@@ -111,8 +111,8 @@ def decompose_xml(input_folder):
                             ".//{http://www.gekid.de/namespace}Menge_Meldung"
                         ).remove(einzelmeldung)
 
-                # TODO das ist nicht so ideal, aber sonst muss ich in der main auch nochmal loopen
-                # - Verbesserungsvorschlag? oder Loop nur in main?
+                # TODO das ist nicht so ideal, aber sonst muss ich in der main auch
+                # nochmal loopen - Verbesserungsvorschlag? oder Loop nur in main?
                 if save_xmls:
                     save_xml_files(meldung_root, patient_id, meldung_id)
 
