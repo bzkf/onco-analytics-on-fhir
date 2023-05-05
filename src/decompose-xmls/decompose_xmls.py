@@ -67,7 +67,8 @@ def decompose_xml(input_folder):
 
         # Loop through each patient
         for patient in patients:
-            # Get the patient ID - might remove from filename later and only keep the meldung_id
+            # Get the patient ID - might remove from filename later
+            # and only keep the meldung_id
             patient_id = patient.find(
                 ".//{http://www.gekid.de/namespace}Patienten_Stammdaten"
             ).get("Patient_ID")
@@ -79,7 +80,8 @@ def decompose_xml(input_folder):
                 meldung_id = meldung.get("Meldung_ID")
                 # print(meldung_id)
 
-                # NEW IDEA - copy root, LOOP THROUGH EXISTING MELDUNGEN, BUT ONLY KEEP THE ONE WITH meldung_id and remove the rest
+                # NEW IDEA - copy root, LOOP THROUGH EXISTING MELDUNGEN, BUT ONLY KEEP
+                # THE ONE WITH meldung_id and remove the rest
                 meldung_root = ET.Element(root.tag, root.attrib)
                 meldung_root.append(absender)
 
@@ -92,7 +94,8 @@ def decompose_xml(input_folder):
                 ).append(meldung)
 
                 relevant_meldung = None
-                # loop through the newly build meldung_root and remove all meldungen with meldung_id not matching to currrent one and remove duplicates
+                # loop through the newly build meldung_root and remove all meldungen with
+                # meldung_id not matching to currrent one and remove duplicates
                 for einzelmeldung in meldung_root.findall(
                     ".//{http://www.gekid.de/namespace}Meldung"
                 ):
@@ -108,7 +111,8 @@ def decompose_xml(input_folder):
                             ".//{http://www.gekid.de/namespace}Menge_Meldung"
                         ).remove(einzelmeldung)
 
-                # TODO das ist nicht so ideal, aber sonst muss ich in der main auch nochmal loopen - Verbesserungsvorschlag? oder Loop nur in main?
+                # TODO das ist nicht so ideal, aber sonst muss ich in der main auch nochmal loopen
+                # - Verbesserungsvorschlag? oder Loop nur in main?
                 if save_xmls:
                     save_xml_files(meldung_root, patient_id, meldung_id)
 

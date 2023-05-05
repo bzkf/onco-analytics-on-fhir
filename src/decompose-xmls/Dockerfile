@@ -34,7 +34,7 @@ RUN adduser \
 # into this layer.
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt
+    python -m pip install --no-cache-dir -r requirements.txt
 
 # permissions TODO
 #RUN chmod 777 /app # entweder das hier oder das nachfolgende - aber User wechseln erst danach
@@ -50,4 +50,4 @@ EXPOSE 8585
 USER appuser
 
 # Run the application.
-CMD python decompose_xmls.py
+CMD ["python", "/.decompose_xmls.py"]
