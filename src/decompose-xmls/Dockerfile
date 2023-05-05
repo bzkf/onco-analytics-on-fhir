@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 RUN chown -R appuser:appuser /app
 
 # Copy the source code into the container.
-COPY seperate_xmls.py /app
+COPY decompose_xmls.py /app
 
 # Expose the port that the application listens on.
 EXPOSE 8585
