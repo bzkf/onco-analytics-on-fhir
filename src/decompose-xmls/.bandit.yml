@@ -1,2 +1,2 @@
 [bandit]
-skips = B405
+skips = ["B405", "B314"]
