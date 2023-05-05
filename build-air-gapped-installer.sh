@@ -43,7 +43,7 @@ images=("quay.io/strimzi/kafka-bridge:0.25.0" "quay.io/strimzi/kafka:0.34.0-kafk
 images+=("${prereq_images[@]}")
 images+=("${diz_in_a_box_images[@]}")
 
-for image in "${diz_in_a_box_images[@]}"; do
+for image in "${images[@]}"; do
   image_slug=$(echo "$image" | slugify)
   file_name="$image_slug.tar"
 
