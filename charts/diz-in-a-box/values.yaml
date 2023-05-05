@@ -135,7 +135,7 @@ stream-processors:
         image:
           registry: harbor.miracum.org
           repository: streams-ume/onkoadt-to-fhir
-          tag: v1.8.1@sha256:2a1217f37bec32a1d647648503989a9d11d5aa08916e70771e538220990094ca
+          tag: v1.9.0@sha256:7c829118d760961fbff1c86b9b6b5eb51116a90b7c8bf5a21f77ec6c381fbe77
           pullPolicy: IfNotPresent
         env:
           - name: OPENTRACING_JAEGER_ENABLED
