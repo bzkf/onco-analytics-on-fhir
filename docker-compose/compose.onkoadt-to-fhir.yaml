@@ -1,6 +1,6 @@
 services:
   onkoadt-to-fhir:
-    image: harbor.miracum.org/streams-ume/onkoadt-to-fhir:v1.8.1@sha256:2a1217f37bec32a1d647648503989a9d11d5aa08916e70771e538220990094ca
+    image: harbor.miracum.org/streams-ume/onkoadt-to-fhir:v1.10.0@sha256:e584922155db6e8c281a9b7fc3728701d0f08f0713ebd35c9931492a761c003a
     restart: unless-stopped
     cap_drop:
       - ALL
