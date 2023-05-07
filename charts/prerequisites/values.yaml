@@ -1,4 +1,6 @@
 strimzi-kafka-operator:
+  image:
+    tag: 0.34.0@sha256:1cdeda55d10793c1de487469e22a2e46d2d348ff54d1d998ac03df8c5c1ef937
   securityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
