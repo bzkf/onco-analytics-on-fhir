@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.3.0](https://github.com/bzkf/diz-in-a-box/compare/v1.2.0...v1.3.0) (2023-05-07)
+
+
+### Features
+
+* added compose-based deployment and k3s image import script ([#47](https://github.com/bzkf/diz-in-a-box/issues/47)) ([1b69d27](https://github.com/bzkf/diz-in-a-box/commit/1b69d27f859b6e1606e5e2fe1c23ef55cb9ad990))
+
+
+### Bug Fixes
+
+* not iterating over all images to download the air-gapped images ([#45](https://github.com/bzkf/diz-in-a-box/issues/45)) ([35f46c1](https://github.com/bzkf/diz-in-a-box/commit/35f46c17543096c701e687cabb5f1799ee352bb5))
+* use digests consistently ([#48](https://github.com/bzkf/diz-in-a-box/issues/48)) ([6ceee8d](https://github.com/bzkf/diz-in-a-box/commit/6ceee8d7bf950bdd03b572a99b875623777cc0a4))
+
+
+### Miscellaneous Chores
+
+* **deps:** update container-images ([#42](https://github.com/bzkf/diz-in-a-box/issues/42)) ([6a88ad6](https://github.com/bzkf/diz-in-a-box/commit/6a88ad6d472c8795db67617dd2708b5c55a6d5df))
+* **deps:** update container-images ([#49](https://github.com/bzkf/diz-in-a-box/issues/49)) ([74c02fd](https://github.com/bzkf/diz-in-a-box/commit/74c02fdcf5cefe5daacb78ac06862241eef0a893))
+* **deps:** update harbor.miracum.org/streams-ume/onkoadt-to-fhir docker tag to v1.10.0 ([#46](https://github.com/bzkf/diz-in-a-box/issues/46)) ([2fc9707](https://github.com/bzkf/diz-in-a-box/commit/2fc9707283ee015d6b94a672398b71416b4cbc52))
+* **deps:** update harbor.miracum.org/streams-ume/onkoadt-to-fhir docker tag to v1.9.0 ([#43](https://github.com/bzkf/diz-in-a-box/issues/43)) ([dc1f1c8](https://github.com/bzkf/diz-in-a-box/commit/dc1f1c8822b3d3165eae910db3d631b9e9224a6f))
+
 ## [1.2.0](https://github.com/bzkf/diz-in-a-box/compare/v1.1.2...v1.2.0) (2023-05-04)
 
 
