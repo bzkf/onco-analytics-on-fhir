@@ -31,6 +31,49 @@ kubectl create namespace ${DIZBOX_NAMESPACE_NAME} --dry-run=client -o yaml | kub
 kubectl config set-context --current --namespace=${DIZBOX_NAMESPACE_NAME}
 ```
 
+##### Air-gapped
+
+Download the air-gapped installer and move it to the deployment machine:
+
+<!-- x-release-please-start-version -->
+
+```sh
+curl -L -O https://github.com/bzkf/diz-in-a-box/releases/download/v1.2.0/air-gapped-installer.tgz
+```
+
+<!-- x-release-please-end -->
+
+Run the following steps on the deployment machine.
+
+Extract the archive:
+
+```sh
+tar xvzf ./air-gapped-installer.tgz
+```
+
+Prepare the images directory and k3s binary:
+
+```sh
+mkdir -p /var/lib/rancher/k3s/agent/images/
+cp ./dist/air-gapped/k3s/k3s-airgap-images-amd64.tar /var/lib/rancher/k3s/agent/images/
+
+cp ./dist/air-gapped/bin/k3s /usr/local/bin/k3s
+```
+
+Run the install script:
+
+```sh
+chmod +x ./dist/air-gapped/bin/install.sh
+INSTALL_K3S_SKIP_DOWNLOAD=true ./dist/air-gapped/bin/install.sh
+```
+
+Run the script to import all required images:
+
+```sh
+chmod +x ./dist/air-gapped/bin/import-images-into-k3s.sh
+IMAGE_FOLDER=./dist/air-gapped/images ./dist/air-gapped/bin/import-images-into-k3s.sh
+```
+
 #### Install Strimzi Operator and Kafka
 
 <!-- x-release-please-start-version -->

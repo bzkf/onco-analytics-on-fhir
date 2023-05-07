@@ -5,3 +5,5 @@ megalinter-reports/
 *.tar.gz
 
 dist/
+
+docker-compose/*normalized.yaml

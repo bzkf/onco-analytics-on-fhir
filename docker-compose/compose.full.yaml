@@ -1,0 +1,177 @@
+services:
+  traefik:
+    image: docker.io/library/traefik:v2.10.1@sha256:2a1c328e239fa9cb3891a98c4c1beee300bf467fc7add316632e82de24529b49
+    restart: unless-stopped
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    read_only: true
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  fhir-server:
+    image: docker.io/hapiproject/hapi:v6.4.0@sha256:638b8df98fcfc074404520700923c07d313f62c5dcad49ca569cdb8041c7cc57
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    deploy:
+      resources:
+        limits:
+          memory: 4096m
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/target
+    privileged: false
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://fhir-db:5432/fhir?currentSchema=public"
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_DRIVERCLASSNAME: org.postgresql.Driver
+      spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgres94Dialect
+      HAPI_FHIR_VALIDATION_REQUESTS_ENABLED: "false"
+      HAPI_FHIR_USE_APACHE_ADDRESS_STRATEGY: "true"
+      HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_DELETE: "false"
+      HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_WRITE: "false"
+      HAPI_FHIR_SUBSCRIPTION_RESTHOOK_ENABLED: "false"
+      HAPI_FHIR_ALLOW_MULTIPLE_DELETE: "true"
+    depends_on:
+      - fhir-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.fhir.loadbalancer.server.port=8080"
+      - "traefik.http.routers.fhir.rule=Host(`fhir-server.127.0.0.1.nip.io`)"
+      - "traefik.http.routers.fhir.entrypoints=web"
+
+  fhir-db:
+    image: docker.io/library/postgres:15.1@sha256:10d6e725f9b2f5531617d93164f4fc85b1739e04cab62cbfbfb81ccd866513b8
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fhir
+    volumes:
+      - "fhir_db_data:/var/lib/postgresql/data:rw"
+
+  fhir-gateway:
+    image: ghcr.io/miracum/fhir-gateway:v3.10.9@sha256:f4bae212ee8c137c522df7610b931d648ee7a5dd237f842432ae092fc3adbd0a
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    read_only: true
+    tmpfs:
+      - /tmp
+    privileged: false
+    environment:
+      SERVICES_PSQL_ENABLED: "false"
+      SPRING_SQL_INIT_MODE: "never"
+      # TODO: re-enable!
+      SERVICES_PSEUDONYMIZER_ENABLED: "false"
+      SERVICES_PSEUDONYMIZER_URL: "http://fhir-pseudonymizer:8080/fhir"
+      SERVICES_LOINC_CONVERSIONS_ENABLED: "false"
+      SERVICES_LOINC_CONVERSIONS_URL: ""
+      SERVICES_FHIRSERVER_ENABLED: "false"
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ADD_ADDITIONAL_PATHS: "true"
+      MANAGEMENT_SERVER_PORT: "8081"
+      OPENTRACING_JAEGER_ENABLED: "false"
+      JAEGER_SERVICE_NAME: "fhir-gateway"
+      SERVICES_KAFKA_ENABLED: "true"
+      INPUT_TOPIC: "fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure"
+      OUTPUT_TOPIC: "fhir.post-gateway"
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      SECURITY_PROTOCOL: "PLAINTEXT"
+      SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_MATCH_EXPRESSION: "^fhir\\."
+      SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
+
+  fhir-pseudonymizer:
+    image: ghcr.io/miracum/fhir-pseudonymizer:v2.17.0@sha256:431a7f4516c1f641966c507941b87a997441665656572a1c00c44376ef08fe24
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    read_only: true
+    privileged: false
+    environment:
+      COMPlus_EnableDiagnostics: "0"
+      PseudonymizationService: "gPAS"
+      AnonymizationEngineConfigPath: "/etc/fhir-pseudonymizer/anonymization.yaml"
+      gPAS__Url: ""
+      gPAS__Auth__Basic__Username: ""
+      gPAS__Auth__Basic__Password: ""
+      gPAS__Version: "1.10.3"
+    volumes:
+      - ./anonymization.yaml:/etc/fhir-pseudonymizer/anonymization.yaml:ro
+
+  kafka:
+    image: docker.io/bitnami/kafka:3.4.0@sha256:f091afcc2a1db46f88dbc87839e7533adab2f3e8b95a0dbe0505a7bc8fe06262
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - "kafka_data:/bitnami:rw"
+
+  akhq:
+    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            kafka-server:
+              properties:
+                bootstrap.servers: "kafka:9092"
+    ports:
+      - "127.0.0.1:8084:8080"
+    depends_on:
+      - kafka
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.akhq.loadbalancer.server.port=8080"
+      - "traefik.http.routers.akhq.rule=Host(`akhq.127.0.0.1.nip.io`)"
+      - "traefik.http.routers.akhq.entrypoints=web"
+
+volumes:
+  fhir_db_data:
+    driver: local
+  kafka_data:
+    driver: local
