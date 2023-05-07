@@ -39,7 +39,7 @@ diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.ima
 readarray -t prereq_images <<<"$prereq_images_string"
 readarray -t diz_in_a_box_images <<<"$diz_in_a_box_images_string"
 
-images=("quay.io/strimzi/kafka-bridge:0.25.0" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0")
+images=("quay.io/strimzi/kafka-bridge:0.25.0@sha256:98eb7542e3ff4e10043040acff7a90aa5fd87ff1ea0cac8491f66b1bbdf072dd" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0@sha256:d87417992eb9118d2395c9950c445f51c4d70f9903fd5eebd4eb7570310e27f9")
 images+=("${prereq_images[@]}")
 images+=("${diz_in_a_box_images[@]}")
 
