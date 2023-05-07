@@ -14,5 +14,5 @@ fi
 # Iterate over all tar files in the folder
 for file in "$IMAGE_FOLDER"/*.tar; do
   echo "Importing image from $file"
-  k3s ctr images import "$file"
+  k3s ctr images import "$file" --digests=true
 done
