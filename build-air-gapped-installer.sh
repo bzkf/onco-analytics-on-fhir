@@ -52,4 +52,10 @@ for image in "${images[@]}"; do
   docker save "$image" -o "$AIR_GAPPED_INSTALL_DIR/images/$file_name"
 done
 
+cp ./import-images-into-k3s.sh "$AIR_GAPPED_INSTALL_DIR/bin/import-images-into-k3s.sh"
+
+MY_HOME="${AIR_GAPPED_INSTALL_DIR}" ./docker-compose/save-images.sh
+
+cp -r ./docker-compose/ "$AIR_GAPPED_INSTALL_DIR"
+
 tar -zcvf air-gapped-installer.tgz "$AIR_GAPPED_INSTALL_DIR"
