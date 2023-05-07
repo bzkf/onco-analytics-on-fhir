@@ -23,7 +23,7 @@ services:
           memory: 512m
 
   fhir-server:
-    image: docker.io/hapiproject/hapi:v6.4.0@sha256:638b8df98fcfc074404520700923c07d313f62c5dcad49ca569cdb8041c7cc57
+    image: docker.io/hapiproject/hapi:v6.4.4@sha256:a1e6194957fd73cb56a4f53e5d482e77833652c9f35249902fd0cf973a17e6a5
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -60,7 +60,7 @@ services:
       - "traefik.http.routers.fhir.entrypoints=web"
 
   fhir-db:
-    image: docker.io/library/postgres:15.1@sha256:10d6e725f9b2f5531617d93164f4fc85b1739e04cab62cbfbfb81ccd866513b8
+    image: docker.io/library/postgres:15.2@sha256:78a275d4c891f7b3a33d3f1a78eda9f1d744954d9e20122bfdc97cdda25cddaf
     restart: unless-stopped
     deploy:
       resources:
