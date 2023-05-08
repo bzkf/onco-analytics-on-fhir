@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.4.0](https://github.com/bzkf/diz-in-a-box/compare/v1.3.1...v1.4.0) (2023-05-08)
+
+
+### Features
+
+* added onkostar db connector ([787b21e](https://github.com/bzkf/diz-in-a-box/commit/787b21ef6f7481d8797f50c61fe5d928501e96e5))
+
+
+### Bug Fixes
+
+* anonymization to work with multiple identifier coding types ([787b21e](https://github.com/bzkf/diz-in-a-box/commit/787b21ef6f7481d8797f50c61fe5d928501e96e5))
+* don't pin compose digests ([#53](https://github.com/bzkf/diz-in-a-box/issues/53)) ([787b21e](https://github.com/bzkf/diz-in-a-box/commit/787b21ef6f7481d8797f50c61fe5d928501e96e5))
+* un-pin compose images due to missing repo names when docker-saving ([787b21e](https://github.com/bzkf/diz-in-a-box/commit/787b21ef6f7481d8797f50c61fe5d928501e96e5))
+
+
+### Miscellaneous Chores
+
+* adds patient topic ([#51](https://github.com/bzkf/diz-in-a-box/issues/51)) ([c3c4328](https://github.com/bzkf/diz-in-a-box/commit/c3c43286ab1ffe47c1ca9ce30ce8bcbede0a0447))
+
 ## [1.3.1](https://github.com/bzkf/diz-in-a-box/compare/v1.3.0...v1.3.1) (2023-05-08)
 
 
