@@ -75,9 +75,11 @@ jobs:
       - name: Upload air-gapped installer artifact
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: air-gapped-installer
+          name: air-gapped-installers
           path: |
             air-gapped-installer.tgz
+            air-gapped-prerequisites-installer.tgz
+            compose-air-gapped-installer.tgz
 
   prepare-artifacts:
     name: prepare artifacts
@@ -102,7 +104,7 @@ jobs:
       - name: Download air-gapped installer
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
-          name: air-gapped-installer
+          name: air-gapped-installers
           path: /tmp
 
       - name: Create dist dir
@@ -115,12 +117,14 @@ jobs:
           cp /tmp/diz-in-a-box-chart.tgz dist/
           cp /tmp/prerequisites-chart.tgz dist/
           cp /tmp/air-gapped-installer.tgz dist/
+          cp /tmp/air-gapped-prerequisites-installer.tgz dist/
+          cp /tmp/compose-air-gapped-installer.tgz dist/
 
       - name: Generate SLSA subject for release assets
         id: hash
         working-directory: dist
         run: |
-          sha256sum diz-in-a-box-chart.tgz prerequisites-chart.tgz air-gapped-installer.tgz > checksums.sha256
+          sha256sum diz-in-a-box-chart.tgz prerequisites-chart.tgz air-gapped-installer.tgz air-gapped-prerequisites-installer.tgz compose-air-gapped-installer.tgz > checksums.sha256
           echo "hashes=$(base64 -w0 < checksums.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: upload assets to release

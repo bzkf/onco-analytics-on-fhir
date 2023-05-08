@@ -39,11 +39,7 @@ diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.ima
 readarray -t prereq_images <<<"$prereq_images_string"
 readarray -t diz_in_a_box_images <<<"$diz_in_a_box_images_string"
 
-images=("quay.io/strimzi/kafka-bridge:0.25.0@sha256:98eb7542e3ff4e10043040acff7a90aa5fd87ff1ea0cac8491f66b1bbdf072dd" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0@sha256:d87417992eb9118d2395c9950c445f51c4d70f9903fd5eebd4eb7570310e27f9")
-images+=("${prereq_images[@]}")
-images+=("${diz_in_a_box_images[@]}")
-
-for image in "${images[@]}"; do
+for image in "${diz_in_a_box_images}"; do
   image_slug=$(echo "$image" | slugify)
   file_name="$image_slug.tar"
 
@@ -53,9 +49,35 @@ for image in "${images[@]}"; do
 done
 
 cp ./import-images-into-k3s.sh "$AIR_GAPPED_INSTALL_DIR/bin/import-images-into-k3s.sh"
-
-MY_HOME="${AIR_GAPPED_INSTALL_DIR}" ./docker-compose/save-images.sh
-
-cp -r ./docker-compose/ "$AIR_GAPPED_INSTALL_DIR"
-
 tar -zcvf air-gapped-installer.tgz "$AIR_GAPPED_INSTALL_DIR"
+
+AIR_GAPPED_PREREQUISITES_INSTALL_DIR=${AIR_GAPPED_PREREQUISITES_INSTALL_DIR:-"./dist/air-gapped-prerequisites"}
+mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR"
+mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images"
+mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/bin"
+
+images=("quay.io/strimzi/kafka-bridge:0.25.0@sha256:98eb7542e3ff4e10043040acff7a90aa5fd87ff1ea0cac8491f66b1bbdf072dd" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0@sha256:d87417992eb9118d2395c9950c445f51c4d70f9903fd5eebd4eb7570310e27f9")
+images+=("${prereq_images[@]}")
+
+for image in "${images[@]}"; do
+  image_slug=$(echo "$image" | slugify)
+  file_name="$image_slug.tar"
+
+  echo "Saving image $image as $AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images/$file_name"
+  docker pull "$image"
+  docker save "$image" -o "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images/$file_name"
+done
+
+cp ./import-images-into-k3s.sh "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/bin/import-images-into-k3s.sh"
+tar -zcvf air-gapped-prerequisites-installer.tgz "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR"
+
+# compose-based air-gapped installer
+
+AIR_GAPPED_COMPOSE_INSTALL_DIR=${AIR_GAPPED_COMPOSE_INSTALL_DIR:-"./dist/compose-air-gapped"}
+mkdir -p "$AIR_GAPPED_COMPOSE_INSTALL_DIR"
+
+MY_HOME="${AIR_GAPPED_COMPOSE_INSTALL_DIR}" ./docker-compose/save-images.sh
+
+find "$AIR_GAPPED_COMPOSE_INSTALL_DIR" -name "docker-compose-air-gapper-*.tgz" -exec mv '{}' "./docker-compose/" \;
+
+tar -zcvf compose-air-gapped-installer.tgz "./docker-compose"
