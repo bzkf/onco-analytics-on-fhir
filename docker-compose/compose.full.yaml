@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: docker.io/library/traefik:v2.10.1@sha256:2a1c328e239fa9cb3891a98c4c1beee300bf467fc7add316632e82de24529b49
+    image: docker.io/library/traefik:v2.10.1
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -8,13 +8,15 @@ services:
     cap_drop:
       - ALL
     read_only: true
+    profiles:
+      - traefik
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
-      - "127.0.0.1:80:80"
-      - "127.0.0.1:443:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     deploy:
@@ -23,7 +25,7 @@ services:
           memory: 512m
 
   fhir-server:
-    image: docker.io/hapiproject/hapi:v6.4.4@sha256:a1e6194957fd73cb56a4f53e5d482e77833652c9f35249902fd0cf973a17e6a5
+    image: docker.io/hapiproject/hapi:v6.4.4
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -53,6 +55,8 @@ services:
       HAPI_FHIR_ALLOW_MULTIPLE_DELETE: "true"
     depends_on:
       - fhir-db
+    ports:
+      - "8082:8080"
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.fhir.loadbalancer.server.port=8080"
@@ -60,7 +64,7 @@ services:
       - "traefik.http.routers.fhir.entrypoints=web"
 
   fhir-db:
-    image: docker.io/library/postgres:15.2@sha256:78a275d4c891f7b3a33d3f1a78eda9f1d744954d9e20122bfdc97cdda25cddaf
+    image: docker.io/library/postgres:15.2
     restart: unless-stopped
     deploy:
       resources:
@@ -77,7 +81,7 @@ services:
       - "fhir_db_data:/var/lib/postgresql/data:rw"
 
   fhir-gateway:
-    image: ghcr.io/miracum/fhir-gateway:v3.10.9@sha256:f4bae212ee8c137c522df7610b931d648ee7a5dd237f842432ae092fc3adbd0a
+    image: ghcr.io/miracum/fhir-gateway:v3.10.9
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -110,7 +114,7 @@ services:
       SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
 
   fhir-pseudonymizer:
-    image: ghcr.io/miracum/fhir-pseudonymizer:v2.17.0@sha256:431a7f4516c1f641966c507941b87a997441665656572a1c00c44376ef08fe24
+    image: ghcr.io/miracum/fhir-pseudonymizer:v2.17.0
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -131,7 +135,7 @@ services:
       - ./anonymization.yaml:/etc/fhir-pseudonymizer/anonymization.yaml:ro
 
   kafka:
-    image: docker.io/bitnami/kafka:3.4.0@sha256:f091afcc2a1db46f88dbc87839e7533adab2f3e8b95a0dbe0505a7bc8fe06262
+    image: docker.io/bitnami/kafka:3.4.0
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -140,12 +144,40 @@ services:
     security_opt:
       - "no-new-privileges:true"
     environment:
-      - ALLOW_PLAINTEXT_LISTENER=yes
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_MESSAGE_MAX_BYTES: "31457280"
     volumes:
       - "kafka_data:/bitnami:rw"
 
+  kafka-connect:
+    image: docker.io/cricketeerone/apache-kafka-connect:3.4.0
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    profiles:
+      - kafka-connect
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_GROUP_ID: kafka-connect-group
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_CONFIG_STORAGE_TOPIC: __kafka-connect-config
+      CONNECT_OFFSET_STORAGE_TOPIC: __kafka-connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: __kafka-connect-status
+      CONNECT_PLUGIN_PATH: /app/libs
+    volumes:
+      - ./kafka-connect-passwords.properties:/tmp/kafka-connect-passwords.properties:ro
+
   akhq:
-    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    image: docker.io/tchiotludo/akhq:0.24.0
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -157,11 +189,15 @@ services:
       AKHQ_CONFIGURATION: |
         akhq:
           connections:
-            kafka-server:
+            kafka:
               properties:
                 bootstrap.servers: "kafka:9092"
+              connect:
+                - name: "kafka-connect"
+                  url: "http://kafka-connect:8083"
+
     ports:
-      - "127.0.0.1:8084:8080"
+      - "8084:8080"
     depends_on:
       - kafka
     labels:
@@ -169,6 +205,22 @@ services:
       - "traefik.http.services.akhq.loadbalancer.server.port=8080"
       - "traefik.http.routers.akhq.rule=Host(`akhq.127.0.0.1.nip.io`)"
       - "traefik.http.routers.akhq.entrypoints=web"
+
+  fhir-to-server:
+    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.3
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      SECURITY_PROTOCOL: PLAINTEXT
+      BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+      FHIR_URL: http://fhir-server:8080/fhir
+      TOPIC: fhir.pseudonymized.onkoadt.MedicationStatement,fhir.pseudonymized.onkoadt.Condition,fhir.pseudonymized.onkoadt.Observation,fhir.pseudonymized.onkoadt.Procedure,fhir.pseudonymized.onkoadt.Patient
 
 volumes:
   fhir_db_data:
