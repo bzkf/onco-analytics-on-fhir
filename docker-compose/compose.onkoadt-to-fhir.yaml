@@ -17,3 +17,4 @@ services:
       SPRING_CLOUD_STREAM_KAFKA_BINDER_AUTOADDPARTITIONS: "true"
       NUM_STREAM_THREADS: "1"
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+      ACTIVE_PROFILE: "patient"
