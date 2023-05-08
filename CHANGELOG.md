@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/bzkf/diz-in-a-box/compare/v1.3.0...v1.3.1) (2023-05-08)
+
+
+### Bug Fixes
+
+* split artifacts into multiple to deal with file sizes ([0edbcf2](https://github.com/bzkf/diz-in-a-box/commit/0edbcf29e17427f34b1e6e6e4b5f08dfd8e04952))
+
 ## [1.3.0](https://github.com/bzkf/diz-in-a-box/compare/v1.2.0...v1.3.0) (2023-05-07)
 
 
