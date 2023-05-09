@@ -50,4 +50,4 @@ EXPOSE 8585
 USER appuser
 
 # Run the application.
-CMD ["python", "/.decompose_xmls.py"]
+CMD ["python", "/app/decompose_xmls.py"]

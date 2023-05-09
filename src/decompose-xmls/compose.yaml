@@ -15,6 +15,7 @@ services:
       - 8585:8585
     volumes:
       - ./input-adt-reports:/app/input-adt-reports
+      - ./output-adt-reports:/app/output-files
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
