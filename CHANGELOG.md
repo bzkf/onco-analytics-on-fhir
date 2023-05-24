@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/bzkf/diz-in-a-box/compare/v1.4.1...v1.4.2) (2023-05-24)
+
+
+### Bug Fixes
+
+* use ghcr.io registry for onkoadt-to-fhir ([#58](https://github.com/bzkf/diz-in-a-box/issues/58)) ([a628a62](https://github.com/bzkf/diz-in-a-box/commit/a628a62cd294c64d3feb8407c0d9f56277ed8c63))
+
 ## [1.4.1](https://github.com/bzkf/diz-in-a-box/compare/v1.4.0...v1.4.1) (2023-05-23)
 
 
