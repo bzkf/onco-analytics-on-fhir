@@ -20,7 +20,10 @@ Open <http://localhost:8084/> to view the cluster's topics.
 ## Update the air-gapped installer script
 
 ```sh
-docker compose -f compose.full.yaml -f compose.onkoadt-to-fhir.yaml config -o compose.normalized.yaml
+docker compose --profile=traefik --profile=kafka-connect \
+  -f compose.full.yaml \
+  -f compose.onkoadt-to-fhir.yaml \
+  config -o compose.normalized.yaml
 
 docker run \
   --env SENZING_DOCKER_COMPOSE_FILE=/data/compose.normalized.yaml \
@@ -29,7 +32,7 @@ docker run \
   --interactive \
   --rm \
   --tty \
-  --volume ./:/data \
+  --volume ${PWD}:/data \
   --user "${UID}" \
   docker.io/senzing/docker-compose-air-gapper:1.0.4@sha256:f519089580c5422c02100042965f14ac2bb7bab5c3321e8a668b4f4b6b03902a
 ```

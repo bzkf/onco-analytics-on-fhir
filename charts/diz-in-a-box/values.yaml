@@ -134,9 +134,9 @@ stream-processors:
       replicaCount: 1
       container:
         image:
-          registry: harbor.miracum.org
-          repository: streams-ume/onkoadt-to-fhir
-          tag: v1.10.4@sha256:5430e1edb268dfe42129f11de5e3d29d43e7053c32db59fc0c23c71fa53a21dc
+          registry: ghcr.io
+          repository: miracum/onkoadt-to-fhir
+          tag: v1.10.5@sha256:3613fbb7e3e3965c5e86d26bf207091f64af9014abbf50992b302f2ca00642e4
           pullPolicy: IfNotPresent
         env:
           - name: OPENTRACING_JAEGER_ENABLED
