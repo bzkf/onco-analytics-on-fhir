@@ -12,13 +12,14 @@
 
 DOCKER_IMAGE_NAMES=(
   "docker.io/tchiotludo/akhq:0.24.0"
-  "docker.io/library/postgres:15.2"
+  "docker.io/library/postgres:15.3"
   "ghcr.io/miracum/fhir-gateway:v3.10.9"
   "ghcr.io/miracum/fhir-pseudonymizer:v2.17.0"
   "docker.io/hapiproject/hapi:v6.4.4"
   "ghcr.io/miracum/kafka-fhir-to-server:v1.2.3"
   "docker.io/bitnami/kafka:3.4.0"
-  "harbor.miracum.org/streams-ume/onkoadt-to-fhir:v1.10.0"
+  "docker.io/cricketeerone/apache-kafka-connect:3.4.0"
+  "ghcr.io/miracum/onkoadt-to-fhir:v1.10.5"
   "docker.io/library/traefik:v2.10.1"
 )
 
@@ -45,7 +46,7 @@ NOT_OK=1
 
 # Create preamble to OUTPUT_LOAD_REPOSITORY_SCRIPT.
 
-cat <<EOT >${OUTPUT_LOAD_REPOSITORY_SCRIPT}
+cat <<EOT > ${OUTPUT_LOAD_REPOSITORY_SCRIPT}
 #!/usr/bin/env bash
 
 # 'load-images.sh' uses 'docker load' to import images into local registry.
@@ -57,7 +58,8 @@ chmod +x ${OUTPUT_LOAD_REPOSITORY_SCRIPT}
 
 # Save Docker images and scripts to output directory.
 
-for DOCKER_IMAGE_NAME in ${DOCKER_IMAGE_NAMES[@]}; do
+for DOCKER_IMAGE_NAME in ${DOCKER_IMAGE_NAMES[@]};
+do
 
   # Pull docker image.
 
@@ -72,7 +74,7 @@ for DOCKER_IMAGE_NAME in ${DOCKER_IMAGE_NAMES[@]}; do
 
   # Add commands to OUTPUT_LOAD_REPOSITORY_SCRIPT to load file into local repository.
 
-  echo "docker load --input images/${DOCKER_OUTPUT_FILENAME}" >>${OUTPUT_LOAD_REPOSITORY_SCRIPT}
+  echo "docker load --input images/${DOCKER_OUTPUT_FILENAME}" >> ${OUTPUT_LOAD_REPOSITORY_SCRIPT}
 
 done
 
