@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.1](https://github.com/bzkf/diz-in-a-box/compare/v1.4.0...v1.4.1) (2023-05-23)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#55](https://github.com/bzkf/diz-in-a-box/issues/55)) ([bb157b4](https://github.com/bzkf/diz-in-a-box/commit/bb157b4ce5937cd7944fb8651ef0579ebf836ab2))
+* **deps:** update container-images ([#54](https://github.com/bzkf/diz-in-a-box/issues/54)) ([f0d70a4](https://github.com/bzkf/diz-in-a-box/commit/f0d70a419c13bf132cd57311be8213de6ff747e3))
+* **deps:** update harbor.miracum.org/streams-ume/onkoadt-to-fhir docker tag to v1.10.4 ([#57](https://github.com/bzkf/diz-in-a-box/issues/57)) ([e4f4e0f](https://github.com/bzkf/diz-in-a-box/commit/e4f4e0f9919666b3dbd29b8edeef102cd78f1ca5))
+
 ## [1.4.0](https://github.com/bzkf/diz-in-a-box/compare/v1.3.1...v1.4.0) (2023-05-08)
 
 
