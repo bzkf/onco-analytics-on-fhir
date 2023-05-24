@@ -9,6 +9,6 @@ dependencies:
     repository: https://strimzi.io/charts/
     version: 0.35.0
 # x-release-please-start-version
-version: 1.4.1
-appVersion: 1.4.1
+version: 1.4.2
+appVersion: 1.4.2
 # x-release-please-end-version
