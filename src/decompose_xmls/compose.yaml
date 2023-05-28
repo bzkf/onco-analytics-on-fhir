@@ -1,0 +1,8 @@
+services:
+  decompose-xmls:
+    build:
+      context: .
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./input-adt-reports:/app/input-adt-reports
+      - ./output-adt-reports:/app/output-files
