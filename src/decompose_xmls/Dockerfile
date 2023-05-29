@@ -1,19 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/engine/reference/builder/
-
-ARG PYTHON_VERSION=3.10.6
-FROM python:${PYTHON_VERSION}-slim as base
-
-# Prevents Python from writing pyc files.
-ENV PYTHONDONTWRITEBYTECODE=1
-
-# Keeps Python from buffering stdout and stderr to avoid situations where
-# the application crashes without emitting any logs due to buffering.
-ENV PYTHONUNBUFFERED=1
-
+FROM docker.io/library/python:3.11.0-slim@sha256:b5ee5360b357dcd0ab2e1cc5e22fa589b6734bbd55776df6b1700994febf1527 AS base
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Create a non-privileged user that the app will run under.
@@ -36,18 +26,23 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install --no-cache-dir -r requirements.txt
 
-# permissions TODO
-#RUN chmod 777 /app # entweder das hier oder das nachfolgende - aber User wechseln erst danach
 RUN chown -R appuser:appuser /app
 
 # Copy the source code into the container.
 COPY decompose_xmls.py /app
 
-# Expose the port that the application listens on.
-EXPOSE 8585
+FROM base AS test
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=bind,source=requirements-test.txt,target=requirements-test.txt \
+    python -m pip install --no-cache-dir -r requirements-test.txt
 
+COPY . .
+
+RUN PYTHONPATH=${PWD} pytest -vv --cov
+
+FROM base
 # Switch to the non-privileged user to run the application.
-USER appuser
+USER 10001
 
 # Run the application.
 CMD ["python", "/app/decompose_xmls.py"]

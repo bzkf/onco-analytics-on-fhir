@@ -4,13 +4,18 @@ import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
-# TODO Env.vars?
-input_folder = "input-adt-reports"
-output_folder = "output-files"
-output_folder_xml = "output-files/output-xmls"
+from confluent_kafka import Producer
+from pydantic import BaseSettings
 
-save_xmls = True  # brauchen wir im Grunde nicht
-save_jsons = True
+
+class Settings(BaseSettings):
+    input_folder: str = "./input-adt-reports"
+    output_folder: str = "./output-files"
+    output_folder_xml: str = "./output-files/output-xmls"
+    save_as_files_enabled: bool = True
+    kafka_enabled: bool = False
+    kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_output_topic: str = "adt.einzelmeldungen"
 
 
 @dataclass
@@ -21,53 +26,27 @@ class Einzelmeldung:
 
     def __repr__(self) -> str:
         ET.register_namespace("", "http://www.gekid.de/namespace")
-        repr = {
+        dict_repr = {
             "xml": ET.tostring(self.xml, encoding="unicode"),
             "patient_id": self.patient_id,
             "meldung_id": self.meldung_id,
         }
-        return json.dumps(repr)
+        return json.dumps(dict_repr)
 
 
 def conditional_folder_create(folder_name):
-    if os.path.exists(folder_name):
-        pass
-    else:
+    if not os.path.exists(folder_name):
         os.makedirs(folder_name)
-
-    """ ist eine Variante besser als die andere?
-    try:
-        os.mkdir(output_folder_xml)
-    except OSError as error:
-        print(error) """
 
 
 def save_xml_files(meldung_root, patient_id, meldung_id):
+    settings = Settings()
     ET.register_namespace("", "http://www.gekid.de/namespace")
     ET.ElementTree(meldung_root).write(
-        f"{output_folder_xml}/patient_{patient_id}_meldung_{meldung_id}.xml",
+        f"{settings.output_folder_xml}/patient_{patient_id}_meldung_{meldung_id}.xml",
         encoding="UTF-8",
         xml_declaration=True,
     )
-
-
-def save_json_files(meldung_root, patient_id, meldung_id):
-    # saves json files for kafka bridge input in this schema
-    xml_str = ET.tostring(meldung_root, encoding="unicode")
-
-    # prepare json files for kafka bridge
-    result_data = {}
-    result_data["LKR_MELDUNG"] = meldung_id
-    result_data["XML_DATEN"] = xml_str
-    result_data["VERSIONSNUMMER"] = 1
-    result_data["REFERENZ_NUMMER"] = patient_id
-
-    with open(
-        f"{output_folder}/patient_{patient_id}_meldung_{meldung_id}.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump(result_data, f, indent=4)
 
 
 def decompose_sammelmeldung(root: ET.Element, filename: str) -> list[Einzelmeldung]:
@@ -147,7 +126,22 @@ def decompose_sammelmeldung(root: ET.Element, filename: str) -> list[Einzelmeldu
     return result
 
 
+def kafka_delivery_report(err, msg):
+    if err is not None:
+        print(f"Message delivery failed: {err}")
+    else:
+        print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+
+
 def decompose_folder(input_folder: str):
+    settings = Settings()
+
+    kafka_producer: Producer = None
+    if settings.kafka_enabled:
+        kafka_producer = Producer(
+            {"bootstrap.servers": settings.kafka_bootstrap_servers}
+        )
+
     for xmlfile in os.listdir(input_folder):
         if not xmlfile.endswith(".xml"):
             continue
@@ -156,32 +150,59 @@ def decompose_folder(input_folder: str):
         root = tree.getroot()
 
         for einzelmeldung in decompose_sammelmeldung(root, filename):
-            # TODO das ist nicht so ideal, aber sonst muss ich in der main auch
-            # nochmal loopen - Verbesserungsvorschlag? oder Loop nur in main?
-            if save_xmls:
+            # saves json files for kafka bridge input in this schema
+            xml_str = ET.tostring(root, encoding="unicode")
+
+            # prepare json files for kafka bridge
+            result_data = {
+                "LKR_MELDUNG": einzelmeldung.meldung_id,
+                "XML_DATEN": xml_str,
+                "VERSIONSNUMMER": 1,
+                "REFERENZ_NUMMER": einzelmeldung.patient_id,
+            }
+
+            if settings.save_as_files_enabled:
+                with open(
+                    f"{settings.output_folder}/"
+                    + f"patient_{einzelmeldung.patient_id}_meldung_"
+                    + f"{einzelmeldung.meldung_id}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    json.dump(result_data, f, indent=4)
+
                 save_xml_files(
                     einzelmeldung.xml,
                     einzelmeldung.patient_id,
                     einzelmeldung.meldung_id,
                 )
 
-            if save_jsons:
-                save_json_files(
-                    einzelmeldung.xml,
-                    einzelmeldung.patient_id,
-                    einzelmeldung.meldung_id,
+            if kafka_producer is not None:
+                kafka_producer.poll(0)
+
+                # Asynchronously produce a message. The delivery report callback will
+                # be triggered from the call to poll() above, or flush() below, when the
+                # message has been successfully delivered or failed permanently.
+                kafka_producer.produce(
+                    settings.kafka_output_topic,
+                    json.dumps(result_data),
+                    callback=kafka_delivery_report,
+                    key=f"{einzelmeldung.patient_id}-{einzelmeldung.meldung_id}",
                 )
+
+    if kafka_producer is not None:
+        kafka_producer.flush()
 
 
 def main():
-    start = time.time()
-
+    start = time.monotonic()
+    settings = Settings()
     # do all stuff here
-    conditional_folder_create(output_folder_xml)
-    decompose_folder(input_folder)
+    conditional_folder_create(settings.output_folder_xml)
+    decompose_folder(settings.input_folder)
 
-    end = time.time()
-    print("time elapsed:", end - start, "s")
+    end = time.monotonic()
+    print(f"time elapsed: {end - start}s")
 
 
 if __name__ == "__main__":
