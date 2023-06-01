@@ -7,3 +7,7 @@ megalinter-reports/
 dist/
 
 docker-compose/*normalized.yaml
+
+__pycache__/
+.pytest_cache
+.coverage

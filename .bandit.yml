@@ -1,0 +1,5 @@
+skips:
+  - "B405"
+  - "B314"
+exclude_dirs:
+  - "*_test.py"
