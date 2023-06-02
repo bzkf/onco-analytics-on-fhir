@@ -25,7 +25,7 @@ services:
           memory: 512m
 
   fhir-server:
-    image: docker.io/hapiproject/hapi:v6.4.4
+    image: docker.io/hapiproject/hapi:v6.6.0
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -207,7 +207,7 @@ services:
       - "traefik.http.routers.akhq.entrypoints=web"
 
   fhir-to-server:
-    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.3
+    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.4
     restart: unless-stopped
     cap_drop:
       - ALL
