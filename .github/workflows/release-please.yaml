@@ -23,6 +23,7 @@ jobs:
             charts/diz-in-a-box/Chart.yaml
             charts/prerequisites/Chart.yaml
             README.md
+            docker-compose/compose.decompose-xmls.yaml
           changelog-types: |
             [
               { "type": "feat", "section": "Features" },

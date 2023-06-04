@@ -76,6 +76,27 @@ tar -zcvf air-gapped-prerequisites-installer.tgz "$AIR_GAPPED_PREREQUISITES_INST
 AIR_GAPPED_COMPOSE_INSTALL_DIR=${AIR_GAPPED_COMPOSE_INSTALL_DIR:-"./dist/compose-air-gapped"}
 mkdir -p "$AIR_GAPPED_COMPOSE_INSTALL_DIR"
 
+# generate save-images.sh
+docker compose --profile=kafka-connect \
+  -f docker-compose/compose.full.yaml \
+  -f docker-compose/compose.onkoadt-to-fhir.yaml \
+  -f docker-compose/compose.decompose-xmls.yaml \
+  config -o docker-compose/compose.normalized.yaml
+
+docker run \
+  --env SENZING_DOCKER_COMPOSE_FILE=/data/compose.normalized.yaml \
+  --env SENZING_OUTPUT_FILE=/data/save-images.sh \
+  --env SENZING_SUBCOMMAND=create-save-images \
+  --interactive \
+  --rm \
+  --tty \
+  --volume "${PWD}/docker-compose:/data" \
+  --user "${UID}" \
+  docker.io/senzing/docker-compose-air-gapper:1.0.4@sha256:f519089580c5422c02100042965f14ac2bb7bab5c3321e8a668b4f4b6b03902a
+
+chmod +x ./docker-compose/save-images.sh
+
+# finally run the generated script to download the images
 MY_HOME="${AIR_GAPPED_COMPOSE_INSTALL_DIR}" ./docker-compose/save-images.sh
 
 find "$AIR_GAPPED_COMPOSE_INSTALL_DIR" -name "docker-compose-air-gapper-*.tgz" -exec mv '{}' "./docker-compose/" \;

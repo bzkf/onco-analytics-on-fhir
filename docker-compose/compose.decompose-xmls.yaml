@@ -1,0 +1,11 @@
+services:
+  decompose-xmls:
+    image: ghcr.io/bzkf/diz-in-a-box/decompose-xmls:v1.0.0 # x-release-please-version
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      KAFKA_ENABLED: "true"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_OUTPUT_TOPIC: "onkostar.MELDUNG_EXPORT"
+      SAVE_AS_FILES_ENABLED: "false"
+    volumes:
+      - ./input-adt-reports:/app/input-adt-reports
