@@ -130,11 +130,14 @@ def kafka_delivery_report(err, msg):
     if err is not None:
         print(f"Message delivery failed: {err}")
     else:
-        print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+        print(f"Message delivered to {msg.topic()}@{msg.partition()}")
 
 
 def decompose_folder(input_folder: str):
     settings = Settings()
+
+    if settings.save_as_files_enabled:
+        conditional_folder_create(settings.output_folder_xml)
 
     kafka_producer: Producer = None
     if settings.kafka_enabled:
@@ -150,8 +153,8 @@ def decompose_folder(input_folder: str):
         root = tree.getroot()
 
         for einzelmeldung in decompose_sammelmeldung(root, filename):
-            # saves json files for kafka bridge input in this schema
-            xml_str = ET.tostring(root, encoding="unicode")
+            ET.register_namespace("", "http://www.gekid.de/namespace")
+            xml_str = ET.tostring(einzelmeldung.xml, encoding="unicode")
 
             # prepare json files for kafka bridge
             result_data = {
@@ -197,8 +200,7 @@ def decompose_folder(input_folder: str):
 def main():
     start = time.monotonic()
     settings = Settings()
-    # do all stuff here
-    conditional_folder_create(settings.output_folder_xml)
+
     decompose_folder(settings.input_folder)
 
     end = time.monotonic()
