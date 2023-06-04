@@ -39,7 +39,7 @@ diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.ima
 readarray -t prereq_images <<<"$prereq_images_string"
 readarray -t diz_in_a_box_images <<<"$diz_in_a_box_images_string"
 
-for image in "${diz_in_a_box_images}"; do
+for image in "${diz_in_a_box_images[@]}"; do
   image_slug=$(echo "$image" | slugify)
   file_name="$image_slug.tar"
 
@@ -87,9 +87,7 @@ docker run \
   --env SENZING_DOCKER_COMPOSE_FILE=/data/compose.normalized.yaml \
   --env SENZING_OUTPUT_FILE=/data/save-images.sh \
   --env SENZING_SUBCOMMAND=create-save-images \
-  --interactive \
   --rm \
-  --tty \
   --volume "${PWD}/docker-compose:/data" \
   --user "${UID}" \
   docker.io/senzing/docker-compose-air-gapper:1.0.4@sha256:f519089580c5422c02100042965f14ac2bb7bab5c3321e8a668b4f4b6b03902a

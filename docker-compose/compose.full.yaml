@@ -1,29 +1,4 @@
 services:
-  traefik:
-    image: docker.io/library/traefik:v2.10.1
-    restart: unless-stopped
-    ipc: none
-    security_opt:
-      - "no-new-privileges:true"
-    cap_drop:
-      - ALL
-    read_only: true
-    profiles:
-      - traefik
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-
   fhir-server:
     image: docker.io/hapiproject/hapi:v6.6.0
     restart: unless-stopped
@@ -57,11 +32,6 @@ services:
       - fhir-db
     ports:
       - "8082:8080"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.fhir.loadbalancer.server.port=8080"
-      - "traefik.http.routers.fhir.rule=Host(`fhir-server.127.0.0.1.nip.io`)"
-      - "traefik.http.routers.fhir.entrypoints=web"
 
   fhir-db:
     image: docker.io/library/postgres:15.3
@@ -146,6 +116,9 @@ services:
     environment:
       ALLOW_PLAINTEXT_LISTENER: "yes"
       KAFKA_CFG_MESSAGE_MAX_BYTES: "31457280"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT"
     volumes:
       - "kafka_data:/bitnami:rw"
 
@@ -175,6 +148,8 @@ services:
       CONNECT_PLUGIN_PATH: /app/libs
     volumes:
       - ./kafka-connect-passwords.properties:/tmp/kafka-connect-passwords.properties:ro
+    ports:
+      - 8083:8083
 
   akhq:
     image: docker.io/tchiotludo/akhq:0.24.0
@@ -195,16 +170,10 @@ services:
               connect:
                 - name: "kafka-connect"
                   url: "http://kafka-connect:8083"
-
     ports:
       - "8084:8080"
     depends_on:
       - kafka
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.akhq.loadbalancer.server.port=8080"
-      - "traefik.http.routers.akhq.rule=Host(`akhq.127.0.0.1.nip.io`)"
-      - "traefik.http.routers.akhq.entrypoints=web"
 
   fhir-to-server:
     image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.5
