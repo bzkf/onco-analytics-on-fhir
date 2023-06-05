@@ -3,7 +3,7 @@
   "config": {
     "tasks.max": "1",
     "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
-    "connection.url": "jdbc:mariadb:thin:@//mariadb:3306/ONKOSTAR",
+    "connection.url": "jdbc:mysql://onkostar-db:3306/ONKOSTAR",
     "connection.user": "onkostar_user",
     "connection.password": "${file:/tmp/kafka-connect-passwords.properties:onkostar-db-password}",
     "schema.pattern": "ONKOSTAR",

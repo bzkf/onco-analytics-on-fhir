@@ -101,7 +101,7 @@ jobs:
           name: helm-charts
           path: /tmp
 
-      - name: Download air-gapped installer
+      - name: Download air-gapped installers
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: air-gapped-installers
@@ -116,15 +116,16 @@ jobs:
           ls -lsa /tmp
           cp /tmp/diz-in-a-box-chart.tgz dist/
           cp /tmp/prerequisites-chart.tgz dist/
-          cp /tmp/air-gapped-installer.tgz dist/
-          cp /tmp/air-gapped-prerequisites-installer.tgz dist/
+          # cp /tmp/air-gapped-installer.tgz dist/
+          # cp /tmp/air-gapped-prerequisites-installer.tgz dist/
           cp /tmp/compose-air-gapped-installer.tgz dist/
 
       - name: Generate SLSA subject for release assets
         id: hash
         working-directory: dist
         run: |
-          sha256sum diz-in-a-box-chart.tgz prerequisites-chart.tgz air-gapped-installer.tgz air-gapped-prerequisites-installer.tgz compose-air-gapped-installer.tgz > checksums.sha256
+          # air-gapped-installer.tgz air-gapped-prerequisites-installer.tgz
+          sha256sum diz-in-a-box-chart.tgz prerequisites-chart.tgz compose-air-gapped-installer.tgz > checksums.sha256
           echo "hashes=$(base64 -w0 < checksums.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: upload assets to release
@@ -142,7 +143,7 @@ jobs:
       id-token: write # To sign the provenance.
       contents: write # To add assets to a release.
     # can't be referenced by digest. See <https://github.com/slsa-framework/slsa-github-generator#verification-of-provenance>
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.5.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.6.0
     with:
       base64-subjects: "${{ needs.prepare-artifacts.outputs.hashes }}"
       compile-generator: true # Workaround for https://github.com/slsa-framework/slsa-github-generator/issues/1163

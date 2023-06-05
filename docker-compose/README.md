@@ -17,22 +17,17 @@ docker compose -f compose.onkoadt-to-fhir.yaml -f compose.full.yaml up
 
 Open <http://localhost:8084/> to view the cluster's topics.
 
-## Update the air-gapped installer script
+## Load sample data from a ADT Sammelmeldung into the Kafka cluster
 
 ```sh
-docker compose --profile=traefik --profile=kafka-connect \
-  -f compose.full.yaml \
-  -f compose.onkoadt-to-fhir.yaml \
-  config -o compose.normalized.yaml
+docker compose -f compose.decompose-xmls.yaml up
+```
 
-docker run \
-  --env SENZING_DOCKER_COMPOSE_FILE=/data/compose.normalized.yaml \
-  --env SENZING_OUTPUT_FILE=/data/save-images.sh \
-  --env SENZING_SUBCOMMAND=create-save-images \
-  --interactive \
-  --rm \
-  --tty \
-  --volume ${PWD}:/data \
-  --user "${UID}" \
-  docker.io/senzing/docker-compose-air-gapper:1.0.4@sha256:f519089580c5422c02100042965f14ac2bb7bab5c3321e8a668b4f4b6b03902a
+## Create connector
+
+```sh
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -d @onkostar-db-connector.json \
+  http://localhost:8083/connectors
 ```

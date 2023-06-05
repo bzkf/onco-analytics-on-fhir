@@ -123,7 +123,7 @@ services:
       - "kafka_data:/bitnami:rw"
 
   kafka-connect:
-    image: docker.io/cricketeerone/apache-kafka-connect:3.4.0
+    image: ghcr.io/miracum/kafka-connect-images/cricketeerone-apache-kafka-connect:v1.0.1
     restart: unless-stopped
     cap_drop:
       - ALL
