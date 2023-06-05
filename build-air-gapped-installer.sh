@@ -1,75 +1,79 @@
 #!/bin/bash
 set -euox pipefail
 
-# via <https://duncanlock.net/blog/2021/06/15/good-simple-bash-slugify-function/>
-function slugify() {
-  iconv -t ascii//TRANSLIT |
-    tr -d "'" |
-    sed -E 's/[^a-zA-Z0-9]+/-/g' |
-    sed -E 's/^-+|-+$//g' |
-    tr "[:upper:]" "[:lower:]"
-}
+SHOULD_CREATE_K3S_AIR_GAPPED_INSTALLER=${SHOULD_CREATE_K3S_AIR_GAPPED_INSTALLER:-"0"}
 
-AIR_GAPPED_INSTALL_DIR=${AIR_GAPPED_INSTALL_DIR:-"./dist/air-gapped"}
+if [ "$SHOULD_CREATE_K3S_AIR_GAPPED_INSTALLER" = "1" ]; then
+  # via <https://duncanlock.net/blog/2021/06/15/good-simple-bash-slugify-function/>
+  function slugify() {
+    iconv -t ascii//TRANSLIT |
+      tr -d "'" |
+      sed -E 's/[^a-zA-Z0-9]+/-/g' |
+      sed -E 's/^-+|-+$//g' |
+      tr "[:upper:]" "[:lower:]"
+  }
 
-mkdir -p "$AIR_GAPPED_INSTALL_DIR"
-mkdir -p "$AIR_GAPPED_INSTALL_DIR/bin"
-mkdir -p "$AIR_GAPPED_INSTALL_DIR/k3s"
-mkdir -p "$AIR_GAPPED_INSTALL_DIR/images"
+  AIR_GAPPED_INSTALL_DIR=${AIR_GAPPED_INSTALL_DIR:-"./dist/air-gapped"}
 
-curl -L "https://get.helm.sh/helm-v3.11.3-linux-amd64.tar.gz" | tar xz
-mv linux-amd64/helm "$AIR_GAPPED_INSTALL_DIR/bin/helm"
+  mkdir -p "$AIR_GAPPED_INSTALL_DIR"
+  mkdir -p "$AIR_GAPPED_INSTALL_DIR/bin"
+  mkdir -p "$AIR_GAPPED_INSTALL_DIR/k3s"
+  mkdir -p "$AIR_GAPPED_INSTALL_DIR/images"
 
-curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/kubectl" "https://storage.googleapis.com/kubernetes-release/release/v1.26.0/bin/linux/amd64/kubectl"
-curl -L -o "$AIR_GAPPED_INSTALL_DIR/k3s/k3s-airgap-images-amd64.tar" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s-airgap-images-amd64.tar"
-curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/k3s" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s"
-curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/install.sh" "https://get.k3s.io/"
+  curl -L "https://get.helm.sh/helm-v3.11.3-linux-amd64.tar.gz" | tar xz
+  mv linux-amd64/helm "$AIR_GAPPED_INSTALL_DIR/bin/helm"
 
-helm repo add miracum https://miracum.github.io/charts
-helm repo add akhq https://akhq.io/
-helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-helm repo add strimzi https://strimzi.io/charts/
+  curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/kubectl" "https://storage.googleapis.com/kubernetes-release/release/v1.26.0/bin/linux/amd64/kubectl"
+  curl -L -o "$AIR_GAPPED_INSTALL_DIR/k3s/k3s-airgap-images-amd64.tar" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s-airgap-images-amd64.tar"
+  curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/k3s" "https://github.com/k3s-io/k3s/releases/download/v1.26.3%2Bk3s1/k3s"
+  curl -L -o "$AIR_GAPPED_INSTALL_DIR/bin/install.sh" "https://get.k3s.io/"
 
-helm dependency build charts/prerequisites/
-helm dependency build charts/diz-in-a-box/
+  helm repo add miracum https://miracum.github.io/charts
+  helm repo add akhq https://akhq.io/
+  helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
+  helm repo add strimzi https://strimzi.io/charts/
 
-prereq_images_string=$(helm template charts/prerequisites/ | yq -N '..|.image? | select(.)' | sort -u)
-diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.image? | select(.)' | sort -u)
+  helm dependency build charts/prerequisites/
+  helm dependency build charts/diz-in-a-box/
 
-readarray -t prereq_images <<<"$prereq_images_string"
-readarray -t diz_in_a_box_images <<<"$diz_in_a_box_images_string"
+  prereq_images_string=$(helm template charts/prerequisites/ | yq -N '..|.image? | select(.)' | sort -u)
+  diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.image? | select(.)' | sort -u)
 
-for image in "${diz_in_a_box_images[@]}"; do
-  image_slug=$(echo "$image" | slugify)
-  file_name="$image_slug.tar"
+  readarray -t prereq_images <<<"$prereq_images_string"
+  readarray -t diz_in_a_box_images <<<"$diz_in_a_box_images_string"
 
-  echo "Saving image $image as $AIR_GAPPED_INSTALL_DIR/images/$file_name"
-  docker pull "$image"
-  docker save "$image" -o "$AIR_GAPPED_INSTALL_DIR/images/$file_name"
-done
+  for image in "${diz_in_a_box_images[@]}"; do
+    image_slug=$(echo "$image" | slugify)
+    file_name="$image_slug.tar"
 
-cp ./import-images-into-k3s.sh "$AIR_GAPPED_INSTALL_DIR/bin/import-images-into-k3s.sh"
-tar -zcvf air-gapped-installer.tgz "$AIR_GAPPED_INSTALL_DIR"
+    echo "Saving image $image as $AIR_GAPPED_INSTALL_DIR/images/$file_name"
+    docker pull "$image"
+    docker save "$image" -o "$AIR_GAPPED_INSTALL_DIR/images/$file_name"
+  done
 
-AIR_GAPPED_PREREQUISITES_INSTALL_DIR=${AIR_GAPPED_PREREQUISITES_INSTALL_DIR:-"./dist/air-gapped-prerequisites"}
-mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR"
-mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images"
-mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/bin"
+  cp ./import-images-into-k3s.sh "$AIR_GAPPED_INSTALL_DIR/bin/import-images-into-k3s.sh"
+  tar -zcvf air-gapped-installer.tgz "$AIR_GAPPED_INSTALL_DIR"
 
-images=("quay.io/strimzi/kafka-bridge:0.25.0@sha256:98eb7542e3ff4e10043040acff7a90aa5fd87ff1ea0cac8491f66b1bbdf072dd" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0@sha256:d87417992eb9118d2395c9950c445f51c4d70f9903fd5eebd4eb7570310e27f9")
-images+=("${prereq_images[@]}")
+  AIR_GAPPED_PREREQUISITES_INSTALL_DIR=${AIR_GAPPED_PREREQUISITES_INSTALL_DIR:-"./dist/air-gapped-prerequisites"}
+  mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR"
+  mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images"
+  mkdir -p "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/bin"
 
-for image in "${images[@]}"; do
-  image_slug=$(echo "$image" | slugify)
-  file_name="$image_slug.tar"
+  images=("quay.io/strimzi/kafka-bridge:0.25.0@sha256:98eb7542e3ff4e10043040acff7a90aa5fd87ff1ea0cac8491f66b1bbdf072dd" "quay.io/strimzi/kafka:0.34.0-kafka-3.4.0@sha256:d87417992eb9118d2395c9950c445f51c4d70f9903fd5eebd4eb7570310e27f9")
+  images+=("${prereq_images[@]}")
 
-  echo "Saving image $image as $AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images/$file_name"
-  docker pull "$image"
-  docker save "$image" -o "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images/$file_name"
-done
+  for image in "${images[@]}"; do
+    image_slug=$(echo "$image" | slugify)
+    file_name="$image_slug.tar"
 
-cp ./import-images-into-k3s.sh "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/bin/import-images-into-k3s.sh"
-tar -zcvf air-gapped-prerequisites-installer.tgz "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR"
+    echo "Saving image $image as $AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images/$file_name"
+    docker pull "$image"
+    docker save "$image" -o "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/images/$file_name"
+  done
+
+  cp ./import-images-into-k3s.sh "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR/bin/import-images-into-k3s.sh"
+  tar -zcvf air-gapped-prerequisites-installer.tgz "$AIR_GAPPED_PREREQUISITES_INSTALL_DIR"
+fi
 
 # compose-based air-gapped installer
 
