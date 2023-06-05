@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/bzkf/diz-in-a-box/compare/v1.5.0...v1.5.1) (2023-06-05)
+
+
+### CI/CD
+
+* use custom cricketeer image and only build compose installer ([#67](https://github.com/bzkf/diz-in-a-box/issues/67)) ([cbe90d9](https://github.com/bzkf/diz-in-a-box/commit/cbe90d9cda282e70988f5f3c1dcaaa348194e51e))
+
 ## [1.5.0](https://github.com/bzkf/diz-in-a-box/compare/v1.4.2...v1.5.0) (2023-06-04)
 
 
