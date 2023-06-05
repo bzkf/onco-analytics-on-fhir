@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.5.0](https://github.com/bzkf/diz-in-a-box/compare/v1.4.2...v1.5.0) (2023-06-04)
+
+
+### Features
+
+* added input data preprocessor to decompose sammelmeldung xmls ([#38](https://github.com/bzkf/diz-in-a-box/issues/38)) ([ef3a73e](https://github.com/bzkf/diz-in-a-box/commit/ef3a73e8ec0296ced92d710efa5e13c5679ddeff))
+* include decompose xml in compose installation ([#66](https://github.com/bzkf/diz-in-a-box/issues/66)) ([52c53b2](https://github.com/bzkf/diz-in-a-box/commit/52c53b2281d5c36c74964d5039bf312a7a905256))
+
+
+### Miscellaneous Chores
+
+* **deps:** update container-images ([#61](https://github.com/bzkf/diz-in-a-box/issues/61)) ([f125e2f](https://github.com/bzkf/diz-in-a-box/commit/f125e2fd594765fb497f8b25a394edda234af252))
+* **deps:** update ghcr.io/miracum/kafka-fhir-to-server docker tag to v1.2.4 ([#63](https://github.com/bzkf/diz-in-a-box/issues/63)) ([81047f7](https://github.com/bzkf/diz-in-a-box/commit/81047f7996acfb9238d244414ef6bfbb6511b3b6))
+* **deps:** update ghcr.io/miracum/kafka-fhir-to-server docker tag to v1.2.5 ([#64](https://github.com/bzkf/diz-in-a-box/issues/64)) ([1d34c23](https://github.com/bzkf/diz-in-a-box/commit/1d34c23b96875ce29d10c67526d5e1d05f2f820f))
+
 ## [1.4.2](https://github.com/bzkf/diz-in-a-box/compare/v1.4.1...v1.4.2) (2023-05-24)
 
 
