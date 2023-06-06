@@ -1,3 +1,4 @@
+from io import BytesIO
 import json
 import os
 import time
@@ -26,8 +27,10 @@ class Einzelmeldung:
 
     def __repr__(self) -> str:
         ET.register_namespace("", "http://www.gekid.de/namespace")
+        f = BytesIO()
+        ET.ElementTree(self.xml).write(f, encoding="utf-8", xml_declaration=True)
         dict_repr = {
-            "xml": ET.tostring(self.xml, encoding="unicode"),
+            "xml": f.getvalue().decode(),
             "patient_id": self.patient_id,
             "meldung_id": self.meldung_id,
         }
@@ -154,14 +157,19 @@ def decompose_folder(input_folder: str):
 
         for einzelmeldung in decompose_sammelmeldung(root, filename):
             ET.register_namespace("", "http://www.gekid.de/namespace")
-            xml_str = ET.tostring(einzelmeldung.xml, encoding="unicode")
-
+            f = BytesIO()
+            ET.ElementTree(einzelmeldung.xml).write(
+                f, encoding="utf-8", xml_declaration=True
+            )
+            xml_str = f.getvalue().decode()
             # prepare json files for kafka bridge
             result_data = {
-                "LKR_MELDUNG": einzelmeldung.meldung_id,
-                "XML_DATEN": xml_str,
-                "VERSIONSNUMMER": 1,
-                "REFERENZ_NUMMER": einzelmeldung.patient_id,
+                "payload": {
+                    "LKR_MELDUNG": einzelmeldung.meldung_id,
+                    "XML_DATEN": xml_str,
+                    "VERSIONSNUMMER": 1,
+                    "REFERENZ_NUMMER": einzelmeldung.patient_id,
+                }
             }
 
             if settings.save_as_files_enabled:
