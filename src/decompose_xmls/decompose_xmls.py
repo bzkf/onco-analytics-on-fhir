@@ -179,8 +179,8 @@ def decompose_folder(input_folder: str):
                     + f"{einzelmeldung.meldung_id}.json",
                     "w",
                     encoding="utf-8",
-                ) as f:
-                    json.dump(result_data, f, indent=4)
+                ) as output_file:
+                    json.dump(result_data, output_file, indent=4)
 
                 save_xml_files(
                     einzelmeldung.xml,
