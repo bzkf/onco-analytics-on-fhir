@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/bzkf/diz-in-a-box/compare/v1.5.1...v1.5.2) (2023-06-07)
+
+
+### Bug Fixes
+
+* add missing payload ([#70](https://github.com/bzkf/diz-in-a-box/issues/70)) ([de0c7fd](https://github.com/bzkf/diz-in-a-box/commit/de0c7fd63310e86b2a89194292cc9311c1ce9fdb))
+
 ## [1.5.1](https://github.com/bzkf/diz-in-a-box/compare/v1.5.0...v1.5.1) (2023-06-05)
 
 
