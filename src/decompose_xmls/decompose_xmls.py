@@ -3,6 +3,7 @@ import os
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from io import BytesIO
 
 from confluent_kafka import Producer
 from pydantic import BaseSettings
@@ -26,8 +27,10 @@ class Einzelmeldung:
 
     def __repr__(self) -> str:
         ET.register_namespace("", "http://www.gekid.de/namespace")
+        f = BytesIO()
+        ET.ElementTree(self.xml).write(f, encoding="utf-8", xml_declaration=True)
         dict_repr = {
-            "xml": ET.tostring(self.xml, encoding="unicode"),
+            "xml": f.getvalue().decode(),
             "patient_id": self.patient_id,
             "meldung_id": self.meldung_id,
         }
@@ -154,14 +157,19 @@ def decompose_folder(input_folder: str):
 
         for einzelmeldung in decompose_sammelmeldung(root, filename):
             ET.register_namespace("", "http://www.gekid.de/namespace")
-            xml_str = ET.tostring(einzelmeldung.xml, encoding="unicode")
-
+            f = BytesIO()
+            ET.ElementTree(einzelmeldung.xml).write(
+                f, encoding="utf-8", xml_declaration=True
+            )
+            xml_str = f.getvalue().decode()
             # prepare json files for kafka bridge
             result_data = {
-                "LKR_MELDUNG": einzelmeldung.meldung_id,
-                "XML_DATEN": xml_str,
-                "VERSIONSNUMMER": 1,
-                "REFERENZ_NUMMER": einzelmeldung.patient_id,
+                "payload": {
+                    "LKR_MELDUNG": einzelmeldung.meldung_id,
+                    "XML_DATEN": xml_str,
+                    "VERSIONSNUMMER": 1,
+                    "REFERENZ_NUMMER": einzelmeldung.patient_id,
+                }
             }
 
             if settings.save_as_files_enabled:
@@ -171,8 +179,8 @@ def decompose_folder(input_folder: str):
                     + f"{einzelmeldung.meldung_id}.json",
                     "w",
                     encoding="utf-8",
-                ) as f:
-                    json.dump(result_data, f, indent=4)
+                ) as output_file:
+                    json.dump(result_data, output_file, indent=4)
 
                 save_xml_files(
                     einzelmeldung.xml,
