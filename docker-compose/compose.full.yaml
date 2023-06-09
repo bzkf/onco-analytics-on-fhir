@@ -105,7 +105,7 @@ services:
       - ./anonymization.yaml:/etc/fhir-pseudonymizer/anonymization.yaml:ro
 
   kafka:
-    image: docker.io/bitnami/kafka:3.4.0
+    image: docker.io/bitnami/kafka:3.4.1
     restart: unless-stopped
     cap_drop:
       - ALL

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Comments are provided throughout this file to help you get started.
-FROM docker.io/library/python:3.11.3-slim@sha256:eaee5f73efa9ae962d2077756292bc4878c04fcbc13dc168bb00cc365f35647e AS base
+FROM docker.io/library/python:3.11.4-slim@sha256:1966141ab594e175852a033da2a38f0cb042b5b92896c22073f8477f96f43b06 AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 WORKDIR /app
