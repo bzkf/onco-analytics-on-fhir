@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.3](https://github.com/bzkf/diz-in-a-box/compare/v1.5.2...v1.5.3) (2023-06-13)
+
+
+### Miscellaneous Chores
+
+* **deps:** update container-images ([#71](https://github.com/bzkf/diz-in-a-box/issues/71)) ([b1a7f81](https://github.com/bzkf/diz-in-a-box/commit/b1a7f81c106470c26d43d2cdc27b7751aa5378b2))
+* **deps:** update docker.io/library/python:3.11.4-slim docker digest to 0f0fca2 ([#75](https://github.com/bzkf/diz-in-a-box/issues/75)) ([30b086b](https://github.com/bzkf/diz-in-a-box/commit/30b086b37ea993652a4579293863c6de83d48247))
+
 ## [1.5.2](https://github.com/bzkf/diz-in-a-box/compare/v1.5.1...v1.5.2) (2023-06-07)
 
 
