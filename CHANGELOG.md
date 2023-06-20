@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.6](https://github.com/bzkf/diz-in-a-box/compare/v1.5.5...v1.5.6) (2023-06-20)
+
+
+### Bug Fixes
+
+* depend only on build for releases ([1252348](https://github.com/bzkf/diz-in-a-box/commit/1252348a380bc76a27f5d44451ad82c629f63882))
+
 ## [1.5.5](https://github.com/bzkf/diz-in-a-box/compare/v1.5.4...v1.5.5) (2023-06-20)
 
 
