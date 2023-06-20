@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.5](https://github.com/bzkf/diz-in-a-box/compare/v1.5.4...v1.5.5) (2023-06-20)
+
+
+### Bug Fixes
+
+* re-structured compose files ([1f9f591](https://github.com/bzkf/diz-in-a-box/commit/1f9f591e39cb01a32a6f2f4a0e9fc865f3b522a9))
+
+
+### CI/CD
+
+* run tests only on PRs to keep the pipeline fast ([a84d656](https://github.com/bzkf/diz-in-a-box/commit/a84d656884d40e5633a5a1a2a544a749a35d31ea))
+
 ## [1.5.4](https://github.com/bzkf/diz-in-a-box/compare/v1.5.3...v1.5.4) (2023-06-20)
 
 

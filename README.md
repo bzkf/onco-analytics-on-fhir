@@ -38,7 +38,7 @@ Download the air-gapped installer and move it to the deployment machine:
 <!-- x-release-please-start-version -->
 
 ```sh
-curl -L -O https://github.com/bzkf/diz-in-a-box/releases/download/v1.5.4/air-gapped-installer.tgz
+curl -L -O https://github.com/bzkf/diz-in-a-box/releases/download/v1.5.5/air-gapped-installer.tgz
 ```
 
 <!-- x-release-please-end -->
@@ -79,7 +79,7 @@ IMAGE_FOLDER=./dist/air-gapped/images ./dist/air-gapped/bin/import-images-into-k
 <!-- x-release-please-start-version -->
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=1.5.4 prerequisites oci://ghcr.io/bzkf/diz-in-a-box/charts/prerequisites
+helm upgrade --install --wait --timeout=10m --version=1.5.5 prerequisites oci://ghcr.io/bzkf/diz-in-a-box/charts/prerequisites
 
 kubectl apply -f k8s/kafka-cluster.yaml
 kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
@@ -94,7 +94,7 @@ kubectl get all -A
 #### Install DIZ-in-a-box
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=1.5.4 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
+helm upgrade --install --wait --timeout=10m --version=1.5.5 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
 
 # test the installation
 helm test diz-in-a-box
