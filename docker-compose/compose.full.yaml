@@ -176,7 +176,7 @@ services:
       - kafka
 
   fhir-to-server:
-    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.5
+    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.6
     restart: unless-stopped
     cap_drop:
       - ALL
