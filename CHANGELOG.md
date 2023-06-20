@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.4](https://github.com/bzkf/diz-in-a-box/compare/v1.5.3...v1.5.4) (2023-06-20)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#73](https://github.com/bzkf/diz-in-a-box/issues/73)) ([f070ed9](https://github.com/bzkf/diz-in-a-box/commit/f070ed9cc27bac3be5d8fa0745a9caec170b999a))
+* **deps:** update ghcr.io/miracum/kafka-fhir-to-server docker tag to v1.2.6 ([#78](https://github.com/bzkf/diz-in-a-box/issues/78)) ([1a9c7bd](https://github.com/bzkf/diz-in-a-box/commit/1a9c7bda1123de276f1dab4cd9515aa7109f4ef2))
+
 ## [1.5.3](https://github.com/bzkf/diz-in-a-box/compare/v1.5.2...v1.5.3) (2023-06-13)
 
 
