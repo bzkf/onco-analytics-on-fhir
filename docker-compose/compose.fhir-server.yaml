@@ -1,0 +1,71 @@
+services:
+  fhir-server:
+    image: docker.io/hapiproject/hapi:v6.6.0
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    deploy:
+      resources:
+        limits:
+          memory: 4096m
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/target
+    privileged: false
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://fhir-db:5432/fhir?currentSchema=public"
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_DRIVERCLASSNAME: org.postgresql.Driver
+      spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgres94Dialect
+      HAPI_FHIR_VALIDATION_REQUESTS_ENABLED: "false"
+      HAPI_FHIR_USE_APACHE_ADDRESS_STRATEGY: "true"
+      HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_DELETE: "false"
+      HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_WRITE: "false"
+      HAPI_FHIR_SUBSCRIPTION_RESTHOOK_ENABLED: "false"
+      HAPI_FHIR_ALLOW_MULTIPLE_DELETE: "true"
+    depends_on:
+      - fhir-db
+    ports:
+      - "8082:8080"
+
+  fhir-db:
+    image: docker.io/library/postgres:15.3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fhir
+    volumes:
+      - "fhir_db_data:/var/lib/postgresql/data:rw"
+
+  fhir-to-server:
+    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.6
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      SECURITY_PROTOCOL: PLAINTEXT
+      BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+      FHIR_URL: http://fhir-server:8080/fhir
+      TOPIC: fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure,fhir.onkoadt.Patient
+
+volumes:
+  fhir_db_data:
+    driver: local

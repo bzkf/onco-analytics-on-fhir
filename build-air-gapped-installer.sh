@@ -85,6 +85,8 @@ docker compose --profile=kafka-connect \
   -f docker-compose/compose.full.yaml \
   -f docker-compose/compose.onkoadt-to-fhir.yaml \
   -f docker-compose/compose.decompose-xmls.yaml \
+  -f docker-compose/compose.fhir-server.yaml \
+  -f docker-compose/compose.pseudonymization.yaml \
   config -o docker-compose/compose.normalized.yaml
 
 docker run \

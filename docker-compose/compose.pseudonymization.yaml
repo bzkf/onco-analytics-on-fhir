@@ -1,0 +1,57 @@
+services:
+  fhir-gateway:
+    image: ghcr.io/miracum/fhir-gateway:v3.10.9
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    read_only: true
+    tmpfs:
+      - /tmp
+    privileged: false
+    environment:
+      SERVICES_PSQL_ENABLED: "false"
+      SPRING_SQL_INIT_MODE: "never"
+      SERVICES_PSEUDONYMIZER_ENABLED: "true"
+      SERVICES_PSEUDONYMIZER_URL: "http://fhir-pseudonymizer:8080/fhir"
+      SERVICES_LOINC_CONVERSIONS_ENABLED: "false"
+      SERVICES_LOINC_CONVERSIONS_URL: ""
+      SERVICES_FHIRSERVER_ENABLED: "false"
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ADD_ADDITIONAL_PATHS: "true"
+      MANAGEMENT_SERVER_PORT: "8081"
+      OPENTRACING_JAEGER_ENABLED: "false"
+      JAEGER_SERVICE_NAME: "fhir-gateway"
+      SERVICES_KAFKA_ENABLED: "true"
+      INPUT_TOPIC: "fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure,fhir.onkoadt.Patient"
+      OUTPUT_TOPIC: "fhir.post-gateway"
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      SECURITY_PROTOCOL: "PLAINTEXT"
+      SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_MATCH_EXPRESSION: "^fhir\\."
+      SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
+
+  fhir-pseudonymizer:
+    image: ghcr.io/miracum/fhir-pseudonymizer:v2.17.0
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    read_only: true
+    privileged: false
+    environment:
+      COMPlus_EnableDiagnostics: "0"
+      PseudonymizationService: "gPAS"
+      AnonymizationEngineConfigPath: "/etc/fhir-pseudonymizer/anonymization.yaml"
+      gPAS__Url: ""
+      gPAS__Auth__Basic__Username: ""
+      gPAS__Auth__Basic__Password: ""
+      gPAS__Version: "1.10.3"
+    volumes:
+      - ./anonymization.yaml:/etc/fhir-pseudonymizer/anonymization.yaml:ro
+
+  fhir-to-server:
+    environment:
+      TOPIC: fhir.pseudonymized.onkoadt.MedicationStatement,fhir.pseudonymized.onkoadt.Condition,fhir.pseudonymized.onkoadt.Observation,fhir.pseudonymized.onkoadt.Procedure,fhir.pseudonymized.onkoadt.Patient
