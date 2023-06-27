@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.7](https://github.com/bzkf/diz-in-a-box/compare/v1.5.6...v1.5.7) (2023-06-27)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#81](https://github.com/bzkf/diz-in-a-box/issues/81)) ([1b56665](https://github.com/bzkf/diz-in-a-box/commit/1b56665e5e72ce86351c53c884891786401e0e46))
+* **deps:** update container-images ([#82](https://github.com/bzkf/diz-in-a-box/issues/82)) ([16dc67c](https://github.com/bzkf/diz-in-a-box/commit/16dc67c1450ef45ce1364a954016915a19ab6a11))
+
 ## [1.5.6](https://github.com/bzkf/diz-in-a-box/compare/v1.5.5...v1.5.6) (2023-06-20)
 
 
