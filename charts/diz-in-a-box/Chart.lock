@@ -7,9 +7,9 @@ dependencies:
   version: 1.1.10
 - name: hapi-fhir-jpaserver
   repository: https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-  version: 0.11.1
+  version: 0.12.0
 - name: fhir-gateway
   repository: https://miracum.github.io/charts
   version: 6.0.9
-digest: sha256:c645874c26d036639829f71414151fed4a7284479005154a4a56c0c57a504fe1
-generated: "2023-06-19T04:31:54.675827574Z"
+digest: sha256:ed29ae01cd9690915c298f95a3abdf8da2b9085135da28aead7b0975ba3f0550
+generated: "2023-06-27T18:38:17.980194227Z"

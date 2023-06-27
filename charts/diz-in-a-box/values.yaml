@@ -136,7 +136,7 @@ stream-processors:
         image:
           registry: ghcr.io
           repository: miracum/onkoadt-to-fhir
-          tag: v1.10.5@sha256:3613fbb7e3e3965c5e86d26bf207091f64af9014abbf50992b302f2ca00642e4
+          tag: v1.11.3@sha256:429fbb4218794af7375561b61878e87cae5f353ce605f5faae925ff7f3a9962b
           pullPolicy: IfNotPresent
         env:
           - name: OPENTRACING_JAEGER_ENABLED
