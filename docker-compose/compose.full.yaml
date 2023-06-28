@@ -18,7 +18,7 @@ services:
       - "kafka_data:/bitnami:rw"
 
   kafka-connect:
-    image: ghcr.io/miracum/kafka-connect-images/cricketeerone-kafka-connect:v1.0.1
+    image: ghcr.io/miracum/kafka-connect-images/cricketeerone-kafka-connect:v1.1.0
     restart: unless-stopped
     cap_drop:
       - ALL
