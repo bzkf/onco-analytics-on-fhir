@@ -1,36 +1,25 @@
-import os
-from pyspark.sql import SparkSession
-from pyspark.conf import SparkConf
-from pathling.etc import find_jar
-import pathling
-from pathling import PathlingContext, Expression as exp
-from pyspark.sql.functions import (
-    regexp_replace,
-    col,
-    explode,
-    concat_ws,
-    explode_outer,
-    first,
-    to_date,
-    max,
-    udf,
-    when,
-)
-from pyspark.sql.types import StringType
-from pydantic import BaseSettings
-import time
-import shutil
 import datetime
+import os
+import shutil
+import time
+
+import pyspark
+from pathling import PathlingContext
+from pathling.etc import find_jar
+from pydantic import BaseSettings
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, explode, first, max, regexp_replace, to_date, udf
+from pyspark.sql.types import StringType
 
 
 class Settings(BaseSettings):
     output_folder: str = "~/opal-output"
-    kafka_topic_year: str = "2023"
-    kafka_patient_topic: str = "fhir.onkoadt.Patient."
-    kafka_condition_topic: str = "fhir.onkoadt.Condition."
-    kafka_observation_topic: str = "fhir.onkoadt.Observation."
-    kafka_procedure_topic: str = "fhir.onkoadt.Procedure."
-    kafka_medicationstatement_topic: str = "fhir.onkoadt.MedicationStatement."
+    kafka_topic_year_suffix: str = ".2023"
+    kafka_patient_topic: str = "fhir.onkoadt.Patient"
+    kafka_condition_topic: str = "fhir.onkoadt.Condition"
+    kafka_observation_topic: str = "fhir.onkoadt.Observation"
+    kafka_procedure_topic: str = "fhir.onkoadt.Procedure"
+    kafka_medicationstatement_topic: str = "fhir.onkoadt.MedicationStatement"
     jar_list: list = [
         "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2",
         "au.csiro.pathling:library-api:6.2.1",
@@ -41,21 +30,25 @@ class Settings(BaseSettings):
     master: str = "local[*]"
     kafka_bootstrap_server: str = "kafka:9092"
 
+    spark_worker_memory: str = "10g"
+    spark_executor_memory: str = "8g"
+    spark_driver_memory: str = "8g"
+    spark_executor_cores: str = "4"
+
 
 settings = Settings()
 
 
-def setupSparkSession(appName: str, master: str):
+def setup_spark_session(appName: str, master: str):
     spark = (
         SparkSession.builder.appName(appName)
         .master(master)
         .config("spark.ui.port", "4040")
         .config("spark.rpc.message.maxSize", "1000")
-        .config("spark.worker.cores", "6")
-        .config("spark.worker.memory", "24")
-        .config("spark.executor.memory", "20g")
-        .config("spark.driver.memory", "22g")
-        .config("spark.executor.cores", "5")
+        .config("spark.worker.memory", settings.spark_worker_memory)
+        .config("spark.executor.memory", settings.spark_executor_memory)
+        .config("spark.driver.memory", settings.spark_driver_memory)
+        .config("spark.executor.cores", settings.spark_executor_cores)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.jars.packages", ",".join(settings.jar_list))
         .config("spark.jars.ivy", "/home/jovyan/.ivy2")
@@ -69,7 +62,9 @@ def setupSparkSession(appName: str, master: str):
         .config("spark.executor.heartbeatInterval", "1200s")
         .config(
             "spark.executor.extraJavaOptions",
-            "-XX:+UseG1GC -XX:+UnlockDiagnosticVMOptions -XX:+G1SummarizeConcMark -XX:InitiatingHeapOccupancyPercent=35 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:OnOutOfMemoryError='kill -9 %p'",
+            "-XX:+UseG1GC -XX:+UnlockDiagnosticVMOptions -XX:+G1SummarizeConcMark "
+            + "-XX:InitiatingHeapOccupancyPercent=35 -verbose:gc -XX:+PrintGCDetails "
+            + "-XX:+PrintGCDateStamps -XX:OnOutOfMemoryError='kill -9 %p'",
         )
         .getOrCreate()
     )
@@ -80,19 +75,19 @@ def setupSparkSession(appName: str, master: str):
 def create_list_of_kafka_topics():
     return (
         settings.kafka_patient_topic
-        + settings.kafka_topic_year
+        + settings.kafka_topic_year_suffix
         + ","
         + settings.kafka_condition_topic
-        + settings.kafka_topic_year
+        + settings.kafka_topic_year_suffix
         + ","
         + settings.kafka_observation_topic
-        + settings.kafka_topic_year
+        + settings.kafka_topic_year_suffix
         + ","
         + settings.kafka_procedure_topic
-        + settings.kafka_topic_year
+        + settings.kafka_topic_year_suffix
         + ","
         + settings.kafka_medicationstatement_topic
-        + settings.kafka_topic_year
+        + settings.kafka_topic_year_suffix
     )
 
 
@@ -125,7 +120,7 @@ def read_data_from_kafka_save_delta(spark: SparkSession, kafka_topics: str):
 
 
 def lookup_gender(gender_string):
-    if gender_string == None or gender_string == "":
+    if gender_string is None or gender_string == "":
         gender_mapped = 0
     elif gender_string == "female" or gender_string == "weiblich":
         gender_mapped = 1
@@ -145,15 +140,14 @@ def calculate_age(birthdate):
 
 
 def return_year(deceasedDateTime):
-    if deceasedDateTime != None:
+    if deceasedDateTime is not None:
         year = deceasedDateTime[0:4]
         return year
     else:
         return deceasedDateTime
 
 
-# wie kann ich hier spezifizieren, dass df_bundles ein pyspark.sql.dataframe.DataFrame ist
-def encode_patients(ptl: PathlingContext, df_bundles):
+def encode_patients(ptl: PathlingContext, df_bundles: pyspark.sql.dataframe.DataFrame):
     df_patients = ptl.encode_bundle(df_bundles, "Patient")
     lookup_genderUDF = udf(lambda x: lookup_gender(x), StringType())
     calculate_ageUDF = udf(lambda x: calculate_age(x), StringType())
@@ -188,11 +182,8 @@ def encode_patients(ptl: PathlingContext, df_bundles):
 def lookup_condcodingcode_mapping(icd10_code):
     if icd10_code[0] == "C":
         icd10_code = icd10_code.replace("C", "3")
-        # print(icd10_code)
     elif icd10_code[0] == "D":
         icd10_code = icd10_code.replace("D", "4")
-        # print(icd10_code)
-    # icd10_code = icd10_code.replace(".", ",")
     return icd10_code
 
 
@@ -301,8 +292,8 @@ def join_dataframes(df_one, partition_col_one: str, df_two, partition_col_two: s
     return df_one_two_joined_cached
 
 
-def lookup_obs_value_codingcode_tnm_UICC_mapping(obs_value_codingcode_tnm_UICC):
-    obs_value_codingcode_tnm_UICC_mapping_dict = {
+def lookup_obs_value_codingcode_tnm_uicc_mapping(obs_value_codingcode_tnm_UICC):
+    obs_value_codingcode_tnm_uicc_mapping_dict = {
         "0": "0",
         "0a": "1",
         "0is": "2",
@@ -332,15 +323,15 @@ def lookup_obs_value_codingcode_tnm_UICC_mapping(obs_value_codingcode_tnm_UICC):
         "IVC": "26",
         "IS": "27",
     }
-    if obs_value_codingcode_tnm_UICC in obs_value_codingcode_tnm_UICC_mapping_dict:
-        return obs_value_codingcode_tnm_UICC_mapping_dict[obs_value_codingcode_tnm_UICC]
+    if obs_value_codingcode_tnm_UICC in obs_value_codingcode_tnm_uicc_mapping_dict:
+        return obs_value_codingcode_tnm_uicc_mapping_dict[obs_value_codingcode_tnm_UICC]
     else:
         return obs_value_codingcode_tnm_UICC
 
 
 def transform_tnmp(observations_tnmp):
     lookup_obs_value_codingcode_tnm_UICC_mappingUDF = udf(
-        lambda x: lookup_obs_value_codingcode_tnm_UICC_mapping(x), StringType()
+        lambda x: lookup_obs_value_codingcode_tnm_uicc_mapping(x), StringType()
     )
     observations_tnmp = observations_tnmp.withColumn(
         "tnmp_UICC_mapped",
@@ -362,7 +353,7 @@ def transform_tnmp(observations_tnmp):
 
 
 def replace_element(obs_value_coding_code_hist):
-    if obs_value_coding_code_hist == None:
+    if obs_value_coding_code_hist is None:
         pass
     else:
         obs_value_coding_code_hist = obs_value_coding_code_hist.replace("/", "")
@@ -508,7 +499,7 @@ def save_final_df(final_df):
     output_path_filename = (
         settings.output_folder
         + "/bzkfsummerschool"
-        + settings.kafka_topic_year
+        + settings.kafka_topic_year_suffix
         + ".csv"
     )
     print("###### OUTPUTFolder settings.output_folder: ", settings.output_folder)
@@ -523,7 +514,7 @@ def main():
     kafka_topics = create_list_of_kafka_topics()
     print("kafka_topics: ", kafka_topics)
 
-    spark = setupSparkSession(settings.spark_app_name, settings.master)
+    spark = setup_spark_session(settings.spark_app_name, settings.master)
     ptl = PathlingContext.create(spark=spark, enable_extensions=True)
 
     read_data_from_kafka_save_delta(spark, kafka_topics)

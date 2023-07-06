@@ -17,10 +17,11 @@ permissions: read-all
 
 env:
   DIZBOX_NAMESPACE_NAME: bzkf-dizbox
-  IMAGE_NAME: ghcr.io/${{ github.repository }}/decompose-xmls
+  DECOMPOSE_XML_IMAGE_NAME: ghcr.io/${{ github.repository }}/decompose-xmls
+  ADTFHIR_TO_OPAL_IMAGE_NAME: ghcr.io/${{ github.repository }}/adtfhir-to-opal
 
 jobs:
-  build:
+  build-decompose-xml-image:
     name: build decompose_xmls container image
     runs-on: ubuntu-22.04
     permissions:
@@ -28,7 +29,7 @@ jobs:
     outputs:
       image-tags: ${{ steps.container_meta.outputs.tags }}
       image-digest: ${{ steps.build.outputs.digest }}
-      image-name: ${{ env.IMAGE_NAME }}
+      image-name: ${{ env.DECOMPOSE_XML_IMAGE_NAME }}
     steps:
       - name: Checkout code
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
@@ -41,7 +42,7 @@ jobs:
         uses: docker/metadata-action@c4ee3adeed93b1fa6a762f209fb01608c1a22f1e # v4
         with:
           images: |
-            ${{ env.IMAGE_NAME }}
+            ${{ env.DECOMPOSE_XML_IMAGE_NAME }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2
@@ -63,20 +64,56 @@ jobs:
           labels: ${{ steps.container_meta.outputs.labels }}
           load: ${{ github.event_name == 'pull_request' }}
 
-      # - name: Run unit tests
-      #   id: docker_build_unit_test
-      #   uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3
-      #   with:
-      #     context: src/decompose_xmls
-      #     push: false
-      #     target: test
+  build-adtfhir-to-opal-image:
+    name: build decompose_xmls container image
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+    outputs:
+      image-tags: ${{ steps.container_meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-name: ${{ env.ADTFHIR_TO_OPAL_IMAGE_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4b4e9c3e2d4531116a6f8ba8e71fc6e2cb6e6c8c # v2
+
+      - name: Container meta
+        id: container_meta
+        uses: docker/metadata-action@c4ee3adeed93b1fa6a762f209fb01608c1a22f1e # v4
+        with:
+          images: |
+            ${{ env.ADTFHIR_TO_OPAL_IMAGE_NAME }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3
+        with:
+          context: src/adtfhir_to_opal
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.container_meta.outputs.tags }}
+          labels: ${{ steps.container_meta.outputs.labels }}
+          load: ${{ github.event_name == 'pull_request' }}
 
   test:
     runs-on: ubuntu-22.04
     # run tests only on PRs
     if: ${{ github.event_name == 'pull_request' }}
     needs:
-      - build
+      - build-decompose-xml-image
+      - build-adtfhir-to-opal-image
     steps:
       - name: install k3s
         run: |
@@ -161,5 +198,6 @@ jobs:
       id-token: write # for creating OIDC tokens for signing.
       packages: write # for uploading container images, signatures, and attestations.
     needs:
-      - build
+      - build-decompose-xml-image
+      - build-adtfhir-to-opal-image
     uses: ./.github/workflows/release.yaml

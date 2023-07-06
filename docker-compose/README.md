@@ -20,10 +20,16 @@ Open <http://localhost:8084/> to view the cluster's topics.
 docker compose -f compose.decompose-xmls.yaml up
 ```
 
+## Start the entire stack
+
+```sh
+docker compose -f compose.onkoadt-to-fhir.yaml -f compose.full.yaml -f compose.decompose-xmls.yaml -f compose.adtfhir-to-opal.yaml up
+```
+
 ## Enable Kafka Connect and the connector
 
 ```sh
-docker compose -f compose.onkoadt-to-fhir.yaml -f compose.full.yaml --profile=kafka-connect up
+docker compose -f compose.onkoadt-to-fhir.yaml -f compose.full.yaml up
 ```
 
 ```sh

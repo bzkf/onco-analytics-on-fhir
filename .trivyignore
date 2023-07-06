@@ -1,0 +1,3 @@
+# the single node spark deployment is running fully isolated.
+# no worries here
+CVE-2023-22946
