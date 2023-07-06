@@ -26,8 +26,6 @@ services:
     ipc: none
     security_opt:
       - "no-new-privileges:true"
-    profiles:
-      - kafka-connect
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:9092
       CONNECT_GROUP_ID: kafka-connect-group

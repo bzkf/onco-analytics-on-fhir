@@ -18,3 +18,4 @@ services:
       NUM_STREAM_THREADS: "1"
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
       ACTIVE_PROFILE: "patient"
+      YEAR_LIMITATION_SUFFIX: "" # e.g. ".2023"

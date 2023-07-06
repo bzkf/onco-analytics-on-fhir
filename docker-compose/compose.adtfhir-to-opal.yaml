@@ -1,0 +1,22 @@
+services:
+  adtfhir-to-opal:
+    image: ghcr.io/bzkf/diz-in-a-box/adtfhir-to-opal:v1.5.7 # x-release-please-version
+    restart: never
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    user: "1000:100"
+    environment:
+      OUTPUT_FOLDER: "/home/jovyan/opal-output"
+      KAFKA_TOPIC_YEAR_SUFFIX: "" # e.g. ".2023"
+      KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
+      KAFKA_PATIENT_TOPIC: "fhir.onkoadt.Patient"
+      KAFKA_CONDITION_TOPIC: "fhir.onkoadt.Condition"
+      KAFKA_OBSERVATION_TOPIC: "fhir.onkoadt.Observation"
+      KAFKA_PROCEDURE_TOPIC: "fhir.onkoadt.Procedure"
+      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.onkoadt.MedicationStatement"
+    volumes:
+      - ${PWD}/output:/home/jovyan/opal-output
