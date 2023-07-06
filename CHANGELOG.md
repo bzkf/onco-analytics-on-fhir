@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.5.8](https://github.com/bzkf/diz-in-a-box/compare/v1.5.7...v1.5.8) (2023-07-06)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#85](https://github.com/bzkf/diz-in-a-box/issues/85)) ([8c22423](https://github.com/bzkf/diz-in-a-box/commit/8c2242357ed54e940996e46d9c186a655f43a45a))
+* **deps:** update docker.io/library/python:3.11.4-slim docker digest to 364ee1a ([#87](https://github.com/bzkf/diz-in-a-box/issues/87)) ([f9b6946](https://github.com/bzkf/diz-in-a-box/commit/f9b6946820cf628ef6f801687b4ebe8879c93ae1))
+* **deps:** update kafka-connect-image to v1.1.0 ([af0a423](https://github.com/bzkf/diz-in-a-box/commit/af0a42392a9d0525f46671331af890b2e68b057d))
+
+
+### CI/CD
+
+* release-please extra file fix ([6f6e611](https://github.com/bzkf/diz-in-a-box/commit/6f6e611a52677204d2a76c656012b80d7d01979b))
+
 ## [1.5.7](https://github.com/bzkf/diz-in-a-box/compare/v1.5.6...v1.5.7) (2023-06-27)
 
 
