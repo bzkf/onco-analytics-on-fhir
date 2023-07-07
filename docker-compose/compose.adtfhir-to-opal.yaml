@@ -1,7 +1,7 @@
 services:
   adtfhir-to-opal:
     image: ghcr.io/bzkf/diz-in-a-box/adtfhir-to-opal:v1.5.8 # x-release-please-version
-    restart: never
+    restart: no
     cap_drop:
       - ALL
     privileged: false
@@ -19,4 +19,4 @@ services:
       KAFKA_PROCEDURE_TOPIC: "fhir.onkoadt.Procedure"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.onkoadt.MedicationStatement"
     volumes:
-      - ${PWD}/output:/home/jovyan/opal-output
+      - ${PWD}/opal-output:/home/jovyan/opal-output
