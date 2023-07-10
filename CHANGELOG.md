@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.10](https://github.com/bzkf/diz-in-a-box/compare/v1.5.9...v1.5.10) (2023-07-10)
+
+
+### Bug Fixes
+
+* set kafka cleanup policy to compact ([#92](https://github.com/bzkf/diz-in-a-box/issues/92)) ([531ff40](https://github.com/bzkf/diz-in-a-box/commit/531ff40d0cb8a56417806fb66d1055a9eadaca86))
+
 ## [1.5.9](https://github.com/bzkf/diz-in-a-box/compare/v1.5.8...v1.5.9) (2023-07-09)
 
 
