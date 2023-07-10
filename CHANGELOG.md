@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.9](https://github.com/bzkf/diz-in-a-box/compare/v1.5.8...v1.5.9) (2023-07-09)
+
+
+### Bug Fixes
+
+* restart policy and output volume ([16bd28d](https://github.com/bzkf/diz-in-a-box/commit/16bd28de1d2591f28314efd09913ab38c3fc8a0f))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#89](https://github.com/bzkf/diz-in-a-box/issues/89)) ([648b6f5](https://github.com/bzkf/diz-in-a-box/commit/648b6f50dce4852079ec830466c672db04725190))
+* **deps:** update ghcr.io/miracum/kafka-fhir-to-server docker tag to v1.2.7 ([#90](https://github.com/bzkf/diz-in-a-box/issues/90)) ([6d3a476](https://github.com/bzkf/diz-in-a-box/commit/6d3a47680343a8e7e985804f77fcaecabfc82ac8))
+
 ## [1.5.8](https://github.com/bzkf/diz-in-a-box/compare/v1.5.7...v1.5.8) (2023-07-06)
 
 
