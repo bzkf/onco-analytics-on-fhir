@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: docker.io/bitnami/kafka:3.5.0
+    image: docker.io/bitnami/kafka:3.5.1
     restart: unless-stopped
     cap_drop:
       - ALL
