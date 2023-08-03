@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.11](https://github.com/bzkf/diz-in-a-box/compare/v1.5.10...v1.5.11) (2023-08-03)
+
+
+### Miscellaneous Chores
+
+* **deps:** update container-images ([#98](https://github.com/bzkf/diz-in-a-box/issues/98)) ([e2628f1](https://github.com/bzkf/diz-in-a-box/commit/e2628f143d25a05d762d97218659d04fc93eb74b))
+
 ## [1.5.10](https://github.com/bzkf/diz-in-a-box/compare/v1.5.9...v1.5.10) (2023-07-10)
 
 
