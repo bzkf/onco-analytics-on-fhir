@@ -20,6 +20,13 @@ Open <http://localhost:8084/> to view the cluster's topics.
 docker compose -f compose.decompose-xmls.yaml up
 ```
 
+## Convert the FHIR resources to a CSV dataset
+
+```sh
+sudo chown -R 1001:1001 ./opal-output/
+docker compose -f compose.adtfhir-to-opal.yaml up
+```
+
 ## Start the entire stack
 
 ```sh
