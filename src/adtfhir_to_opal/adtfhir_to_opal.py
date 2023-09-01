@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     kafka_observation_topic: str = "fhir.onkoadt.Observation"
     kafka_procedure_topic: str = "fhir.onkoadt.Procedure"
     kafka_medicationstatement_topic: str = "fhir.onkoadt.MedicationStatement"
+    # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
         "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2",
         "au.csiro.pathling:library-api:6.2.1",
@@ -34,6 +35,8 @@ class Settings(BaseSettings):
     spark_executor_memory: str = "8g"
     spark_driver_memory: str = "8g"
     spark_executor_cores: str = "4"
+
+    spark_jars_ivy: str = "/home/spark/.ivy2"
 
 
 settings = Settings()
@@ -51,7 +54,7 @@ def setup_spark_session(appName: str, master: str):
         .config("spark.executor.cores", settings.spark_executor_cores)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.jars.packages", ",".join(settings.jar_list))
-        .config("spark.jars.ivy", "/home/jovyan/.ivy2")
+        .config("spark.jars.ivy", settings.spark_jars_ivy)
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
