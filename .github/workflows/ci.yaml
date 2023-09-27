@@ -65,7 +65,7 @@ jobs:
           load: ${{ github.event_name == 'pull_request' }}
 
   build-adtfhir-to-opal-image:
-    name: build decompose_xmls container image
+    name: build adtfhir_to_opal container image
     runs-on: ubuntu-22.04
     permissions:
       packages: write
@@ -137,7 +137,6 @@ jobs:
 
           kubectl config view
 
-          helm repo add strimzi https://strimzi.io/charts/
           helm dependency build charts/prerequisites
           helm upgrade --install --wait --timeout=10m diz-in-a-box-prerequisites charts/prerequisites
 
@@ -194,9 +193,9 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     permissions:
       actions: read
-      contents: write # for release notes
-      id-token: write # for creating OIDC tokens for signing.
-      packages: write # for uploading container images, signatures, and attestations.
+      contents: write
+      id-token: write
+      packages: write
     needs:
       - build-decompose-xml-image
       - build-adtfhir-to-opal-image

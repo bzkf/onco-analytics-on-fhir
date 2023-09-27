@@ -31,7 +31,6 @@ jobs:
           helm repo add miracum https://miracum.github.io/charts
           helm repo add akhq https://akhq.io/
           helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-          helm repo add strimzi https://strimzi.io/charts/
 
           helm dep build charts/diz-in-a-box
           helm dep build charts/prerequisites
@@ -139,9 +138,9 @@ jobs:
     needs:
       - prepare-artifacts
     permissions:
-      actions: read # To read the workflow path.
-      id-token: write # To sign the provenance.
-      contents: write # To add assets to a release.
+      actions: read
+      id-token: write
+      contents: write
     # can't be referenced by digest. See <https://github.com/slsa-framework/slsa-github-generator#verification-of-provenance>
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.6.0
     with:
