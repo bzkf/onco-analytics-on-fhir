@@ -80,6 +80,7 @@ hapi-fhir-jpaserver:
     auth:
       # -- the postgres database root (`postgres`) user.
       # this should be changed for improved security.
+      # kics-scan ignore-line
       postgresPassword: fhir
     primary:
       persistence:
@@ -194,6 +195,7 @@ fhir-gateway:
           tag: "15.1.0-debian-11-r0@sha256:27915588d5203a10a1c23624d9c81644437f33b7c224e25f79bcd9bd09bbb8e2"
         auth:
           #checkov:skip=CKV_SECRET_6:Known hard-coded password
+          # kics-scan ignore-line
           postgresPassword: "vfps-postgres"
         primary:
           persistence:

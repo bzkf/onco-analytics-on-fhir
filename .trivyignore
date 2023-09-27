@@ -1,3 +1,9 @@
 # the single node spark deployment is running fully isolated.
 # no worries here
 CVE-2023-22946
+
+AVD-KSV-0041
+AVD-KSV-0048
+AVD-KSV-0049
+AVD-KSV-0050
+AVD-KSV-0056

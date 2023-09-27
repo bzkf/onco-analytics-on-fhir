@@ -31,7 +31,6 @@ if [ "$SHOULD_CREATE_K3S_AIR_GAPPED_INSTALLER" = "1" ]; then
   helm repo add miracum https://miracum.github.io/charts
   helm repo add akhq https://akhq.io/
   helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-  helm repo add strimzi https://strimzi.io/charts/
 
   helm dependency build charts/prerequisites/
   helm dependency build charts/diz-in-a-box/
