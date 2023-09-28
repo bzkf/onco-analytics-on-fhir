@@ -13,13 +13,14 @@ from pyspark.sql.types import StringType
 
 
 class Settings(BaseSettings):
-    output_folder: str = "~/opal-output"
-    kafka_topic_year_suffix: str = ".2023"
-    kafka_patient_topic: str = "fhir.onkoadt.Patient"
-    kafka_condition_topic: str = "fhir.onkoadt.Condition"
-    kafka_observation_topic: str = "fhir.onkoadt.Observation"
-    kafka_procedure_topic: str = "fhir.onkoadt.Procedure"
-    kafka_medicationstatement_topic: str = "fhir.onkoadt.MedicationStatement"
+    output_folder: str = "/opt/bitnami/spark/opal-output/"
+    output_filename: str = "oBDS_tabular"
+    kafka_topic_year_suffix: str = ".2022"
+    kafka_patient_topic: str = "fhir.post-gateway-bzkf-onkoadt.Patient"
+    kafka_condition_topic: str = "fhir.post-gateway-bzkf-onkoadt.Condition"
+    kafka_observation_topic: str = "fhir.post-gateway-bzkf-onkoadt.Observation"
+    kafka_procedure_topic: str = "fhir.post-gateway-bzkf-onkoadt.Procedure"
+    kafka_medicationstatement_topic: str = "fhir.post-gateway-bzkf-onkoadt.MedicationStatement"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
         "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2",
@@ -142,6 +143,24 @@ def calculate_age(birthdate):
     return age
 
 
+def calculate_age_at_conditiondate(birthdate, conditiondate):
+    age_at_conditiondate = conditiondate - birthdate
+    days_in_year = 365.2425
+    age_at_conditiondate = int(age_at_conditiondate.days/days_in_year)
+    return age_at_conditiondate
+
+
+def add_age_at_condition(df_pat_cond_joined):
+    calculate_age_at_conditiondateUDF = udf(lambda x, y:
+                                            calculate_age_at_conditiondate(x, y),
+                                            StringType())
+    df_pat_cond_joined = df_pat_cond_joined.withColumn(
+        "age_at_diagnosis", calculate_age_at_conditiondateUDF(
+            to_date(df_pat_cond_joined.birthDate),
+            df_pat_cond_joined.conditiondate))
+    return df_pat_cond_joined
+
+
 def return_year(deceasedDateTime):
     if deceasedDateTime is not None:
         year = deceasedDateTime[0:4]
@@ -157,7 +176,8 @@ def encode_patients(ptl: PathlingContext, df_bundles: pyspark.sql.dataframe.Data
     return_yearUDF = udf(lambda x: return_year(x), StringType())
 
     patients = df_patients.selectExpr(
-        "id as pat_id", "gender", "birthDate", "deceasedBoolean", "deceasedDateTime"
+        "id as pat_id", "gender", "birthDate",
+        "deceasedBoolean", "deceasedDateTime"
     )
 
     patients = patients.withColumns(
@@ -297,37 +317,76 @@ def join_dataframes(df_one, partition_col_one: str, df_two, partition_col_two: s
 
 def lookup_obs_value_codingcode_tnm_uicc_mapping(obs_value_codingcode_tnm_UICC):
     obs_value_codingcode_tnm_uicc_mapping_dict = {
-        "0": "0",
-        "0a": "1",
-        "0is": "2",
-        "I": "3",
-        "IA": "4",
-        "IA1": "5",
-        "IA2": "6",
-        "IB": "7",
-        "IB1": "8",
-        "IB2": "9",
-        "IC": "10",
-        "II": "11",
-        "IIA": "12",
-        "IIA1": "13",
-        "IIA2": "14",
-        "IIB": "15",
-        "IIC": "16",
-        "III": "17",
-        "IIIA": "18",
-        "IIIB": "19",
-        "IIIC": "20",
-        "IIIC1": "21",
-        "IIIC2": "22",
-        "IV": "23",
-        "IVA": "24",
-        "IVB": "25",
-        "IVC": "26",
-        "IS": "27",
+            "0": "0",
+            "0a": "1",
+            "0is": "2",
+            "I": "3",
+            "IA": "4",
+            "IA1": "5",
+            "IA2": "6",
+            "IA3": "7",
+            "IB": "8",
+            "IB1": "9",
+            "IB2": "10",
+            "IC": "11",
+            "IS": "12",
+            "II": "13",
+            "IIA": "14",
+            "IIA1": "15",
+            "IIA2": "16",
+            "IIB": "17",
+            "IIC": "18",
+            "III": "19",
+            "IIIA": "20",
+            "IIIB": "21",
+            "IIIC": "22",
+            "IIIC1": "23",
+            "IIIC2": "24",
+            "IV": "25",
+            "IVA": "26",
+            "IVB": "27",
+            "IVC": "28",
     }
     if obs_value_codingcode_tnm_UICC in obs_value_codingcode_tnm_uicc_mapping_dict:
         return obs_value_codingcode_tnm_uicc_mapping_dict[obs_value_codingcode_tnm_UICC]
+    else:
+        return obs_value_codingcode_tnm_UICC
+
+
+def lookup_grouped_uicc(obs_value_codingcode_tnm_UICC):
+    grouped_uicc_dict = {
+            "0": "0",
+            "0a": "0",
+            "0is": "0",
+            "I": "1",
+            "IA": "1",
+            "IA1": "1",
+            "IA2": "1",
+            "IA3": "1",
+            "IB": "1",
+            "IB1": "1",
+            "IB2": "1",
+            "IC": "1",
+            "IS": "1",
+            "II": "2",
+            "IIA": "2",
+            "IIA1": "2",
+            "IIA2": "2",
+            "IIB": "2",
+            "IIC": "2",
+            "III": "3",
+            "IIIA": "3",
+            "IIIB": "3",
+            "IIIC": "3",
+            "IIIC1": "3",
+            "IIIC2": "3",
+            "IV": "4",
+            "IVA": "4",
+            "IVB": "4",
+            "IVC": "4",
+    }
+    if obs_value_codingcode_tnm_UICC in grouped_uicc_dict:
+        return grouped_uicc_dict[obs_value_codingcode_tnm_UICC]
     else:
         return obs_value_codingcode_tnm_UICC
 
@@ -340,6 +399,13 @@ def transform_tnmp(observations_tnmp):
         "tnmp_UICC_mapped",
         lookup_obs_value_codingcode_tnm_UICC_mappingUDF(observations_tnmp.obsvaluecode),
     )
+    lookup_lookup_grouped_uiccUDF = udf(
+        lambda x: lookup_grouped_uicc(x), StringType()
+    )
+    observations_tnmp = observations_tnmp.withColumn(
+        "tnmp_UICC_grouped",
+        lookup_lookup_grouped_uiccUDF(observations_tnmp.obsvaluecode),
+    )
     observations_tnmp = observations_tnmp.selectExpr(
         "obssubjreference as tnm_obssubjreference",
         "obsid as tnmp_obsid",
@@ -348,6 +414,7 @@ def transform_tnmp(observations_tnmp):
         "obsvaluecode as tnmp_obsvalue_UICC",
         "obsdate as tnmp_obsdate",
         "tnmp_UICC_mapped",
+        "tnmp_UICC_grouped"
     )
 
     observations_tnmp_cached = observations_tnmp.cache()
@@ -456,21 +523,22 @@ def group_df(joined_dataframe):
         first("pat_id").alias("pat_id"),
         first("gender_mapped").alias("gender_mapped"),
         first("conditiondate").alias("conditiondate"),
-        max("condcodingcode").alias("condcodingcode"),
+        first("condcodingcode").alias("condcodingcode"),
         first("condcodingcode_mapped").alias("condcodingcode_mapped"),
         first("deceased_year").alias("deceased_year"),
         first("age_in_years").alias("age_in_years"),
-        max("tnmp_obsid").alias("tnmp_obsid"),
-        max("tnmp_obsvalue_UICC").alias("tnmp_obsvalue_UICC"),
-        max("tnmp_UICC_mapped").alias("tnmp_UICC_mapped"),
-        max("tnmp_obsdate").alias("tnmp_obsdate"),
+        first("age_at_diagnosis").alias("age_at_diagnosis"),
+        first("tnmp_obsid").alias("tnmp_obsid"),
+        first("tnmp_obsvalue_UICC").alias("tnmp_obsvalue_UICC"),
+        first("tnmp_UICC_mapped").alias("tnmp_UICC_mapped"),
+        first("tnmp_UICC_grouped").alias("tnmp_UICC_grouped"),
+        first("tnmp_obsdate").alias("tnmp_obsdate"),
         first("evidencereference").alias("evidencereference"),
-        max("obsdate_hist").alias("obsdate_hist"),
+        first("obsdate_hist").alias("obsdate_hist"),
         first("obs_value_hist_mapped_0_4").alias("obs_value_hist_mapped_0_4"),
         first("obs_value_hist_mapped_5").alias("obs_value_hist_mapped_5"),
         first("obs_id_hist").alias("obs_id_hist"),
     )
-
     joined_dataframe_grouped_repartitioned = joined_dataframe_grouped.repartition(
         20, col("pat_id")
     )
@@ -484,9 +552,11 @@ def group_df(joined_dataframe):
             "condcodingcode",
             "condcodingcode_mapped",
             "age_in_years",
+            "age_at_diagnosis",
             "deceased_year",
             "tnmp_obsvalue_UICC",
             "tnmp_UICC_mapped",
+            "tnmp_UICC_grouped",
             "tnmp_obsdate",
             "obs_value_hist_mapped_0_4",
             "obs_value_hist_mapped_5",
@@ -501,7 +571,7 @@ def save_final_df(final_df):
     final_df_pandas = final_df_pandas.rename_axis("ID")  # required for opal import
     output_path_filename = (
         settings.output_folder
-        + "/bzkfsummerschool"
+        + settings.output_filename
         + settings.kafka_topic_year_suffix
         + ".csv"
     )
@@ -532,22 +602,20 @@ def main():
     df_pat_cond_joined = join_dataframes(
         df_patients, "pat_id", df_conditions, "subjectreference"
     )
+    df_pat_cond_joined = add_age_at_condition(df_pat_cond_joined)
 
     df_observations_tnmp, df_observations_histology = encode_observations(
         ptl, df_bundles
     )
-
     df_pat_cond_obstnmp_joined = join_dataframes(
         df_pat_cond_joined, "pat_id", df_observations_tnmp, "tnm_obssubjreference"
     )
-
     df_pat_cond_obstnmp_obshist_joined = join_dataframes(
         df_pat_cond_obstnmp_joined,
         "pat_id",
         df_observations_histology,
         "obssubjreference",
     )
-
     df_pat_cond_obstnmp_obshist_joined_grouped = group_df(
         df_pat_cond_obstnmp_obshist_joined
     )

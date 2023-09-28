@@ -4,13 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output"
-      KAFKA_TOPIC_YEAR_SUFFIX: ""
+      OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output/"
+      KAFKA_TOPIC_YEAR_SUFFIX: ".2022"
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
-      KAFKA_PATIENT_TOPIC: "fhir.onkoadt.Patient"
-      KAFKA_CONDITION_TOPIC: "fhir.onkoadt.Condition"
-      KAFKA_OBSERVATION_TOPIC: "fhir.onkoadt.Observation"
-      KAFKA_PROCEDURE_TOPIC: "fhir.onkoadt.Procedure"
-      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.onkoadt.MedicationStatement"
+      KAFKA_PATIENT_TOPIC: "fhir.post-gateway-bzkf-onkoadt.Patient"
+      KAFKA_CONDITION_TOPIC: "fhir.post-gateway-bzkf-onkoadt.Condition"
+      KAFKA_OBSERVATION_TOPIC: "fhir.post-gateway-bzkf-onkoadt.Observation"
+      KAFKA_PROCEDURE_TOPIC: "fhir.post-gateway-bzkf-onkoadt.Procedure"
+      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.post-gateway-bzkf-onkoadt.MedicationStatement"
     volumes:
       - ${PWD}/output:/opt/bitnami/spark/opal-output
