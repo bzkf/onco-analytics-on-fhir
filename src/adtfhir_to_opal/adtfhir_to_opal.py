@@ -8,7 +8,7 @@ from pathling import PathlingContext
 from pathling.etc import find_jar
 from pydantic import BaseSettings
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, explode, first, max, regexp_replace, to_date, udf
+from pyspark.sql.functions import col, explode, first, regexp_replace, to_date, udf
 from pyspark.sql.types import StringType
 
 
@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     kafka_condition_topic: str = "fhir.post-gateway-bzkf-onkoadt.Condition"
     kafka_observation_topic: str = "fhir.post-gateway-bzkf-onkoadt.Observation"
     kafka_procedure_topic: str = "fhir.post-gateway-bzkf-onkoadt.Procedure"
-    kafka_medicationstatement_topic: str = "fhir.post-gateway-bzkf-onkoadt.MedicationStatement"
+    kafka_medicationstatement_topic: str = \
+        "fhir.post-gateway-bzkf-onkoadt.MedicationStatement"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
         "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2",
