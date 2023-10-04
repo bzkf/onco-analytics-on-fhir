@@ -13,7 +13,7 @@ from pyspark.sql.types import StringType
 
 
 class Settings(BaseSettings):
-    output_folder: str = "/opt/bitnami/spark/opal-output/"
+    output_folder: str = "/opt/bitnami/spark/opal-output"
     output_filename: str = "oBDS_tabular"
     kafka_topic_year_suffix: str = ".2022"
     kafka_patient_topic: str = "fhir.post-gateway-bzkf-onkoadt.Patient"
@@ -115,13 +115,8 @@ def read_data_from_kafka_save_delta(spark: SparkSession, kafka_topics: str):
     query.processAllAvailable()
     kafka_data = spark.sql("select * from gettable")
     kafka_data = kafka_data.select("value")
-    print(
-        "Heyhoy settings.output_folder + bundles-delta: ",
-        settings.output_folder + "/bundles-delta",
-    )
-    kafka_data.write.format("delta").mode("overwrite").save(
-        settings.output_folder + "/bundles-delta"
-    )
+    bundle_folder = os.path.join(settings.output_folder, "bundles-delta")
+    kafka_data.write.format("delta").mode("overwrite").save(bundle_folder)
 
 
 def lookup_gender(gender_string):
@@ -570,15 +565,15 @@ def group_df(joined_dataframe):
 def save_final_df(final_df):
     final_df_pandas = final_df.toPandas()
     final_df_pandas = final_df_pandas.rename_axis("ID")  # required for opal import
-    output_path_filename = (
-        settings.output_folder
-        + settings.output_filename
-        + settings.kafka_topic_year_suffix
-        + ".csv"
-    )
-    print("###### OUTPUTFolder settings.output_folder: ", settings.output_folder)
-    print("###### OUTPUTFILE: ", output_path_filename)
+
+    output_filename = str(settings.output_filename + settings.kafka_topic_year_suffix
+                          + ".csv")
+    output_path_filename = os.path.join(
+        settings.output_folder,
+        output_filename)
     print("###### current dir: ", os.getcwd())
+    print("###### output_path_filename : ", output_path_filename)
+
     final_df_pandas.to_csv(output_path_filename)
 
 
@@ -593,9 +588,8 @@ def main():
 
     read_data_from_kafka_save_delta(spark, kafka_topics)
 
-    df_bundles = spark.read.format("delta").load(
-        settings.output_folder + "/bundles-delta"
-    )
+    df_bundles = spark.read.format("delta").load(os.path.join(
+        settings.output_folder, "bundles-delta"))
 
     df_patients = encode_patients(ptl, df_bundles)
     df_conditions = encode_conditions(ptl, df_bundles)
@@ -623,8 +617,8 @@ def main():
 
     save_final_df(df_pat_cond_obstnmp_obshist_joined_grouped)
 
-    shutil.rmtree(settings.output_folder + "/bundles-delta")
-    print("########## DELETED bundles-delta folder and files")
+    shutil.rmtree(os.path.join(settings.output_folder, "bundles-delta"))
+    print("###### DELETED bundles-delta folder and files")
 
     # df_pat_cond_obstnmp_obshist_joined_grouped.show()
 
