@@ -1,0 +1,102 @@
+services:
+  opal:
+    image: docker.io/obiba/opal:4.6@sha256:0cff692fae7033789e65fb2661a2515d9cbb999e2e741a0a39b769e5c57dc343
+    restart: unless-stopped
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      OPAL_ADMINISTRATOR_PASSWORD: ${OPAL_ADMINISTRATOR_PASSWORD:?}
+      ROCK_HOSTS: "rock-0:8085,rock-1:8085,rock-2:8085"
+      ROCK_ADMINISTRATOR_USER: administrator
+      ROCK_ADMINISTRATOR_PASSWORD: ${ROCK_ADMINISTRATOR_PASSWORD:?}
+      ROCK_MANAGER_USER: manager
+      ROCK_MANAGER_PASSWORD: ${ROCK_MANAGER_PASSWORD:?}
+      ROCK_USER_USER: user
+      ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
+      POSTGRESDATA_HOST: opal-db
+      POSTGRESDATA_USER: postgres
+      POSTGRESDATA_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRESDATA_DATABASE: opal
+      CSRF_ALLOWED: opal.127.0.0.1.nip.io
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - "opal_srv_data:/srv:rw"
+    depends_on:
+      - opal-db
+      - rock-0
+      - rock-1
+      - rock-2
+
+  opal-db:
+    image: docker.io/library/postgres:16.0@sha256:1e90f8560705b0daccbd8eb25573627c8452fc9282496433aab1259ae4c85824
+    restart: unless-stopped
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: opal
+    volumes:
+      - "opal_db_data:/var/lib/postgresql/data:rw"
+
+  rock-0:
+    image: docker.io/datashield/rock-base:6.3@sha256:ebb5be25ccdaa59ff780b55bb12208c365ab03d7c0dae3412578c97d6268f3e3
+    restart: unless-stopped
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      ROCK_CLUSTER: default
+      ROCK_ID: "0"
+      ROCK_ADMINISTRATOR_NAME: administrator
+      ROCK_ADMINISTRATOR_PASSWORD: ${ROCK_ADMINISTRATOR_PASSWORD:?}
+      ROCK_MANAGER_NAME: manager
+      ROCK_MANAGER_PASSWORD: ${ROCK_MANAGER_PASSWORD:?}
+      ROCK_USER_NAME: user
+      ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
+
+  rock-1:
+    image: docker.io/datashield/rock-base:6.3@sha256:ebb5be25ccdaa59ff780b55bb12208c365ab03d7c0dae3412578c97d6268f3e3
+    restart: unless-stopped
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      ROCK_CLUSTER: default
+      ROCK_ID: "1"
+      ROCK_ADMINISTRATOR_NAME: administrator
+      ROCK_ADMINISTRATOR_PASSWORD: ${ROCK_ADMINISTRATOR_PASSWORD:?}
+      ROCK_MANAGER_NAME: manager
+      ROCK_MANAGER_PASSWORD: ${ROCK_MANAGER_PASSWORD:?}
+      ROCK_USER_NAME: user
+      ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
+
+  rock-2:
+    image: docker.io/datashield/rock-base:6.3@sha256:ebb5be25ccdaa59ff780b55bb12208c365ab03d7c0dae3412578c97d6268f3e3
+    restart: unless-stopped
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      ROCK_CLUSTER: default
+      ROCK_ID: "2"
+      ROCK_ADMINISTRATOR_NAME: administrator
+      ROCK_ADMINISTRATOR_PASSWORD: ${ROCK_ADMINISTRATOR_PASSWORD:?}
+      ROCK_MANAGER_NAME: manager
+      ROCK_MANAGER_PASSWORD: ${ROCK_MANAGER_PASSWORD:?}
+      ROCK_USER_NAME: user
+      ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
+
+volumes:
+  opal_db_data:
+    driver: local
+  opal_srv_data:
+    driver: local

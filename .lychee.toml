@@ -1,2 +1,2 @@
-exclude = [ '^https://github.com/.*/compare/' ]
+exclude = ['^https://github.com/.*/compare/']
 exclude_all_private = true
