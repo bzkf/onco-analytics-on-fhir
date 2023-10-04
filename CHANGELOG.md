@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.6.0](https://github.com/bzkf/diz-in-a-box/compare/v1.5.11...v1.6.0) (2023-10-04)
+
+
+### Features
+
+* added a sample deployment for datashield/opal ([#105](https://github.com/bzkf/diz-in-a-box/issues/105)) ([d18fa12](https://github.com/bzkf/diz-in-a-box/commit/d18fa120a7cf2a68bca6ba25c0900ee2ab2f9087))
+* updated adtfhir-to-opal to produce uicc mapping, grouped uicc, age at diagnosis ([#107](https://github.com/bzkf/diz-in-a-box/issues/107)) ([3d223e8](https://github.com/bzkf/diz-in-a-box/commit/3d223e81003a38e51d821a8eee5d8ac38ba4e558))
+
+
+### Miscellaneous Chores
+
+* added incomplete taskfile for demoing ([0764e7a](https://github.com/bzkf/diz-in-a-box/commit/0764e7af4c2ad56820aa21c4075ba2c0f711f4f7))
+* **deps:** update actions/checkout action to v4 ([#106](https://github.com/bzkf/diz-in-a-box/issues/106)) ([09a8064](https://github.com/bzkf/diz-in-a-box/commit/09a806430b0c2d7b2163b6adf94433b3e94c276e))
+* **deps:** update compose.onkoadt-to-fhir.yaml to use harbor image variant ([#109](https://github.com/bzkf/diz-in-a-box/issues/109)) ([9b546c0](https://github.com/bzkf/diz-in-a-box/commit/9b546c0ccf5fdb58626feacbfd291896ba82ea92))
+* **deps:** update ghcr.io/miracum/kafka-fhir-to-server docker tag to v2 ([#96](https://github.com/bzkf/diz-in-a-box/issues/96)) ([032906b](https://github.com/bzkf/diz-in-a-box/commit/032906bf15e15bc7b095b969a3664a4c3c6c4e75))
+* **deps:** update github-actions ([#31](https://github.com/bzkf/diz-in-a-box/issues/31)) ([51782af](https://github.com/bzkf/diz-in-a-box/commit/51782afc4b69d5a25ce2fb7a3053e9c35235a892))
+* **deps:** update github-actions (major) ([#60](https://github.com/bzkf/diz-in-a-box/issues/60)) ([26c1666](https://github.com/bzkf/diz-in-a-box/commit/26c166642194aa11eeea5809e80c7e9830937f12))
+* **deps:** update google-github-actions/release-please-action action to v3.7.12 ([#108](https://github.com/bzkf/diz-in-a-box/issues/108)) ([edeabf6](https://github.com/bzkf/diz-in-a-box/commit/edeabf65441aa70abd2a1e37ac9abc18f574d269))
+* fixed KRaft config for newest Kafka ([#101](https://github.com/bzkf/diz-in-a-box/issues/101)) ([84df54e](https://github.com/bzkf/diz-in-a-box/commit/84df54e4d8b31256781d948fc6e71721d8d44c94))
+* unpin strimzi Operator Image for easier updates ([f13faa8](https://github.com/bzkf/diz-in-a-box/commit/f13faa8bf20aa3d5a9ceebdbfa59cbb37ef8d572))
+* updated FHIR Pseudonymizer to v2.20.0 ([#104](https://github.com/bzkf/diz-in-a-box/issues/104)) ([66897d4](https://github.com/bzkf/diz-in-a-box/commit/66897d40e910c7b7963c86e18d1c984ea3898a66))
+* use a smaller spark base image ([#103](https://github.com/bzkf/diz-in-a-box/issues/103)) ([862e124](https://github.com/bzkf/diz-in-a-box/commit/862e12457c17a7ebd6e09015661b16b16a6db177))
+
 ## [1.5.11](https://github.com/bzkf/diz-in-a-box/compare/v1.5.10...v1.5.11) (2023-08-03)
 
 
