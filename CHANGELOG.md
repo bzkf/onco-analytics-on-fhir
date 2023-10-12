@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/bzkf/diz-in-a-box/compare/v1.6.1...v1.6.2) (2023-10-12)
+
+
+### Miscellaneous Chores
+
+* **deps:** downgraded helm to create release ([#113](https://github.com/bzkf/diz-in-a-box/issues/113)) ([657bd67](https://github.com/bzkf/diz-in-a-box/commit/657bd678d925d941de0867706b68b2f88751d574))
+
 ## [1.6.1](https://github.com/bzkf/diz-in-a-box/compare/v1.6.0...v1.6.1) (2023-10-12)
 
 
