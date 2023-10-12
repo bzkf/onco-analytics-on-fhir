@@ -127,6 +127,15 @@ jobs:
 
       - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
+      - name: downgrade helm
+        shell: bash
+        run: |
+          rm /usr/local/bin/helm
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > /tmp/helm.sh
+          chmod +x /tmp/helm.sh
+          /tmp/helm.sh --version v3.12.3
+          helm version
+
       - name: install dependencies
         run: |
           kubectl get node

@@ -26,6 +26,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: downgrade helm
+        shell: bash
+        run: |
+          rm /usr/local/bin/helm
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > /tmp/helm.sh
+          chmod +x /tmp/helm.sh
+          /tmp/helm.sh --version v3.12.3
+          helm version
+
       - name: Add helm repos and update deps
         run: |
           helm repo add miracum https://miracum.github.io/charts
