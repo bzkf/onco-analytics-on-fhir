@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/bzkf/diz-in-a-box/compare/v1.6.0...v1.6.1) (2023-10-12)
+
+
+### Miscellaneous Chores
+
+* **deps:** updated fhir pseudonymizer and gateway to latest ([#111](https://github.com/bzkf/diz-in-a-box/issues/111)) ([3925bcc](https://github.com/bzkf/diz-in-a-box/commit/3925bcccf3a556e15dbb04f9a835f44472476986))
+
 ## [1.6.0](https://github.com/bzkf/diz-in-a-box/compare/v1.5.11...v1.6.0) (2023-10-04)
 
 
