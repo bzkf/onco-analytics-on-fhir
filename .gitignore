@@ -15,3 +15,5 @@ __pycache__/
 
 bundles-delta/
 *.csv
+
+.vscode
