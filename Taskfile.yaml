@@ -4,21 +4,21 @@ env:
   COMPOSE_PROJECT_NAME: bzkf-diz-in-a-box
 
 tasks:
-  adt-to-fhir:
+  obds-to-fhir:
     dir: docker-compose/
     cmds:
       - |
         docker compose \
           -f compose.full.yaml \
           -f compose.decompose-xmls.yaml \
-          -f compose.onkoadt-to-fhir.yaml up --detach
+          -f compose.obds-to-fhir.yaml up --detach
 
   fhir-to-opal:
     dir: docker-compose/
     cmds:
       - |
         docker compose \
-          -f compose.adtfhir-to-opal.yaml up
+          -f compose.obds-to-opal.yaml up
 
   clean:
     dir: docker-compose/

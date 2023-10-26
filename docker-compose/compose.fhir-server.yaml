@@ -67,7 +67,7 @@ services:
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
       FHIR_URL: http://fhir-server:8080/fhir
       # TODO: change if pseudonymization is enabled
-      TOPIC: fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure,fhir.onkoadt.Patient
+      TOPIC: fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient
 
 volumes:
   fhir_db_data:

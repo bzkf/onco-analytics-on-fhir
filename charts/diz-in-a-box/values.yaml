@@ -116,11 +116,11 @@ stream-processors:
             value: "false"
           - name: TOPIC
             value: >-
-              fhir.pseudonymized.onkoadt.MedicationStatement,
-              fhir.pseudonymized.onkoadt.Condition,
-              fhir.pseudonymized.onkoadt.Observation,
-              fhir.pseudonymized.onkoadt.Procedure,
-              fhir.pseudonymized.onkoadt.Patient
+              fhir.pseudonymized.obds.MedicationStatement,
+              fhir.pseudonymized.obds.Condition,
+              fhir.pseudonymized.obds.Observation,
+              fhir.pseudonymized.obds.Procedure,
+              fhir.pseudonymized.obds.Patient
           - name: JAVA_TOOL_OPTIONS
             value: "-XX:MaxRAMPercentage=70"
         livenessProbe:
@@ -131,12 +131,12 @@ stream-processors:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-    onkoadt-to-fhir:
+    obds-to-fhir:
       replicaCount: 1
       container:
         image:
           registry: ghcr.io
-          repository: miracum/onkoadt-to-fhir
+          repository: miracum/obds-to-fhir
           tag: v1.11.3@sha256:429fbb4218794af7375561b61878e87cae5f353ce605f5faae925ff7f3a9962b
           pullPolicy: IfNotPresent
         env:
@@ -168,11 +168,11 @@ fhir-gateway:
   kafka:
     enabled: true
     inputTopics:
-      - fhir.onkoadt.MedicationStatement
-      - fhir.onkoadt.Condition
-      - fhir.onkoadt.Observation
-      - fhir.onkoadt.Procedure
-      - fhir.onkoadt.Patient
+      - fhir.obds.MedicationStatement
+      - fhir.obds.Condition
+      - fhir.obds.Observation
+      - fhir.obds.Procedure
+      - fhir.obds.Patient
     # name of the topic to write processed resources to.
     # Ignored because we use `SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_MATCH_EXPRESSION`
     outputTopic: fhir.post-gateway
