@@ -18,7 +18,7 @@ permissions: read-all
 env:
   DIZBOX_NAMESPACE_NAME: bzkf-dizbox
   DECOMPOSE_XML_IMAGE_NAME: ghcr.io/${{ github.repository }}/decompose-xmls
-  ADTFHIR_TO_OPAL_IMAGE_NAME: ghcr.io/${{ github.repository }}/adtfhir-to-opal
+  OBDS_FHIR_TO_OPAL_IMAGE_NAME: ghcr.io/${{ github.repository }}/obds-fhir-to-opal
 
 jobs:
   build-decompose-xml-image:
@@ -64,7 +64,7 @@ jobs:
           labels: ${{ steps.container_meta.outputs.labels }}
           load: ${{ github.event_name == 'pull_request' }}
 
-  build-adtfhir-to-opal-image:
+  build-obds-fhir-to-opal-image:
     name: build decompose_xmls container image
     runs-on: ubuntu-22.04
     permissions:
@@ -72,7 +72,7 @@ jobs:
     outputs:
       image-tags: ${{ steps.container_meta.outputs.tags }}
       image-digest: ${{ steps.build.outputs.digest }}
-      image-name: ${{ env.ADTFHIR_TO_OPAL_IMAGE_NAME }}
+      image-name: ${{ env.OBDS_FHIR_TO_OPAL_IMAGE_NAME }}
     steps:
       - name: Checkout code
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
@@ -85,7 +85,7 @@ jobs:
         uses: docker/metadata-action@c4ee3adeed93b1fa6a762f209fb01608c1a22f1e # v4
         with:
           images: |
-            ${{ env.ADTFHIR_TO_OPAL_IMAGE_NAME }}
+            ${{ env.OBDS_FHIR_TO_OPAL_IMAGE_NAME }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2
@@ -99,7 +99,7 @@ jobs:
         id: build
         uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3
         with:
-          context: src/adtfhir_to_opal
+          context: src/obds_fhir_to_opal
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: ${{ github.event_name != 'pull_request' }}
@@ -113,7 +113,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     needs:
       - build-decompose-xml-image
-      - build-adtfhir-to-opal-image
+      - build-obds-fhir-to-opal-image
     steps:
       - name: install k3s
         run: |
@@ -165,7 +165,7 @@ jobs:
         run: |
           helm test diz-in-a-box
 
-          kubectl wait deployment/diz-in-a-box-stream-processors-onkoadt-to-fhir --for=condition=Available --timeout=300s
+          kubectl wait deployment/diz-in-a-box-stream-processors-obds-to-fhir --for=condition=Available --timeout=300s
           kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
 
       - name: Print cluster logs
@@ -199,5 +199,5 @@ jobs:
       packages: write # for uploading container images, signatures, and attestations.
     needs:
       - build-decompose-xml-image
-      - build-adtfhir-to-opal-image
+      - build-obds-fhir-to-opal-image
     uses: ./.github/workflows/release.yaml

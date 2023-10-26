@@ -24,7 +24,7 @@ services:
       OPENTRACING_JAEGER_ENABLED: "false"
       JAEGER_SERVICE_NAME: "fhir-gateway"
       SERVICES_KAFKA_ENABLED: "true"
-      INPUT_TOPIC: "fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure,fhir.onkoadt.Patient"
+      INPUT_TOPIC: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
       OUTPUT_TOPIC: "fhir.post-gateway"
       BOOTSTRAP_SERVERS: "kafka:9092"
       SECURITY_PROTOCOL: "PLAINTEXT"
@@ -54,4 +54,4 @@ services:
 
   fhir-to-server:
     environment:
-      TOPIC: fhir.pseudonymized.onkoadt.MedicationStatement,fhir.pseudonymized.onkoadt.Condition,fhir.pseudonymized.onkoadt.Observation,fhir.pseudonymized.onkoadt.Procedure,fhir.pseudonymized.onkoadt.Patient
+      TOPIC: fhir.pseudonymized.obds.MedicationStatement,fhir.pseudonymized.obds.Condition,fhir.pseudonymized.obds.Observation,fhir.pseudonymized.obds.Procedure,fhir.pseudonymized.obds.Patient

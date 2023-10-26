@@ -1,6 +1,6 @@
 services:
-  adtfhir-to-opal:
-    image: ghcr.io/bzkf/diz-in-a-box/adtfhir-to-opal:v1.5.11 # x-release-please-version
+  obds-fhir-to-opal:
+    image: ghcr.io/bzkf/diz-in-a-box/obds-fhir-to-opal:v1.5.11 # x-release-please-version
     restart: no
     cap_drop:
       - ALL
@@ -13,10 +13,10 @@ services:
       OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output"
       KAFKA_TOPIC_YEAR_SUFFIX: "" # e.g. ".2023"
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
-      KAFKA_PATIENT_TOPIC: "fhir.onkoadt.Patient"
-      KAFKA_CONDITION_TOPIC: "fhir.onkoadt.Condition"
-      KAFKA_OBSERVATION_TOPIC: "fhir.onkoadt.Observation"
-      KAFKA_PROCEDURE_TOPIC: "fhir.onkoadt.Procedure"
-      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.onkoadt.MedicationStatement"
+      KAFKA_PATIENT_TOPIC: "fhir.obds.Patient"
+      KAFKA_CONDITION_TOPIC: "fhir.obds.Condition"
+      KAFKA_OBSERVATION_TOPIC: "fhir.obds.Observation"
+      KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
+      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
     volumes:
       - ${PWD}/opal-output:/opt/bitnami/spark/opal-output

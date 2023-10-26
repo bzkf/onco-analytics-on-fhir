@@ -15,11 +15,11 @@ from pyspark.sql.types import StringType
 class Settings(BaseSettings):
     output_folder: str = "~/opal-output"
     kafka_topic_year_suffix: str = ".2023"
-    kafka_patient_topic: str = "fhir.onkoadt.Patient"
-    kafka_condition_topic: str = "fhir.onkoadt.Condition"
-    kafka_observation_topic: str = "fhir.onkoadt.Observation"
-    kafka_procedure_topic: str = "fhir.onkoadt.Procedure"
-    kafka_medicationstatement_topic: str = "fhir.onkoadt.MedicationStatement"
+    kafka_patient_topic: str = "fhir.obds.Patient"
+    kafka_condition_topic: str = "fhir.obds.Condition"
+    kafka_observation_topic: str = "fhir.obds.Observation"
+    kafka_procedure_topic: str = "fhir.obds.Procedure"
+    kafka_medicationstatement_topic: str = "fhir.obds.MedicationStatement"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
         "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2",
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
         "ch.cern.sparkmeasure:spark-measure_2.13:0.21",
         "io.delta:delta-core_2.12:2.3.0",
     ]
-    spark_app_name: str = "ADTFHIR-to-Opal"
+    spark_app_name: str = "oBDS-FHIR-to-Opal"
     master: str = "local[*]"
     kafka_bootstrap_server: str = "kafka:9092"
 

@@ -1,6 +1,6 @@
 services:
-  onkoadt-to-fhir:
-    image: ghcr.io/miracum/onkoadt-to-fhir:v1.11.3
+  obds-to-fhir:
+    image: ghcr.io/miracum/obds-to-fhir:v1.11.3
     restart: unless-stopped
     cap_drop:
       - ALL

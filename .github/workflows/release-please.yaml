@@ -24,7 +24,7 @@ jobs:
             charts/prerequisites/Chart.yaml
             README.md
             docker-compose/compose.decompose-xmls.yaml
-            docker-compose/compose.adtfhir-to-opal.yaml
+            docker-compose/compose.obds-fhir-to-opal.yaml
           changelog-types: |
             [
               { "type": "feat", "section": "Features" },

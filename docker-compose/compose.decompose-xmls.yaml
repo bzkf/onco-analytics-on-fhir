@@ -8,4 +8,4 @@ services:
       KAFKA_OUTPUT_TOPIC: "onkostar.MELDUNG_EXPORT"
       SAVE_AS_FILES_ENABLED: "false"
     volumes:
-      - ./input-adt-reports:/app/input-adt-reports
+      - ./input-obds-reports:/app/input-obds-reports
