@@ -6,9 +6,9 @@ deprecated: false
 kubeVersion: ">= 1.21.0"
 dependencies:
   - name: strimzi-kafka-operator
-    repository: https://strimzi.io/charts/
-    version: 0.35.1
+    repository: oci://quay.io/strimzi-helm
+    version: 0.37.0
 # x-release-please-start-version
-version: 1.5.11
-appVersion: 1.5.11
+version: 1.6.2
+appVersion: 1.6.2
 # x-release-please-end-version

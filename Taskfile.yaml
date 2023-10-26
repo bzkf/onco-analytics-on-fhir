@@ -1,0 +1,26 @@
+version: "3"
+
+env:
+  COMPOSE_PROJECT_NAME: bzkf-diz-in-a-box
+
+tasks:
+  adt-to-fhir:
+    dir: docker-compose/
+    cmds:
+      - |
+        docker compose \
+          -f compose.full.yaml \
+          -f compose.decompose-xmls.yaml \
+          -f compose.onkoadt-to-fhir.yaml up --detach
+
+  fhir-to-opal:
+    dir: docker-compose/
+    cmds:
+      - |
+        docker compose \
+          -f compose.adtfhir-to-opal.yaml up
+
+  clean:
+    dir: docker-compose/
+    cmd: |
+      docker compose -f compose.full.yaml down --volumes --remove-orphans

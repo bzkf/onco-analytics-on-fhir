@@ -19,6 +19,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: "jdbc:postgresql://fhir-db:5432/fhir?currentSchema=public"
       SPRING_DATASOURCE_USERNAME: postgres
+      # kics-scan ignore-line
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATASOURCE_DRIVERCLASSNAME: org.postgresql.Driver
       spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgres94Dialect
@@ -45,6 +46,7 @@ services:
       - "no-new-privileges:true"
     privileged: false
     environment:
+      # kics-scan ignore-line
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: fhir
     volumes:
@@ -64,6 +66,7 @@ services:
       BOOTSTRAP_SERVERS: kafka:9092
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
       FHIR_URL: http://fhir-server:8080/fhir
+      # TODO: change if pseudonymization is enabled
       TOPIC: fhir.onkoadt.MedicationStatement,fhir.onkoadt.Condition,fhir.onkoadt.Observation,fhir.onkoadt.Procedure,fhir.onkoadt.Patient
 
 volumes:

@@ -1,6 +1,6 @@
 services:
   fhir-gateway:
-    image: ghcr.io/miracum/fhir-gateway:v3.10.9
+    image: ghcr.io/miracum/fhir-gateway:v3.12.2
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -32,7 +32,7 @@ services:
       SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
 
   fhir-pseudonymizer:
-    image: ghcr.io/miracum/fhir-pseudonymizer:v2.20.0
+    image: ghcr.io/miracum/fhir-pseudonymizer:v2.21.0
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -42,16 +42,13 @@ services:
     read_only: true
     privileged: false
     environment:
-      COMPlus_EnableDiagnostics: "0"
+      DOTNET_EnableDiagnostics: "0"
       PseudonymizationService: "gPAS"
       AnonymizationEngineConfigPath: "/etc/fhir-pseudonymizer/anonymization.yaml"
+      Anonymization__CryptoHashKey: ""
       gPAS__Url: ""
       gPAS__Auth__Basic__Username: ""
       gPAS__Auth__Basic__Password: ""
       gPAS__Version: "1.10.3"
     volumes:
       - ./anonymization.yaml:/etc/fhir-pseudonymizer/anonymization.yaml:ro
-
-  fhir-to-server:
-    environment:
-      TOPIC: fhir.pseudonymized.obds.MedicationStatement,fhir.pseudonymized.obds.Condition,fhir.pseudonymized.obds.Observation,fhir.pseudonymized.obds.Procedure,fhir.pseudonymized.obds.Patient

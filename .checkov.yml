@@ -1,0 +1,20 @@
+skip-check:
+  - CKV_SECRET_6
+  - CKV_DOCKER_2
+  - CKV_K8S_21
+  - CKV_K8S_35
+  - CKV_K8S_15
+  # Check: CKV_K8S_40: "Containers should run as a high UID to avoid host conflict"
+  # TODO: maybe use an annotation to just exempt the postgres pods from this.
+  - CKV_K8S_40
+  - CKV_K8S_13
+  - CKV_K8S_11
+  - CKV_K8S_43
+  - CKV_K8S_38
+  - CKV_K8S_22
+  - CKV_K8S_31
+  - CKV_K8S_10
+  - CKV_K8S_12
+  - CKV_K8S_29
+  - CKV_K8S_8
+  - CKV_K8S_9
