@@ -135,9 +135,9 @@ stream-processors:
       replicaCount: 1
       container:
         image:
-          registry: ghcr.io
-          repository: miracum/obds-to-fhir
-          tag: v1.11.3@sha256:429fbb4218794af7375561b61878e87cae5f353ce605f5faae925ff7f3a9962b
+          registry: harbor.miracum.org
+          repository: streams-ume/obds-to-fhir
+          tag: v1.16.0@sha256:06b798a757f3669d18504ac6c2848027d33a03465bcec91c5a9b846c240371ec
           pullPolicy: IfNotPresent
         env:
           - name: OPENTRACING_JAEGER_ENABLED

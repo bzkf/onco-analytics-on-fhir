@@ -22,7 +22,7 @@ env:
 
 jobs:
   build-decompose-xml-image:
-    name: build decompose_xmls container image
+    name: build decompose-xmls container image
     runs-on: ubuntu-22.04
     permissions:
       packages: write
@@ -65,7 +65,7 @@ jobs:
           load: ${{ github.event_name == 'pull_request' }}
 
   build-obds-fhir-to-opal-image:
-    name: build decompose_xmls container image
+    name: build obds-fhir-to-opal container image
     runs-on: ubuntu-22.04
     permissions:
       packages: write
