@@ -13,15 +13,13 @@ from pyspark.sql.types import StringType
 
 
 class Settings(BaseSettings):
-    output_folder: str = "/opt/bitnami/spark/opal-output"
-    output_filename: str = "oBDS_tabular"
-    kafka_topic_year_suffix: str = ".2022"
-    kafka_patient_topic: str = "fhir.post-gateway-bzkf-onkoadt.Patient"
-    kafka_condition_topic: str = "fhir.post-gateway-bzkf-onkoadt.Condition"
-    kafka_observation_topic: str = "fhir.post-gateway-bzkf-onkoadt.Observation"
-    kafka_procedure_topic: str = "fhir.post-gateway-bzkf-onkoadt.Procedure"
-    kafka_medicationstatement_topic: str = \
-        "fhir.post-gateway-bzkf-onkoadt.MedicationStatement"
+    output_folder: str = "~/opal-output"
+    kafka_topic_year_suffix: str = ".2023"
+    kafka_patient_topic: str = "fhir.obds.Patient"
+    kafka_condition_topic: str = "fhir.obds.Condition"
+    kafka_observation_topic: str = "fhir.obds.Observation"
+    kafka_procedure_topic: str = "fhir.obds.Procedure"
+    kafka_medicationstatement_topic: str = "fhir.obds.MedicationStatement"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
         "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2",
@@ -29,7 +27,7 @@ class Settings(BaseSettings):
         "ch.cern.sparkmeasure:spark-measure_2.13:0.21",
         "io.delta:delta-core_2.12:2.3.0",
     ]
-    spark_app_name: str = "ADTFHIR-to-Opal"
+    spark_app_name: str = "oBDS-FHIR-to-Opal"
     master: str = "local[*]"
     kafka_bootstrap_server: str = "kafka:9092"
 
@@ -142,18 +140,20 @@ def calculate_age(birthdate):
 def calculate_age_at_conditiondate(birthdate, conditiondate):
     age_at_conditiondate = conditiondate - birthdate
     days_in_year = 365.2425
-    age_at_conditiondate = int(age_at_conditiondate.days/days_in_year)
+    age_at_conditiondate = int(age_at_conditiondate.days / days_in_year)
     return age_at_conditiondate
 
 
 def add_age_at_condition(df_pat_cond_joined):
-    calculate_age_at_conditiondateUDF = udf(lambda x, y:
-                                            calculate_age_at_conditiondate(x, y),
-                                            StringType())
+    calculate_age_at_conditiondateUDF = udf(
+        lambda x, y: calculate_age_at_conditiondate(x, y), StringType()
+    )
     df_pat_cond_joined = df_pat_cond_joined.withColumn(
-        "age_at_diagnosis", calculate_age_at_conditiondateUDF(
-            to_date(df_pat_cond_joined.birthDate),
-            df_pat_cond_joined.conditiondate))
+        "age_at_diagnosis",
+        calculate_age_at_conditiondateUDF(
+            to_date(df_pat_cond_joined.birthDate), df_pat_cond_joined.conditiondate
+        ),
+    )
     return df_pat_cond_joined
 
 
@@ -172,8 +172,7 @@ def encode_patients(ptl: PathlingContext, df_bundles: pyspark.sql.dataframe.Data
     return_yearUDF = udf(lambda x: return_year(x), StringType())
 
     patients = df_patients.selectExpr(
-        "id as pat_id", "gender", "birthDate",
-        "deceasedBoolean", "deceasedDateTime"
+        "id as pat_id", "gender", "birthDate", "deceasedBoolean", "deceasedDateTime"
     )
 
     patients = patients.withColumns(
@@ -313,35 +312,35 @@ def join_dataframes(df_one, partition_col_one: str, df_two, partition_col_two: s
 
 def lookup_obs_value_codingcode_tnm_uicc_mapping(obs_value_codingcode_tnm_UICC):
     obs_value_codingcode_tnm_uicc_mapping_dict = {
-            "0": "0",
-            "0a": "1",
-            "0is": "2",
-            "I": "3",
-            "IA": "4",
-            "IA1": "5",
-            "IA2": "6",
-            "IA3": "7",
-            "IB": "8",
-            "IB1": "9",
-            "IB2": "10",
-            "IC": "11",
-            "IS": "12",
-            "II": "13",
-            "IIA": "14",
-            "IIA1": "15",
-            "IIA2": "16",
-            "IIB": "17",
-            "IIC": "18",
-            "III": "19",
-            "IIIA": "20",
-            "IIIB": "21",
-            "IIIC": "22",
-            "IIIC1": "23",
-            "IIIC2": "24",
-            "IV": "25",
-            "IVA": "26",
-            "IVB": "27",
-            "IVC": "28",
+        "0": "0",
+        "0a": "1",
+        "0is": "2",
+        "I": "3",
+        "IA": "4",
+        "IA1": "5",
+        "IA2": "6",
+        "IA3": "7",
+        "IB": "8",
+        "IB1": "9",
+        "IB2": "10",
+        "IC": "11",
+        "IS": "12",
+        "II": "13",
+        "IIA": "14",
+        "IIA1": "15",
+        "IIA2": "16",
+        "IIB": "17",
+        "IIC": "18",
+        "III": "19",
+        "IIIA": "20",
+        "IIIB": "21",
+        "IIIC": "22",
+        "IIIC1": "23",
+        "IIIC2": "24",
+        "IV": "25",
+        "IVA": "26",
+        "IVB": "27",
+        "IVC": "28",
     }
     if obs_value_codingcode_tnm_UICC in obs_value_codingcode_tnm_uicc_mapping_dict:
         return obs_value_codingcode_tnm_uicc_mapping_dict[obs_value_codingcode_tnm_UICC]
@@ -351,35 +350,35 @@ def lookup_obs_value_codingcode_tnm_uicc_mapping(obs_value_codingcode_tnm_UICC):
 
 def lookup_grouped_uicc(obs_value_codingcode_tnm_UICC):
     grouped_uicc_dict = {
-            "0": "0",
-            "0a": "0",
-            "0is": "0",
-            "I": "1",
-            "IA": "1",
-            "IA1": "1",
-            "IA2": "1",
-            "IA3": "1",
-            "IB": "1",
-            "IB1": "1",
-            "IB2": "1",
-            "IC": "1",
-            "IS": "1",
-            "II": "2",
-            "IIA": "2",
-            "IIA1": "2",
-            "IIA2": "2",
-            "IIB": "2",
-            "IIC": "2",
-            "III": "3",
-            "IIIA": "3",
-            "IIIB": "3",
-            "IIIC": "3",
-            "IIIC1": "3",
-            "IIIC2": "3",
-            "IV": "4",
-            "IVA": "4",
-            "IVB": "4",
-            "IVC": "4",
+        "0": "0",
+        "0a": "0",
+        "0is": "0",
+        "I": "1",
+        "IA": "1",
+        "IA1": "1",
+        "IA2": "1",
+        "IA3": "1",
+        "IB": "1",
+        "IB1": "1",
+        "IB2": "1",
+        "IC": "1",
+        "IS": "1",
+        "II": "2",
+        "IIA": "2",
+        "IIA1": "2",
+        "IIA2": "2",
+        "IIB": "2",
+        "IIC": "2",
+        "III": "3",
+        "IIIA": "3",
+        "IIIB": "3",
+        "IIIC": "3",
+        "IIIC1": "3",
+        "IIIC2": "3",
+        "IV": "4",
+        "IVA": "4",
+        "IVB": "4",
+        "IVC": "4",
     }
     if obs_value_codingcode_tnm_UICC in grouped_uicc_dict:
         return grouped_uicc_dict[obs_value_codingcode_tnm_UICC]
@@ -395,9 +394,7 @@ def transform_tnmp(observations_tnmp):
         "tnmp_UICC_mapped",
         lookup_obs_value_codingcode_tnm_UICC_mappingUDF(observations_tnmp.obsvaluecode),
     )
-    lookup_lookup_grouped_uiccUDF = udf(
-        lambda x: lookup_grouped_uicc(x), StringType()
-    )
+    lookup_lookup_grouped_uiccUDF = udf(lambda x: lookup_grouped_uicc(x), StringType())
     observations_tnmp = observations_tnmp.withColumn(
         "tnmp_UICC_grouped",
         lookup_lookup_grouped_uiccUDF(observations_tnmp.obsvaluecode),
@@ -410,7 +407,7 @@ def transform_tnmp(observations_tnmp):
         "obsvaluecode as tnmp_obsvalue_UICC",
         "obsdate as tnmp_obsdate",
         "tnmp_UICC_mapped",
-        "tnmp_UICC_grouped"
+        "tnmp_UICC_grouped",
     )
 
     observations_tnmp_cached = observations_tnmp.cache()
@@ -566,11 +563,10 @@ def save_final_df(final_df):
     final_df_pandas = final_df.toPandas()
     final_df_pandas = final_df_pandas.rename_axis("ID")  # required for opal import
 
-    output_filename = str(settings.output_filename + settings.kafka_topic_year_suffix
-                          + ".csv")
-    output_path_filename = os.path.join(
-        settings.output_folder,
-        output_filename)
+    output_filename = str(
+        settings.output_filename + settings.kafka_topic_year_suffix + ".csv"
+    )
+    output_path_filename = os.path.join(settings.output_folder, output_filename)
     print("###### current dir: ", os.getcwd())
     print("###### output_path_filename : ", output_path_filename)
 
@@ -588,8 +584,9 @@ def main():
 
     read_data_from_kafka_save_delta(spark, kafka_topics)
 
-    df_bundles = spark.read.format("delta").load(os.path.join(
-        settings.output_folder, "bundles-delta"))
+    df_bundles = spark.read.format("delta").load(
+        os.path.join(settings.output_folder, "bundles-delta")
+    )
 
     df_patients = encode_patients(ptl, df_bundles)
     df_conditions = encode_conditions(ptl, df_bundles)

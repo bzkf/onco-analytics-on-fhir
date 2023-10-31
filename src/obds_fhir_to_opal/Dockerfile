@@ -13,6 +13,6 @@ USER 1001:1001
 RUN spark-shell -v --conf spark.jars.ivy=${SPARK_JARS_IVY}\
     --packages "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2,au.csiro.pathling:library-api:6.2.1,ch.cern.sparkmeasure:spark-measure_2.13:0.21,io.delta:delta-core_2.12:2.3.0"
 
-COPY adtfhir_to_opal.py adtfhir_to_opal.py
+COPY obds_fhir_to_opal.py obds_fhir_to_opal.py
 
-ENTRYPOINT [ "python", "adtfhir_to_opal.py" ]
+ENTRYPOINT [ "python", "obds_fhir_to_opal.py" ]

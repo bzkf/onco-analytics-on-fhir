@@ -1,0 +1,16 @@
+services:
+  obds-fhir-to-opal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output/"
+      KAFKA_TOPIC_YEAR_SUFFIX: ""
+      KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
+      KAFKA_PATIENT_TOPIC: "fhir.obds.Patient"
+      KAFKA_CONDITION_TOPIC: "fhir.obds.Condition"
+      KAFKA_OBSERVATION_TOPIC: "fhir.obds.Observation"
+      KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
+      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
+    volumes:
+      - ${PWD}/output:/opt/bitnami/spark/opal-output

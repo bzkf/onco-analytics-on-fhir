@@ -99,7 +99,7 @@ helm upgrade --install --wait --timeout=10m --version=1.6.2 diz-in-a-box oci://g
 # test the installation
 helm test diz-in-a-box
 
-kubectl wait deployment/diz-in-a-box-stream-processors-onkoadt-to-fhir --for=condition=Available --timeout=300s
+kubectl wait deployment/diz-in-a-box-stream-processors-obds-to-fhir --for=condition=Available --timeout=300s
 kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
 ```
 

@@ -10,13 +10,13 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    input_folder: str = "./input-adt-reports"
+    input_folder: str = "./input-obds-reports"
     output_folder: str = "./output-files"
     output_folder_xml: str = "./output-files/output-xmls"
     save_as_files_enabled: bool = True
     kafka_enabled: bool = False
     kafka_bootstrap_servers: str = "localhost:9092"
-    kafka_output_topic: str = "adt.einzelmeldungen"
+    kafka_output_topic: str = "obds.einzelmeldungen"
 
 
 @dataclass
