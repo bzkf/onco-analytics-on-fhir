@@ -18,10 +18,10 @@ Kubernetes: `>= 1.21.0`
 
 | Repository                                             | Name                | Version |
 | ------------------------------------------------------ | ------------------- | ------- |
-| https://akhq.io/                                       | akhq                | 0.3.1   |
-| https://hapifhir.github.io/hapi-fhir-jpaserver-starter | hapi-fhir-jpaserver | 0.11.1  |
-| https://miracum.github.io/charts                       | fhir-gateway        | 6.0.3   |
-| https://miracum.github.io/charts                       | stream-processors   | 1.1.10  |
+| <https://akhq.io/>                                       | akhq                | 0.3.1   |
+| <https://hapifhir.github.io/hapi-fhir-jpaserver-starter> | hapi-fhir-jpaserver | 0.11.1  |
+| <https://miracum.github.io/charts>                       | fhir-gateway        | 6.0.3   |
+| <https://miracum.github.io/charts>                       | stream-processors   | 1.1.10  |
 
 ## Values
 
