@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.0.0](https://github.com/bzkf/diz-in-a-box/compare/v1.6.2...v2.0.0) (2023-11-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* affects (default) names of all created and used Kafka topics
+
+### Features
+
+* renamed `adt` to `obds` ([581311b](https://github.com/bzkf/diz-in-a-box/commit/581311b27644c6e41e09e5879fb2c82b153eea9a))
+* renamed adt to obds - BREAKING CHANGE - renames all container images ([9300032](https://github.com/bzkf/diz-in-a-box/commit/9300032f28f92b24e4e6acc9fb31a3c50b8a1468))
+
+
+### Miscellaneous Chores
+
+* bumps obds-to-fhir ([7be7d17](https://github.com/bzkf/diz-in-a-box/commit/7be7d174037719742adf9ee47f4cad48adea0b50))
+* bumps obds-to-fhir images ([a1a98ac](https://github.com/bzkf/diz-in-a-box/commit/a1a98accddc7f3d4a8470e6d0ba4e97d79350957))
+* make megalinter black happy ([3c6946c](https://github.com/bzkf/diz-in-a-box/commit/3c6946ceace2065984d3f1329e09f6a0cbb2a6f8))
+* markdownlint ([8a59ef7](https://github.com/bzkf/diz-in-a-box/commit/8a59ef73eba16518183ee18bb37da1a6da98fd9e))
+* updates obds-to-fhir image registry ([#118](https://github.com/bzkf/diz-in-a-box/issues/118)) ([ed3398e](https://github.com/bzkf/diz-in-a-box/commit/ed3398ee37744e91c6de541b17490275df68bc6d))
+
 ## [1.6.2](https://github.com/bzkf/diz-in-a-box/compare/v1.6.1...v1.6.2) (2023-10-12)
 
 
