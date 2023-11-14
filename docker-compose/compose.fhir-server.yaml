@@ -35,7 +35,7 @@ services:
       - "8082:8080"
 
   fhir-db:
-    image: docker.io/library/postgres:15.3
+    image: docker.io/library/postgres:16.1
     restart: unless-stopped
     deploy:
       resources:
@@ -53,7 +53,7 @@ services:
       - "fhir_db_data:/var/lib/postgresql/data:rw"
 
   fhir-to-server:
-    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.7
+    image: ghcr.io/miracum/kafka-fhir-to-server:v2.0.5
     restart: unless-stopped
     cap_drop:
       - ALL
