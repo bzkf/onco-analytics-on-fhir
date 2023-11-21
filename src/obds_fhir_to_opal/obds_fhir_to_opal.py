@@ -14,7 +14,8 @@ from pyspark.sql.types import StringType
 
 class Settings(BaseSettings):
     output_folder: str = "~/opal-output"
-    kafka_topic_year_suffix: str = ".2023"
+    output_filename: str = "bzkf_q4_22.csv"
+    kafka_topic_year_suffix: str = ".2022"
     kafka_patient_topic: str = "fhir.obds.Patient"
     kafka_condition_topic: str = "fhir.obds.Condition"
     kafka_observation_topic: str = "fhir.obds.Observation"
@@ -144,7 +145,75 @@ def calculate_age_at_conditiondate(birthdate, conditiondate):
     return age_at_conditiondate
 
 
-def add_age_at_condition(df_pat_cond_joined):
+# 0-14, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 50-54, 55-59...80-84, 85+
+def diagnosis_age_group_small(age_at_diagnosis):
+    diagnosis_age_group_small = 100
+    if age_at_diagnosis <= 14:
+        diagnosis_age_group_small = 0
+    elif age_at_diagnosis <= 19:
+        diagnosis_age_group_small = 1
+    elif age_at_diagnosis <= 24:
+        diagnosis_age_group_small = 2
+    elif age_at_diagnosis <= 29:
+        diagnosis_age_group_small = 3
+    elif age_at_diagnosis <= 34:
+        diagnosis_age_group_small = 4
+    elif age_at_diagnosis <= 39:
+        diagnosis_age_group_small = 5
+    elif age_at_diagnosis <= 44:
+        diagnosis_age_group_small = 6
+    elif age_at_diagnosis <= 49:
+        diagnosis_age_group_small = 7
+    elif age_at_diagnosis <= 54:
+        diagnosis_age_group_small = 8
+    elif age_at_diagnosis <= 59:
+        diagnosis_age_group_small = 9
+    elif age_at_diagnosis <= 64:
+        diagnosis_age_group_small = 10
+    elif age_at_diagnosis <= 69:
+        diagnosis_age_group_small = 11
+    elif age_at_diagnosis <= 74:
+        diagnosis_age_group_small = 12
+    elif age_at_diagnosis <= 79:
+        diagnosis_age_group_small = 13
+    elif age_at_diagnosis <= 84:
+        diagnosis_age_group_small = 14
+    elif age_at_diagnosis >= 85:
+        diagnosis_age_group_small = 15
+    else:
+        diagnosis_age_group_small = 100
+    return diagnosis_age_group_small
+
+
+# 0-10, 11-20, 21-30... 71-80, 81-90, 90+
+def diagnosis_age_group_large(age_at_diagnosis):
+    diagnosis_age_group_large = 100
+    if age_at_diagnosis <= 10:
+        diagnosis_age_group_large = 0
+    elif age_at_diagnosis <= 20:
+        diagnosis_age_group_large = 1
+    elif age_at_diagnosis <= 30:
+        diagnosis_age_group_large = 2
+    elif age_at_diagnosis <= 40:
+        diagnosis_age_group_large = 3
+    elif age_at_diagnosis <= 50:
+        diagnosis_age_group_large = 4
+    elif age_at_diagnosis <= 60:
+        diagnosis_age_group_large = 5
+    elif age_at_diagnosis <= 70:
+        diagnosis_age_group_large = 6
+    elif age_at_diagnosis <= 80:
+        diagnosis_age_group_large = 7
+    elif age_at_diagnosis <= 90:
+        diagnosis_age_group_large = 8
+    elif age_at_diagnosis > 90:
+        diagnosis_age_group_large = 9
+    else:
+        diagnosis_age_group_large = 100
+    return diagnosis_age_group_large
+
+
+def add_age_at_condition_and_groups(df_pat_cond_joined):
     calculate_age_at_conditiondateUDF = udf(
         lambda x, y: calculate_age_at_conditiondate(x, y), StringType()
     )
@@ -153,6 +222,22 @@ def add_age_at_condition(df_pat_cond_joined):
         calculate_age_at_conditiondateUDF(
             to_date(df_pat_cond_joined.birthDate), df_pat_cond_joined.conditiondate
         ),
+    )
+
+    diagnosis_age_group_small_UDF = udf(
+        lambda x: diagnosis_age_group_small(x), StringType()
+    )
+    df_pat_cond_joined = df_pat_cond_joined.withColumn(
+        "age_group_small",
+        diagnosis_age_group_small_UDF(df_pat_cond_joined.age_at_diagnosis),
+    )
+
+    diagnosis_age_group_large_UDF = udf(
+        lambda x: diagnosis_age_group_large(x), StringType()
+    )
+    df_pat_cond_joined = df_pat_cond_joined.withColumn(
+        "age_group_large",
+        diagnosis_age_group_large_UDF(df_pat_cond_joined.age_at_diagnosis),
     )
     return df_pat_cond_joined
 
@@ -205,10 +290,89 @@ def lookup_condcodingcode_mapping(icd10_code):
     return icd10_code
 
 
+def group_entities(condcodingcode_mapped):
+    entity_group = 100
+    condcodingcode_mapped = float(condcodingcode_mapped)
+    if condcodingcode_mapped >= 300 and condcodingcode_mapped < 315:
+        entity_group = 0  # Lippe, Mundhöhle und Rachen (C00-C14)
+    elif condcodingcode_mapped >= 315 and condcodingcode_mapped < 316:
+        entity_group = 1  # Speiseröhre (C15)
+    elif condcodingcode_mapped >= 316 and condcodingcode_mapped < 317:
+        entity_group = 2  # Magen (C16)
+    elif condcodingcode_mapped >= 318 and condcodingcode_mapped < 322:
+        entity_group = 3  # Dickdarm und Rektum (C18-C21)
+    elif condcodingcode_mapped >= 322 and condcodingcode_mapped < 323:
+        entity_group = 4  # Leber (C22)
+    elif condcodingcode_mapped >= 323 and condcodingcode_mapped < 325:
+        entity_group = 5  # Gallenblase und Gallenwege (C23-C24)
+    elif condcodingcode_mapped >= 325 and condcodingcode_mapped < 326:
+        entity_group = 6  # Bauchspeicheldrüse (C25)
+    elif condcodingcode_mapped >= 332 and condcodingcode_mapped < 333:
+        entity_group = 7  # • Kehlkopf (C32)
+    elif condcodingcode_mapped >= 333 and condcodingcode_mapped < 335:
+        entity_group = 8  # • Trachea, Bronchien und Lunge (C33-C34)
+    elif condcodingcode_mapped >= 343 and condcodingcode_mapped < 344:
+        entity_group = 9  # • Malignes Melanom der Haut (C43)
+    elif (
+        condcodingcode_mapped >= 350
+        and condcodingcode_mapped < 351
+        or condcodingcode_mapped >= 405
+        and condcodingcode_mapped < 406
+    ):
+        entity_group = 10  # • Brust (C50, D05)
+    elif (
+        condcodingcode_mapped >= 353
+        and condcodingcode_mapped < 354
+        or condcodingcode_mapped >= 406
+        and condcodingcode_mapped < 407
+    ):
+        entity_group = 11  # • Gebärmutterhals (C53, D06)
+    elif condcodingcode_mapped >= 354 and condcodingcode_mapped < 356:
+        entity_group = 12  # • Gebärmutterkörper (C54-C55)
+    elif (
+        condcodingcode_mapped >= 356
+        and condcodingcode_mapped < 357
+        or condcodingcode_mapped == 439.1
+    ):
+        entity_group = 13  # • Eierstöcke (C56, D39.1)
+    elif condcodingcode_mapped >= 361 and condcodingcode_mapped < 362:
+        entity_group = 14  # • Prostata (C61)
+    elif condcodingcode_mapped >= 362 and condcodingcode_mapped < 363:
+        entity_group = 15  # • Hoden (C62)
+    elif condcodingcode_mapped >= 364 and condcodingcode_mapped < 365:
+        entity_group = 16  # • Niere (C64)
+    elif (
+        condcodingcode_mapped >= 367
+        and condcodingcode_mapped < 368
+        or condcodingcode_mapped == 409.0
+        or condcodingcode_mapped == 441.4
+    ):
+        entity_group = 17  # • Harnblase (C67, D09.0, D41.4)
+    elif condcodingcode_mapped >= 370 and condcodingcode_mapped < 373:
+        entity_group = 18  # • Gehirn und zentrales Nervensystem (C70-C72)
+    elif condcodingcode_mapped >= 373 and condcodingcode_mapped < 374:
+        entity_group = 19  # • Schilddrüse (C73)
+    elif condcodingcode_mapped >= 381 and condcodingcode_mapped < 382:
+        entity_group = 20  # • Morbus Hodgkin (C81)
+    elif (
+        condcodingcode_mapped >= 382
+        and condcodingcode_mapped < 389
+        or condcodingcode_mapped >= 396
+        and condcodingcode_mapped < 397
+    ):
+        entity_group = 21  # • Non-Hodgkin-Lymphome (C82-C88, C96)
+    elif condcodingcode_mapped >= 390 and condcodingcode_mapped < 391:
+        entity_group = 22  # • Plasmozytom (C90)
+    elif condcodingcode_mapped >= 391 and condcodingcode_mapped < 396:
+        entity_group = 23  # • Leukämien (C91-C95)
+    return entity_group
+
+
 def encode_conditions(ptl: PathlingContext, df_bundles):
     lookup_condcodingcode_mappingUDF = udf(
         lambda x: lookup_condcodingcode_mapping(x), StringType()
     )
+    group_entities_UDF = udf(lambda x: group_entities(x), StringType())
     df_conditions = ptl.encode_bundle(df_bundles, "Condition")
     conditions = df_conditions.selectExpr(
         "id as cond_id",
@@ -279,12 +443,17 @@ def encode_conditions(ptl: PathlingContext, df_bundles):
         "condcodingcode_mapped",
         lookup_condcodingcode_mappingUDF(conditions.condcodingcode),
     )
+    conditions = conditions.withColumn(
+        "entity_group",
+        group_entities_UDF(conditions.condcodingcode_mapped),
+    )
     conditions = conditions.select(
         "cond_id",
         "conditiondate",
         "subjectreference",
         "condcodingcode",
         "condcodingcode_mapped",
+        "entity_group",
         "stagereference",
         "evidencereference",
     ).withColumn("conditiondate", to_date(conditions.conditiondate))
@@ -518,9 +687,12 @@ def group_df(joined_dataframe):
         first("conditiondate").alias("conditiondate"),
         first("condcodingcode").alias("condcodingcode"),
         first("condcodingcode_mapped").alias("condcodingcode_mapped"),
+        first("entity_group").alias("entity_group"),
         first("deceased_year").alias("deceased_year"),
         first("age_in_years").alias("age_in_years"),
         first("age_at_diagnosis").alias("age_at_diagnosis"),
+        first("age_group_small").alias("age_group_small"),
+        first("age_group_large").alias("age_group_large"),
         first("tnmp_obsid").alias("tnmp_obsid"),
         first("tnmp_obsvalue_UICC").alias("tnmp_obsvalue_UICC"),
         first("tnmp_UICC_mapped").alias("tnmp_UICC_mapped"),
@@ -544,8 +716,11 @@ def group_df(joined_dataframe):
             "conditiondate",
             "condcodingcode",
             "condcodingcode_mapped",
+            "entity_group",
             "age_in_years",
             "age_at_diagnosis",
+            "age_group_small",
+            "age_group_large",
             "deceased_year",
             "tnmp_obsvalue_UICC",
             "tnmp_UICC_mapped",
@@ -563,10 +738,9 @@ def save_final_df(final_df):
     final_df_pandas = final_df.toPandas()
     final_df_pandas = final_df_pandas.rename_axis("ID")  # required for opal import
 
-    output_filename = str(
-        settings.output_filename + settings.kafka_topic_year_suffix + ".csv"
+    output_path_filename = os.path.join(
+        settings.output_folder, settings.output_filename
     )
-    output_path_filename = os.path.join(settings.output_folder, output_filename)
     print("###### current dir: ", os.getcwd())
     print("###### output_path_filename : ", output_path_filename)
 
@@ -594,7 +768,7 @@ def main():
     df_pat_cond_joined = join_dataframes(
         df_patients, "pat_id", df_conditions, "subjectreference"
     )
-    df_pat_cond_joined = add_age_at_condition(df_pat_cond_joined)
+    df_pat_cond_joined = add_age_at_condition_and_groups(df_pat_cond_joined)
 
     df_observations_tnmp, df_observations_histology = encode_observations(
         ptl, df_bundles
