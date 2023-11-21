@@ -17,95 +17,57 @@ permissions: read-all
 
 env:
   DIZBOX_NAMESPACE_NAME: bzkf-dizbox
-  DECOMPOSE_XML_IMAGE_NAME: ghcr.io/${{ github.repository }}/decompose-xmls
-  OBDS_FHIR_TO_OPAL_IMAGE_NAME: ghcr.io/${{ github.repository }}/obds-fhir-to-opal
 
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    runs-on: ubuntu-22.04
+    uses: miracum/.github/.github/workflows/standard-build.yaml@af38234ff7a38994a6e414ba2f13a1576eed54c0 # v1.4.1
     permissions:
+      contents: read
+      id-token: write
       packages: write
-    outputs:
-      image-tags: ${{ steps.container_meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
-      image-name: ${{ env.DECOMPOSE_XML_IMAGE_NAME }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3
-
-      - name: Container meta
-        id: container_meta
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5
-        with:
-          images: |
-            ${{ env.DECOMPOSE_XML_IMAGE_NAME }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3
-        if: ${{ github.event_name != 'pull_request' }}
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        id: build
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5
-        with:
-          context: src/decompose_xmls
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.container_meta.outputs.tags }}
-          labels: ${{ steps.container_meta.outputs.labels }}
-          load: ${{ github.event_name == 'pull_request' }}
+      pull-requests: write
+      actions: read
+      security-events: write
+    with:
+      image: ghcr.io/${{ github.repository }}/decompose-xmls
+      build-context: src/decompose_xmls
+      enable-build-test-layer: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    runs-on: ubuntu-22.04
+    uses: miracum/.github/.github/workflows/standard-build.yaml@af38234ff7a38994a6e414ba2f13a1576eed54c0 # v1.4.1
     permissions:
+      contents: read
+      id-token: write
       packages: write
-    outputs:
-      image-tags: ${{ steps.container_meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
-      image-name: ${{ env.OBDS_FHIR_TO_OPAL_IMAGE_NAME }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
+      pull-requests: write
+      actions: read
+      security-events: write
+    with:
+      image: ghcr.io/${{ github.repository }}/obds-fhir-to-opal
+      build-context: src/obds_fhir_to_opal
+      enable-build-test-layer: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3
-
-      - name: Container meta
-        id: container_meta
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5
-        with:
-          images: |
-            ${{ env.OBDS_FHIR_TO_OPAL_IMAGE_NAME }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3
-        if: ${{ github.event_name != 'pull_request' }}
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        id: build
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5
-        with:
-          context: src/obds_fhir_to_opal
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.container_meta.outputs.tags }}
-          labels: ${{ steps.container_meta.outputs.labels }}
-          load: ${{ github.event_name == 'pull_request' }}
+  lint:
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@af38234ff7a38994a6e414ba2f13a1576eed54c0 # v1.4.1
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      security-events: write
+      actions: read
+    with:
+      enable-validate-gradle-wrapper: false
+      codeql-languages: '["python"]'
+      enable-codeql: false
+      enable-verify-base-image-signature: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   test:
     runs-on: ubuntu-22.04
@@ -125,7 +87,7 @@ jobs:
           sudo k3s kubectl config view --raw | tee ~/.kube/config > /dev/null
           chmod 600 ~/.kube/config
 
-      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: downgrade helm
         shell: bash
@@ -193,7 +155,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: ${{ github.event_name == 'pull_request' }}
     steps:
-      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - run: |
           ./build-air-gapped-installer.sh
