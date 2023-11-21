@@ -1,4 +1,5 @@
 import datetime
+import math
 import os
 import shutil
 import time
@@ -147,70 +148,48 @@ def calculate_age_at_conditiondate(birthdate, conditiondate):
 
 # 0-14, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 50-54, 55-59...80-84, 85+
 def diagnosis_age_group_small(age_at_diagnosis):
-    diagnosis_age_group_small = 100
-    if age_at_diagnosis <= 14:
-        diagnosis_age_group_small = 0
-    elif age_at_diagnosis <= 19:
-        diagnosis_age_group_small = 1
-    elif age_at_diagnosis <= 24:
-        diagnosis_age_group_small = 2
-    elif age_at_diagnosis <= 29:
-        diagnosis_age_group_small = 3
-    elif age_at_diagnosis <= 34:
-        diagnosis_age_group_small = 4
-    elif age_at_diagnosis <= 39:
-        diagnosis_age_group_small = 5
-    elif age_at_diagnosis <= 44:
-        diagnosis_age_group_small = 6
-    elif age_at_diagnosis <= 49:
-        diagnosis_age_group_small = 7
-    elif age_at_diagnosis <= 54:
-        diagnosis_age_group_small = 8
-    elif age_at_diagnosis <= 59:
-        diagnosis_age_group_small = 9
-    elif age_at_diagnosis <= 64:
-        diagnosis_age_group_small = 10
-    elif age_at_diagnosis <= 69:
-        diagnosis_age_group_small = 11
-    elif age_at_diagnosis <= 74:
-        diagnosis_age_group_small = 12
-    elif age_at_diagnosis <= 79:
-        diagnosis_age_group_small = 13
-    elif age_at_diagnosis <= 84:
-        diagnosis_age_group_small = 14
-    elif age_at_diagnosis >= 85:
-        diagnosis_age_group_small = 15
-    else:
-        diagnosis_age_group_small = 100
-    return diagnosis_age_group_small
+    age_ranges = [
+        14,
+        19,
+        24,
+        29,
+        34,
+        39,
+        44,
+        49,
+        54,
+        59,
+        64,
+        69,
+        74,
+        79,
+        84,
+        math.inf,
+    ]
+
+    for index, upper_limit in enumerate(age_ranges):
+        if age_at_diagnosis <= upper_limit:
+            return index
 
 
 # 0-10, 11-20, 21-30... 71-80, 81-90, 90+
 def diagnosis_age_group_large(age_at_diagnosis):
-    diagnosis_age_group_large = 100
-    if age_at_diagnosis <= 10:
-        diagnosis_age_group_large = 0
-    elif age_at_diagnosis <= 20:
-        diagnosis_age_group_large = 1
-    elif age_at_diagnosis <= 30:
-        diagnosis_age_group_large = 2
-    elif age_at_diagnosis <= 40:
-        diagnosis_age_group_large = 3
-    elif age_at_diagnosis <= 50:
-        diagnosis_age_group_large = 4
-    elif age_at_diagnosis <= 60:
-        diagnosis_age_group_large = 5
-    elif age_at_diagnosis <= 70:
-        diagnosis_age_group_large = 6
-    elif age_at_diagnosis <= 80:
-        diagnosis_age_group_large = 7
-    elif age_at_diagnosis <= 90:
-        diagnosis_age_group_large = 8
-    elif age_at_diagnosis > 90:
-        diagnosis_age_group_large = 9
-    else:
-        diagnosis_age_group_large = 100
-    return diagnosis_age_group_large
+    age_ranges = [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        math.inf,
+    ]
+
+    for index, upper_limit in enumerate(age_ranges):
+        if age_at_diagnosis <= upper_limit:
+            return index
 
 
 def add_age_at_condition_and_groups(df_pat_cond_joined):
