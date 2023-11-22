@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.1.0](https://github.com/bzkf/diz-in-a-box/compare/v2.0.0...v2.1.0) (2023-11-21)
+
+
+### Features
+
+* age and entity groupings for datashield ([#124](https://github.com/bzkf/diz-in-a-box/issues/124)) ([c03d2d3](https://github.com/bzkf/diz-in-a-box/commit/c03d2d318c18ad2e59003fe792e61d39751c0528))
+
+
+### Miscellaneous Chores
+
+* bumps obds-to-fhir ([#120](https://github.com/bzkf/diz-in-a-box/issues/120)) ([e3035dd](https://github.com/bzkf/diz-in-a-box/commit/e3035dd4b0104946970d50c57f6e901638ca2c01))
+* **deps:** update github/codeql-action action to v2.22.6 ([#122](https://github.com/bzkf/diz-in-a-box/issues/122)) ([e1fef29](https://github.com/bzkf/diz-in-a-box/commit/e1fef29fb0d5b3a13387458fd7e480155d137a31))
+
+
+### CI/CD
+
+* use reusable miracum workflows for ci ([#123](https://github.com/bzkf/diz-in-a-box/issues/123)) ([ff86902](https://github.com/bzkf/diz-in-a-box/commit/ff869028c41ef5c2cb85b2fd2a52896b6de087d3))
+
 ## [2.0.0](https://github.com/bzkf/diz-in-a-box/compare/v1.6.2...v2.0.0) (2023-11-08)
 
 
