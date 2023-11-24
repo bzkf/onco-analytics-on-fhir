@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.1](https://github.com/bzkf/diz-in-a-box/compare/v2.1.0...v2.1.1) (2023-11-24)
+
+
+### Bug Fixes
+
+* update connector SQL query and related part in README.md ([#126](https://github.com/bzkf/diz-in-a-box/issues/126)) ([4332970](https://github.com/bzkf/diz-in-a-box/commit/4332970d278c274267871c7199f6f95f93f64c76))
+
+
+### Miscellaneous Chores
+
+* **deps:** updated pseudonymizer to v2.21.3 ([#128](https://github.com/bzkf/diz-in-a-box/issues/128)) ([41dbbc2](https://github.com/bzkf/diz-in-a-box/commit/41dbbc25d4c06ed14e7b4774334b8290892050c0))
+
 ## [2.1.0](https://github.com/bzkf/diz-in-a-box/compare/v2.0.0...v2.1.0) (2023-11-21)
 
 
