@@ -35,6 +35,20 @@ docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml -f compose.deco
 
 ## Enable Kafka Connect and the connector
 
+Make sure to have access to Onkostar tables `lkr_meldung`, `lkr_meldung_export` and `erkrankung`.
+
+The following SQL query will SELECT required information with columns filtered by type and containing required ICD_Version entry in `XML_DATEN`:
+
+```sql
+SELECT * FROM (
+  SELECT YEAR(e.diagnosedatum) AS YEAR, versionsnummer AS VERSIONSNUMMER, lme.id AS ID, CONVERT(lme.xml_daten using utf8) AS XML_DATEN
+    FROM lkr_meldung_export lme
+    JOIN lkr_meldung lm ON lme.lkr_meldung = lm.id
+    JOIN erkrankung e ON lm.erkrankung_id = e.id
+    WHERE typ != '-1' AND versionsnummer IS NOT NULL AND lme.XML_DATEN LIKE '%ICD_Version%'
+) o;
+```
+
 ```sh
 docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml up
 ```

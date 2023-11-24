@@ -8,7 +8,7 @@
     "connection.password": "${file:/tmp/kafka-connect-passwords.properties:onkostar-db-password}",
     "schema.pattern": "ONKOSTAR",
     "topic.prefix": "onkostar.MELDUNG_EXPORT",
-    "query": "SELECT * FROM (SELECT * FROM STG_ONKOSTAR_LKR_MELDUNG_EXPORT WHERE TYP != '-1' AND VERSIONSNUMMER IS NOT NULL) o",
+    "query": "SELECT * FROM (SELECT YEAR(e.diagnosedatum) AS YEAR, versionsnummer AS VERSIONSNUMMER, lme.id AS ID, CONVERT(lme.xml_daten using utf8) AS XML_DATEN FROM lkr_meldung_export lme JOIN lkr_meldung lm ON lme.lkr_meldung = lm.id JOIN erkrankung e ON lm.erkrankung_id = e.id WHERE typ != '-1' AND versionsnummer IS NOT NULL AND lme.XML_DATEN LIKE '%ICD_Version%') o;",
     "mode": "incrementing",
     "incrementing.column.name": "ID",
     "validate.non.null": "true",
