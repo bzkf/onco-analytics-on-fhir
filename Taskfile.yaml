@@ -18,7 +18,7 @@ tasks:
     cmds:
       - |
         docker compose \
-          -f compose.obds-to-opal.yaml up
+          -f compose.obds-fhir-to-opal.yaml up
 
   clean:
     dir: docker-compose/

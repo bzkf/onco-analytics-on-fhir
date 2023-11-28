@@ -1,6 +1,6 @@
 services:
   fhir-server:
-    image: docker.io/hapiproject/hapi:v6.6.0
+    image: docker.io/hapiproject/hapi:v6.10.0@sha256:eabce64f25832ea01efc3e6ee1e8a365c446c088af60c7ece5749fca677e3ad5
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -35,7 +35,7 @@ services:
       - "8082:8080"
 
   fhir-db:
-    image: docker.io/library/postgres:15.3
+    image: docker.io/library/postgres:15.5@sha256:a76de2b9fe8c687d04ff2a6d10174fc5d11952515591cce102e28ede079b8d1c
     restart: unless-stopped
     deploy:
       resources:
