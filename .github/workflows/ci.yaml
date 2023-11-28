@@ -9,10 +9,7 @@ on:
       - master
   release:
     types:
-      # If you want a workflow to run when stable and pre-releases publish, subscribe to published instead of released and prereleased.
-      # <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#release>
-      - published
-
+      - created
 permissions: read-all
 
 env:
@@ -69,17 +66,20 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  test:
+  test-k8s:
     runs-on: ubuntu-22.04
+    # disabled since the major deployment platform is currently
+    # docker compose anyways
+    if: ${{ false }}
     # run tests only on PRs
-    if: ${{ github.event_name == 'pull_request' }}
+    # ${{ github.event_name == 'pull_request' }}
     needs:
       - build-decompose-xml-image
       - build-obds-fhir-to-opal-image
     steps:
       - name: install k3s
         run: |
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.26.1+k3s1 sh -
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.28.3+k3s2 sh -
 
       - name: setup .kube/config
         run: |
@@ -88,15 +88,6 @@ jobs:
           chmod 600 ~/.kube/config
 
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: downgrade helm
-        shell: bash
-        run: |
-          rm /usr/local/bin/helm
-          curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > /tmp/helm.sh
-          chmod +x /tmp/helm.sh
-          /tmp/helm.sh --version v3.12.3
-          helm version
 
       - name: install dependencies
         run: |
@@ -109,14 +100,13 @@ jobs:
           kubectl config view
 
           helm dependency build charts/prerequisites
-          helm upgrade --install --wait --timeout=10m diz-in-a-box-prerequisites charts/prerequisites
+          helm upgrade --install --wait --timeout=10m --set strimzi-kafka-operator.generateNetworkPolicy=false diz-in-a-box-prerequisites charts/prerequisites
 
           kubectl apply -f k8s/
-          kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
-          kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
+          kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=600s
 
           kubectl apply -f k8s/kafka-bridge.yaml
-          kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
+          kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=600s
 
           kubectl get all -A
 
