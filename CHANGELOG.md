@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/bzkf/diz-in-a-box/compare/v2.1.1...v2.1.2) (2023-11-28)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#94](https://github.com/bzkf/diz-in-a-box/issues/94)) ([3739ba2](https://github.com/bzkf/diz-in-a-box/commit/3739ba2b2a9e136220f220be43440c9dfad2991a))
+
 ## [2.1.1](https://github.com/bzkf/diz-in-a-box/compare/v2.1.0...v2.1.1) (2023-11-24)
 
 
