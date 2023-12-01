@@ -1,6 +1,6 @@
 services:
   opal:
-    image: docker.io/obiba/opal:4.6@sha256:0cff692fae7033789e65fb2661a2515d9cbb999e2e741a0a39b769e5c57dc343
+    image: docker.io/obiba/opal:4.6@sha256:79782ac5b921535bfcdee141b7045e978a1e983bef924324445db14159d47909
     restart: unless-stopped
     ipc: none
     security_opt:
