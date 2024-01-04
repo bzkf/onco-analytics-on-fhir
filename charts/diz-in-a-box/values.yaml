@@ -137,7 +137,7 @@ stream-processors:
         image:
           registry: ghcr.io
           repository: miracum/obds-to-fhir
-          tag: v2.0.4@sha256:13c8a93ebd8f150c4b6219bf5fb073fdd52f207cc7c9e472b775d06829e0a124
+          tag: v2.0.7@sha256:f7be46001b2a8101b9e6e87430c8cdcd38f6d9c063c52a7df13e625285a49769
           pullPolicy: IfNotPresent
         env:
           - name: OPENTRACING_JAEGER_ENABLED
