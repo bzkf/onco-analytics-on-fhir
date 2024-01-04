@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.3](https://github.com/bzkf/diz-in-a-box/compare/v2.1.2...v2.1.3) (2024-01-04)
+
+
+### Documentation
+
+* create SECURITY.md ([ca09f85](https://github.com/bzkf/diz-in-a-box/commit/ca09f85fae789f7459a69a0b3856006a6288ff79))
+
+
+### Miscellaneous Chores
+
+* bumps obds-to-fhir image ([#136](https://github.com/bzkf/diz-in-a-box/issues/136)) ([73b03ce](https://github.com/bzkf/diz-in-a-box/commit/73b03ce71167c55b61959b84eed4ed5cf5e8ca14))
+* **deps:** update docker.io/hapiproject/hapi docker tag to v6.10.1 ([#132](https://github.com/bzkf/diz-in-a-box/issues/132)) ([8cab8b8](https://github.com/bzkf/diz-in-a-box/commit/8cab8b8dec7a7e1361551f406c0bc9ac9940e4c6))
+* **deps:** update docker.io/obiba/opal:4.6 docker digest to 79782ac ([#131](https://github.com/bzkf/diz-in-a-box/issues/131)) ([ad52b39](https://github.com/bzkf/diz-in-a-box/commit/ad52b39c4168d972b75629eb1567c8ff0e6dd272))
+* remove image digest since it seems to interfere with docker save and docker load ([f6fdb59](https://github.com/bzkf/diz-in-a-box/commit/f6fdb5988f6eb3615e3f9b0845bf885f8b98c132))
+
 ## [2.1.2](https://github.com/bzkf/diz-in-a-box/compare/v2.1.1...v2.1.2) (2023-11-28)
 
 
