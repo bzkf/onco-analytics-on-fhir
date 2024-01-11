@@ -1,6 +1,6 @@
 dependencies:
 - name: strimzi-kafka-operator
   repository: oci://quay.io/strimzi-helm
-  version: 0.38.0
-digest: sha256:f96a89d0a93a9f4287fff83031e35664b5fead97acf7942d03dc24d9da89bcf7
-generated: "2023-11-26T16:59:50.148859573Z"
+  version: 0.39.0
+digest: sha256:c986c32b5483a8d395c49960c179f12d775ce5ef2c55ac5cb63f376d9fc97660
+generated: "2024-01-11T20:52:49.55346174Z"
