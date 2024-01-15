@@ -1,6 +1,6 @@
 services:
   obds-to-fhir:
-    image: ghcr.io/miracum/obds-to-fhir:v2.0.8@sha256:9f3ee43267f24062db81a6575f33e225cd2be00120d4ccb81e257fbbc5353882
+    image: ghcr.io/miracum/obds-to-fhir:v2.0.10@sha256:061ca9c88d47cbe74aefddd60b455c6f3c0984638b07525f73157b070b700193
     restart: unless-stopped
     cap_drop:
       - ALL

@@ -32,7 +32,7 @@ services:
       SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
 
   fhir-pseudonymizer:
-    image: ghcr.io/miracum/fhir-pseudonymizer:v2.21.4@sha256:3fc8e396ecfa9a9471a6c806e3a069f15bc58d90d3eb296b74d931ff72a025c9
+    image: ghcr.io/miracum/fhir-pseudonymizer:v2.21.5@sha256:5d96f44cb9853ba1535926e72f61a09e5ca3300ff382e5ad8c697a9f50295f00
     restart: unless-stopped
     cap_drop:
       - ALL
