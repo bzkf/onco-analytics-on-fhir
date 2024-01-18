@@ -19,3 +19,8 @@ services:
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
       ACTIVE_PROFILE: "patient"
       YEAR_LIMITATION_SUFFIX: "" # e.g. ".2023"
+      FHIR_SYSTEMS_PATIENTID: "https://CHANGE-ME/patid"
+      FHIR_SYSTEMS_CONDITIONID: "https://CHANGE-ME/patid"
+      FHIR_SYSTEMS_OBSERVATIONID: "https://CHANGE-ME/patid"
+      FHIR_SYSTEMS_PROCEDUREID: "https://CHANGE-ME/patid"
+      FHIR_SYSTEMS_MEDICATIONSTATEMENTID: "https://CHANGE-ME/patid"
