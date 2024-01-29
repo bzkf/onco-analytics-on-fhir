@@ -32,7 +32,7 @@ services:
       - rock-2
 
   opal-db:
-    image: docker.io/library/postgres:16.1@sha256:302de9d3235dbab5e89a87f889663116259eb7bce4aaeaaa6a1117daaa9a4750
+    image: docker.io/library/postgres:16.1@sha256:49c276fa02e3d61bd9b8db81dfb4784fe814f50f778dce5980a03817438293e3
     restart: unless-stopped
     ipc: private
     security_opt:
