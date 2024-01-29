@@ -1,2 +1,2 @@
-pydantic==1.10.13
+pydantic==1.10.14
 confluent-kafka==2.3.0
