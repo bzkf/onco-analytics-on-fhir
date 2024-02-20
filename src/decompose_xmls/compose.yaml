@@ -12,7 +12,7 @@ services:
       - ./output-obds-reports:/app/output-files
 
   kafka:
-    image: docker.io/bitnami/kafka:3.6.1@sha256:80dfb40553ac8d0785e9ddf40ee50ccd7af4b432e36fed8ed082fbfc2bb824e9
+    image: docker.io/bitnami/kafka:3.6.1@sha256:b5254050e61d1912ed9cf3f7107adc6a21ff29d85047b46d7b6df57cf25fa2f7
     restart: unless-stopped
     profiles:
       - kafka
