@@ -140,7 +140,10 @@ def calculate_age(birthdate):
 
 
 def calculate_age_at_conditiondate(birthdate, conditiondate):
-    age_at_conditiondate = conditiondate - birthdate
+    if conditiondate is None:
+        age_at_conditiondate = birthdate
+    else:
+        age_at_conditiondate = conditiondate - birthdate
     days_in_year = 365.2425
     age_at_conditiondate = int(age_at_conditiondate.days / days_in_year)
     return age_at_conditiondate
@@ -236,7 +239,8 @@ def encode_patients(ptl: PathlingContext, df_bundles: pyspark.sql.dataframe.Data
     return_yearUDF = udf(lambda x: return_year(x), StringType())
 
     patients = df_patients.selectExpr(
-        "id as pat_id", "gender", "birthDate", "deceasedBoolean", "deceasedDateTime"
+        "EXPLODE_OUTER(identifier.value) as pat_id", "gender", "birthDate",
+        "deceasedBoolean", "deceasedDateTime"
     )
 
     patients = patients.withColumns(
