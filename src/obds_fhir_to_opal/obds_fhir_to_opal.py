@@ -150,7 +150,6 @@ def calculate_age_at_conditiondate(birthdate, conditiondate):
     return age_at_conditiondate
 
 
-
 # 0-14, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 50-54, 55-59...80-84, 85+
 def diagnosis_age_group_small(age_at_diagnosis):
     age_ranges = [
