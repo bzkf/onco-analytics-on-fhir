@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.1.4](https://github.com/bzkf/diz-in-a-box/compare/v2.1.3...v2.1.4) (2024-03-26)
+
+
+### Bug Fixes
+
+* do not use semicolon at the end of SQL query ([#157](https://github.com/bzkf/diz-in-a-box/issues/157)) ([b3805f3](https://github.com/bzkf/diz-in-a-box/commit/b3805f393e39bd8655653ad290cfee050b5f0b89))
+* exchange pat identifier with actual id, handle empty conditiondate ([#164](https://github.com/bzkf/diz-in-a-box/issues/164)) ([08c6273](https://github.com/bzkf/diz-in-a-box/commit/08c6273c49f67d3e820709c878fd1f95f3926f4d))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#142](https://github.com/bzkf/diz-in-a-box/issues/142)) ([77e9e83](https://github.com/bzkf/diz-in-a-box/commit/77e9e83d2a8d4a591db3baf04ba4c3b74fcdf2d2))
+* **deps:** update all non-major dependencies ([#147](https://github.com/bzkf/diz-in-a-box/issues/147)) ([833a09e](https://github.com/bzkf/diz-in-a-box/commit/833a09e568ce07d9776bf5dff02cc42fae9670e7))
+* **deps:** update all non-major dependencies ([#149](https://github.com/bzkf/diz-in-a-box/issues/149)) ([9242de3](https://github.com/bzkf/diz-in-a-box/commit/9242de3b0bde58d30fc112bedf82ced1d2337248))
+* **deps:** update all non-major dependencies ([#153](https://github.com/bzkf/diz-in-a-box/issues/153)) ([03c1f4b](https://github.com/bzkf/diz-in-a-box/commit/03c1f4bb9839e181b86c2b7712f4f0b806f73697))
+* **deps:** update docker.io/bitnami/kafka:3.6.0 docker digest to cff659c ([#133](https://github.com/bzkf/diz-in-a-box/issues/133)) ([35016c0](https://github.com/bzkf/diz-in-a-box/commit/35016c06fa52746aa38abdab0fde74e484fd0edd))
+* **deps:** update docker.io/bitnami/kafka:3.6.1 docker digest to 80dfb40 ([#151](https://github.com/bzkf/diz-in-a-box/issues/151)) ([7693f07](https://github.com/bzkf/diz-in-a-box/commit/7693f07e4e89c648f9bbcb7e0977f93b576d6591))
+* **deps:** update docker.io/bitnami/kafka:3.6.1 docker digest to b525405 ([#156](https://github.com/bzkf/diz-in-a-box/issues/156)) ([c96934d](https://github.com/bzkf/diz-in-a-box/commit/c96934dfee6ae02ae95a4c9af8647baf24bc6ab5))
+* **deps:** update docker.io/library/postgres:15.5 docker digest to 15b7f8d ([#154](https://github.com/bzkf/diz-in-a-box/issues/154)) ([936b0b0](https://github.com/bzkf/diz-in-a-box/commit/936b0b0cdc0256e8dfc57b0c0dfd5d38413d83cc))
+* **deps:** update docker.io/library/postgres:15.5 docker digest to 7415b9c ([#134](https://github.com/bzkf/diz-in-a-box/issues/134)) ([be76059](https://github.com/bzkf/diz-in-a-box/commit/be760591d6e608e5a2b1efbf637202b46ddd906a))
+* **deps:** update docker.io/library/postgres:15.5 docker digest to 89d430f ([#139](https://github.com/bzkf/diz-in-a-box/issues/139)) ([92e7f35](https://github.com/bzkf/diz-in-a-box/commit/92e7f35faa732bc0305b9336d0ff983f3c2f5bfb))
+* **deps:** update docker.io/library/postgres:16.1 docker digest to 09f23e0 ([#155](https://github.com/bzkf/diz-in-a-box/issues/155)) ([04d73fb](https://github.com/bzkf/diz-in-a-box/commit/04d73fb6a6fdbdeb4f4c1e9fa0580ef5442877e5))
+* **deps:** update docker.io/library/postgres:16.1 docker digest to 49c276f ([#140](https://github.com/bzkf/diz-in-a-box/issues/140)) ([f9ea488](https://github.com/bzkf/diz-in-a-box/commit/f9ea488c9f82ce3968ba909196300698ee6e51a1))
+* **deps:** update docker.io/obiba/opal:4.6 docker digest to 50abaa4 ([#141](https://github.com/bzkf/diz-in-a-box/issues/141)) ([db11236](https://github.com/bzkf/diz-in-a-box/commit/db1123648da2cd928c5e9b7637d4b35f2308a88d))
+* expose obds-to-fhir env vars ([#148](https://github.com/bzkf/diz-in-a-box/issues/148)) ([4f40596](https://github.com/bzkf/diz-in-a-box/commit/4f40596ee92823efa2358d907151b55e4b49d583))
+
+
+### CI/CD
+
+* updated standard schedule to scan both build imges ([#138](https://github.com/bzkf/diz-in-a-box/issues/138)) ([8c5f067](https://github.com/bzkf/diz-in-a-box/commit/8c5f067d9285faa1b809c038b0c98eafdf384748))
+
 ## [2.1.3](https://github.com/bzkf/diz-in-a-box/compare/v2.1.2...v2.1.3) (2024-01-04)
 
 
