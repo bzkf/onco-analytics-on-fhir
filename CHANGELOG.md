@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.5](https://github.com/bzkf/diz-in-a-box/compare/v2.1.4...v2.1.5) (2024-03-27)
+
+
+### Bug Fixes
+
+* additional column for patid to keep pat identifier for joins, include new datadictionary ([#165](https://github.com/bzkf/diz-in-a-box/issues/165)) ([49ec635](https://github.com/bzkf/diz-in-a-box/commit/49ec6351ca2017439858dfe4f31021848dedec0e))
+
 ## [2.1.4](https://github.com/bzkf/diz-in-a-box/compare/v2.1.3...v2.1.4) (2024-03-26)
 
 
