@@ -241,7 +241,10 @@ def encode_patients(ptl: PathlingContext, df_bundles: pyspark.sql.dataframe.Data
     return_yearUDF = udf(lambda x: return_year(x), StringType())
 
     patients = df_patients.selectExpr(
-        "EXPLODE_OUTER(identifier.value) as pat_id", "gender", "birthDate",
+        "id as pat_id",
+        # todo: remove this later or change opal datadictionary
+        "EXPLODE_OUTER(identifier.value) as patID",
+        "gender", "birthDate",
         "deceasedBoolean", "deceasedDateTime"
     )
 
@@ -255,6 +258,7 @@ def encode_patients(ptl: PathlingContext, df_bundles: pyspark.sql.dataframe.Data
 
     patients = patients.select(
         patients.pat_id,
+        patients.patID,
         patients.gender,
         patients.gender_mapped,
         patients.birthDate,
@@ -632,6 +636,7 @@ def encode_observations(ptl: PathlingContext, df_bundles):
 def group_df(joined_dataframe):
     joined_dataframe_grouped = joined_dataframe.groupBy("cond_id").agg(
         first("pat_id").alias("pat_id"),
+        first("patID").alias("patID"),
         first("gender_mapped").alias("gender_mapped"),
         first("conditiondate").alias("conditiondate"),
         first("condcodingcode").alias("condcodingcode"),
@@ -660,6 +665,7 @@ def group_df(joined_dataframe):
     joined_dataframe_grouped_repartitioned = (
         joined_dataframe_grouped_repartitioned.select(
             "pat_id",
+            "patID",
             "cond_id",
             "gender_mapped",
             "conditiondate",
