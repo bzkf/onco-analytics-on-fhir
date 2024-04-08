@@ -9,7 +9,8 @@ from pathling import PathlingContext
 from pathling.etc import find_jar
 from pydantic import BaseSettings
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, explode, first, regexp_replace, to_date, udf, substring
+from pyspark.sql.functions import col, explode, first, regexp_replace, to_date, udf, \
+    substring
 from pyspark.sql.types import StringType
 
 
