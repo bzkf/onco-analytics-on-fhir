@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/bzkf/diz-in-a-box/compare/v2.1.5...v2.2.0) (2024-04-08)
+
+
+### Features
+
+* add column conditiondate year for filtering in data shield ([#169](https://github.com/bzkf/diz-in-a-box/issues/169)) ([a3cc155](https://github.com/bzkf/diz-in-a-box/commit/a3cc15550736f884ec7db7b66316fd5d04c46d3e))
+
 ## [2.1.5](https://github.com/bzkf/diz-in-a-box/compare/v2.1.4...v2.1.5) (2024-03-27)
 
 
