@@ -9,7 +9,7 @@ from pathling import PathlingContext
 from pathling.etc import find_jar
 from pydantic import BaseSettings
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, explode, first, regexp_replace, to_date, udf
+from pyspark.sql.functions import col, explode, first, regexp_replace, to_date, udf, substring
 from pyspark.sql.types import StringType
 
 
@@ -388,6 +388,7 @@ def encode_conditions(ptl: PathlingContext, df_bundles):
             "evidencereference": regexp_replace(
                 "evidencereference", "Observation/", ""
             ),
+            "conditiondate_year": substring("conditiondate", 1, 4),
             "stagereference": regexp_replace("stagereference", "Observation/", ""),
             "conditiondate": regexp_replace("conditiondate", "T", " "),
         }
@@ -403,6 +404,7 @@ def encode_conditions(ptl: PathlingContext, df_bundles):
     conditions = conditions.select(
         "cond_id",
         "conditiondate",
+        "conditiondate_year",
         "subjectreference",
         "condcodingcode",
         "condcodingcode_mapped",
@@ -639,6 +641,7 @@ def group_df(joined_dataframe):
         first("patID").alias("patID"),
         first("gender_mapped").alias("gender_mapped"),
         first("conditiondate").alias("conditiondate"),
+        first("conditiondate_year").alias("conditiondate_year"),
         first("condcodingcode").alias("condcodingcode"),
         first("condcodingcode_mapped").alias("condcodingcode_mapped"),
         first("entity_group").alias("entity_group"),
@@ -669,6 +672,7 @@ def group_df(joined_dataframe):
             "cond_id",
             "gender_mapped",
             "conditiondate",
+            "conditiondate_year",
             "condcodingcode",
             "condcodingcode_mapped",
             "entity_group",
