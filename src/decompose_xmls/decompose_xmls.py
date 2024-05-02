@@ -11,8 +11,8 @@ from pydantic import BaseSettings
 
 class Settings(BaseSettings):
     input_folder: str = "./input-obds-reports"
-    output_folder: str = "./output-files"   # RENAME THIS
-    output_folder_xml: str = "./output-files/output-xmls"
+    output_folder: str = "./output-obds-reports"   # RENAME THIS
+    output_folder_xml: str = "./output-obds-reports/output-xmls"
     save_as_files_enabled: bool = True
     kafka_enabled: bool = False
     kafka_bootstrap_servers: str = "localhost:9092"
@@ -60,39 +60,45 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
         print(f"Absender is not defined in the input file {filename}. Stopping.")
         return []
 
-    menge_patient = ET.Element("Menge_Patient")
-
     # Loop through each patient
     for patient in [p for p in patients if p is not None]:
         if (
-            patient_id_element := patient.find(
+            patient_stammdaten := patient.find(
                 ".//{http://www.gekid.de/namespace}Patienten_Stammdaten"
             )
         ) is None:
             print(f"Patienten_Stammdaten is unset for {filename}. Skipping.")
             continue
 
-        patient_id = patient_id_element.get("Patient_ID")
+        patient_id = patient_stammdaten.get("Patient_ID")
         if patient_id is None:
             print(f"Patient_ID is unset for {filename}. Skipping.")
             continue
 
         # remove all Menge_Meldung
-        menge_meldung = patient.find('.//{http://www.gekid.de/namespace}Menge_Meldung')
+        menge_meldung = patient.find('./{http://www.gekid.de/namespace}Menge_Meldung')
         if menge_meldung is not None:
             patient.remove(menge_meldung)
 
         for meldung in menge_meldung:
-            # get meldung_id
+            # build Menge_Meldung group
             meldung_id = meldung.get("Meldung_ID")
             menge_meldung_group = ET.Element("Menge_Meldung")
-            # APPEND IN THE END
             menge_meldung_group.append(meldung)
-            #menge_patient = ET.Element("Menge_Patient")
-            menge_patient.append(patient)
-            menge_patient.append(menge_meldung_group)
+            # build parent tag Patient, append two children on the same level:
+            # append child Patient_Stammdaten first,
+            # append child Menge_Meldung_Group second
+            element_patient = ET.Element("Patient")
+            element_patient.append(patient_stammdaten)
+            element_patient.append(menge_meldung_group)
+            # build grandparent tag Menge_Patient and add Patient + children
+            menge_patient = ET.Element("Menge_Patient")
+            menge_patient.append(element_patient)
+            # build root element
             meldung_root = ET.Element(root.tag, root.attrib)
+            # append absender
             meldung_root.append(absender)
+            # append menge_patient built above
             meldung_root.append(menge_patient)
 
             ET.register_namespace("", "http://www.gekid.de/namespace")
@@ -152,8 +158,7 @@ def decompose_folder(input_folder: str):
 
     if settings.save_as_files_enabled:
         conditional_folder_create(settings.output_folder_xml)
-
-    for xmlfile in os.listdir(input_folder):
+    for xmlfile in os.listdir(settings.input_folder):
         if not xmlfile.endswith(".xml"):
             continue
         filename = os.path.join(input_folder, xmlfile)
