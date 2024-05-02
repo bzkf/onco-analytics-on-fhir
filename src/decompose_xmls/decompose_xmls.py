@@ -2,7 +2,6 @@ import json
 import os
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from io import BytesIO
 
 from confluent_kafka import Producer
