@@ -10,7 +10,7 @@ from pydantic import BaseSettings
 
 class Settings(BaseSettings):
     input_folder: str = "./input-obds-reports"
-    output_folder: str = "./output-obds-reports"   # RENAME THIS
+    output_folder: str = "./output-obds-reports"
     output_folder_xml: str = "./output-obds-reports/output-xmls"
     save_as_files_enabled: bool = True
     kafka_enabled: bool = False
@@ -51,7 +51,7 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
         kafka_producer = Producer(
             {"bootstrap.servers": settings.kafka_bootstrap_servers}
         )
-    # Get all "Patient" elements, save the absender to be appended to each new file - IN THE END
+    # Get all "Patient" elements, save the absender to be appended to each new file
     patients = root.findall(".//{http://www.gekid.de/namespace}Patient")
     absender = root.find("./{http://www.gekid.de/namespace}Absender")
 
@@ -75,7 +75,7 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
             continue
 
         # remove all Menge_Meldung
-        menge_meldung = patient.find('./{http://www.gekid.de/namespace}Menge_Meldung')
+        menge_meldung = patient.find("./{http://www.gekid.de/namespace}Menge_Meldung")
         if menge_meldung is not None:
             patient.remove(menge_meldung)
 
