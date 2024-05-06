@@ -2,7 +2,6 @@ import json
 import os
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from io import BytesIO
 
 from confluent_kafka import Producer
@@ -11,30 +10,12 @@ from pydantic import BaseSettings
 
 class Settings(BaseSettings):
     input_folder: str = "./input-obds-reports"
-    output_folder: str = "./output-files"
-    output_folder_xml: str = "./output-files/output-xmls"
+    output_folder: str = "./output-obds-reports"
+    output_folder_xml: str = "./output-obds-reports/output-xmls"
     save_as_files_enabled: bool = True
     kafka_enabled: bool = False
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_output_topic: str = "obds.einzelmeldungen"
-
-
-@dataclass
-class Einzelmeldung:
-    xml: ET.Element
-    patient_id: str
-    meldung_id: str
-
-    def __repr__(self) -> str:
-        ET.register_namespace("", "http://www.gekid.de/namespace")
-        f = BytesIO()
-        ET.ElementTree(self.xml).write(f, encoding="utf-8", xml_declaration=True)
-        dict_repr = {
-            "xml": f.getvalue().decode(),
-            "patient_id": self.patient_id,
-            "meldung_id": self.meldung_id,
-        }
-        return json.dumps(dict_repr)
 
 
 def conditional_folder_create(folder_name):
@@ -45,88 +26,15 @@ def conditional_folder_create(folder_name):
 def save_xml_files(meldung_root, patient_id, meldung_id):
     settings = Settings()
     ET.register_namespace("", "http://www.gekid.de/namespace")
-    ET.ElementTree(meldung_root).write(
-        f"{settings.output_folder_xml}/patient_{patient_id}_meldung_{meldung_id}.xml",
+    tree = ET.ElementTree(meldung_root)
+    ET.indent(tree, "  ")
+    # ET.ElementTree(meldung_root)
+    tree.write(
+        f"{settings.output_folder_xml}/patient_{patient_id}"
+        f"_meldung_{meldung_id}.xml",
         encoding="UTF-8",
         xml_declaration=True,
     )
-
-
-def decompose_sammelmeldung(root: ET.Element, filename: str) -> list[Einzelmeldung]:
-    # Get all "Patient" elements, save the absender to be appended to each new file
-    patients = root.findall(".//{http://www.gekid.de/namespace}Patient")
-    absender = root.find("./{http://www.gekid.de/namespace}Absender")
-
-    if absender is None:
-        print(f"Absender is not defined in the input file {filename}. Stopping.")
-        return []
-
-    result: list[Einzelmeldung] = []
-
-    # Loop through each patient
-    for patient in [p for p in patients if p is not None]:
-        # Get the patient ID - might remove from filename later
-        # and only keep the meldung_id
-        if (
-            patient_id_element := patient.find(
-                ".//{http://www.gekid.de/namespace}Patienten_Stammdaten"
-            )
-        ) is None:
-            print(f"Patienten_Stammdaten is unset for {filename}. Skipping.")
-            continue
-
-        patient_id = patient_id_element.get("Patient_ID")
-        if patient_id is None:
-            print(f"Patient_ID is unset for {filename}. Skipping.")
-            continue
-
-        # Get all "Meldung" elements for this patient
-        meldungen = patient.findall(".//{http://www.gekid.de/namespace}Meldung")
-
-        # Loop through each meldung for this patient
-        for meldung in meldungen:
-            meldung_id = meldung.get("Meldung_ID")
-            if meldung_id is None:
-                print(f"Meldung_ID is unset for {filename}. Skipping.")
-                continue
-
-            # NEW IDEA - copy root, LOOP THROUGH EXISTING MELDUNGEN, BUT ONLY KEEP
-            # THE ONE WITH meldung_id and remove the rest
-            meldung_root = ET.Element(root.tag, root.attrib)
-            meldung_root.append(absender)
-
-            # reintroduce parent tag "Menge_Patient" that gets lost in the looping
-            menge_patient = ET.Element("Menge_Patient")
-            menge_patient.append(patient)
-            meldung_root.append(menge_patient)
-
-            menge_meldung_element = meldung_root.find(
-                ".//{http://www.gekid.de/namespace}Menge_Meldung"
-            )
-
-            if menge_meldung_element is None:
-                print(f"Menge_Meldung element not found in {filename}")
-                continue
-
-            menge_meldung_element.append(meldung)
-
-            relevant_meldung = None
-            # loop through the newly build meldung_root and remove all meldungen
-            # with meldung_id not matching to currrent one and remove duplicates
-            for einzelmeldung in meldung_root.findall(
-                ".//{http://www.gekid.de/namespace}Meldung"
-            ):
-                if einzelmeldung.attrib["Meldung_ID"] == meldung_id:
-                    if relevant_meldung is None:
-                        relevant_meldung = einzelmeldung
-                    else:
-                        menge_meldung_element.remove(einzelmeldung)
-                else:
-                    menge_meldung_element.remove(einzelmeldung)
-
-            result.append(Einzelmeldung(meldung_root, patient_id, meldung_id))
-
-    return result
 
 
 def kafka_delivery_report(err, msg):
@@ -136,73 +44,128 @@ def kafka_delivery_report(err, msg):
         print(f"Message delivered to {msg.topic()}@{msg.partition()}")
 
 
-def decompose_folder(input_folder: str):
+def decompose_sammelmeldung(root: ET.Element, filename: str):
     settings = Settings()
-
-    if settings.save_as_files_enabled:
-        conditional_folder_create(settings.output_folder_xml)
-
     kafka_producer: Producer = None
     if settings.kafka_enabled:
         kafka_producer = Producer(
             {"bootstrap.servers": settings.kafka_bootstrap_servers}
         )
+    # Get all "Patient" elements, save the absender to be appended to each new file
+    patients = root.findall(".//{http://www.gekid.de/namespace}Patient")
+    absender = root.find("./{http://www.gekid.de/namespace}Absender")
 
-    for xmlfile in os.listdir(input_folder):
+    if absender is None:
+        print(f"Absender is not defined in the input file {filename}. Stopping.")
+        return []
+
+    # Loop through each patient
+    for patient in [p for p in patients if p is not None]:
+        if (
+            patient_stammdaten := patient.find(
+                ".//{http://www.gekid.de/namespace}Patienten_Stammdaten"
+            )
+        ) is None:
+            print(f"Patienten_Stammdaten is unset for {filename}. Skipping.")
+            continue
+
+        patient_id = patient_stammdaten.get("Patient_ID")
+        if patient_id is None:
+            print(f"Patient_ID is unset for {filename}. Skipping.")
+            continue
+
+        # remove all Menge_Meldung
+        menge_meldung = patient.find('./{http://www.gekid.de/namespace}Menge_Meldung')
+        if menge_meldung is not None:
+            patient.remove(menge_meldung)
+
+            for meldung in menge_meldung:
+                # build Menge_Meldung group
+                meldung_id = meldung.get("Meldung_ID")
+                menge_meldung_group = ET.Element("Menge_Meldung")
+                menge_meldung_group.append(meldung)
+                # build parent tag Patient, append two children on the same level:
+                # append child Patient_Stammdaten first,
+                # append child Menge_Meldung_Group second
+                element_patient = ET.Element("Patient")
+                element_patient.append(patient_stammdaten)
+                element_patient.append(menge_meldung_group)
+                # build grandparent tag Menge_Patient and add Patient + children
+                menge_patient = ET.Element("Menge_Patient")
+                menge_patient.append(element_patient)
+                # build root element
+                meldung_root = ET.Element(root.tag, root.attrib)
+                # append absender
+                meldung_root.append(absender)
+                # append menge_patient built above
+                meldung_root.append(menge_patient)
+
+                ET.register_namespace("", "http://www.gekid.de/namespace")
+                f = BytesIO()
+                tree = ET.ElementTree(meldung_root)
+                ET.indent(tree, "  ")
+                tree.write(
+                    f, encoding="utf-8", xml_declaration=True
+                )
+
+                xml_str = f.getvalue().decode()
+                # prepare json files for kafka bridge
+                result_data = {
+                    "payload": {
+                        "LKR_MELDUNG": meldung_id,
+                        "XML_DATEN": xml_str,
+                        "VERSIONSNUMMER": 1,
+                        "REFERENZ_NUMMER": patient_id,
+                    }
+                }
+
+                if settings.save_as_files_enabled:
+                    with open(
+                        f"{settings.output_folder}/"
+                        + f"patient_{patient_id}_meldung_"
+                        + f"{meldung_id}.json",
+                        "w",
+                        encoding="utf-8",
+                    ) as output_file:
+                        json.dump(result_data, output_file, indent=4)
+
+                save_xml_files(
+                        meldung_root,
+                        patient_id,
+                        meldung_id,
+                    )
+
+                if kafka_producer is not None:
+                    kafka_producer.poll(0)
+
+                    # Asynchronously produce a message. The delivery report callback
+                    # will be triggered from the call to poll() above, or flush() below
+                    # when the message has been successfully delivered or failed
+                    # permanently.
+                    kafka_producer.produce(
+                        settings.kafka_output_topic,
+                        json.dumps(result_data),
+                        callback=kafka_delivery_report,
+                        key=f"{patient_id}-{meldung_id}",
+                    )
+
+    if kafka_producer is not None:
+        kafka_producer.flush()
+
+
+def decompose_folder(input_folder: str):
+    settings = Settings()
+
+    if settings.save_as_files_enabled:
+        conditional_folder_create(settings.output_folder_xml)
+    for xmlfile in os.listdir(settings.input_folder):
         if not xmlfile.endswith(".xml"):
             continue
         filename = os.path.join(input_folder, xmlfile)
         tree = ET.parse(filename)
         root = tree.getroot()
 
-        for einzelmeldung in decompose_sammelmeldung(root, filename):
-            ET.register_namespace("", "http://www.gekid.de/namespace")
-            f = BytesIO()
-            ET.ElementTree(einzelmeldung.xml).write(
-                f, encoding="utf-8", xml_declaration=True
-            )
-            xml_str = f.getvalue().decode()
-            # prepare json files for kafka bridge
-            result_data = {
-                "payload": {
-                    "LKR_MELDUNG": einzelmeldung.meldung_id,
-                    "XML_DATEN": xml_str,
-                    "VERSIONSNUMMER": 1,
-                    "REFERENZ_NUMMER": einzelmeldung.patient_id,
-                }
-            }
-
-            if settings.save_as_files_enabled:
-                with open(
-                    f"{settings.output_folder}/"
-                    + f"patient_{einzelmeldung.patient_id}_meldung_"
-                    + f"{einzelmeldung.meldung_id}.json",
-                    "w",
-                    encoding="utf-8",
-                ) as output_file:
-                    json.dump(result_data, output_file, indent=4)
-
-                save_xml_files(
-                    einzelmeldung.xml,
-                    einzelmeldung.patient_id,
-                    einzelmeldung.meldung_id,
-                )
-
-            if kafka_producer is not None:
-                kafka_producer.poll(0)
-
-                # Asynchronously produce a message. The delivery report callback will
-                # be triggered from the call to poll() above, or flush() below, when the
-                # message has been successfully delivered or failed permanently.
-                kafka_producer.produce(
-                    settings.kafka_output_topic,
-                    json.dumps(result_data),
-                    callback=kafka_delivery_report,
-                    key=f"{einzelmeldung.patient_id}-{einzelmeldung.meldung_id}",
-                )
-
-    if kafka_producer is not None:
-        kafka_producer.flush()
+        decompose_sammelmeldung(root, filename)
 
 
 def main():

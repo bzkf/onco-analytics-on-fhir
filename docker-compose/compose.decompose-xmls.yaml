@@ -9,3 +9,4 @@ services:
       SAVE_AS_FILES_ENABLED: "false"
     volumes:
       - ./input-obds-reports:/app/input-obds-reports
+      - ./output-obds-reports:/app/output-obds-reports
