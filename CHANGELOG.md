@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1](https://github.com/bzkf/diz-in-a-box/compare/v2.2.0...v2.2.1) (2024-05-06)
+
+
+### Bug Fixes
+
+* cryptoHash all references by default ([#174](https://github.com/bzkf/diz-in-a-box/issues/174)) ([12fccb8](https://github.com/bzkf/diz-in-a-box/commit/12fccb828b429a1c5b41490c613ed3364610b94d))
+* Decompose refactoring ([#173](https://github.com/bzkf/diz-in-a-box/issues/173)) ([9e3aea1](https://github.com/bzkf/diz-in-a-box/commit/9e3aea112b37db4489f412a9ffb5ace72e2bac22))
+
 ## [2.2.0](https://github.com/bzkf/diz-in-a-box/compare/v2.1.5...v2.2.0) (2024-04-08)
 
 
