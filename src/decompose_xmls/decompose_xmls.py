@@ -10,7 +10,7 @@ from pydantic import BaseSettings
 
 class Settings(BaseSettings):
     input_folder: str = "./input-obds-reports"
-    output_folder: str = "./output-obds-reports"   # RENAME THIS
+    output_folder: str = "./output-obds-reports"
     output_folder_xml: str = "./output-obds-reports/output-xmls"
     save_as_files_enabled: bool = True
     kafka_enabled: bool = False
