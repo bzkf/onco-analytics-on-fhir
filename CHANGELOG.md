@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/bzkf/diz-in-a-box/compare/v2.2.1...v2.2.2) (2024-05-07)
+
+
+### Bug Fixes
+
+* create output xml folder if not exists and update snapshots ([#176](https://github.com/bzkf/diz-in-a-box/issues/176)) ([23192fa](https://github.com/bzkf/diz-in-a-box/commit/23192facb5a3c42a1ac8043e8013e0b243cc8bb0))
+
 ## [2.2.1](https://github.com/bzkf/diz-in-a-box/compare/v2.2.0...v2.2.1) (2024-05-06)
 
 
