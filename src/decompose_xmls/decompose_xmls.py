@@ -47,6 +47,7 @@ def kafka_delivery_report(err, msg):
 
 
 def decompose_sammelmeldung(root: ET.Element, filename: str):
+    results = []
     settings = Settings()
     kafka_producer: Producer = None
     if settings.kafka_enabled:
@@ -121,6 +122,8 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
                     }
                 }
 
+                results.append(result_data)
+
                 if settings.save_as_files_enabled:
                     with open(
                         f"{settings.output_folder}/"
@@ -153,6 +156,8 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
 
     if kafka_producer is not None:
         kafka_producer.flush()
+
+    return results
 
 
 def decompose_folder(input_folder: str):
