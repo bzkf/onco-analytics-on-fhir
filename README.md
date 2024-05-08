@@ -2,17 +2,29 @@
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bzkf/diz-in-a-box/badge)](https://api.securityscorecards.dev/projects/github.com/bzkf/diz-in-a-box)
 
-DIZ in a box.
+This software is used to transform oncological basic data set (oBDS) XML files from tumor documentation systems to HL7® FHIR® and to a tabular format.
+
+## Modular Pipeline
+![Figure Modular Pipeline](img/fig1.png)
+
+[publication to be cited here]
+
 
 ## Installation
 
-### Prerequisites
+### Installation: Docker Compose Setup
+Please follow along here: [docker-compose/README.md](docker-compose/README.md)
+
+
+### Installation: kubernetes setup
+
+#### Prerequisites
 
 - [helm](https://github.com/helm/helm)
 
-### Steps
+#### Steps
 
-#### Install K3S Cluster
+##### Install K3S Cluster
 
 ```sh
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.26.1+k3s1 sh -
@@ -74,7 +86,7 @@ chmod +x ./dist/air-gapped/bin/import-images-into-k3s.sh
 IMAGE_FOLDER=./dist/air-gapped/images ./dist/air-gapped/bin/import-images-into-k3s.sh
 ```
 
-#### Install Strimzi Operator and Kafka
+##### Install Strimzi Operator and Kafka
 
 <!-- x-release-please-start-version -->
 
@@ -91,7 +103,7 @@ kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
 kubectl get all -A
 ```
 
-#### Install DIZ-in-a-box
+##### Install DIZ-in-a-box
 
 ```sh
 helm upgrade --install --wait --timeout=10m --version=2.2.2 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
