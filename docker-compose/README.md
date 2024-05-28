@@ -8,7 +8,7 @@
 #### a) ONKOSTAR data base connector
 Configure kafka-connect in [compose.full-yaml](compose.full.yaml) and [docker-compose/kafka-connect-passwords.properties](kafka-connect-passwords.properties).
 The oBDS single report XML-files will be loaded into the Kafka cluster.
-For more information about kafka-connect, refer to [7. Enable Kafka Connect and the connector.](#enable-kafka-konnect-and-the-connector)
+For more information about kafka-connect, refer to [7. Enable Kafka Connect and the connector.](#7-enable-kafka-konnect-and-the-connector)
 #### b) Folder import
 Copy your oBDS collection report XML-files to [docker-compose/input-obds-reports]().
 
