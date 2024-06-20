@@ -20,7 +20,7 @@ jobs:
           release-type: simple
           pull-request-title-pattern: "chore: release ${version}"
           extra-files: |
-            charts/diz-in-a-box/Chart.yaml
+            charts/onco-analytics-on-fhir/Chart.yaml
             charts/prerequisites/Chart.yaml
             README.md
             docker-compose/compose.decompose-xmls.yaml

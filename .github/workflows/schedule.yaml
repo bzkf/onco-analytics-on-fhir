@@ -16,6 +16,6 @@ jobs:
       issues: write
       security-events: write
     with:
-      images: "['ghcr.io/bzkf/diz-in-a-box/decompose-xmls:latest', 'ghcr.io/bzkf/diz-in-a-box/obds-fhir-to-opal:latest']"
+      images: "['ghcr.io/bzkf/onco-analytics-on-fhir/decompose-xmls:latest', 'ghcr.io/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal:latest']"
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}

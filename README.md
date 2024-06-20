@@ -1,6 +1,6 @@
-# diz-in-a-box
+# onco-analytics-on-fhir
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bzkf/diz-in-a-box/badge)](https://api.securityscorecards.dev/projects/github.com/bzkf/diz-in-a-box)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bzkf/onco-analytics-on-fhir/badge)](https://api.securityscorecards.dev/projects/github.com/bzkf/onco-analytics-on-fhir)
 
 This software is used to transform oncological basic data set (oBDS) XML files from tumor documentation systems to HL7® FHIR® and to a tabular format.
 
@@ -38,9 +38,9 @@ chmod 600 ~/.kube/config
 kubectl get nodes
 
 # create a namespace to isolate the installation
-export DIZBOX_NAMESPACE_NAME=bzkf-dizbox
-kubectl create namespace ${DIZBOX_NAMESPACE_NAME} --dry-run=client -o yaml | kubectl apply -f -
-kubectl config set-context --current --namespace=${DIZBOX_NAMESPACE_NAME}
+export ONCO_ANALYTICS_NAMESPACE_NAME=bzkf-onco-analytics
+kubectl create namespace ${ONCO_ANALYTICS_NAMESPACE_NAME} --dry-run=client -o yaml | kubectl apply -f -
+kubectl config set-context --current --namespace=${ONCO_ANALYTICS_NAMESPACE_NAME}
 ```
 
 ##### Air-gapped
@@ -50,7 +50,7 @@ Download the air-gapped installer and move it to the deployment machine:
 <!-- x-release-please-start-version -->
 
 ```sh
-curl -L -O https://github.com/bzkf/diz-in-a-box/releases/download/v2.2.2/air-gapped-installer.tgz
+curl -L -O https://github.com/bzkf/onco-analytics-on-fhir/releases/download/v2.2.2/air-gapped-installer.tgz
 ```
 
 <!-- x-release-please-end -->
@@ -91,7 +91,7 @@ IMAGE_FOLDER=./dist/air-gapped/images ./dist/air-gapped/bin/import-images-into-k
 <!-- x-release-please-start-version -->
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=2.2.2 prerequisites oci://ghcr.io/bzkf/diz-in-a-box/charts/prerequisites
+helm upgrade --install --wait --timeout=10m --version=2.2.2 prerequisites oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/prerequisites
 
 kubectl apply -f k8s/kafka-cluster.yaml
 kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
@@ -103,16 +103,16 @@ kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
 kubectl get all -A
 ```
 
-##### Install DIZ-in-a-box
+##### Install onco-analytics-on-fhir
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=2.2.2 diz-in-a-box oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
+helm upgrade --install --wait --timeout=10m --version=2.2.2 onco-analytics-on-fhir oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/onco-analytics-on-fhir
 
 # test the installation
-helm test diz-in-a-box
+helm test onco-analytics-on-fhir
 
-kubectl wait deployment/diz-in-a-box-stream-processors-obds-to-fhir --for=condition=Available --timeout=300s
-kubectl wait deployment/diz-in-a-box-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
+kubectl wait deployment/onco-analytics-on-fhir-stream-processors-obds-to-fhir --for=condition=Available --timeout=300s
+kubectl wait deployment/onco-analytics-on-fhir-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
 ```
 
 <!-- x-release-please-end -->

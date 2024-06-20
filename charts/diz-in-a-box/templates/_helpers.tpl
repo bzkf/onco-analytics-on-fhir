@@ -2,7 +2,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "diz-in-a-box.name" -}}
+{{- define "onco-analytics-on-fhir.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
@@ -11,7 +11,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "diz-in-a-box.fullname" -}}
+{{- define "onco-analytics-on-fhir.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -27,17 +27,17 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "diz-in-a-box.chart" -}}
+{{- define "onco-analytics-on-fhir.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
 Common labels
 */}}
-{{- define "diz-in-a-box.labels" -}}
-helm.sh/chart: {{ include "diz-in-a-box.chart" . }}
+{{- define "onco-analytics-on-fhir.labels" -}}
+helm.sh/chart: {{ include "onco-analytics-on-fhir.chart" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{ include "diz-in-a-box.matchLabels" . }}
+{{ include "onco-analytics-on-fhir.matchLabels" . }}
 {{- if .Values.extraLabels }}
     {{- toYaml .Values.extraLabels }}
 {{- end }}
@@ -46,7 +46,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 */}}
-{{- define "diz-in-a-box.matchLabels" -}}
-app.kubernetes.io/name: {{ include "diz-in-a-box.name" . }}
+{{- define "onco-analytics-on-fhir.matchLabels" -}}
+app.kubernetes.io/name: {{ include "onco-analytics-on-fhir.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
