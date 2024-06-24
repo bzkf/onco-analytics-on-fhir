@@ -1,4 +1,4 @@
-# diz-in-a-box
+# onco-analytics-on-fhir
 
 DIZ in a box.
 
@@ -9,7 +9,7 @@ DIZ in a box.
 To install the chart with the release name `my-diz`:
 
 ```console
-helm install my-diz oci://ghcr.io/bzkf/diz-in-a-box/charts/diz-in-a-box
+helm install my-diz oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/onco-analytics-on-fhir
 ```
 
 ## Requirements

@@ -41,21 +41,21 @@ jobs:
           helm repo add akhq https://akhq.io/
           helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
 
-          helm dep build charts/diz-in-a-box
+          helm dep build charts/onco-analytics-on-fhir
           helm dep build charts/prerequisites
 
       # TODO: maybe replace image tags in values.yaml with digests before packaging
       - name: Package, upload, and sign Helm charts
         run: |
-          CHART_VERSION=$(yq .version charts/diz-in-a-box/Chart.yaml)
+          CHART_VERSION=$(yq .version charts/onco-analytics-on-fhir/Chart.yaml)
 
-          # diz-in-a-box
-          helm package charts/diz-in-a-box
-          helm push "diz-in-a-box-${CHART_VERSION}.tgz" oci://ghcr.io/${{ github.repository }}/charts
+          # onco-analytics-on-fhir
+          helm package charts/onco-analytics-on-fhir
+          helm push "onco-analytics-on-fhir-${CHART_VERSION}.tgz" oci://ghcr.io/${{ github.repository }}/charts
 
-          cp "diz-in-a-box-${CHART_VERSION}.tgz" diz-in-a-box-chart.tgz
+          cp "onco-analytics-on-fhir-${CHART_VERSION}.tgz" onco-analytics-on-fhir-chart.tgz
 
-          cosign sign --yes "ghcr.io/${{ github.repository }}/charts/diz-in-a-box:${CHART_VERSION}"
+          cosign sign --yes "ghcr.io/${{ github.repository }}/charts/onco-analytics-on-fhir:${CHART_VERSION}"
 
           # prerequisites
           helm package charts/prerequisites
@@ -69,7 +69,7 @@ jobs:
         with:
           name: helm-charts
           path: |
-            diz-in-a-box-chart.tgz
+            onco-analytics-on-fhir-chart.tgz
             prerequisites-chart.tgz
 
   build-air-gapped-installer:
@@ -122,7 +122,7 @@ jobs:
       - name: Add Helm chart to dist
         run: |
           ls -lsa /tmp
-          cp /tmp/diz-in-a-box-chart.tgz dist/
+          cp /tmp/onco-analytics-on-fhir-chart.tgz dist/
           cp /tmp/prerequisites-chart.tgz dist/
           # cp /tmp/air-gapped-installer.tgz dist/
           # cp /tmp/air-gapped-prerequisites-installer.tgz dist/
@@ -133,7 +133,7 @@ jobs:
         working-directory: dist
         run: |
           # air-gapped-installer.tgz air-gapped-prerequisites-installer.tgz
-          sha256sum diz-in-a-box-chart.tgz prerequisites-chart.tgz compose-air-gapped-installer.tgz > checksums.sha256
+          sha256sum onco-analytics-on-fhir-chart.tgz prerequisites-chart.tgz compose-air-gapped-installer.tgz > checksums.sha256
           echo "hashes=$(base64 -w0 < checksums.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: upload assets to release

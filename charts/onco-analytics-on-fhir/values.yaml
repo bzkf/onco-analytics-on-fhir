@@ -21,7 +21,7 @@ akhq:
     - name: SSL_KEY_STORE_PASSWORD
       valueFrom:
         secretKeyRef:
-          name: diz-in-a-box-akhq
+          name: onco-analytics-on-fhir-akhq
           key: user.password
     - name: SSL_TRUST_STORE_PASSWORD
       valueFrom:
@@ -43,7 +43,7 @@ akhq:
                 - key: ca.p12
                   path: ca.p12
           - secret:
-              name: diz-in-a-box-akhq
+              name: onco-analytics-on-fhir-akhq
               items:
                 - key: user.crt
                   path: user.crt
@@ -111,7 +111,7 @@ stream-processors:
           pullPolicy: IfNotPresent
         env:
           - name: FHIR_URL
-            value: http://diz-in-a-box-hapi-fhir-jpaserver:8080/fhir
+            value: http://onco-analytics-on-fhir-hapi-fhir-jpaserver:8080/fhir
           - name: DISABLE_AUTO_COMMIT
             value: "false"
           - name: TOPIC

@@ -1,4 +1,4 @@
-# diz-in-a-box Docker Compose Version
+# onco-analytics-on-fhir Docker Compose Version
 
 ![Figure Modular Pipeline](../img/fig1.png)
 
@@ -105,7 +105,7 @@ In case of absence of Internet connectivity, container images cannot be pulled f
 <!-- x-release-please-start-version -->
 
 ```sh
-curl -L -O https://github.com/bzkf/diz-in-a-box/releases/download/v2.2.2/air-gapped-installer.tgz
+curl -L -O https://github.com/bzkf/onco-analytics-on-fhir/releases/download/v2.2.2/air-gapped-installer.tgz
 ```
 
 <!-- x-release-please-end -->

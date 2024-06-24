@@ -1,6 +1,6 @@
 services:
   obds-fhir-to-opal:
-    image: ghcr.io/bzkf/diz-in-a-box/obds-fhir-to-opal:v2.2.2 # x-release-please-version
+    image: ghcr.io/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal:v2.2.2 # x-release-please-version
     restart: no
     cap_drop:
       - ALL

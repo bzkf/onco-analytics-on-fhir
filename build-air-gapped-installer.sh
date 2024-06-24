@@ -33,10 +33,10 @@ if [ "$SHOULD_CREATE_K3S_AIR_GAPPED_INSTALLER" = "1" ]; then
   helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
 
   helm dependency build charts/prerequisites/
-  helm dependency build charts/diz-in-a-box/
+  helm dependency build charts/onco-analytics-on-fhir/
 
   prereq_images_string=$(helm template charts/prerequisites/ | yq -N '..|.image? | select(.)' | sort -u)
-  diz_in_a_box_images_string=$(helm template charts/diz-in-a-box/ | yq -N '..|.image? | select(.)' | sort -u)
+  diz_in_a_box_images_string=$(helm template charts/onco-analytics-on-fhir/ | yq -N '..|.image? | select(.)' | sort -u)
 
   readarray -t prereq_images <<<"$prereq_images_string"
   readarray -t diz_in_a_box_images <<<"$diz_in_a_box_images_string"

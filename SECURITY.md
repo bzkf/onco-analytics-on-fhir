@@ -6,5 +6,5 @@ Only the most recent major version is regularly updated and receives security fi
 
 ## Reporting a Vulnerability
 
-Please use the project's [private vulnerability reporting feature](https://github.com/bzkf/diz-in-a-box/security/advisories)
+Please use the project's [private vulnerability reporting feature](https://github.com/bzkf/onco-analytics-on-fhir/security/advisories)
 to report any vulnerabilities. For more information, see <https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability>.
