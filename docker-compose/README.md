@@ -63,11 +63,24 @@ The following SQL query will SELECT required information with columns filtered b
 
 ```sql
 SELECT * FROM (
+  SELECT YEAR(STR_TO_DATE(EXTRACTVALUE(lme.xml_daten, '//Diagnosedatum'), '%d.%c.%Y')) AS YEAR, versionsnummer AS VERSIONSNUMMER, lme.id AS ID, CONVERT(lme.xml_daten using utf8) AS XML_DATEN
+    FROM lkr_meldung_export lme
+    WHERE lme.typ != '-1' AND lme.versionsnummer IS NOT NULL AND lme.XML_DATEN LIKE '%ICD_Version%'
+) o;
+```
+
+If you are not using direct access to Onkostar MySQL/MariaDB database, you should use the following query that will fetch
+the diagnosis date from table `erkrankung`, because function `EXTRACTVALUE()` to extract values from XML is only
+supported on MySQL and MariaDB.
+This will require `JOIN`ing tables `lkr_meldung` and `erkrankung`.
+
+```sql
+SELECT * FROM (
   SELECT YEAR(e.diagnosedatum) AS YEAR, versionsnummer AS VERSIONSNUMMER, lme.id AS ID, CONVERT(lme.xml_daten using utf8) AS XML_DATEN
     FROM lkr_meldung_export lme
     JOIN lkr_meldung lm ON lme.lkr_meldung = lm.id
     JOIN erkrankung e ON lm.erkrankung_id = e.id
-    WHERE typ != '-1' AND versionsnummer IS NOT NULL AND lme.XML_DATEN LIKE '%ICD_Version%'
+    WHERE lme.typ != '-1' AND lme.versionsnummer IS NOT NULL AND lme.XML_DATEN LIKE '%ICD_Version%'
 ) o;
 ```
 
