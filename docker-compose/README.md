@@ -73,7 +73,7 @@ To remove leading zeros from `Patient_ID` (see: https://github.com/bzkf/onco-ana
 It will update `XML_DATEN` by replacing the attribute `Patient_ID` by using an `INT` if the value found can be casted into an integer but keeps the original value
 if any other (e.g. alphanumeric value) is used and the cast will result in `0` value.
 
-```
+```sql
 SELECT * FROM (
     SELECT
         YEAR(STR_TO_DATE(EXTRACTVALUE(lme.xml_daten, '//Diagnosedatum'), '%d.%c.%Y')) AS YEAR,
