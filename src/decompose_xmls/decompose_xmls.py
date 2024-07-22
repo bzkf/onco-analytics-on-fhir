@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import regex
 import xml.etree.ElementTree as ET
 from io import BytesIO
 
@@ -45,6 +46,8 @@ def kafka_delivery_report(err, msg):
     else:
         print(f"Message delivered to {msg.topic()}@{msg.partition()}")
 
+def remove_leading_zeros(patient_id: str):
+    return regex.sub(r'^0+', '', patient_id)
 
 def decompose_sammelmeldung(root: ET.Element, filename: str):
     results = []
@@ -91,8 +94,14 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
                 # append child Patient_Stammdaten first,
                 # append child Menge_Meldung_Group second
                 element_patient = ET.Element("Patient")
+
+                # Fix leading IDs in
+                patient_id = remove_leading_zeros(patient_id)
+                patient_stammdaten.set("Patient_ID", patient_id)
+
                 element_patient.append(patient_stammdaten)
                 element_patient.append(menge_meldung_group)
+
                 # build grandparent tag Menge_Patient and add Patient + children
                 menge_patient = ET.Element("Menge_Patient")
                 menge_patient.append(element_patient)
