@@ -7,6 +7,8 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
       KAFKA_OUTPUT_TOPIC: "onkostar.MELDUNG_EXPORT"
       SAVE_AS_FILES_ENABLED: "false"
+      # Set to 'true' to enable removing of leading zeros in patient IDs
+      REMOVE_LEADING_PATIENTID_ZEROS: "false"
     volumes:
       - ./input-obds-reports:/app/input-obds-reports
       - ./output-obds-reports:/app/output-obds-reports
