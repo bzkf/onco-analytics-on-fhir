@@ -47,7 +47,10 @@ def kafka_delivery_report(err, msg):
         print(f"Message delivered to {msg.topic()}@{msg.partition()}")
 
 def remove_leading_zeros(patient_id: str):
-    return regex.sub(r'^0+', '', patient_id)
+    if os.environ.get('REMOVE_LEADING_PATIENTID_ZEROS') == 'true':
+        return regex.sub(r'^0+', '', patient_id)
+    else:
+        return patient_id
 
 def decompose_sammelmeldung(root: ET.Element, filename: str):
     results = []
