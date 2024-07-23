@@ -46,11 +46,13 @@ def kafka_delivery_report(err, msg):
     else:
         print(f"Message delivered to {msg.topic()}@{msg.partition()}")
 
-def remove_leading_zeros(patient_id: str):
+
+def remove_leading_zeros(patient_id: str) -> str:
     if os.environ.get('REMOVE_LEADING_PATIENTID_ZEROS') == 'true':
         return regex.sub(r'^0+', '', patient_id)
     else:
         return patient_id
+
 
 def decompose_sammelmeldung(root: ET.Element, filename: str):
     results = []
@@ -99,8 +101,9 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
                 element_patient = ET.Element("Patient")
 
                 # Fix leading IDs in
-                patient_id = remove_leading_zeros(patient_id)
-                patient_stammdaten.set("Patient_ID", patient_id)
+                if patient_id is not None:
+                    patient_id = remove_leading_zeros(patient_id)
+                    patient_stammdaten.set("Patient_ID", patient_id)
 
                 element_patient.append(patient_stammdaten)
                 element_patient.append(menge_meldung_group)
