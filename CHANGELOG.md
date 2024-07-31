@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.3.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.2.2...v2.3.0) (2024-07-31)
+
+
+### Features
+
+* only use entries with ADT_GEKID version 2.x ([#186](https://github.com/bzkf/onco-analytics-on-fhir/issues/186)) ([09409df](https://github.com/bzkf/onco-analytics-on-fhir/commit/09409dfbff944264fd69663a19bbce9ff7e4d6ed))
+* remove leading zeros from patient id ([#190](https://github.com/bzkf/onco-analytics-on-fhir/issues/190)) ([6e8c835](https://github.com/bzkf/onco-analytics-on-fhir/commit/6e8c835f8d6d088a0d5f8d6a2e543508b94d80f0))
+
+
+### Bug Fixes
+
+* calculate correct age on diagnosis on birthday ([#195](https://github.com/bzkf/onco-analytics-on-fhir/issues/195)) ([f632bff](https://github.com/bzkf/onco-analytics-on-fhir/commit/f632bffa19a9a17225195bfaf17f0bbb04649f79))
+
+
+### Documentation
+
+* extract diagnosis date from XML data ([#185](https://github.com/bzkf/onco-analytics-on-fhir/issues/185)) ([1480267](https://github.com/bzkf/onco-analytics-on-fhir/commit/14802672e68831dec03bab83a6e8f5e4508bec2c))
+* zeros be gone -  add information on how to sanitize Patient_ID ([#189](https://github.com/bzkf/onco-analytics-on-fhir/issues/189)) ([bc71206](https://github.com/bzkf/onco-analytics-on-fhir/commit/bc71206983bea50459c7f678b0bd0bfaa35fca5e))
+
+
+### Miscellaneous Chores
+
+* readme cleanup ([#179](https://github.com/bzkf/onco-analytics-on-fhir/issues/179)) ([d6c1fea](https://github.com/bzkf/onco-analytics-on-fhir/commit/d6c1fea99aee0442635f818c4a7617644205a9e2))
+* rename diz-in-a-box to onco-analytics-on-fhir ([#184](https://github.com/bzkf/onco-analytics-on-fhir/issues/184)) ([bab3d27](https://github.com/bzkf/onco-analytics-on-fhir/commit/bab3d2771b7f95f975f07084d2cc73e21b7f0458))
+
 ## [2.2.2](https://github.com/bzkf/diz-in-a-box/compare/v2.2.1...v2.2.2) (2024-05-07)
 
 
