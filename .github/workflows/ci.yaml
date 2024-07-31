@@ -66,6 +66,29 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  tests:
+    strategy:
+      matrix:
+        # Python versions to run tests for
+        python-version: ["3.11"]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          cd src/decompose_xmls
+          pip install pytest
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+      - name: Run decompose_xmls tests
+        run: |
+          cd src/decompose_xmls
+          pytest
+
   test-k8s:
     runs-on: ubuntu-22.04
     # disabled since the major deployment platform is currently
