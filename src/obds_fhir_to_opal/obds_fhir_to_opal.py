@@ -13,6 +13,8 @@ from pyspark.sql.functions import col, explode, first, regexp_replace, to_date, 
     substring
 from pyspark.sql.types import StringType
 
+from dateutil.relativedelta import relativedelta
+
 
 class Settings(BaseSettings):
     output_folder: str = "~/opal-output"
@@ -143,12 +145,9 @@ def calculate_age(birthdate):
 def calculate_age_at_conditiondate(birthdate, conditiondate):
     if conditiondate is None:
         # todo: change this definitely
-        age_at_conditiondate = birthdate - datetime.date(2022, 6, 15)
+        return birthdate - datetime.date(2022, 6, 15)
     else:
-        age_at_conditiondate = conditiondate - birthdate
-    days_in_year = 365.2425
-    age_at_conditiondate = int(age_at_conditiondate.days / days_in_year)
-    return age_at_conditiondate
+        return relativedelta(conditiondate, birthdate).years
 
 
 # 0-14, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 50-54, 55-59...80-84, 85+
