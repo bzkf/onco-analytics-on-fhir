@@ -15,4 +15,3 @@ from .obds_fhir_to_opal import calculate_age_at_conditiondate
 )
 def test_should_return_correct_age_at_conditiondate(birthday, conditiondate, expected):
     assert calculate_age_at_conditiondate(birthday, conditiondate) == expected
-
