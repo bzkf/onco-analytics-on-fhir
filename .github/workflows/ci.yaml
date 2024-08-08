@@ -18,7 +18,7 @@ env:
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@99097e53ffa6d6e73b7f0a25fc33125cfc7a5102 # v1.5.0
+    uses: miracum/.github/.github/workflows/standard-build.yaml@94bc59ad38688cdadd85572c9079a812dc2f3476 # v1.11.4
     permissions:
       contents: read
       id-token: write
@@ -35,7 +35,7 @@ jobs:
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@99097e53ffa6d6e73b7f0a25fc33125cfc7a5102 # v1.5.0
+    uses: miracum/.github/.github/workflows/standard-build.yaml@94bc59ad38688cdadd85572c9079a812dc2f3476 # v1.11.4
     permissions:
       contents: read
       id-token: write
@@ -51,7 +51,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@99097e53ffa6d6e73b7f0a25fc33125cfc7a5102 # v1.5.0
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@94bc59ad38688cdadd85572c9079a812dc2f3476 # v1.11.4
     permissions:
       contents: read
       pull-requests: write
@@ -73,9 +73,9 @@ jobs:
         python-version: ["3.11"]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -110,7 +110,7 @@ jobs:
           sudo k3s kubectl config view --raw | tee ~/.kube/config > /dev/null
           chmod 600 ~/.kube/config
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: install dependencies
         run: |
@@ -168,7 +168,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: ${{ github.event_name == 'pull_request' }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - run: |
           ./build-air-gapped-installer.sh
