@@ -71,6 +71,8 @@ jobs:
       matrix:
         # Python versions to run tests for
         python-version: ["3.11"]
+        # Sub directory
+        sub-dir: ["src/decompose_xmls", "src/obds_fhir_to_opal"]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -80,13 +82,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          cd src/decompose_xmls
+          cd ${{ matrix.sub-dir }}
           pip install pytest
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run decompose_xmls tests
         run: |
-          cd src/decompose_xmls
+          cd ${{ matrix.sub-dir }}
           pytest
 
   test-k8s:
