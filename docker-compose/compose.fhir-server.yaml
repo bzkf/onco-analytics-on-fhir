@@ -35,7 +35,7 @@ services:
       - "8082:8080"
 
   fhir-db:
-    image: docker.io/library/postgres:15.6@sha256:bbda96e657b1015eb3a43dbb96f21b67cbc62b3825490b2edd2907f6041cb0f4
+    image: docker.io/library/postgres:16.4@sha256:0cf02e45421b780449f0bab6b4af7e5ab2c37d3ca729e284fcec1a18f3fa9354
     restart: unless-stopped
     deploy:
       resources:
