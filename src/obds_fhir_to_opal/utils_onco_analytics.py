@@ -1,4 +1,5 @@
 from pyspark.sql import functions as F
+from pyspark.sql import DataFrame
 import pandas as pd
 from typing import List, Optional
 
@@ -98,7 +99,7 @@ def group_entities(icd10_code_mapped):
     return -100
 
 
-def deconstruct_date(df, date_col):
+def deconstruct_date(df: DataFrame, date_col: str):
     # Extract year, month, and day from date_col
     year_col = f"{date_col}_year"
     month_col = f"{date_col}_month"
