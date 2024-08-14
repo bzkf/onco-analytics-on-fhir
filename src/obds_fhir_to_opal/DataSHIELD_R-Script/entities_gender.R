@@ -34,19 +34,31 @@ ds.colnames("D")
 #### check gender_mapped values where "other"
 #### create subsets - 1 = female, 2 = male, 3 = other/diverse
 
-# for(loc in 1:length(connections)){
-#  tryCatch(
-#    ds.dataFrameSubset("D", "D$gender_mapped", "3", "==",
-#    newobj = "D1", datasources = connections[loc]),
-#    error = function(cond){warning("subset gendermapped=
-#    other/diverse could not be generated in ",
-#    names(connections[loc]), ". Not enough cases?")}
-#  )
-# }
-# ds.dim("D1", datasources = connections[1])
+for (loc in 1:length(connections)) {
+  tryCatch(
+    ds.dataFrameSubset(
+      "D",
+      "D$gender_mapped",
+      "3",
+      "==",
+      newobj = "D1",
+      datasources = connections[loc]
+    ),
+    error = function(cond) {
+      warning(
+        "subset gendermapped=
+   other/diverse could not be generated in ",
+        names(connections[loc]),
+        ". Not enough cases?"
+      )
+    }
+  )
+}
+ds.dim("D1", datasources = connections[1])
 
 
-#### optional: additional filter D date_diagnosis_year == 2022 here to assure only data from 2022
+#### optional: additional filter D date_diagnosis_year == 2022 here to assure
+# only data from 2022
 ds.dataFrameSubset(
   df.name = "D",
   V1.name = "D$date_diagnosis_year",

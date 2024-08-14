@@ -1,7 +1,4 @@
 import pytest
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import col, udf
-from pyspark.sql.types import StringType
 from .utils_onco_analytics import map_icd10, map_gender, group_entities
 
 
@@ -20,7 +17,8 @@ from .utils_onco_analytics import map_icd10, map_gender, group_entities
     ],
 )
 def test_map_icd10(icd10_code, expected):
-    assert map_icd10(icd10_code) == expected
+    result = map_icd10(icd10_code)
+    assert result == expected
 
 
 @pytest.mark.parametrize(
@@ -38,7 +36,8 @@ def test_map_icd10(icd10_code, expected):
     ],
 )
 def test_map_gender(gender, expected):
-    assert map_gender(gender) == expected
+    result = map_gender(gender)
+    assert result == expected
 
 
 """ icd10_mapped = float(icd10_mapped)
@@ -98,4 +97,5 @@ def test_map_gender(gender, expected):
     ],
 )
 def test_group_entities(icd10_mapped, expected):
-    assert group_entities(icd10_mapped) == expected
+    result = group_entities(icd10_mapped)
+    assert result == expected

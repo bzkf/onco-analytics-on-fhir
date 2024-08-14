@@ -116,8 +116,8 @@ def deconstruct_date(df: DataFrame, date_col: str):
 def generate_datadictionary(
     file_path: str = "./",
     table_name: str = "",
-    colnames_list: List[str] = None,
-    value_type_list: List[str] = None,
+    colnames_list: List[str] = [],
+    value_type_list: List[str] = [],
     entity_type: str = "Participant",
     referenced_entity_type: str = "",
     mime_type: str = "",
