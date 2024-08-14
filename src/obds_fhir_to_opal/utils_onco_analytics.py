@@ -41,6 +41,8 @@ def map_icd10(icd10_code):
         icd10_code_mapped = icd10_code.replace(
             first_letter, letter_to_number[first_letter]
         )
+    else:
+        icd10_code_mapped = -1
 
     return icd10_code_mapped
 

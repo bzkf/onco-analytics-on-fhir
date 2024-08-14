@@ -119,7 +119,6 @@ get_all_loc_dfs <- function() {
 #'
 #' @examples
 #' generate_subsets("icd10_grouped", 1, 3, connections)
-
 generate_subsets <-
   function(colname,
            start_subset,
@@ -155,27 +154,32 @@ generate_subsets <-
 
 #' Generate a results table for subset frequencies (e.g., diagnoses) by gender
 #'
-#' This function creates a results table that contains the subset frequencies by gender (male, female, and other) for each
-#' specified subset and each location. The function iterates over a list of subsets and checks for each subset and each location whether the subset is available.
-#' If available, the total count and the counts split by gender are calculated and stored in a vector.
-#' This vector is then converted into a matrix, which is returned as a tabular summary of the results.
+#' This function creates a results table that contains the subset frequencies
+#' by gender (male, female, and other) for each specified subset and each
+#' location. The function iterates over a list of subsets and checks for each
+#' subset and each location whether the subset is available. If available,
+#' the total count and the counts split by gender are calculated and stored
+#' in a vector. This vector is then converted into a matrix, which is returned
+#' as a tabular summary of the results.
 #'
 #' @param subset_list A list of subsets to be analyzed.
-#' @param all_loc_dfs A list of data sources containing the available dataframes for each connection, e.g., obtained via get_all_loc_dfs().
-#' @param connections A list of DataSHIELD connections to the data sources of the participating locations.
+#' @param all_loc_dfs A list of data sources containing the available dataframes
+#'     for each connection, e.g., obtained via get_all_loc_dfs().
+#' @param connections A list of DataSHIELD connections to the data sources of
+#'     the participating locations.
 #'
-#' @details
-#' The function uses the `ds.dataFrameSubset` function to create subsets based on gender (`gender_mapped`).
-#' For each subset and each connection, the total count as well as the counts for the genders "male" (2), "female" (1),
-#' and "other" (3) are calculated. The results are stored in a vector and then converted into a matrix.
+#' @details The function uses the `ds.dataFrameSubset` function to create subsets
+#'     based on gender (`gender_mapped`). For each subset and each connection,
+#'     the total count as well as the counts for the genders "male" (2), "female"
+#'     (1), and "other" (3) are calculated. The results are stored in a vector and
+#'     then converted into a matrix.
 #'
-#' @return
-#' The function returns a matrix that contains the total count and the counts split by gender for each subset
-#' and each connection.
+#' @return The function returns a matrix that contains the total count and the
+#'     counts split by gender for each subset and each connection.
 #'
 #' @examples
-#' generate_gender_subset_output(c("subset_1", "subset_2"), all_loc_dfs, connections)
-#'
+#' generate_gender_subset_output(c("subset_1", "subset_2"), all_loc_dfs,
+#'     connections)
 subset_prevalence_by_gender <-
   function(subset_list, all_loc_dfs, connections) {
     # Generate the output as a vector

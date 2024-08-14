@@ -34,7 +34,7 @@ ds.colnames("D")
 #### check gender_mapped values where "other"
 #### create subsets - 1 = female, 2 = male, 3 = other/diverse
 
-for (loc in 1:length(connections)) {
+for (loc in 1:seq_along(connections)) {
   tryCatch(
     ds.dataFrameSubset(
       "D",
