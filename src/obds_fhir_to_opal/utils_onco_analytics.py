@@ -1,11 +1,6 @@
 from pyspark.sql import functions as F
-
-# from pyspark.sql.functions import col, explode, first, regexp_replace, to_date, udf, max, count, unix_timestamp, abs, row_number, to_timestamp, \
-# when, regexp_extract, substring
-# from pyspark.sql.types import StringType, DoubleType, IntegerType
-# from pyspark.sql.window import Window
 import pandas as pd
-import math
+from typing import List, Optional
 
 
 def map_icd10(icd10_code):
@@ -62,7 +57,7 @@ def map_gender(gender_string):
 
 
 def group_entities(icd10_code_mapped):
-    condcodingcode_mapped = float(icd10_code_mapped)
+    icd10_code_mapped = float(icd10_code_mapped)
     ranges = [
         (300, 315, 0),  # Lippe, Mundhöhle und Rachen (C00-C14)
         (315, 316, 1),  # Speiseröhre (C15)
@@ -118,21 +113,21 @@ def deconstruct_date(df, date_col):
 
 # optionally pass lists to fill the datadictionary
 def generate_datadictionary(
-    file_path="./",
-    table_name="",
-    colnames_list="",
-    value_type_list="",
-    entity_type="Participant",
-    referenced_entity_type="",
-    mime_type="",
-    unit="",
-    repeatable=0,
-    occurence_group="",
-    index=1,
-    label="",
-    description=None,
-    categories="",
-):
+    file_path: str = "./",
+    table_name: str = "",
+    colnames_list: List[str] = None,
+    value_type_list: List[str] = None,
+    entity_type: str = "Participant",
+    referenced_entity_type: str = "",
+    mime_type: str = "",
+    unit: str = "",
+    repeatable: int = 0,
+    occurence_group: str = "",
+    index: int = 1,
+    label: str = "",
+    description: Optional[dict] = None,
+    categories: str = "",
+) -> pd.DataFrame:
 
     if not len(colnames_list) == len(value_type_list):
         raise ValueError("All lists must have the same length as colnames_list")

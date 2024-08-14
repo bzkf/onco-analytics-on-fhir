@@ -203,7 +203,8 @@ def extract_df(pc: PathlingContext, data: ptl.datasource.DataSource):
             exp("id", "condition_id"),
             exp("onsetDateTime", "date_diagnosis"),
             exp(
-                "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code",
+                """code.coding
+                .where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code""",
                 "icd10_code",
             ),
             exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
@@ -217,21 +218,19 @@ def extract_df(pc: PathlingContext, data: ptl.datasource.DataSource):
         "icd10_mapped",
         map_icd10UDF(df.icd10_code).cast(DoubleType()),
     )
-    # groupd icd10 to entities, inspired from "Jahresbericht 2023 des Bayerischen Krebsregisters - Krebs in Bayern in den Jahren 2015 bis 2019 - Band 5"
+    # groupd icd10 to entities, inspired from "Jahresbericht 2023 des Bayerischen
+    # Krebsregisters - Krebs in Bayern in den Jahren 2015 bis 2019 - Band 5"
     df = df.withColumn(
         "icd10_grouped_entities",
         group_entitiesUDF(df.icd10_mapped).cast(IntegerType()),
     )
-    # map gender to numeric value for DataSHIELD, None = 0, "female" = 1, "male" = 2, "other/diverse" = 3
+    # map gender to numeric value for DataSHIELD, None = 0, "female" = 1, "male" = 2,
+    # "other/diverse" = 3
     df = df.withColumn(
         "gender_mapped",
         map_genderUDF(df.gender).cast(IntegerType()),
     )
     df = df.dropDuplicates()
-
-    # test both
-    # df_cached = df.cache()
-    # return df_cached
 
     return df
 
@@ -254,19 +253,24 @@ def save_final_df(df):
 
 def prepare_datadictionary(df):
     # generate data dictionary
-    dtypes_list_df = [dtype[1] for dtype in df.dtypes]
+    dtypes_list_df = [str(dtype[1]) for dtype in df.dtypes]
 
     description_list_df_dictionary = {
         "condition_id": "Condition ID, unique for each condition",
         "date_diagnosis": "date of diagnosis",
         "icd10_code": "ICD10 GM diagnosis code",
-        "icd10_mapped": "ICD10 GM diagnosis code mapped A = 1, B = 2, C = 3, D = 4, e.g.: A01.9 = 101.9, C50.1 = 350.1 or D41.9 = 441.9",
-        "icd10_grouped_entities": "ICD10 GM diagnosis code grouped to entity groups from 0-23 according to LGL Report Cancer in Bavaria 2019, mapping see github.com/bzkf/onco-analytics-on-fhir/src/obds_fhir_to_opal/utils_onco_analytics.py",
+        "icd10_mapped": """ICD10 GM diagnosis code mapped A = 1, B = 2, C = 3, D = 4,
+        e.g.: A01.9 = 101.9, C50.1 = 350.1 or D41.9 = 441.9""",
+        "icd10_grouped_entities": """ICD10 GM diagnosis code grouped to entity groups
+        from 0-23 according to LGL Report Cancer in Bavaria 2019, mapping see
+        github.com/bzkf/onco-analytics-on-fhir/src/obds_fhir_to_opal
+        /utils_onco_analytics.py""",
         "date_diagnosis_year": "Year of Diagnosis",
         "date_diagnosis_month": "Month of Diagnosis",
         "date_diagnosis_day": "Day of Diagnosis",
         "gender": "Gender - male, female, other/diverse",
-        "gender_mapped": "Gender mapped: 0 = None, 1 = female, 2 = male, 3 = other/diverse",
+        "gender_mapped": """Gender mapped: 0 = None, 1 = female, 2 = male,
+        3 = other/diverse""",
     }
 
     return dtypes_list_df, description_list_df_dictionary
