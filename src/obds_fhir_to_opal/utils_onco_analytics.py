@@ -47,16 +47,17 @@ def map_icd10(icd10_code):
     return icd10_code_mapped
 
 
+# to do: add case "unkown" here separately in the future
 def map_gender(gender_string):
-    if gender_string is None or gender_string == "":
-        gender_mapped = 0
-    elif gender_string == "female" or gender_string == "weiblich":
-        gender_mapped = 1
-    elif gender_string == "male" or gender_string == "männlich":
-        gender_mapped = 2
-    else:
-        gender_mapped = 3  # other / divers
-    return gender_mapped
+    match gender_string:
+        case None | "":
+            return 0
+        case "female" | "weiblich":
+            return 1
+        case "male" | "männlich":
+            return 2
+        case _:
+            return 3  # other / divers / unknown
 
 
 def group_entities(icd10_code_mapped):
