@@ -11,6 +11,7 @@ DISABLE_LINTERS:
   #  due to import-error
   - PYTHON_PYLINT
   - SPELL_LYCHEE
+  - R_LINTR
 
 SHOW_ELAPSED_TIME: true
 

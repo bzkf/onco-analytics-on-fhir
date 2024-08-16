@@ -1,5 +1,6 @@
 import pytest
-from .utils_onco_analytics import map_icd10, map_gender, group_entities
+
+from .utils_onco_analytics import group_entities, map_gender, map_icd10
 
 
 # test functions separately
