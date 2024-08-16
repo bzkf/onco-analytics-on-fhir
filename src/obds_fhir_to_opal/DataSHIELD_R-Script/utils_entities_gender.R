@@ -84,7 +84,7 @@ ds_login <- function() {
 get_all_loc_dfs <- function() {
   all_loc_dfs <- list()
   all_dfs <- ds.ls()
-  for (i in 1:length(connections)) {
+  for (i in seq_along(connections)) {
     all_loc_dfs <- c(all_loc_dfs, list(all_dfs[[i]][[2]]))
   }
   names(all_loc_dfs) <- names(connections)
@@ -125,7 +125,7 @@ generate_subsets <-
            end_subset,
            connections) {
     for (subset_group in start_subset:end_subset) {
-      for (loc in 1:length(connections)) {
+      for (loc in seq_along(connections)) {
         tryCatch({
           ds.dataFrameSubset(
             "D",
@@ -186,7 +186,7 @@ subset_prevalence_by_gender <-
     output_vector <- NULL
 
     for (subs in subset_list) {
-      for (loc in 1:length(connections)) {
+      for (loc in seq_along(connections)) {
         # Check if the subset is available
         if (subs %in% all_loc_dfs[[loc]]) {
           male <- NA
