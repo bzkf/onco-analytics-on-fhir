@@ -17,3 +17,5 @@ bundles-delta/
 *.csv
 
 .vscode
+
+.venv/

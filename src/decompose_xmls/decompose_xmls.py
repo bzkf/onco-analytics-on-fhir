@@ -1,10 +1,10 @@
 import json
 import os
 import time
-import regex
 import xml.etree.ElementTree as ET
 from io import BytesIO
 
+import regex
 from confluent_kafka import Producer
 from pydantic import BaseSettings
 
@@ -48,8 +48,8 @@ def kafka_delivery_report(err, msg):
 
 
 def remove_leading_zeros(patient_id: str) -> str:
-    if os.environ.get('REMOVE_LEADING_PATIENTID_ZEROS') == 'true':
-        return regex.sub(r'^0+', '', patient_id)
+    if os.environ.get("REMOVE_LEADING_PATIENTID_ZEROS") == "true":
+        return regex.sub(r"^0+", "", patient_id)
     else:
         return patient_id
 
@@ -86,7 +86,7 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
             continue
 
         # remove all Menge_Meldung
-        menge_meldung = patient.find('./{http://www.gekid.de/namespace}Menge_Meldung')
+        menge_meldung = patient.find("./{http://www.gekid.de/namespace}Menge_Meldung")
         if menge_meldung is not None:
             patient.remove(menge_meldung)
 
@@ -122,9 +122,7 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
                 f = BytesIO()
                 tree = ET.ElementTree(meldung_root)
                 ET.indent(tree, "  ")
-                tree.write(
-                    f, encoding="utf-8", xml_declaration=True
-                )
+                tree.write(f, encoding="utf-8", xml_declaration=True)
 
                 xml_str = f.getvalue().decode()
                 # prepare json files for kafka bridge
@@ -150,10 +148,10 @@ def decompose_sammelmeldung(root: ET.Element, filename: str):
                         json.dump(result_data, output_file, indent=4)
 
                 save_xml_files(
-                        meldung_root,
-                        patient_id,
-                        meldung_id,
-                    )
+                    meldung_root,
+                    patient_id,
+                    meldung_id,
+                )
 
                 if kafka_producer is not None:
                     kafka_producer.poll(0)

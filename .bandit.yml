@@ -1,5 +1,5 @@
 skips:
   - "B405"
   - "B314"
-exclude_dirs:
-  - "*_test.py"
+assert_used:
+  skips: ["**/test_*.py", "**/*_test.py"]

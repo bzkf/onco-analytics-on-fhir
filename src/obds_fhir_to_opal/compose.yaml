@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     environment:
       OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output/"
-      OUTPUT_FILENAME: "bzkf_q4_22.csv"
+      OUTPUT_FILENAME: "df.csv"
       KAFKA_TOPIC_YEAR_SUFFIX: ".2022"
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
       KAFKA_PATIENT_TOPIC: "fhir.obds.Patient"
@@ -14,4 +14,4 @@ services:
       KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
     volumes:
-      - ${PWD}/output:/opt/bitnami/spark/opal-output
+      - ${PWD}/output:/home/spark/opal-output

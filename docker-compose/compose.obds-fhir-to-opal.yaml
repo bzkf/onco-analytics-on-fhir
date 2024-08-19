@@ -19,4 +19,4 @@ services:
       KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
     volumes:
-      - ${PWD}/opal-output:/opt/bitnami/spark/opal-output
+      - ${PWD}/opal-output:/home/spark/opal-output
