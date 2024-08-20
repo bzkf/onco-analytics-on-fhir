@@ -1,0 +1,230 @@
+services:
+  minio:
+    image: docker.io/bitnami/minio:2024.7.10@sha256:9a1a49c6c460733f6b4070dbf2f189c5523666b7be22993fe20c7fb4b51b19d6
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    environment:
+      MINIO_UPDATE: "off"
+      MINIO_CALLHOME_ENABLE: "off"
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      # kics-scan ignore-line
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}" # gitleaks:allow
+      MINIO_DEFAULT_BUCKETS: "fhir"
+      MINIO_SCHEME: "http"
+    volumes:
+      - minio-data:/bitnami/minio/data:rw
+    ports:
+      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:9000:9000"
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+
+  wait-for-minio:
+    image: docker.io/curlimages/curl:8.8.0@sha256:73e4d532ea62d7505c5865b517d3704966ffe916609bedc22af6833dc9969bcd
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: "no"
+    environment:
+      MINIO_ENDPOINT_URL: http://minio:9000
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ "$(curl -s -o /dev/null -L -w "%{http_code}" "$$MINIO_ENDPOINT_URL/minio/health/live")" == "200" ]; do
+            echo "$(date): Waiting for minio server @ $$MINIO_ENDPOINT_URL to be up";
+            sleep 5;
+        done;
+    depends_on:
+      minio:
+        condition: service_started
+
+  pathling:
+    image: docker.io/aehrc/pathling:7.0.1@sha256:70177a4eb7a20a5edba7a4957ac6cd245c29e3c306e98c5de59fe2974c1f71b8
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    environment:
+      JAVA_TOOL_OPTIONS: |
+        -Xmx64g
+        -Xss64m
+        -XX:G1HeapRegionSize=32M
+        -XX:+ExplicitGCInvokesConcurrent
+        -XX:+ExitOnOutOfMemoryError
+        -XX:+HeapDumpOnOutOfMemoryError
+        -Duser.timezone=UTC
+        --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+        --add-opens=java.base/java.net=ALL-UNNAMED
+        --add-opens=java.base/java.nio=ALL-UNNAMED
+        --add-opens=java.base/java.util=ALL-UNNAMED
+        --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+      pathling.storage.warehouseUrl: s3a://fhir
+      pathling.storage.cacheDatasets: "false"
+      pathling.query.cacheResults: "false"
+      pathling.import.allowableSources: file:///tmp/import/
+      pathling.terminology.enabled: "false"
+      pathling.terminology.serverUrl: http://localhost:8080/i-dont-exist
+      fs.s3a.endpoint: "http://minio:9000"
+      fs.s3a.access.key: "${S3A_ACCESS_KEY}"
+      fs.s3a.secret.key: "${S3A_SECRET_KEY}"
+      fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
+      fs.s3a.path.style.access: "true"
+      # spark.sql.parquet.compression.codec: "zstd"
+      # spark.io.compression.codec: "zstd"
+      # parquet.compression.codec.zstd.level: "9"
+      spark.serializer: "org.apache.spark.serializer.KryoSerializer"
+      spark.master: "local[*]"
+      spark.driver.memory: 24g
+    ports:
+      - "127.0.0.1:8082:8080"
+      - "127.0.0.1:4040:4040"
+    depends_on:
+      wait-for-minio:
+        condition: service_completed_successfully
+
+  wait-for-pathling:
+    image: docker.io/curlimages/curl:8.8.0@sha256:73e4d532ea62d7505c5865b517d3704966ffe916609bedc22af6833dc9969bcd
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: "no"
+    environment:
+      PATHLING_URL: http://pathling:8080
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ "$(curl -s -o /dev/null -L -w "%{http_code}" "$$PATHLING_URL/fhir/metadata")" == "200" ]; do
+            echo "$(date): Waiting for pathling server @ $$PATHLING_URL to be up";
+            sleep 5;
+        done;
+    depends_on:
+      pathling:
+        condition: service_started
+
+  import-resources:
+    image: docker.io/curlimages/curl:8.8.0@sha256:73e4d532ea62d7505c5865b517d3704966ffe916609bedc22af6833dc9969bcd
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: "no"
+    environment:
+      PATHLING_URL: http://pathling:8080
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        curl -X POST --header 'Content-Type: application/fhir+json' --data @/tmp/pathling-import-request.json --url 'http://pathling:8080/fhir/$$import'
+    volumes:
+      - $PWD/pathling-import-request.json:/tmp/pathling-import-request.json:ro
+    depends_on:
+      wait-for-pathling:
+        condition: service_completed_successfully
+
+  warehousekeeper:
+    image: ghcr.io/miracum/util-images/warehousekeeper:v0.1.5@sha256:8f89e0b10a8218e6f23870896155bd96031c235c4eec6ff3d20625d0b6614542
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: "no"
+    environment:
+      AWS_ALLOW_HTTP: "1"
+      AWS_REGION: "eu-central-1"
+      AWS_ENDPOINT_URL: "http://minio:9000"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        python3 /opt/warehousekeeper/warehousekeeper.py register --bucket-name=fhir --database-name-prefix=default/ --hive-metastore=thrift://hive-metastore:9083
+        python3 /opt/warehousekeeper/warehousekeeper.py optimize --bucket-name=fhir --database-name-prefix=default/
+        python3 /opt/warehousekeeper/warehousekeeper.py vacuum   --bucket-name=fhir --database-name-prefix=default/ --retention-hours=0 --dry-run=false --enforce-retention-duration=false
+    volumes:
+      - $PWD/config/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+    depends_on:
+      import-resources:
+        condition: service_completed_successfully
+
+  metastore-db:
+    image: docker.io/bitnami/postgresql:16.3.0@sha256:b0248a5e2bf4fda5208183d4a6203287828666823a7a57431cfa4d31688bae97
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: unless-stopped
+    environment:
+      POSTGRESQL_USERNAME: "${POSTGRESQL_USERNAME}"
+      POSTGRESQL_PASSWORD: "${POSTGRESQL_PASSWORD}"
+      POSTGRESQL_DATABASE: metastore
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  hive-metastore:
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.0@sha256:d8f99a4a16ede640f184dca9bd84bef84f84b26f41b10eb5c62a57bb796268c8
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      SERVICE_OPTS: |
+        -Djavax.jdo.option.ConnectionUserName=hive
+        -Djavax.jdo.option.ConnectionPassword=hive
+      AWS_ACCESS_KEY_ID: "admin"
+      AWS_SECRET_ACCESS_KEY: "miniopass"
+      AWS_DEFAULT_REGION: "eu-central-1"
+    volumes:
+      - $PWD/config/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+    depends_on:
+      metastore-db:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  fhir-to-pathling-server:
+    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.7
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      SECURITY_PROTOCOL: PLAINTEXT
+      BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+      FHIR_URL: http://fhir-server:8080/fhir
+      # TODO: change if pseudonymization is enabled
+      TOPIC: fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient
+
+volumes:
+  minio-data: {}
