@@ -20,7 +20,7 @@ jobs:
     name: build decompose-xmls container image
     uses: miracum/.github/.github/workflows/standard-build.yaml@49140a0c55dda78f1694ffb02ef3b182a3347756 # v1.12.2
     permissions:
-      contents: read
+      contents: write
       id-token: write
       packages: write
       pull-requests: write
@@ -37,7 +37,7 @@ jobs:
     name: build obds-fhir-to-opal container image
     uses: miracum/.github/.github/workflows/standard-build.yaml@49140a0c55dda78f1694ffb02ef3b182a3347756 # v1.12.2
     permissions:
-      contents: read
+      contents: write
       id-token: write
       packages: write
       pull-requests: write
@@ -73,9 +73,9 @@ jobs:
         python-version: ["3.11"]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
