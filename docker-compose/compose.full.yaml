@@ -25,7 +25,7 @@ services:
       - "kafka_data:/bitnami:rw"
 
   kafka-connect:
-    image: ghcr.io/miracum/kafka-connect-images/cricketeerone-kafka-connect:v1.1.0
+    image: ghcr.io/miracum/kafka-connect-images/cricketeerone-kafka-connect:v1.1.0@sha256:da35bfd64d284bd6d45f6106881904e5ef30b775563b9f733e0e976fc8f48e24
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -52,7 +52,7 @@ services:
       - 8083:8083
 
   akhq:
-    image: docker.io/tchiotludo/akhq:0.24.0
+    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
     restart: unless-stopped
     cap_drop:
       - ALL
