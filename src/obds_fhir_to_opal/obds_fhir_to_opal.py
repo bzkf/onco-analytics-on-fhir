@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     kafka_medicationstatement_topic: str = "fhir.obds.MedicationStatement"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
-        "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2",
+        "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.4",
         "au.csiro.pathling:library-api:6.2.1",
         "ch.cern.sparkmeasure:spark-measure_2.13:0.21",
         "io.delta:delta-core_2.12:2.3.0",
@@ -244,9 +244,9 @@ def save_final_df(df):
     # to have only one single csv
     df_with_id = df_with_id.coalesce(1)
     # write DataFrame to CSV, rename it
-    output_dir = "output_dir"
+    output_dir = os.path.join(settings.output_folder, "csv-dir")
     df_with_id.write.mode("overwrite").csv(output_dir, header=True)
-    output_file = "df.csv"
+    output_file = os.path.join(settings.output_folder, settings.output_filename)
     part_file = [file for file in os.listdir(output_dir) if file.startswith("part-")][0]
     shutil.move(os.path.join(output_dir, part_file), output_file)
     shutil.rmtree(output_dir)

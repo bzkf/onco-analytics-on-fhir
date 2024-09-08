@@ -10,5 +10,5 @@ services:
       # Set to 'true' to enable removing of leading zeros in patient IDs
       REMOVE_LEADING_PATIENTID_ZEROS: "false"
     volumes:
-      - ./input-obds-reports:/app/input-obds-reports
-      - ./output-obds-reports:/app/output-obds-reports
+      - ./input-obds-reports:/app/input-obds-reports:ro
+      - ./output-obds-reports:/app/output-obds-reports:rw
