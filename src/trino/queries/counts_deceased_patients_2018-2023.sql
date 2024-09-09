@@ -100,7 +100,7 @@ fhir_data AS (
   WHERE
     deceasedDateTime IS NOT NULL
   GROUP BY
-    year(date(deceasedDateTime))
+    YEAR(DATE(deceasedDateTime))
   HAVING
     year(date(deceasedDateTime)) BETWEEN 2018
     AND 2023
