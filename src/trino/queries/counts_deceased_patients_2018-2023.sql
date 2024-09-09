@@ -93,7 +93,7 @@ WITH onkostar_data AS (
 ),
 fhir_data AS (
   SELECT
-    CAST(year(date(deceasedDateTime)) AS INTEGER) AS "Year of Death",
+    CAST(YEAR(DATE(deceasedDateTime)) AS INTEGER) AS "Year of Death",
     COUNT(DISTINCT id) AS "FHIR Death Count (2)"
   FROM
     fhir.obds_qs.Patient
