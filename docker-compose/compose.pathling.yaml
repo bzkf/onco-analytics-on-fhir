@@ -194,8 +194,8 @@ services:
       SERVICE_NAME: metastore
       DB_DRIVER: postgres
       SERVICE_OPTS: |
-        -Djavax.jdo.option.ConnectionUserName=${HIVE_METASTORE_USERNAME}
-        -Djavax.jdo.option.ConnectionPassword=${HIVE_METASTORE_PASSWORD}
+        -Djavax.jdo.option.ConnectionUserName=${POSTGRESQL_USERNAME}
+        -Djavax.jdo.option.ConnectionPassword=${POSTGRESQL_PASSWORD}
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
       AWS_DEFAULT_REGION: "eu-central-1"
