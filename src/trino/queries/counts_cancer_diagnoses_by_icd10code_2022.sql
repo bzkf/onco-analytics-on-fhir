@@ -57,7 +57,7 @@ onkostar_data AS (
                                 '<Tumorzuordnung Tumor_ID="(.*?)"',
                                 1
                             )
-                        ) AS varbinary
+                        ) AS VARBINARY
                     )
                 ) AS cond_id,
                 regexp_extract(
