@@ -222,7 +222,7 @@ services:
       SECURITY_PROTOCOL: PLAINTEXT
       BOOTSTRAP_SERVERS: kafka:9092
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
-      FHIR_URL: http://fhir-server:8080/fhir
+      FHIR_URL: http://pathling:8080/fhir
       # TODO: change if pseudonymization is enabled
       TOPIC: fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient
 
