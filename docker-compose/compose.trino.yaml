@@ -9,8 +9,8 @@ services:
     privileged: false
     restart: unless-stopped
     environment:
-      AWS_ACCESS_KEY_ID: "admin"
-      AWS_SECRET_ACCESS_KEY: "miniopass"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
