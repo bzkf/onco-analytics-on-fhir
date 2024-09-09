@@ -10,7 +10,7 @@ services:
     environment:
       MINIO_UPDATE: "off"
       MINIO_CALLHOME_ENABLE: "off"
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_USER: "${AWS_ACCESS_KEY_ID}"
       # kics-scan ignore-line
       MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}" # gitleaks:allow
       MINIO_DEFAULT_BUCKETS: "fhir"
