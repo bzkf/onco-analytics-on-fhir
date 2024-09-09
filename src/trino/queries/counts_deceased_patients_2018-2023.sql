@@ -104,7 +104,6 @@ fhir_data AS (
   HAVING
     YEAR(DATE(deceasedDateTime)) BETWEEN 2018
     AND 2023
-    year(date(deceasedDateTime))
 ),
 csv_data AS (
   SELECT
