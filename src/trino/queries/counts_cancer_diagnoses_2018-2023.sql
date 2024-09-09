@@ -160,7 +160,7 @@ onkostar_data AS (
 ),
 csv_data AS (
     SELECT
-        CAST(date_diagnosis_year AS INTEGER) as "Year of Diagnosis",
+        CAST(date_diagnosis_year AS INTEGER) AS "Year of Diagnosis",
         COUNT(*) AS "CSV Diagnosis Count (3)"
     FROM
         storage.csv."s3a://bzkf-obds-dq/df.csv"
