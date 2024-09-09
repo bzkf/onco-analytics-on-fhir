@@ -102,7 +102,7 @@ fhir_data AS (
   GROUP BY
     YEAR(DATE(deceasedDateTime))
   HAVING
-    year(date(deceasedDateTime)) BETWEEN 2018
+    YEAR(DATE(deceasedDateTime)) BETWEEN 2018
     AND 2023
   ORDER BY
     year(date(deceasedDateTime))
