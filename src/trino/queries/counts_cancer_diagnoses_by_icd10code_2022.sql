@@ -107,7 +107,7 @@ onkostar_data AS (
                             ),
                             'condition',
                             regexp_extract(lme.xml_daten, ' Tumor_ID="(.*?)"', 1)
-                        ) AS varbinary
+                        ) AS VARBINARY
                     )
                 ) AS cond_id,
                 MAX(lme.versionsnummer) AS max_version
