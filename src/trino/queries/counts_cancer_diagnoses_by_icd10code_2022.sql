@@ -158,7 +158,7 @@ onkostar_data AS (
 ),
 csv_data AS (
     SELECT
-        CAST(date_diagnosis_year AS INTEGER) as "Year of Diagnosis",
+        CAST(date_diagnosis_year AS INTEGER) AS "Year of Diagnosis",
         substr(icd10_code, 1, 3) AS icd10_code,
         COUNT(*) AS "CSV Diagnosis Count (3)"
     FROM
