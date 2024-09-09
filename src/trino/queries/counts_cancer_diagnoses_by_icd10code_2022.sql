@@ -144,7 +144,7 @@ onkostar_data AS (
                             ),
                             'condition',
                             regexp_extract(lme.xml_daten, ' Tumor_ID="(.*?)"', 1)
-                        ) AS varbinary
+                        ) AS VARBINARY
                     )
                 )
         ) o2 ON o1.cond_id = o2.cond_id
