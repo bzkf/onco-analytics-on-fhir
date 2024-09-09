@@ -76,8 +76,8 @@ services:
       pathling.terminology.enabled: "false"
       pathling.terminology.serverUrl: http://localhost:8080/i-dont-exist
       fs.s3a.endpoint: "http://minio:9000"
-      fs.s3a.access.key: "${S3A_ACCESS_KEY}"
-      fs.s3a.secret.key: "${S3A_SECRET_KEY}"
+      fs.s3a.access.key: "${AWS_ACCESS_KEY_ID}"
+      fs.s3a.secret.key: "${AWS_SECRET_ACCESS_KEY}"
       fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
       fs.s3a.path.style.access: "true"
       # spark.sql.parquet.compression.codec: "zstd"
