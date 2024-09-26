@@ -185,15 +185,18 @@ SELECT
     COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0) AS "FHIR Diagnosis Count (2)",
     COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) - COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0) AS "Absolute Difference (1) - (2)",
     CASE
-        WHEN COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) != 0 THEN ROUND(
+        WHEN COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) = 0
+        AND COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0) = 0 THEN NULL
+        ELSE ROUND(
             ABS(
-                COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) - (COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0))
-            ) / CAST(
-                COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) AS DOUBLE
+                COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) - COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0)
+            ) / (
+                (
+                    COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) + COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0)
+                ) / 2
             ) * 100,
             2
         )
-        ELSE NULL
     END AS "Relative Difference (1) - (2) %",
     COALESCE(csv_data."CSV Diagnosis Count (3)", 0) AS "CSV Diagnosis Count (3)",
     COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0) - COALESCE(csv_data."CSV Diagnosis Count (3)", 0) AS "Absolute Difference (2) - (3)"
