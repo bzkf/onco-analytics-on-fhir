@@ -155,11 +155,12 @@ SELECT
   f."FHIR Death Count (2)",
   COALESCE(o."Onkostar Death Count (1)", 0) - COALESCE(f."FHIR Death Count (2)", 0) AS "Absolute Difference (1) - (2)",
   CASE
-    WHEN COALESCE(o."Onkostar Death Count (1)", 0) != 0 THEN ROUND(
+    WHEN COALESCE(o."ONKOSTAR Death Count (1)", 0) != 0
+      OR COALESCE(f."FHIR Death Count (2)", 0) != 0 THEN ROUND(
       ABS(
-        COALESCE(o."Onkostar Death Count (1)", 0) - (COALESCE(f."FHIR Death Count (2)", 0))
-      ) / CAST(
-        COALESCE(o."Onkostar Death Count (1)", 0) AS DOUBLE
+        COALESCE(o."ONKOSTAR Death Count (1)", 0) - COALESCE(f."FHIR Death Count (2)", 0)
+      ) / (
+        (COALESCE(o."ONKOSTAR Death Count (1)", 0) + COALESCE(f."FHIR Death Count (2)", 0)) / 2
       ) * 100,
       2
     )

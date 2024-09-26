@@ -84,11 +84,6 @@ onkostar_data AS (
                 )
                 AND lme.versionsnummer IS NOT NULL
                 AND lme.xml_daten NOT LIKE '%<Menge_Tumorkonferenz%'
-                AND regexp_extract(
-                    lme.xml_daten,
-                    '<Patienten_Stammdaten Patient_ID="(.*?)"',
-                    1
-                ) NOT LIKE 'g%'
         ) o1
         LEFT OUTER JOIN (
             SELECT
@@ -129,11 +124,6 @@ onkostar_data AS (
                 )
                 AND lme.versionsnummer IS NOT NULL
                 AND lme.xml_daten NOT LIKE '%<Menge_Tumorkonferenz%'
-                AND regexp_extract(
-                    lme.xml_daten,
-                    '<Patienten_Stammdaten Patient_ID="(.*?)"',
-                    1
-                ) NOT LIKE 'g%'
             GROUP BY
                 sha256(
                     CAST(
@@ -180,13 +170,12 @@ SELECT
     COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0) AS "FHIR Diagnosis Count (2)",
     COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) - COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0) AS "Absolute Difference (1) - (2)",
     CASE
-        WHEN COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) != 0 THEN ROUND(
+        WHEN COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) != 0
+          OR COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0) != 0 THEN ROUND(
             ABS(
-                COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) - (
-                    COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0)
-                )
-            ) / CAST(
-                COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) AS DOUBLE
+                COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) - COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0)
+            ) / (
+                (COALESCE(onkostar_data."Onkostar Diagnosis Count (1)", 0) + COALESCE(fhir_data."FHIR Diagnosis Count (2)", 0)) / 2
             ) * 100,
             2
         )
