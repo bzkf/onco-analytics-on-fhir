@@ -1,6 +1,6 @@
 pathling==6.2.1
 pydantic==1.10.14
-pyspark==3.3.2
+pyspark==3.3.4
 pandas==2.2.0
 python-dateutil==2.9.0.post0
 xlsxwriter==3.2.0

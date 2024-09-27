@@ -5,6 +5,8 @@
     "docker.io/bitnami/spark",
     "docker.io/library/python",
     "pathling",
-    "pyspark"
+    "pyspark",
+    "ghcr.io/bzkf/onco-analytics-on-fhir/decompose-xmls",
+    "ghcr.io/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal"
   ]
 }

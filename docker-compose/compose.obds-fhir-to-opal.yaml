@@ -10,7 +10,7 @@ services:
       - "no-new-privileges:true"
     user: "1001:1001"
     environment:
-      OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output"
+      OUTPUT_FOLDER: "/home/spark/opal-output"
       KAFKA_TOPIC_YEAR_SUFFIX: "" # e.g. ".2023"
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
       KAFKA_PATIENT_TOPIC: "fhir.obds.Patient"
@@ -19,4 +19,4 @@ services:
       KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
     volumes:
-      - ${PWD}/opal-output:/home/spark/opal-output
+      - ./opal-output:/home/spark/opal-output:rw
