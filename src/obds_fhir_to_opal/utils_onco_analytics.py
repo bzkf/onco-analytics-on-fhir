@@ -50,15 +50,14 @@ def map_icd10(icd10_code):
 
 # to do: add case "unkown" here separately in the future
 def map_gender(gender_string):
-    match gender_string:
-        case None | "":
-            return 0
-        case "female" | "weiblich":
-            return 1
-        case "male" | "männlich":
-            return 2
-        case _:
-            return 3  # other / divers / unknown
+    if gender_string in [None, ""]:
+        return 0
+    elif gender_string in ["female", "weiblich"]:
+        return 1
+    elif gender_string in ["male", "männlich"]:
+        return 2
+    else:
+        return 3  # other / divers / unknown
 
 
 def group_entities(icd10_code_mapped):
