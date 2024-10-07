@@ -49,7 +49,7 @@ def map_icd10(icd10_code):
 
 
 # to do: add case "unkown" here separately in the future
-def map_gender(gender_string: str) -> int:
+def map_gender(gender_string):
     if gender_string in [None, ""]:
         return 0
     elif gender_string in ["female", "weiblich"]:
