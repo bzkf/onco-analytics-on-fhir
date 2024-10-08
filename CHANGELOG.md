@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.0...v2.3.1) (2024-10-08)
+
+
+### Bug Fixes
+
+* downgrade for python &lt; 3.11 compatibility ([#208](https://github.com/bzkf/onco-analytics-on-fhir/issues/208)) ([97073f6](https://github.com/bzkf/onco-analytics-on-fhir/commit/97073f67bb06277146ffc1e4fb3f1da8cba269d3))
+* minor fixes to e2e runability ([#203](https://github.com/bzkf/onco-analytics-on-fhir/issues/203)) ([354c0b0](https://github.com/bzkf/onco-analytics-on-fhir/commit/354c0b062be01cfb32f2faf2042aa038de1f0ed0))
+
+
+### Miscellaneous Chores
+
+* **deps:** update github-actions ([#143](https://github.com/bzkf/onco-analytics-on-fhir/issues/143)) ([ad31a0e](https://github.com/bzkf/onco-analytics-on-fhir/commit/ad31a0e379f4760c6c78db371c6168cf861a4289))
+* **deps:** update github-actions ([#205](https://github.com/bzkf/onco-analytics-on-fhir/issues/205)) ([6fc600e](https://github.com/bzkf/onco-analytics-on-fhir/commit/6fc600ebc469ffc6856bf81b0dc330e06792b549))
+* remove black and white from entity plot ([#199](https://github.com/bzkf/onco-analytics-on-fhir/issues/199)) ([2a4e5a3](https://github.com/bzkf/onco-analytics-on-fhir/commit/2a4e5a343018d1af03e9ef65e40150f475fb2408))
+
 ## [2.3.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.2.2...v2.3.0) (2024-07-31)
 
 
