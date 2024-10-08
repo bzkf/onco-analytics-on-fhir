@@ -53,7 +53,7 @@ services:
       - "fhir_db_data:/var/lib/postgresql/data:rw"
 
   fhir-to-server:
-    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.7@sha256:cabd9e0b233e11b17ddf4651fe0479f9c20381f51a26812864860df34b69cd3c
+    image: ghcr.io/miracum/kafka-fhir-to-server:v2.1.5@sha256:bbabb4023987977640f01ffa2a92a9462ab4d9273bd826e92e257fab1bfacbce
     restart: unless-stopped
     cap_drop:
       - ALL
