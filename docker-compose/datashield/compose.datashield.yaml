@@ -1,6 +1,6 @@
 services:
   opal:
-    image: docker.io/obiba/opal:4.6@sha256:50abaa400d5b474981c951719301ce4f3c9f5058090cc878e5e82b1b35342881
+    image: docker.io/obiba/opal:4.7@sha256:37acba4b52d91d93fd30bba78fd306d96901b33d214f2ba02048e5f29961008e
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -32,7 +32,7 @@ services:
       - rock-2
 
   opal-db:
-    image: docker.io/library/postgres:16.2@sha256:86c1b844918b818384fdc374ef42b9fa072f1a6ae44c41af9a6a7a925a4a7a71
+    image: docker.io/library/postgres:16.4@sha256:d32f68374aa762a698438c0c37f1f7815ad5086cfc1a3869c390322cd7adeb74
     restart: unless-stopped
     ipc: private
     security_opt:
