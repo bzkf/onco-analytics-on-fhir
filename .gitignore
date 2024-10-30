@@ -19,3 +19,5 @@ bundles-delta/
 .vscode
 
 .venv/
+
+*.jar

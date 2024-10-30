@@ -1,0 +1,39 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "source",
+      "part": [
+        {
+          "name": "resourceType",
+          "valueCode": "Patient"
+        },
+        {
+          "name": "url",
+          "valueUrl": "file:///tmp/import/Patient.ndjson"
+        },
+        {
+          "name": "mode",
+          "valueCode": "overwrite"
+        }
+      ]
+    },
+    {
+      "name": "source",
+      "part": [
+        {
+          "name": "resourceType",
+          "valueCode": "Condition"
+        },
+        {
+          "name": "url",
+          "valueUrl": "file:///tmp/import/Condition.ndjson"
+        },
+        {
+          "name": "mode",
+          "valueCode": "overwrite"
+        }
+      ]
+    }
+  ]
+}
