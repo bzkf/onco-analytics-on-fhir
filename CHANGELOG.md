@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.3.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.1...v2.3.2) (2024-11-19)
+
+
+### Miscellaneous Chores
+
+* adds bzkf registry comparison graph for paper revision ([#214](https://github.com/bzkf/onco-analytics-on-fhir/issues/214)) ([8458fa4](https://github.com/bzkf/onco-analytics-on-fhir/commit/8458fa452724a02631634557e3dffe9236f82149))
+* **deps:** update docker.io/library/postgres:15.6 docker digest to 1ebd963 ([#160](https://github.com/bzkf/onco-analytics-on-fhir/issues/160)) ([48c9f95](https://github.com/bzkf/onco-analytics-on-fhir/commit/48c9f95b1fe6776b296f564c1a36e0925d3a146c))
+* **deps:** update docker.io/library/postgres:16.2 docker digest to 4aea012 ([#161](https://github.com/bzkf/onco-analytics-on-fhir/issues/161)) ([dfec2da](https://github.com/bzkf/onco-analytics-on-fhir/commit/dfec2da856d13aa4392798cb979cf256e3d3e7ca))
+* **deps:** update github-actions ([#210](https://github.com/bzkf/onco-analytics-on-fhir/issues/210)) ([1d6eb68](https://github.com/bzkf/onco-analytics-on-fhir/commit/1d6eb68235a425c7f49aee8714c47caf1062261a))
+
 ## [2.3.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.0...v2.3.1) (2024-10-08)
 
 
