@@ -1,0 +1,73 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "source",
+      "part": [
+        {
+          "name": "resourceType",
+          "valueCode": "Patient"
+        },
+        {
+          "name": "url",
+          "valueUrl": "file:///tmp/import/Patient.ndjson"
+        },
+        {
+          "name": "mode",
+          "valueCode": "overwrite"
+        }
+      ]
+    },
+    {
+      "name": "source",
+      "part": [
+        {
+          "name": "resourceType",
+          "valueCode": "Condition"
+        },
+        {
+          "name": "url",
+          "valueUrl": "file:///tmp/import/Condition.ndjson"
+        },
+        {
+          "name": "mode",
+          "valueCode": "overwrite"
+        }
+      ]
+    },
+    {
+      "name": "source",
+      "part": [
+        {
+          "name": "resourceType",
+          "valueCode": "Observation"
+        },
+        {
+          "name": "url",
+          "valueUrl": "file:///tmp/import/Observation.ndjson"
+        },
+        {
+          "name": "mode",
+          "valueCode": "overwrite"
+        }
+      ]
+    },
+    {
+      "name": "source",
+      "part": [
+        {
+          "name": "resourceType",
+          "valueCode": "Encounter"
+        },
+        {
+          "name": "url",
+          "valueUrl": "file:///tmp/import/Encounter.ndjson"
+        },
+        {
+          "name": "mode",
+          "valueCode": "overwrite"
+        }
+      ]
+    }
+  ]
+}
