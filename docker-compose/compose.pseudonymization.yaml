@@ -1,6 +1,6 @@
 services:
   fhir-gateway:
-    image: ghcr.io/miracum/fhir-gateway:v3.12.8@sha256:2cf2d887b25594c04af3d6be302f8ccaea12dee90965fe4e2f81d24786ac3b6d
+    image: ghcr.io/miracum/fhir-gateway:v3.14.2@sha256:4a8d63755d26dbc81b2fc59afd15b7792fc73a23d76501b4a2433a93e8e9d100
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -32,7 +32,7 @@ services:
       SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
 
   fhir-pseudonymizer:
-    image: ghcr.io/miracum/fhir-pseudonymizer:v2.21.6@sha256:f250919efe324d31d9d442058256d6af58c0ea26980fc5852544a93cf8a71b1d
+    image: ghcr.io/miracum/fhir-pseudonymizer:v2.22.2@sha256:b4a5aeada149fcc3506070290fd4df76d859fe350912823fcac84d83b8891c50
     restart: unless-stopped
     cap_drop:
       - ALL
