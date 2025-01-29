@@ -3,25 +3,29 @@ import shutil
 import time
 
 import pathling as ptl
-from pathling import Expression as exp
+# from pathling import Expression as exp
 from pathling import PathlingContext
 from pathling.etc import find_jar
 from pydantic import BaseSettings  # pydantic_settings ?
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import monotonically_increasing_id, udf
-from pyspark.sql.types import DoubleType, IntegerType, StringType
+# from pyspark.sql.functions import monotonically_increasing_id, udf
+# from pyspark.sql.types import DoubleType, IntegerType, StringType
 from utils_onco_analytics import (
-    deconstruct_date,
+    # deconstruct_date,
     generate_datadictionary,
-    group_entities,
-    map_gender,
-    map_icd10,
+    # group_entities,
+    # map_gender,
+    # map_icd10,
+    extract_df_PoC,
+    prepare_datadictionary_PoC,
+    save_final_df
 )
 
 
 class Settings(BaseSettings):
     output_folder: str = "~/opal-output"
     output_filename: str = "df.csv"
+    study_name: str = "PoC"
     kafka_topic_year_suffix: str = ".2022"
     kafka_patient_topic: str = "fhir.obds.Patient"
     kafka_condition_topic: str = "fhir.obds.Condition"
@@ -173,110 +177,6 @@ def read_data_from_kafka_save_delta(
         )
 
 
-def lookup_gender(gender_string):
-    if gender_string is None or gender_string == "":
-        gender_mapped = 0
-    elif gender_string == "female" or gender_string == "weiblich":
-        gender_mapped = 1
-    elif gender_string == "male" or gender_string == "männlich":
-        gender_mapped = 2
-    else:
-        gender_mapped = 3  # other / divers
-    return gender_mapped
-
-
-def return_year(deceasedDateTime):
-    if deceasedDateTime is not None:
-        year = deceasedDateTime[0:4]
-        return year
-    else:
-        return deceasedDateTime
-
-
-def extract_df(pc: PathlingContext, data: ptl.datasource.DataSource):
-    map_icd10UDF = udf(lambda x: map_icd10(x), StringType())
-    group_entitiesUDF = udf(lambda x: group_entities(x), StringType())
-    map_genderUDF = udf(lambda x: map_gender(x), StringType())
-
-    df = data.extract(
-        "Condition",
-        columns=[
-            exp("id", "condition_id"),
-            exp("onsetDateTime", "date_diagnosis"),
-            exp(
-                """code.coding
-                .where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code""",
-                "icd10_code",
-            ),
-            exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
-        ],
-    )
-    # deconstruct date in YYYY, MM, DD
-    df = deconstruct_date(df, "date_diagnosis")
-
-    # map ICD10 code to numeric value for DataSHIELD, C = 3, D = 4
-    df = df.withColumn(
-        "icd10_mapped",
-        map_icd10UDF(df.icd10_code).cast(DoubleType()),
-    )
-    # groupd icd10 to entities, inspired from "Jahresbericht 2023 des Bayerischen
-    # Krebsregisters - Krebs in Bayern in den Jahren 2015 bis 2019 - Band 5"
-    df = df.withColumn(
-        "icd10_grouped_entities",
-        group_entitiesUDF(df.icd10_mapped).cast(IntegerType()),
-    )
-    # map gender to numeric value for DataSHIELD, None = 0, "female" = 1, "male" = 2,
-    # "other/diverse" = 3
-    df = df.withColumn(
-        "gender_mapped",
-        map_genderUDF(df.gender).cast(IntegerType()),
-    )
-    df = df.dropDuplicates()
-
-    return df
-
-
-def save_final_df(df):
-    df_with_id = df.withColumn("ID", monotonically_increasing_id())
-
-    # rearrange columns to have ID as the first column
-    df_with_id = df_with_id.select("ID", *df.columns)
-    # to have only one single csv
-    df_with_id = df_with_id.coalesce(1)
-    # write DataFrame to CSV, rename it
-    output_dir = os.path.join(settings.output_folder, "csv-dir")
-    df_with_id.write.mode("overwrite").csv(output_dir, header=True)
-    output_file = os.path.join(settings.output_folder, settings.output_filename)
-    part_file = [file for file in os.listdir(output_dir) if file.startswith("part-")][0]
-    shutil.move(os.path.join(output_dir, part_file), output_file)
-    shutil.rmtree(output_dir)
-
-
-def prepare_datadictionary(df):
-    # generate data dictionary
-    dtypes_list_df = [str(dtype[1]) for dtype in df.dtypes]
-
-    description_list_df_dictionary = {
-        "condition_id": "Condition ID, unique for each condition",
-        "date_diagnosis": "date of diagnosis",
-        "icd10_code": "ICD10 GM diagnosis code",
-        "icd10_mapped": """ICD10 GM diagnosis code mapped A = 1, B = 2, C = 3, D = 4,
-        e.g.: A01.9 = 101.9, C50.1 = 350.1 or D41.9 = 441.9""",
-        "icd10_grouped_entities": """ICD10 GM diagnosis code grouped to entity groups
-        from 0-23 according to LGL Report Cancer in Bavaria 2019, mapping see
-        github.com/bzkf/onco-analytics-on-fhir/src/obds_fhir_to_opal
-        /utils_onco_analytics.py""",
-        "date_diagnosis_year": "Year of Diagnosis",
-        "date_diagnosis_month": "Month of Diagnosis",
-        "date_diagnosis_day": "Day of Diagnosis",
-        "gender": "Gender - male, female, other/diverse",
-        "gender_mapped": """Gender mapped: 0 = None, 1 = female, 2 = male,
-        3 = other/diverse""",
-    }
-
-    return dtypes_list_df, description_list_df_dictionary
-
-
 def main():
     start = time.monotonic()
 
@@ -290,16 +190,17 @@ def main():
 
     data = pc.read.delta(os.path.join(settings.output_folder, "bundles-delta"))
 
-    df = extract_df(ptl, data)
+    df = extract_df_PoC(ptl, data)  # hier neuen study_typ einfügen, ggf switch case
 
-    save_final_df(df)
+    save_final_df(df, settings)
 
     shutil.rmtree(os.path.join(settings.output_folder, "bundles-delta"))
 
-    dtypes_list_df, description_list_df_dictionary = prepare_datadictionary(df)
+    dtypes_list_df, description_list_df_dictionary = prepare_datadictionary_PoC(df)
 
     generate_datadictionary(
-        file_path="data_dictionary_df.xlsx",
+        file_path=os.path.join(
+            settings.output_folder, settings.study_name, "data_dictionary_df.xlsx"),
         table_name="df",
         colnames_list=df.columns,
         value_type_list=dtypes_list_df,
