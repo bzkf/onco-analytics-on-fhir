@@ -6,7 +6,7 @@ services:
     environment:
       OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output/"
       OUTPUT_FILENAME: "df.csv"
-      STUDY_NAME: "PoC"
+      STUDY_NAME: "study_protocol_c" #"study_protocol_c" # "PoC"
       KAFKA_TOPIC_YEAR_SUFFIX: "" #".2022"
       KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
       KAFKA_PATIENT_TOPIC: "fhir.obds.Patient"

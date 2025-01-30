@@ -2,23 +2,17 @@ import os
 import shutil
 import time
 
-import pathling as ptl
-# from pathling import Expression as exp
 from pathling import PathlingContext
 from pathling.etc import find_jar
-from pydantic import BaseSettings  # pydantic_settings ?
+from pydantic import BaseSettings
 from pyspark.sql import SparkSession
-# from pyspark.sql.functions import monotonically_increasing_id, udf
-# from pyspark.sql.types import DoubleType, IntegerType, StringType
 from utils_onco_analytics import (
-    # deconstruct_date,
-    generate_datadictionary,
-    # group_entities,
-    # map_gender,
-    # map_icd10,
+    generate_data_dictionary,
     extract_df_PoC,
-    prepare_datadictionary_PoC,
-    save_final_df
+    prepare_data_dictionary_PoC,
+    extract_df_study_protocol_c,
+    prepare_data_dictionary_study_protocol_c,
+    save_final_df,
 )
 
 
@@ -190,17 +184,27 @@ def main():
 
     data = pc.read.delta(os.path.join(settings.output_folder, "bundles-delta"))
 
-    df = extract_df_PoC(ptl, data)  # hier neuen study_typ einfügen, ggf switch case
-
+    match settings.study_name:
+        case "PoC":
+            df = extract_df_PoC(pc, data)
+            dtypes_list_df, description_list_df_dictionary = (
+                prepare_data_dictionary_PoC(df)
+            )
+        case "study_protocol_c":
+            df = extract_df_study_protocol_c(pc, data)
+            dtypes_list_df, description_list_df_dictionary = (
+                prepare_data_dictionary_study_protocol_c(df)
+            )
+        case _:
+            raise ValueError(f"Unknown study type: {settings.study_name}")
     save_final_df(df, settings)
 
     shutil.rmtree(os.path.join(settings.output_folder, "bundles-delta"))
 
-    dtypes_list_df, description_list_df_dictionary = prepare_datadictionary_PoC(df)
-
-    generate_datadictionary(
+    generate_data_dictionary(
         file_path=os.path.join(
-            settings.output_folder, settings.study_name, "data_dictionary_df.xlsx"),
+            settings.output_folder, settings.study_name, "data_dictionary_df.xlsx"
+        ),
         table_name="df",
         colnames_list=df.columns,
         value_type_list=dtypes_list_df,
