@@ -21,8 +21,6 @@ services:
       KAFKA_CFG_LOG_CLEANUP_POLICY: compact
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-    ports: # hier
-      - 127.0.0.1:9094:9094
     volumes:
       - "kafka_data:/bitnami:rw"
 
