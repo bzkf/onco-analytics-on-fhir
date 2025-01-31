@@ -6,7 +6,6 @@ RUN groupadd -g 1001 spark && \
     useradd spark -u 1001 -g spark -m -s /bin/bash
 
 COPY requirements.txt requirements.txt
-
 RUN pip install --no-cache-dir -r requirements.txt
 
 USER 1001:1001
@@ -15,7 +14,15 @@ RUN spark-shell -v --conf spark.jars.ivy=${SPARK_JARS_IVY}\
 
 WORKDIR /home/spark
 
+USER 0
+COPY start.sh start.sh
+RUN chmod +x start.sh
+USER 1001:1001
+
 COPY obds_fhir_to_opal.py obds_fhir_to_opal.py
 COPY utils_onco_analytics.py utils_onco_analytics.py
+COPY test_utils_onco_analytics.py test_utils_onco_analytics.py
 
-ENTRYPOINT [ "python", "obds_fhir_to_opal.py" ]
+ENTRYPOINT [ "bash", "start.sh" ]
+
+#ENTRYPOINT [ "python", "obds_fhir_to_opal.py" ]

@@ -1,7 +1,7 @@
 import pytest
 from pyspark.sql import SparkSession, Row
 
-from .utils_onco_analytics import (
+from utils_onco_analytics import (
     group_entities,
     map_gender,
     map_icd10,

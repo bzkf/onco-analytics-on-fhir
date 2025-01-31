@@ -60,14 +60,14 @@
 
 ### Features
 
-* add column conditiondate year for filtering in data shield ([#169](https://github.com/bzkf/diz-in-a-box/issues/169)) ([a3cc155](https://github.com/bzkf/diz-in-a-box/commit/a3cc15550736f884ec7db7b66316fd5d04c46d3e))
+* add column condition_date year for filtering in data shield ([#169](https://github.com/bzkf/diz-in-a-box/issues/169)) ([a3cc155](https://github.com/bzkf/diz-in-a-box/commit/a3cc15550736f884ec7db7b66316fd5d04c46d3e))
 
 ## [2.1.5](https://github.com/bzkf/diz-in-a-box/compare/v2.1.4...v2.1.5) (2024-03-27)
 
 
 ### Bug Fixes
 
-* additional column for patid to keep pat identifier for joins, include new datadictionary ([#165](https://github.com/bzkf/diz-in-a-box/issues/165)) ([49ec635](https://github.com/bzkf/diz-in-a-box/commit/49ec6351ca2017439858dfe4f31021848dedec0e))
+* additional column for patid to keep pat identifier for joins, include new data_dictionary ([#165](https://github.com/bzkf/diz-in-a-box/issues/165)) ([49ec635](https://github.com/bzkf/diz-in-a-box/commit/49ec6351ca2017439858dfe4f31021848dedec0e))
 
 ## [2.1.4](https://github.com/bzkf/diz-in-a-box/compare/v2.1.3...v2.1.4) (2024-03-26)
 
@@ -75,7 +75,7 @@
 ### Bug Fixes
 
 * do not use semicolon at the end of SQL query ([#157](https://github.com/bzkf/diz-in-a-box/issues/157)) ([b3805f3](https://github.com/bzkf/diz-in-a-box/commit/b3805f393e39bd8655653ad290cfee050b5f0b89))
-* exchange pat identifier with actual id, handle empty conditiondate ([#164](https://github.com/bzkf/diz-in-a-box/issues/164)) ([08c6273](https://github.com/bzkf/diz-in-a-box/commit/08c6273c49f67d3e820709c878fd1f95f3926f4d))
+* exchange pat identifier with actual id, handle empty condition_date ([#164](https://github.com/bzkf/diz-in-a-box/issues/164)) ([08c6273](https://github.com/bzkf/diz-in-a-box/commit/08c6273c49f67d3e820709c878fd1f95f3926f4d))
 
 
 ### Miscellaneous Chores
