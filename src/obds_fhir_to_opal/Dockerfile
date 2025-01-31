@@ -24,5 +24,3 @@ COPY utils_onco_analytics.py utils_onco_analytics.py
 COPY test_utils_onco_analytics.py test_utils_onco_analytics.py
 
 ENTRYPOINT [ "bash", "start.sh" ]
-
-#ENTRYPOINT [ "python", "obds_fhir_to_opal.py" ]
