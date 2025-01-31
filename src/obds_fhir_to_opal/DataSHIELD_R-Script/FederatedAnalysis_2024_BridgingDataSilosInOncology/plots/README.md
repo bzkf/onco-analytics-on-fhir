@@ -34,6 +34,3 @@ This folder contains two Jupyter notebooks designed for visualizing the results 
 - **Data Source:** The analysis is based on Real-World Data (RWD) collected from six university hospitals in Bavaria.
 - **Data Format:** The CSV file includes 24 tumor entities along with corresponding case counts for each site, segmented by gender.
 - **Python Version:** built with Python 3.11.9, for additional packages see requirements.txt
-
-
-
