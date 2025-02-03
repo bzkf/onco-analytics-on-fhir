@@ -1,6 +1,6 @@
 #!/bin/bash
-pytest -v test_utils_onco_analytics.py
-if [ $? -eq 0 ]; then
+set -e
+if pytest -v test_utils_onco_analytics.py; then
   echo "Tests erfolgreich, starte obds_fhir_to_opal.py..."
   python obds_fhir_to_opal.py
 else
