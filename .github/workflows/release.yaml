@@ -8,7 +8,7 @@ permissions: {}
 jobs:
   publish-helm-chart:
     name: publish helm chart
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -65,7 +65,7 @@ jobs:
 
           cosign sign --yes "ghcr.io/${{ github.repository }}/charts/prerequisites:${CHART_VERSION}"
 
-      - uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: helm-charts
           path: |
@@ -73,7 +73,7 @@ jobs:
             prerequisites-chart.tgz
 
   build-air-gapped-installer:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -81,7 +81,7 @@ jobs:
           ./build-air-gapped-installer.sh
 
       - name: Upload air-gapped installer artifact
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: air-gapped-installers
           path: |
@@ -91,7 +91,7 @@ jobs:
 
   prepare-artifacts:
     name: prepare artifacts
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - publish-helm-chart
       - build-air-gapped-installer
@@ -104,13 +104,13 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Download Helm chart
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: helm-charts
           path: /tmp
 
       - name: Download air-gapped installers
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: air-gapped-installers
           path: /tmp
@@ -137,7 +137,7 @@ jobs:
           echo "hashes=$(base64 -w0 < checksums.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: upload assets to release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # tag=v1
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2
         with:
           files: |
             dist/*.tgz
@@ -151,7 +151,7 @@ jobs:
       id-token: write
       contents: write
     # can't be referenced by digest. See <https://github.com/slsa-framework/slsa-github-generator#verification-of-provenance>
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.10.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
     with:
       base64-subjects: "${{ needs.prepare-artifacts.outputs.hashes }}"
       compile-generator: true # Workaround for https://github.com/slsa-framework/slsa-github-generator/issues/1163

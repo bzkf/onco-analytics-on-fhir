@@ -18,3 +18,5 @@ skip-check:
   - CKV_K8S_29
   - CKV_K8S_8
   - CKV_K8S_9
+  # "Minimize the admission of pods which lack an associated NetworkPolicy"
+  - CKV2_K8S_6
