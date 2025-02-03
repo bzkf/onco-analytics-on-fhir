@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.1...v2.4.0) (2025-02-03)
+
+
+### Features
+
+* Study protocol c data extraction for c2 + c3 ([#220](https://github.com/bzkf/onco-analytics-on-fhir/issues/220)) ([641a635](https://github.com/bzkf/onco-analytics-on-fhir/commit/641a635a827b9fdab09118de89bba083d6cf1913))
+
 ## [2.3.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.0...v2.3.1) (2024-10-08)
 
 
