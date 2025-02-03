@@ -18,7 +18,7 @@ env:
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@3a6d6e823363d6a7b39daaadc24566130bddef38 # v1.12.10
+    uses: miracum/.github/.github/workflows/standard-build.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
     permissions:
       contents: write
       id-token: write
@@ -35,7 +35,7 @@ jobs:
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@3a6d6e823363d6a7b39daaadc24566130bddef38 # v1.12.10
+    uses: miracum/.github/.github/workflows/standard-build.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
     permissions:
       contents: write
       id-token: write
@@ -51,7 +51,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@3a6d6e823363d6a7b39daaadc24566130bddef38 # v1.12.10
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
     permissions:
       contents: read
       pull-requests: write
@@ -75,7 +75,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
