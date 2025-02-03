@@ -154,15 +154,15 @@ def test_calculate_age_at_condition_date():
 
     birthdate = None
     condition_date = "2006-11-15"
-    assert calculate_age_at_condition_date(birthdate, condition_date) == None
+    assert calculate_age_at_condition_date(birthdate, condition_date) is None
 
     birthdate = "1950-01"
     condition_date = None
-    assert calculate_age_at_condition_date(birthdate, condition_date) == None
+    assert calculate_age_at_condition_date(birthdate, condition_date) is None
 
     birthdate = "1950-01"
     condition_date = "invalid-date"
-    assert calculate_age_at_condition_date(birthdate, condition_date) == None
+    assert calculate_age_at_condition_date(birthdate, condition_date) is None
 
 
 def test_age_group_small(spark):

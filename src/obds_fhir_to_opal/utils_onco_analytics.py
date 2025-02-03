@@ -11,24 +11,11 @@ from pathling import Expression as exp
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import (
     col,
-    explode,
-    first,
-    regexp_replace,
-    to_date,
     udf,
-    max,
-    count,
-    unix_timestamp,
-    abs,
-    row_number,
-    to_timestamp,
     when,
-    regexp_extract,
-    substring,
     year,
     month,
     dayofmonth,
-    collect_list,
     lower,
     monotonically_increasing_id,
 )
@@ -110,7 +97,8 @@ def group_icd_groups(icd10_code_mapped, start_range=0, end_range=2700):
         return -1  # invalid
 
 
-# do not use this before DataSHIELD for easier validation of results - map later or map in addition to icd_grouped
+# do not use this before DataSHIELD for easier validation of results - map later or map
+# in addition to icd_grouped
 def group_entities(icd10_code_mapped):
     ranges = [
         (300, 315, 0),  # Lippe, Mundhöhle und Rachen (C00-C14)
