@@ -7,7 +7,7 @@ from .decompose_xmls import decompose_sammelmeldung
 
 
 @pytest.mark.parametrize(
-    "obds_input_file_path", [("input-obds-reports/test-2patients.xml")]
+    "obds_input_file_path", ["input-obds-reports/test-2patients.xml"]
 )
 def test_decompose_sammelmeldung(snapshot, obds_input_file_path):
     os.environ["REMOVE_LEADING_PATIENTID_ZEROS"] = "false"
@@ -19,7 +19,7 @@ def test_decompose_sammelmeldung(snapshot, obds_input_file_path):
 
 
 @pytest.mark.parametrize(
-    "obds_input_file_path", [("input-obds-reports/test-patientid-with-zeros.xml")]
+    "obds_input_file_path", ["input-obds-reports/test-patientid-with-zeros.xml"]
 )
 def test_decompose_with_pathient_id_starting_with_zero(snapshot, obds_input_file_path):
     os.environ["REMOVE_LEADING_PATIENTID_ZEROS"] = "true"
@@ -31,7 +31,7 @@ def test_decompose_with_pathient_id_starting_with_zero(snapshot, obds_input_file
 
 
 @pytest.mark.parametrize(
-    "obds_input_file_path", [("input-obds-reports/test-patientid-with-zeros.xml")]
+    "obds_input_file_path", ["input-obds-reports/test-patientid-with-zeros.xml"]
 )
 def test_decompose_keep_pathient_id_starting_with_zero(snapshot, obds_input_file_path):
     os.environ["REMOVE_LEADING_PATIENTID_ZEROS"] = "false"

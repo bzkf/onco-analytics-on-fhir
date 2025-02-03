@@ -1,16 +1,15 @@
 import pytest
-from pyspark.sql import SparkSession, Row
-
+from pyspark.sql import Row, SparkSession
 from utils_onco_analytics import (
-    group_entities,
-    map_gender,
-    map_icd10,
-    group_icd_groups,
+    add_age_group_large,
+    add_age_group_small,
+    calculate_age_at_condition_date,
     deconstruct_date,
     deconstruct_date_year_only,
-    calculate_age_at_condition_date,
-    add_age_group_small,
-    add_age_group_large
+    group_entities,
+    group_icd_groups,
+    map_gender,
+    map_icd10,
 )
 
 
@@ -118,7 +117,7 @@ def test_deconstruct_date(spark):
     expected = [
         ("2024-10-25", 2024, 10, 25),
         ("2023-01-15", 2023, 1, 15),
-        ("2022-07-30", None, None, None)
+        ("2022-07-30", None, None, None),
     ]
 
     for actual, expected_row in zip(result, expected):
@@ -139,7 +138,7 @@ def test_deconstruct_date_year_only(spark):
     expected = [
         (2024,),  # Expected year for the first row
         (2023,),  # Expected year for the second row
-        (None,)   # Expected None for empty date
+        (None,),  # Expected None for empty date
     ]
 
     for actual, expected_row in zip(result, expected):
@@ -172,8 +171,9 @@ def test_age_group_small(spark):
     result_df = add_age_group_small(df, "age_at_diagnosis")
     expected = [(5, 0), (15, 1), (25, 3), (49, 7), (70, 12), (85, 15), (100, 15)]
 
-    result = [(row['age_at_diagnosis'], row['age_group_small'])
-              for row in result_df.collect()]
+    result = [
+        (row["age_at_diagnosis"], row["age_group_small"]) for row in result_df.collect()
+    ]
     assert result == expected
 
 
@@ -184,6 +184,7 @@ def test_age_group_large(spark):
     result_df = add_age_group_large(df, "age_at_diagnosis")
     expected = [(5, 0), (15, 1), (20, 1), (40, 3), (70, 6), (90, 8), (100, 9)]
 
-    result = [(row['age_at_diagnosis'], row['age_group_large'])
-              for row in result_df.collect()]
+    result = [
+        (row["age_at_diagnosis"], row["age_group_large"]) for row in result_df.collect()
+    ]
     assert result == expected
