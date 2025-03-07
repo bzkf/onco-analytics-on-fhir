@@ -1,6 +1,6 @@
 services:
   opal:
-    image: docker.io/obiba/opal:4.6@sha256:50abaa400d5b474981c951719301ce4f3c9f5058090cc878e5e82b1b35342881
+    image: docker.io/obiba/opal:5.1.1@sha256:db61cb64e8234817e530ba06402d06ebb1b947bbcb90fad9a6251b315843559a
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -32,20 +32,20 @@ services:
       - rock-2
 
   opal-db:
-    image: docker.io/library/postgres:16.2@sha256:4aea012537edfad80f98d870a36e6b90b4c09b27be7f4b4759d72db863baeebb
+    image: docker.io/bitnami/postgresql:17.4.0@sha256:be6c1ca552492e8418cdd57b0e7799ba63205b604ac8534ea81724ce4be839dd
     restart: unless-stopped
     ipc: private
     security_opt:
       - "no-new-privileges:true"
     privileged: false
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-      POSTGRES_DB: opal
+      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRESQL_DATABASE: opal
     volumes:
       - "opal_db_data:/var/lib/postgresql/data:rw"
 
   rock-0:
-    image: docker.io/datashield/rock-base:6.3@sha256:ebb5be25ccdaa59ff780b55bb12208c365ab03d7c0dae3412578c97d6268f3e3
+    image: docker.io/datashield/rock-base:6.3.1@sha256:7f975c363b3a1ee78f871d550bd8ad343cf975e04a56b40e3624ee05568d9a7d
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -62,7 +62,7 @@ services:
       ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
 
   rock-1:
-    image: docker.io/datashield/rock-base:6.3@sha256:ebb5be25ccdaa59ff780b55bb12208c365ab03d7c0dae3412578c97d6268f3e3
+    image: docker.io/datashield/rock-base:6.3.1@sha256:7f975c363b3a1ee78f871d550bd8ad343cf975e04a56b40e3624ee05568d9a7d
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -79,7 +79,7 @@ services:
       ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
 
   rock-2:
-    image: docker.io/datashield/rock-base:6.3@sha256:ebb5be25ccdaa59ff780b55bb12208c365ab03d7c0dae3412578c97d6268f3e3
+    image: docker.io/datashield/rock-base:6.3.1@sha256:7f975c363b3a1ee78f871d550bd8ad343cf975e04a56b40e3624ee05568d9a7d
     restart: unless-stopped
     ipc: none
     security_opt:
