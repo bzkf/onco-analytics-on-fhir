@@ -24,3 +24,4 @@ services:
       FHIR_SYSTEMS_OBSERVATIONID: ${FHIR_SYSTEMS_OBSERVATIONID:-https://fhir.diz.uk-erlangen.de/identifiers/onkostar-xml-observation-id}
       FHIR_SYSTEMS_PROCEDUREID: ${FHIR_SYSTEMS_PROCEDUREID:-https://fhir.diz.uk-erlangen.de/identifiers/onkostar-xml-procedure-id}
       FHIR_SYSTEMS_MEDICATIONSTATEMENTID: ${FHIR_SYSTEMS_MEDICATIONSTATEMENTID:-https://fhir.diz.uk-erlangen.de/identifiers/onkostar-xml-medication-statement-id}
+      FHIR_MAPPINGS_MODUL_PROSTATA_ENABLED: "true"
