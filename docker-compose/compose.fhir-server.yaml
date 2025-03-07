@@ -1,6 +1,6 @@
 services:
   fhir-server:
-    image: docker.io/hapiproject/hapi:v6.10.1@sha256:4eac1b3481180b028616d1fab7e657e368538063d75f7ed3be2032e34c657dd4
+    image: docker.io/hapiproject/hapi:v8.0.0@sha256:bf6ecbb4492361ae258a2bde6d4daf4c505b1a98e0925745aa0689e95b2d157e
     restart: unless-stopped
     cap_drop:
       - ALL
