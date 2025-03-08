@@ -12,7 +12,7 @@ services:
       - ./output-obds-reports:/app/output-obds-reports:rw
 
   kafka:
-    image: docker.io/bitnami/kafka:3.6.1@sha256:b5254050e61d1912ed9cf3f7107adc6a21ff29d85047b46d7b6df57cf25fa2f7
+    image: docker.io/bitnami/kafka:3.9.0@sha256:7c91967e7a76eacbc823f951f4c3826ddfd8188ed3cfc99fc9b2fe0d5e89e75b
     restart: unless-stopped
     profiles:
       - kafka
@@ -33,7 +33,7 @@ services:
       # KAFKA_CFG_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka:19092,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092
 
   akhq:
-    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    image: docker.io/tchiotludo/akhq:0.25.1@sha256:cfaef8f419c4e4b78c583597d6428b63166e90eeb194af890264d68051a22180
     restart: unless-stopped
     profiles:
       - kafka
