@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: docker.io/bitnami/kafka:3.6.1@sha256:b5254050e61d1912ed9cf3f7107adc6a21ff29d85047b46d7b6df57cf25fa2f7
+    image: docker.io/bitnami/kafka:3.9.0@sha256:7c91967e7a76eacbc823f951f4c3826ddfd8188ed3cfc99fc9b2fe0d5e89e75b
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -27,7 +27,7 @@ services:
       - "kafka_data:/bitnami:rw"
 
   kafka-connect:
-    image: ghcr.io/miracum/util-images/cricketeerone-kafka-connect:v1.6.0@sha256:5d4c79d5b9d64562d8906aec14c66ed5f48ddb0f9e7f12949547ab89b69e3f0f
+    image: ghcr.io/miracum/util-images/cricketeerone-kafka-connect:v1.6.2@sha256:66fa69028dffe5aabe2323a782aa365fbe45394393f8da53cc283375bc910399
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -54,7 +54,7 @@ services:
       - 8083:8083
 
   akhq:
-    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    image: docker.io/tchiotludo/akhq:0.25.1@sha256:cfaef8f419c4e4b78c583597d6428b63166e90eeb194af890264d68051a22180
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -92,7 +92,7 @@ services:
       - ./output-obds-reports:/app/output-obds-reports:rw
 
   obds-to-fhir:
-    image: ghcr.io/bzkf/obds-to-fhir:v2.2.0@sha256:b5d264c849fb5a19d8af1677b6f9adc26d70108c22e4f2753d0b2472da39f038
+    image: ghcr.io/bzkf/obds-to-fhir:v2.3.0@sha256:a424f5cbf5b8b1d66d645428f81ead94b037249ddb1eb1d71c686896e72e94d7
     restart: unless-stopped
     cap_drop:
       - ALL
