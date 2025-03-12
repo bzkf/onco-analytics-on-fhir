@@ -150,10 +150,11 @@ jobs:
       - name: query them using trino
         run: |
           curl -o trino-cli.jar https://repo1.maven.org/maven2/io/trino/trino-cli/472/trino-cli-472-executable.jar
-          java -jar trino-cli.jar --execute 'SELECT * FROM fhir.default.Patient'
+          java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
 
       - name: Print compose logs
         if: always()
+        working-directory: docker-compose/
         run: |
           docker compose --env-file=.demo.env \
             -f compose.kafka.yaml \
@@ -168,7 +169,7 @@ jobs:
         with:
           name: compose-logs
           path: |
-            compose-logs.txt
+            docker-compose/compose-logs.txt
 
   test-k8s:
     runs-on: ubuntu-24.04
