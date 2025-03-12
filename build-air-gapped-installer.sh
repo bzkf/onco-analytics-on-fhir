@@ -86,6 +86,8 @@ docker compose --profile=kafka-connect \
   -f docker-compose/compose.decompose-xmls.yaml \
   -f docker-compose/compose.fhir-server.yaml \
   -f docker-compose/compose.pseudonymization.yaml \
+  -f docker-compose/trino-pathling/compose.yaml \
+  --env-file=docker-compose/.demo.env \
   config -o docker-compose/compose.normalized.yaml
 
 docker run \
@@ -95,7 +97,7 @@ docker run \
   --rm \
   --volume "${PWD}/docker-compose:/data" \
   --user "${UID}" \
-  docker.io/senzing/docker-compose-air-gapper:1.0.4@sha256:f519089580c5422c02100042965f14ac2bb7bab5c3321e8a668b4f4b6b03902a
+  ghcr.io/bzkf/docker-compose-air-gapper:main@sha256:379143f28a40ac258769070d005e8098c27f28e3c3d39dfded62fcac402fee04
 
 chmod +x ./docker-compose/save-images.sh
 

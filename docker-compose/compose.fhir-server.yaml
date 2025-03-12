@@ -1,6 +1,6 @@
 services:
   blaze:
-    image: docker.io/samply/blaze:0.33.0@sha256:f239104ede15f2656f2b6798c21096bafbcfbe7aecbf64fe7dd7f152a9eabc3a
+    image: ghcr.io/samply/blaze:0.33.0@sha256:f239104ede15f2656f2b6798c21096bafbcfbe7aecbf64fe7dd7f152a9eabc3a
     environment:
       JAVA_TOOL_OPTIONS: "-Xmx16g"
       BASE_URL: "http://blaze:8080"
