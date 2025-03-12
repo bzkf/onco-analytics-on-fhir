@@ -83,6 +83,7 @@ mkdir -p "$AIR_GAPPED_COMPOSE_INSTALL_DIR"
 docker compose --profile=kafka-connect \
   -f docker-compose/compose.kafka.yaml \
   -f docker-compose/compose.obds-to-fhir.yaml \
+  -f docker-compose/compose.obds-fhir-to-opal.yaml \
   -f docker-compose/compose.decompose-xmls.yaml \
   -f docker-compose/compose.fhir-server.yaml \
   -f docker-compose/compose.pseudonymization.yaml \
@@ -106,4 +107,4 @@ MY_HOME="${AIR_GAPPED_COMPOSE_INSTALL_DIR}" ./docker-compose/save-images.sh
 
 find "$AIR_GAPPED_COMPOSE_INSTALL_DIR" -name "docker-compose-air-gapper-*.tgz" -exec mv '{}' "./docker-compose/" \;
 
-tar -zcvf compose-air-gapped-installer.tgz "./docker-compose"
+tar cvzf - "./docker-compose" | split --bytes=1GB - compose-air-gapped-installer.tar.gz.

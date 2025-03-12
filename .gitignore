@@ -21,3 +21,5 @@ bundles-delta/
 .venv/
 
 *.jar
+
+*.tar.gz.*

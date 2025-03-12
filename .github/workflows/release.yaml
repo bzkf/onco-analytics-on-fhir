@@ -85,9 +85,7 @@ jobs:
         with:
           name: air-gapped-installers
           path: |
-            air-gapped-installer.tgz
-            air-gapped-prerequisites-installer.tgz
-            compose-air-gapped-installer.tgz
+            compose-air-gapped-installer.tar.gz.*
 
   prepare-artifacts:
     name: prepare artifacts
