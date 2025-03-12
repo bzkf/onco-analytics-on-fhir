@@ -1,59 +1,16 @@
 services:
-  fhir-server:
-    image: docker.io/hapiproject/hapi:v6.10.1@sha256:4eac1b3481180b028616d1fab7e657e368538063d75f7ed3be2032e34c657dd4
-    restart: unless-stopped
-    cap_drop:
-      - ALL
-    ipc: none
-    security_opt:
-      - "no-new-privileges:true"
-    deploy:
-      resources:
-        limits:
-          memory: 4096m
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /app/target
-    privileged: false
+  blaze:
+    image: docker.io/samply/blaze:0.33.0@sha256:f239104ede15f2656f2b6798c21096bafbcfbe7aecbf64fe7dd7f152a9eabc3a
     environment:
-      SPRING_DATASOURCE_URL: "jdbc:postgresql://fhir-db:5432/fhir?currentSchema=public"
-      SPRING_DATASOURCE_USERNAME: postgres
-      # kics-scan ignore-line
-      SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_DATASOURCE_DRIVERCLASSNAME: org.postgresql.Driver
-      spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgres94Dialect
-      HAPI_FHIR_VALIDATION_REQUESTS_ENABLED: "false"
-      HAPI_FHIR_USE_APACHE_ADDRESS_STRATEGY: "true"
-      HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_DELETE: "false"
-      HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY_ON_WRITE: "false"
-      HAPI_FHIR_SUBSCRIPTION_RESTHOOK_ENABLED: "false"
-      HAPI_FHIR_ALLOW_MULTIPLE_DELETE: "true"
-    depends_on:
-      - fhir-db
-    ports:
-      - "8082:8080"
-
-  fhir-db:
-    image: docker.io/library/postgres:15.6@sha256:1ebd963e5c598f944a4e9ba27de4c95289d663dcc73731025aa53c5254094d8f
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 1024m
-    ipc: private
-    security_opt:
-      - "no-new-privileges:true"
-    privileged: false
-    environment:
-      # kics-scan ignore-line
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: fhir
+      JAVA_TOOL_OPTIONS: "-Xmx16g"
+      BASE_URL: "http://blaze:8080"
     volumes:
-      - "fhir_db_data:/var/lib/postgresql/data:rw"
+      - "blaze-data:/app/data"
+    ports:
+      - "127.0.0.1:8083:8080"
 
   fhir-to-server:
-    image: ghcr.io/miracum/kafka-fhir-to-server:v1.2.7@sha256:cabd9e0b233e11b17ddf4651fe0479f9c20381f51a26812864860df34b69cd3c
+    image: ghcr.io/miracum/kafka-fhir-to-server:v3.0.0@sha256:c407d03f0c520f1d804dc1aa964e4a774e9b4dc6869ea489d918a5a9a2e7edb1
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -65,10 +22,9 @@ services:
       SECURITY_PROTOCOL: PLAINTEXT
       BOOTSTRAP_SERVERS: kafka:9092
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
-      FHIR_URL: http://fhir-server:8080/fhir
+      FHIR_URL: http://blaze:8080/fhir
       # TODO: change if pseudonymization is enabled
       TOPIC: fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient
 
 volumes:
-  fhir_db_data:
-    driver: local
+  blaze-data: {}

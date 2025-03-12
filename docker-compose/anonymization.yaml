@@ -9,11 +9,9 @@ fhirPathRules:
   - path: nodesByType('Reference').reference
     method: cryptoHash
   - path: nodesByType('Identifier').where(type.coding.where(system='http://terminology.hl7.org/CodeSystem/v2-0203' and code='VN').exists()).value
-    method: pseudonymize
-    domain: visit-identifiers
+    method: cryptoHash
   - path: nodesByType('Identifier').where(type.coding.where(system='http://terminology.hl7.org/CodeSystem/v2-0203' and code='MR').exists()).value
-    method: pseudonymize
-    domain: patient-identifiers
+    method: cryptoHash
 parameters:
   dateShiftKey: ""
   dateShiftScope: resource

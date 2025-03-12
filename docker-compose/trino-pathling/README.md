@@ -1,8 +1,5 @@
 # Trino & Pathling
 
-> [!IMPORTANT]
-> Not yet ready for production use.
-
 ## Run
 
 ```sh
@@ -27,8 +24,8 @@ To query them, connect to Trino at <http://localhost:8080> using DataGrip, DBeav
 For exampel:
 
 ```sh
-curl -O https://repo1.maven.org/maven2/io/trino/trino-cli/463/trino-cli-463-executable.jar
-java -jar trino-cli-463-executable.jar
+curl -o trino-cli.jar https://repo1.maven.org/maven2/io/trino/trino-cli/472/trino-cli-472-executable.jar
+java -jar trino-cli.jar
 ```
 
 ```console

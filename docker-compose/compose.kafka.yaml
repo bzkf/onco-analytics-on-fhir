@@ -1,0 +1,80 @@
+services:
+  kafka:
+    image: docker.io/bitnami/kafka:3.9.0@sha256:7c91967e7a76eacbc823f951f4c3826ddfd8188ed3cfc99fc9b2fe0d5e89e75b
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      KAFKA_CFG_NODE_ID: "0"
+      KAFKA_RAFT_CLUSTER_ID: "onco-analytics-on-fhir"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka:9093"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_MESSAGE_MAX_BYTES: "31457280"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_LOG_CLEANUP_POLICY: compact
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+    volumes:
+      - "kafka_data:/bitnami:rw"
+
+  kafka-connect:
+    image: ghcr.io/miracum/util-images/cricketeerone-kafka-connect:v1.6.0@sha256:5d4c79d5b9d64562d8906aec14c66ed5f48ddb0f9e7f12949547ab89b69e3f0f
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_GROUP_ID: kafka-connect-group
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_CONFIG_STORAGE_TOPIC: __kafka-connect-config
+      CONNECT_OFFSET_STORAGE_TOPIC: __kafka-connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: __kafka-connect-status
+      CONNECT_PLUGIN_PATH: /app/libs
+    volumes:
+      - ./kafka-connect-passwords.properties:/tmp/kafka-connect-passwords.properties:ro
+    ports:
+      - 127.0.0.1:8083:8083
+
+  akhq:
+    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            kafka:
+              properties:
+                bootstrap.servers: "kafka:9092"
+              connect:
+                - name: "kafka-connect"
+                  url: "http://kafka-connect:8083"
+    ports:
+      - "8084:8080"
+    depends_on:
+      - kafka
+
+volumes:
+  kafka_data:
+    driver: local
