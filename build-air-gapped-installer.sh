@@ -87,7 +87,7 @@ docker compose --profile=kafka-connect \
   -f docker-compose/compose.decompose-xmls.yaml \
   -f docker-compose/compose.fhir-server.yaml \
   -f docker-compose/compose.pseudonymization.yaml \
-  -f docker-compose/trino-pathling/compose.yaml \
+  # -f docker-compose/trino-pathling/compose.yaml \
   --env-file=docker-compose/.demo.env \
   config -o docker-compose/compose.normalized.yaml
 
