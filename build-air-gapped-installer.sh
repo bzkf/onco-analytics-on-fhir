@@ -81,7 +81,7 @@ mkdir -p "$AIR_GAPPED_COMPOSE_INSTALL_DIR"
 
 # generate save-images.sh
 docker compose --profile=kafka-connect \
-  -f docker-compose/compose.full.yaml \
+  -f docker-compose/compose.kafka.yaml \
   -f docker-compose/compose.obds-to-fhir.yaml \
   -f docker-compose/compose.decompose-xmls.yaml \
   -f docker-compose/compose.fhir-server.yaml \

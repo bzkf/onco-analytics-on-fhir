@@ -70,7 +70,7 @@ docker compose -f compose.obds-fhir-to-opal.yaml up
 ### 6. Start the entire stack
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml -f compose.decompose-xmls.yaml -f compose.obds-fhir-to-opal.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.decompose-xmls.yaml -f compose.obds-fhir-to-opal.yaml up
 ```
 
 ### 7. Enable Kafka Connect and the connector
@@ -136,7 +136,7 @@ SELECT * FROM (
 ```
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml up
 ```
 
 ```sh
@@ -152,13 +152,13 @@ curl -X POST \
 > Requires gPAS to be set-up and the [anonymization.yaml](anonymization.yaml) to be configured
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml -f compose.pseudonymization.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.pseudonymization.yaml up
 ```
 
 ### 9. Run with enabled pseudonymization and sending resources to a FHIR server
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
 ```
 
 ### 10. Air-gapped installation
