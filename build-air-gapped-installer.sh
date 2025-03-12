@@ -80,6 +80,7 @@ AIR_GAPPED_COMPOSE_INSTALL_DIR=${AIR_GAPPED_COMPOSE_INSTALL_DIR:-"./dist/compose
 mkdir -p "$AIR_GAPPED_COMPOSE_INSTALL_DIR"
 
 # generate save-images.sh
+# TODO: re-add -f docker-compose/trino-pathling/compose.yaml \
 docker compose --profile=kafka-connect \
   -f docker-compose/compose.kafka.yaml \
   -f docker-compose/compose.obds-to-fhir.yaml \
@@ -87,7 +88,6 @@ docker compose --profile=kafka-connect \
   -f docker-compose/compose.decompose-xmls.yaml \
   -f docker-compose/compose.fhir-server.yaml \
   -f docker-compose/compose.pseudonymization.yaml \
-  # -f docker-compose/trino-pathling/compose.yaml \
   --env-file=docker-compose/.demo.env \
   config -o docker-compose/compose.normalized.yaml
 
