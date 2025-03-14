@@ -6,12 +6,13 @@ from pathling import PathlingContext
 from pathling.etc import find_jar
 from pydantic import BaseSettings
 from pyspark.sql import SparkSession
+from pyspark import SparkContext
 from utils_onco_analytics import (
     extract_df_PoC,
+    extract_df_study_protocol_a,
     extract_df_study_protocol_c,
     generate_data_dictionary,
-    prepare_data_dictionary_PoC,
-    prepare_data_dictionary_study_protocol_c,
+    prepare_data_dictionary,
     save_final_df,
 )
 
@@ -28,16 +29,17 @@ class Settings(BaseSettings):
     kafka_medicationstatement_topic: str = "fhir.obds.MedicationStatement"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
-        "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.4",
-        "au.csiro.pathling:library-api:6.2.1",
-        "ch.cern.sparkmeasure:spark-measure_2.13:0.21",
-        "io.delta:delta-core_2.12:2.3.0",
+        "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.4",
+        "au.csiro.pathling:library-api:7.0.1",
+        "ch.cern.sparkmeasure:spark-measure_2.12:0.24",
+        "io.delta:delta-spark_2.12:3.2.0",
     ]
+
     spark_app_name: str = "oBDS-FHIR-to-Opal"
     master: str = "local[*]"
     kafka_bootstrap_server: str = "kafka:9092"
 
-    spark_driver_memory: str = "18g"
+    spark_driver_memory: str = "20g"
 
     spark_jars_ivy: str = "/home/spark/.ivy2"
 
@@ -46,6 +48,18 @@ settings = Settings()
 
 
 def setup_spark_session(appName: str, master: str):
+    # muss ich ein sigint signal abfangen ctrl+c zb?
+    existing_spark = SparkSession.getActiveSession()
+    if existing_spark is not None:
+        print("Stopping existing Spark session before creating a new one...")
+        existing_spark.catalog.clearCache()  # see i
+        existing_spark.stop()  # Stop any active session
+        SparkSession._instantiatedContext = None
+        # Force clear the active SparkContext
+        SparkContext._active_spark_context = None
+    elif existing_spark is None:
+        print("no existing spark session found")
+
     spark = (
         SparkSession.builder.appName(appName)
         .master(master)
@@ -59,8 +73,10 @@ def setup_spark_session(appName: str, master: str):
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
         )
+        .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
         .config("spark.network.timeout", "6000s")
-        .config("spark.driver.maxResultSize", "8g")
+        # .config("spark.driver.maxResultSize", "8g")
+        .config("spark.sql.debug.maxToStringFields", "1000")    #
         .config("spark.sql.broadcastTimeout", "1200s")
         .config("spark.executor.heartbeatInterval", "1200s")
         .config(
@@ -70,8 +86,11 @@ def setup_spark_session(appName: str, master: str):
             + "-XX:+PrintGCDateStamps -XX:OnOutOfMemoryError='kill -9 %p'",
         )
         .config("spark.task.maxDirectResultSize", "256MB")
+        # try to avoid multiple spark contexts in one python process
+        .config("spark.driver.allowMultipleContexts", "false")
         .getOrCreate()
     )
+
     spark.sparkContext.addFile(find_jar())
     return spark
 
@@ -138,13 +157,13 @@ def read_data_from_kafka_save_delta(
         print("Warning: 'conditions' is None, skipping Conditions dataset processing.")
 
     # PROCEDURES
-    procedures = pc.encode_bundle(kafka_data.select("value"), "Procedure")
+    """ procedures = pc.encode_bundle(kafka_data.select("value"), "Procedure")
     if procedures is not None:
         procedures_dataset = pc.read.datasets({"Procedure": procedures})
         procedures_dataset.write.delta(bundle_folder)
     else:
         print("Warning: 'procedures' is None, skipping Procedures dataset processing.")
-
+ """
     # OBSERVATIONS
     observations = pc.encode_bundle(kafka_data.select("value"), "Observation")
     if observations is not None:
@@ -156,7 +175,7 @@ def read_data_from_kafka_save_delta(
         )
 
     # MEDICATION STATEMENTS
-    medicationstatements = pc.encode_bundle(
+    """ medicationstatements = pc.encode_bundle(
         kafka_data.select("value"), "MedicationStatement"
     )
     if medicationstatements is not None:
@@ -168,7 +187,7 @@ def read_data_from_kafka_save_delta(
         print(
             "Warning: 'medicationstatements' is None, skipping MedicationStatements"
             "dataset processing."
-        )
+        ) """
 
 
 def main():
@@ -180,6 +199,7 @@ def main():
     spark = setup_spark_session(settings.spark_app_name, settings.master)
     pc = PathlingContext.create(spark=spark, enable_extensions=True)
 
+    # try:
     read_data_from_kafka_save_delta(spark, kafka_topics, pc)
 
     data = pc.read.delta(os.path.join(settings.output_folder, "bundles-delta"))
@@ -187,20 +207,31 @@ def main():
     match settings.study_name:
         case "PoC":
             df = extract_df_PoC(pc, data)
-            dtypes_list_df, description_list_df_dictionary = (
-                prepare_data_dictionary_PoC(df)
-            )
+            dtypes_list_df, description_list_df_dictionary = prepare_data_dictionary(
+                df)
+        case "study_protocol_a":
+            df = extract_df_study_protocol_a(pc, data, settings, spark)
+            dtypes_list_df, description_list_df_dictionary = prepare_data_dictionary(
+                df)
+        case "study_protocol_a_c61":
+            df = extract_df_study_protocol_a(pc, data, settings, spark, c61=True)
+            dtypes_list_df, description_list_df_dictionary = prepare_data_dictionary(
+                df)
         case "study_protocol_c":
             df = extract_df_study_protocol_c(pc, data)
-            dtypes_list_df, description_list_df_dictionary = (
-                prepare_data_dictionary_study_protocol_c(df)
-            )
+            dtypes_list_df, description_list_df_dictionary = prepare_data_dictionary(
+                df)
         case _:
             raise ValueError(f"Unknown study type: {settings.study_name}")
+
     save_final_df(df, settings)
 
-    shutil.rmtree(os.path.join(settings.output_folder, "bundles-delta"))
+    # Clean up the delta folder after processing
+    # dir_path = os.path.join(settings.output_folder, "bundles-delta")
+    # if os.path.exists(dir_path) and os.path.isdir(dir_path):
+    #    shutil.rmtree(dir_path)
 
+    # Generate the data dictionary
     generate_data_dictionary(
         file_path=os.path.join(
             settings.output_folder, settings.study_name, "data_dictionary_df.xlsx"
@@ -210,9 +241,19 @@ def main():
         value_type_list=dtypes_list_df,
         description=description_list_df_dictionary,
     )
-
     end = time.monotonic()
+
     print(f"time elapsed: {end - start}s")
+
+
+"""     finally:
+        # Gracefully stop the Spark session in the 'finally' block to ensure it always runs
+        if 'spark' in locals() and spark is not None:
+            print("Stopping Spark session end of main...")
+            spark.stop()
+            spark.catalog.clearCache()  # see i
+            SparkSession._instantiatedContext = None
+            spark.SparkContext._active_spark_context = None """
 
 
 if __name__ == "__main__":

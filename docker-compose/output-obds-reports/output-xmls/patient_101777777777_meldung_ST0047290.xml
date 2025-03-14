@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<ADT_GEKID xmlns="http://www.gekid.de/namespace" Schema_Version="2.2.1">
+  <Absender Absender_ID="UKKK_ONKOSTAR" Software_ID="ONKOSTAR" Installations_ID="2.11.1.4">
+    <Absender_Bezeichnung>UKKK</Absender_Bezeichnung>
+    <Absender_Ansprechpartner />
+    <Absender_Anschrift>xxxxxxxxxxxxxxxxxxxx</Absender_Anschrift>
+  </Absender>
+  <Menge_Patient>
+    <Patient>
+      <Patienten_Stammdaten Patient_ID="101777777777">
+        <KrankenversichertenNr>277777777</KrankenversichertenNr>
+        <KrankenkassenNr>9777777777</KrankenkassenNr>
+        <Patienten_Nachname>Riedelo</Patienten_Nachname>
+        <Patienten_Titel />
+        <Patienten_Namenszusatz />
+        <Patienten_Vornamen>M</Patienten_Vornamen>
+        <Patienten_Geburtsname />
+        <Patienten_Geschlecht>M</Patienten_Geschlecht>
+        <Patienten_Geburtsdatum>28.10.1900</Patienten_Geburtsdatum>
+        <Menge_Adresse>
+          <Adresse>
+            <Patienten_Strasse>xxxxxxxxx</Patienten_Strasse>
+            <Patienten_Hausnummer />
+            <Patienten_Land>DE</Patienten_Land>
+            <Patienten_PLZ>90</Patienten_PLZ>
+            <Patienten_Ort>xxxxxxx</Patienten_Ort>
+          </Adresse>
+        </Menge_Adresse>
+      </Patienten_Stammdaten>
+      <Menge_Meldung>
+        <Meldung Meldung_ID="ST0047290" Melder_ID="ST">
+          <Meldedatum>10.03.2015</Meldedatum>
+          <Meldebegruendung>I</Meldebegruendung>
+          <Meldeanlass>behandlungsbeginn</Meldeanlass>
+          <Tumorzuordnung Tumor_ID="1">
+            <Primaertumor_ICD_Code>C61</Primaertumor_ICD_Code>
+            <Primaertumor_ICD_Version>10 2022 GM</Primaertumor_ICD_Version>
+            <Diagnosedatum>29.07.2015</Diagnosedatum>
+            <Seitenlokalisation>T</Seitenlokalisation>
+          </Tumorzuordnung>
+          <Menge_ST>
+            <ST ST_ID="361237">
+              <ST_Intention>K</ST_Intention>
+              <ST_Stellung_OP>O</ST_Stellung_OP>
+              <Menge_Bestrahlung>
+                <Bestrahlung>
+                  <ST_Zielgebiet>5.4.+</ST_Zielgebiet>
+                  <ST_Seite_Zielgebiet>U</ST_Seite_Zielgebiet>
+                  <ST_Beginn_Datum>13.10.1900</ST_Beginn_Datum>
+                  <ST_Applikationsart>PRCN</ST_Applikationsart>
+                  <ST_Einzeldosis>
+                    <Dosis>1.8</Dosis>
+                    <Einheit>Gy</Einheit>
+                  </ST_Einzeldosis>
+                </Bestrahlung>
+                <Bestrahlung>
+                  <ST_Zielgebiet>5.4.-</ST_Zielgebiet>
+                  <ST_Seite_Zielgebiet>U</ST_Seite_Zielgebiet>
+                  <ST_Beginn_Datum>28.11.1900</ST_Beginn_Datum>
+                  <ST_Applikationsart>S</ST_Applikationsart>
+                </Bestrahlung>
+                <Bestrahlung>
+                  <ST_Zielgebiet>5.12.</ST_Zielgebiet>
+                  <ST_Seite_Zielgebiet>L</ST_Seite_Zielgebiet>
+                  <ST_Beginn_Datum>24.11.1900</ST_Beginn_Datum>
+                  <ST_Applikationsart>S</ST_Applikationsart>
+                </Bestrahlung>
+              </Menge_Bestrahlung>
+              <Anmerkung>Boost 1: Brachy-Boost in HDR-Technik ED 9,5 Gy GD 19 Gy Boost 2: SEQ ED 1,8
+                Gy GD 21,6 Gy</Anmerkung>
+            </ST>
+          </Menge_ST>
+        </Meldung>
+      </Menge_Meldung>
+    </Patient>
+  </Menge_Patient>
+</ADT_GEKID>
