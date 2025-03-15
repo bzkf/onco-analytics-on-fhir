@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: docker.io/bitnami/kafka:3.9.0@sha256:7c91967e7a76eacbc823f951f4c3826ddfd8188ed3cfc99fc9b2fe0d5e89e75b
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/bitnami/kafka:3.9.0@sha256:7c91967e7a76eacbc823f951f4c3826ddfd8188ed3cfc99fc9b2fe0d5e89e75b
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -25,7 +25,7 @@ services:
       - "kafka_data:/bitnami:rw"
 
   kafka-connect:
-    image: ghcr.io/miracum/util-images/cricketeerone-kafka-connect:v1.6.0@sha256:5d4c79d5b9d64562d8906aec14c66ed5f48ddb0f9e7f12949547ab89b69e3f0f
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/util-images/cricketeerone-kafka-connect:v1.6.0@sha256:5d4c79d5b9d64562d8906aec14c66ed5f48ddb0f9e7f12949547ab89b69e3f0f
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -52,7 +52,7 @@ services:
       - 127.0.0.1:8083:8083
 
   akhq:
-    image: docker.io/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
     restart: unless-stopped
     cap_drop:
       - ALL

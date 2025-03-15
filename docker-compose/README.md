@@ -180,3 +180,26 @@ Extract the archive:
 ```sh
 tar xvzf ./air-gapped-installer.tgz
 ```
+
+## Customize any compose file
+
+The easiest way to configure any settings or environment variables of the compose files is to merge them with customized ones: <https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/>.
+
+For example, to modify the configuration of the [compose.pseudonymization.yaml](compose.pseudonymization.yaml) file you can create an override file called [compose.pseudonymization.overrides.yaml](compose.pseudonymization.yaml) like this one:
+
+```yaml
+services:
+  fhir-pseudonymizer:
+    environment:
+      gPAS__Url: "https://gpas.example.com/ttp-fhir/fhir/gpas/"
+      gPAS__Auth__Basic__Username: "user"
+      gPAS__Auth__Basic__Password: ${FHIR_PSEUDONYMIZER_GPAS_AUTH_BASIC_PASSWORD:?}
+```
+
+and run it like so:
+
+```sh
+docker compose --env-file=.demo.env -f compose.pseudonymization.yaml -f compose.pseudonymization.overrides.yaml up
+```
+
+this assumes that the `FHIR_PSEUDONYMIZER_GPAS_AUTH_BASIC_PASSWORD` env var is set in the .demo.env file.
