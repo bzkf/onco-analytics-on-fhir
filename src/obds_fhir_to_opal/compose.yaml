@@ -15,6 +15,6 @@ services:
       KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
     volumes:
-      - ./output:/opt/bitnami/spark/opal-output
+      - ./opal-output:/opt/bitnami/spark/opal-output
     ports:
       - "4040:4040" # Weiterleitung des Spark UI Ports

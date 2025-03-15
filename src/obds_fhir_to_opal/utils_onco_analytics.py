@@ -5,29 +5,30 @@ from datetime import datetime
 from typing import List, Optional
 
 import pandas as pd
+from loguru import logger
 from pathling import Expression as exp
 from pathling import PathlingContext, datasource
 from pydantic import BaseSettings
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.window import Window
 from pyspark.sql.functions import (
+    abs,
     col,
+    collect_list,
     dayofmonth,
+    first,
+    greatest,
+    lit,
     lower,
     monotonically_increasing_id,
     month,
+    regexp_extract,
+    row_number,
     udf,
     when,
     year,
-    collect_list,
-    abs,
-    lit,
-    row_number,
-    first,
-    greatest,
-    regexp_extract,
 )
 from pyspark.sql.types import DoubleType, IntegerType, StringType
+from pyspark.sql.window import Window
 
 
 def map_icd10(icd10_code):
@@ -386,6 +387,7 @@ def map_death_cause_tumor(
         .otherwise(-1),
     )
 
+
 # UDF for sorting with None first, then empty string, then 0, then '0' and ascending order for other values
 
 
@@ -393,8 +395,9 @@ def sort_and_last(values):
     if values is None:
         return None
     # Custom sorting: (None -> empty string -> 0 -> '0' -> other values ascending)
-    sorted_arr = sorted(values, key=lambda x: (
-        x is not None, x != '', x != 0, x != '0', x))
+    sorted_arr = sorted(
+        values, key=lambda x: (x is not None, x != "", x != 0, x != "0", x)
+    )
     print(sorted_arr)
     return sorted_arr[-1] if sorted_arr else None
 
@@ -415,14 +418,16 @@ def find_first(df, date_diagnosis_col, other_date_col, obs_id):
     # get duplicate rows
     df_duplicate_counts = df.groupBy("condition_id").count().where("count > 1")
     df_duplicate_counts_rows = df.join(
-        df_duplicate_counts, on="condition_id", how="inner").drop("count")
+        df_duplicate_counts, on="condition_id", how="inner"
+    ).drop("count")
 
     # store singular rows where condition_id only appears once for joining back later
     df_single_rows = df.join(df_duplicate_counts, on="condition_id", how="left_anti")
 
     # remove rows where other_date_col is null
     df_duplicate_counts_rows = df_duplicate_counts_rows.filter(
-        col(other_date_col).isNotNull())
+        col(other_date_col).isNotNull()
+    )
 
     # Aggregate by condition_id, keeping the last/highest non-null value (handles the case where I have the same other_date but different obs values
     # - keeps the highest e.g. TNM or gleason for that date
@@ -433,19 +438,23 @@ def find_first(df, date_diagnosis_col, other_date_col, obs_id):
     ]
 
     df_duplicate_counts_rows = df_duplicate_counts_rows.groupBy(
-        "condition_id", other_date_col, date_diagnosis_col).agg(*agg_expr)
+        "condition_id", other_date_col, date_diagnosis_col
+    ).agg(*agg_expr)
 
     # define window spec to order by closest date
     window_spec = Window.partitionBy("condition_id").orderBy(
         abs(
-            when(col(other_date_col).isNotNull(), col(other_date_col).cast("timestamp"))
-            .otherwise(lit(None).cast("timestamp")) - col(date_diagnosis_col).cast("timestamp")
+            when(
+                col(other_date_col).isNotNull(), col(other_date_col).cast("timestamp")
+            ).otherwise(lit(None).cast("timestamp"))
+            - col(date_diagnosis_col).cast("timestamp")
         ).asc()
     )
 
     # select the closest date = first row number in the ordered rows
     df_duplicate_counts_rows = df_duplicate_counts_rows.withColumn(
-        "row_num", row_number().over(window_spec))
+        "row_num", row_number().over(window_spec)
+    )
     df_closest = df_duplicate_counts_rows.filter(col("row_num") == 1).drop("row_num")
 
     # rename other_date_col to other_date_col_first
@@ -453,7 +462,8 @@ def find_first(df, date_diagnosis_col, other_date_col, obs_id):
 
     # rename other_date_col and drop obs_id in df_single_rows
     df_single_rows = df_single_rows.withColumnRenamed(
-        other_date_col, other_date_col + "_first").drop(obs_id)
+        other_date_col, other_date_col + "_first"
+    ).drop(obs_id)
 
     # merge both DataFrames
     final_df = df_closest.unionByName(df_single_rows)
@@ -539,11 +549,12 @@ def extract_df_study_protocol_a(
                 "patid_pseudonym",
             ),
             exp("onsetDateTime", "date_diagnosis"),
-            exp("code.coding.where( \
+            exp(
+                "code.coding.where( \
                     system='http://fhir.de/CodeSystem/bfarm/icd-10-gm' \
                     ).code",
                 "icd10_code",
-                ),
+            ),
             exp("Condition.subject.resolve().ofType(Patient).birthDate", "birthdate"),
             exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
             exp(
@@ -557,6 +568,8 @@ def extract_df_study_protocol_a(
         ],
     )
     a_unique_condids = a_unique_condids.cache()
+
+    logger.info("cached condition ids")
 
     # save conditions
     """ file_path = os.path.join(
@@ -586,6 +599,8 @@ def extract_df_study_protocol_a(
     )
     a_cond_ctnm = a_cond_ctnm.cache()
 
+    logger.info("cached a_cond_ctnm")
+
     a_cond_ptnm = data.extract(
         "Condition",
         columns=[
@@ -600,6 +615,8 @@ def extract_df_study_protocol_a(
         ],
     )
     a_cond_ptnm = a_cond_ptnm.cache()
+
+    logger.info("cached a_cond_ptnm")
 
     # extract cTNM and pTNM observations separately
     a_observations_c_tnm = data.extract(
@@ -642,6 +659,8 @@ def extract_df_study_protocol_a(
     )
     a_observations_c_tnm = a_observations_c_tnm.cache()
 
+    logger.info("cached a_observations_c_tnm")
+
     a_observations_p_tnm = data.extract(
         "Observation",
         columns=[
@@ -682,6 +701,8 @@ def extract_df_study_protocol_a(
     )
     a_observations_p_tnm = a_observations_p_tnm.cache()
 
+    logger.info("cached a_observations_p_tnm")
+
     # group "multiplied" columns by observation id, merge non-null values for one
     # observation into one line
     a_observations_c_tnm_grouped = a_observations_c_tnm.groupBy("obs_tnm_id").agg(
@@ -699,6 +720,8 @@ def extract_df_study_protocol_a(
         first("p_UICC", ignorenulls=True).alias("p_UICC"),
     )
 
+    logger.info("Done grouping")
+
     # join with condition data
     a_cond_c_tnm = a_cond_ctnm.join(
         a_observations_c_tnm_grouped,
@@ -714,6 +737,8 @@ def extract_df_study_protocol_a(
     )
     a_cond_p_tnm = a_cond_p_tnm.dropna(how="all")
 
+    logger.info("Done joining")
+
     # find first cTNM and pTNM observation date closest to diagnosis date for each
     # condition
     a_cond_c_tnm_first = find_first(
@@ -722,6 +747,8 @@ def extract_df_study_protocol_a(
     a_cond_p_tnm_first = find_first(
         a_cond_p_tnm, "date_diagnosis", "pTNM_date", "obs_tnm_id"
     )
+
+    logger.info("Done find_first")
 
     # join cTNM first and pTNM first to all unique condition ids from above to also
     # include those where TNM is missing
@@ -739,36 +766,45 @@ def extract_df_study_protocol_a(
     )
     a_unique_condids_cp_tnm = a_unique_condids_cp_tnm.cache()
 
+    logger.info("Cached a_unique_condids_cp_tnm")
+
     # add death information from observation
     a6_7_obs = data.extract(
         "Observation",
         columns=[
-            exp("Observation.where(code.coding.system.first()='http://loinc.org' and \
+            exp(
+                "Observation.where(code.coding.system.first()='http://loinc.org' and \
                 code.coding.code.first()='68343-3').id",
                 "observation_id",
-                ),
-            exp("Observation.where(code.coding.system.first()='http://loinc.org' and \
+            ),
+            exp(
+                "Observation.where(code.coding.system.first()='http://loinc.org' and \
                 code.coding.code.first()='68343-3').valueCodeableConcept.coding.where( \
                 system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code",
                 "death_cause_icd10",
-                ),
-            exp("Observation.where(code.coding.system.first()='http://loinc.org' and \
+            ),
+            exp(
+                "Observation.where(code.coding.system.first()='http://loinc.org' and \
                 code.coding.code.first()='68343-3').valueCodeableConcept.coding.where( \
                 system='http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS').code",
                 "death_cause_tumor",
-                ),
-            exp("Observation.where(code.coding.system.first()='http://loinc.org' and \
+            ),
+            exp(
+                "Observation.where(code.coding.system.first()='http://loinc.org' and \
                 code.coding.code.first()='68343-3').effectiveDateTime",
                 "date_death",
-                ),
-            exp("Observation.where(code.coding.system.first()='http://loinc.org' and \
+            ),
+            exp(
+                "Observation.where(code.coding.system.first()='http://loinc.org' and \
                 code.coding.code.first()='68343-3').subject.resolve().ofType(Patient) \
                 .identifier.value",
                 "patid_pseudonym",
-                ),
+            ),
         ],
     )
     a6_7_obs = a6_7_obs.cache()
+
+    logger.info("Cached a6_7_obs")
 
     # group "multiplied" cols to comine all non-null values into one row per obds-id
     a6_7_obs_grouped = a6_7_obs.groupBy("observation_id").agg(
@@ -781,6 +817,8 @@ def extract_df_study_protocol_a(
     a0_7 = a_unique_condids_cp_tnm.join(
         a6_7_obs_grouped, on="patid_pseudonym", how="left"
     )
+
+    logger.info("joined a0_7")
 
     # group by condition id and date and prioritize non-null values
     a0_7_grouped = a0_7.groupBy("condition_id", "date_diagnosis").agg(
@@ -805,6 +843,8 @@ def extract_df_study_protocol_a(
         first("date_death", ignorenulls=True).alias("date_death"),
     )
 
+    logger.info("group by condition id and date and prioritize non-null values")
+
     # DataSHIELD preparations
     # deconstruct date to extract year in new col for datashield
     a0_7_final = deconstruct_date_year_only(a0_7_grouped, "date_diagnosis")
@@ -812,6 +852,8 @@ def extract_df_study_protocol_a(
     a0_7_final = deconstruct_date_year_only(a0_7_final, "cTNM_date_first")
     a0_7_final = deconstruct_date_year_only(a0_7_final, "pTNM_date_first")
     a0_7_final = deconstruct_date_year_only(a0_7_final, "date_death")
+
+    logger.info("deconstruct date to extract year in new col for datashield")
 
     # map TNM, UICC
     a0_7_final = map_tnm_column(a0_7_final, "cT")
@@ -822,6 +864,8 @@ def extract_df_study_protocol_a(
     a0_7_final = map_tnm_column(a0_7_final, "pM")
     a0_7_final = map_uicc_column(a0_7_final, "c_UICC")
     a0_7_final = map_uicc_column(a0_7_final, "p_UICC")
+
+    logger.info("map TNM, UICC")
 
     # map ICD10
     a0_7_final = a0_7_final.withColumn(
@@ -889,6 +933,9 @@ def extract_df_study_protocol_a(
         "dead_bool_mapped",
         greatest(*[col(column).isNotNull().cast("int") for column in columns_to_check]),
     )
+
+    logger.info("if any of the columns contains a non-null value: dead")
+
     # fix order
     desired_order = [
         "condition_id",
@@ -942,26 +989,40 @@ def extract_df_study_protocol_a(
 
     a0_7_final = a0_7_final.select(*desired_order)
 
+    logger.info("select desired order")
+
     # filter years
     a0_7_final = a0_7_final[a0_7_final["date_diagnosis_year"].between(2012, 2022)]
 
-    if c61 is True:
-        # filter for ICD10 Code C61
-        a0_7_final_c61 = a0_7_final.filter(
-            a0_7_final["icd10_entity"].cast("int") == 14)
-        # add gleason
-        observations_gleason = data.extract("Observation",
-                                            columns=[
-                                                exp("id", "obs_id_gleason"),
-                                                exp("Observation.where(code.coding.system.first()='http://loinc.org' and code.coding.code.first()='35266-6').valueInteger", "gleason"),
-                                                exp("Observation.where(code.coding.system.first()='http://loinc.org' and code.coding.code.first()='35266-6').effectiveDateTime", "gleason_date"),
-                                                exp("Observation.subject.resolve().ofType(Patient).identifier.value",
-                                                    "patid_pseudonym"),
+    logger.info("filter years")
 
-                                            ],
-                                            filters=["reverseResolve(Condition.stage.assessment).code.coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code.first() = 'C61'"
-                                                     ]
-                                            )
+    if c61 is True:
+        logger.info("filter c61")
+        # filter for ICD10 Code C61
+        a0_7_final_c61 = a0_7_final.filter(a0_7_final["icd10_entity"].cast("int") == 14)
+        # add gleason
+        observations_gleason = data.extract(
+            "Observation",
+            columns=[
+                exp("id", "obs_id_gleason"),
+                exp(
+                    "Observation.where(code.coding.system.first()='http://loinc.org' and code.coding.code.first()='35266-6').valueInteger",
+                    "gleason",
+                ),
+                exp(
+                    "Observation.where(code.coding.system.first()='http://loinc.org' and code.coding.code.first()='35266-6').effectiveDateTime",
+                    "gleason_date",
+                ),
+                exp(
+                    "Observation.subject.resolve().ofType(Patient).identifier.value",
+                    "patid_pseudonym",
+                ),
+            ],
+            filters=[
+                "reverseResolve(Condition.stage.assessment).code.coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code.first() = 'C61'"
+            ],
+        )
+        logger.info("gleason extract")
         observations_gleason = observations_gleason.filter(
             (observations_gleason["gleason"].isNotNull())  # &
             # (observations_gleason["gleason_date"].isNotNull())
@@ -969,17 +1030,22 @@ def extract_df_study_protocol_a(
         # join gleason observations to whole df
         a0_7_final_c61_gleason = a0_7_final_c61.join(
             observations_gleason,
-            a0_7_final_c61["patid_pseudonym"] == observations_gleason["patid_pseudonym"],
-            "left"
+            a0_7_final_c61["patid_pseudonym"]
+            == observations_gleason["patid_pseudonym"],
+            "left",
         )
+        logger.info("gleason join")
 
         a0_7_final_c61_gleason = a0_7_final_c61_gleason.drop("patid_pseudonym")
         # a0_7_final_c61_gleason = a0_7_final_c61_gleason.drop("patid_pseudonym")
         a0_7_final_c61_gleason = a0_7_final_c61_gleason.withColumn(
-            "deceased_boolean", col("deceased_boolean").cast("string"))
+            "deceased_boolean", col("deceased_boolean").cast("string")
+        )
         # return a0_7_final_c61_gleason
         a0_7_final_c61_gleason_first = find_first(
-            a0_7_final_c61_gleason, "date_diagnosis", "gleason_date", "obs_id_gleason")
+            a0_7_final_c61_gleason, "date_diagnosis", "gleason_date", "obs_id_gleason"
+        )
+        logger.info("return a0_7_final_c61_gleason")
         return a0_7_final_c61_gleason_first
 
     return a0_7_final
@@ -1079,8 +1145,9 @@ def prepare_data_dictionary(df):
     dtypes_list_df = [str(dtype[1]) for dtype in df.dtypes]
 
     df_description = pd.read_csv("descriptions_for_data_dictionary.csv")
-    description_dict = pd.Series(df_description.Description.values,
-                                 index=df_description.Variable).to_dict()
+    description_dict = pd.Series(
+        df_description.Description.values, index=df_description.Variable
+    ).to_dict()
 
     return dtypes_list_df, description_dict
 
