@@ -1,5 +1,4 @@
 import os
-import shutil
 import time
 
 from loguru import logger
