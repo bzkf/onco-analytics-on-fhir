@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-def setup_spark_session(appName: str, master: str):
+def setup_spark_session(app_name: str, master: str):
     # muss ich ein sigint signal abfangen ctrl+c zb?
     existing_spark = SparkSession.getActiveSession()
     if existing_spark is not None:
@@ -58,7 +58,7 @@ def setup_spark_session(appName: str, master: str):
         print("no existing spark session found")
 
     spark = (
-        SparkSession.builder.appName(appName)
+        SparkSession.builder.appName(app_name)
         .master(master)
         .config("spark.ui.port", "4040")
         .config("spark.rpc.message.maxSize", "1000")
