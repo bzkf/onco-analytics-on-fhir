@@ -10,7 +10,9 @@ on:
   release:
     types:
       - created
-permissions: read-all
+
+permissions:
+  contents: read
 
 env:
   ONCO_ANALYTICS_NAMESPACE_NAME: bzkf-onco-analytics
@@ -18,7 +20,7 @@ env:
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
+    uses: miracum/.github/.github/workflows/standard-build.yaml@061614f984847163156095116168d113da0c88d9 # v1.16.2
     permissions:
       contents: write
       id-token: write
@@ -35,7 +37,7 @@ jobs:
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
+    uses: miracum/.github/.github/workflows/standard-build.yaml@061614f984847163156095116168d113da0c88d9 # v1.16.2
     permissions:
       contents: write
       id-token: write
@@ -51,7 +53,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@061614f984847163156095116168d113da0c88d9 # v1.16.2
     permissions:
       contents: read
       pull-requests: write
@@ -74,6 +76,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
@@ -134,7 +138,7 @@ jobs:
           docker compose -f compose.obds-fhir-to-opal.yaml up
 
       - name: upload the CSV
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: opal-df
           path: |
@@ -165,7 +169,7 @@ jobs:
 
       - name: Upload compose dump
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: compose-logs
           path: |
@@ -193,6 +197,8 @@ jobs:
           chmod 600 ~/.kube/config
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: install dependencies
         run: |
@@ -240,7 +246,7 @@ jobs:
 
       - name: Upload cluster dump
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: kind-cluster-dump.txt
           path: |
@@ -262,6 +268,8 @@ jobs:
           swap-storage: true
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - run: |
           ./build-air-gapped-installer.sh
