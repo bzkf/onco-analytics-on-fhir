@@ -17,4 +17,4 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@d1a8f221d7723166f48a584aebba00ef3f6febec # v4.1.4
         with:
-          token: ${{ secrets.MIRACUM_BOT_SEMANTIC_RELEASE_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_GITHUB_TOKEN }}
