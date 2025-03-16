@@ -2,11 +2,8 @@ FROM docker.io/bitnami/spark:3.5.4@sha256:6adad33c3bbb65f20f328e6e6f37efdfd7aefa
 ENV SPARK_JARS_IVY="/home/spark/.ivy"
 WORKDIR /opt/bitnami/spark
 USER 0
-#RUN groupadd -g 1001 spark && \
-#    useradd spark -u 1001 -g spark -m -s /bin/bash
-
-RUN id -g spark &>/dev/null || groupadd -g 1001 spark && \
-    id -u spark &>/dev/null || useradd spark -u 1001 -g spark -m -s /bin/bash
+RUN groupadd -g 1001 spark && \
+   useradd spark -u 1001 -g spark -m -s /bin/bash
 
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
@@ -20,7 +17,7 @@ WORKDIR /home/spark
 USER 0
 COPY start.sh start.sh
 RUN chmod +x start.sh
-#USER 1001:1001
+USER 1001:1001
 
 COPY obds_fhir_to_opal.py obds_fhir_to_opal.py
 COPY utils_onco_analytics.py utils_onco_analytics.py
