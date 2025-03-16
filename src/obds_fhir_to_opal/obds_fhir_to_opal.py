@@ -143,8 +143,6 @@ def read_data_from_kafka_save_delta(
     if patients is not None:
         patients_dataset = pc.read.datasets({"Patient": patients})
         patients_dataset.write.delta(bundle_folder)
-
-        patients.write
     else:
         print("Warning: 'patients' is None, skipping Patients dataset processing.")
 
