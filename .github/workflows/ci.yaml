@@ -18,7 +18,7 @@ env:
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
+    uses: miracum/.github/.github/workflows/standard-build.yaml@061614f984847163156095116168d113da0c88d9 # v1.16.2
     permissions:
       contents: write
       id-token: write
@@ -35,7 +35,7 @@ jobs:
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
+    uses: miracum/.github/.github/workflows/standard-build.yaml@061614f984847163156095116168d113da0c88d9 # v1.16.2
     permissions:
       contents: write
       id-token: write
@@ -51,7 +51,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@4cc91eaee2ea6c0513da1195a6b53bb9c16f5666 # v1.13.1
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@061614f984847163156095116168d113da0c88d9 # v1.16.2
     permissions:
       contents: read
       pull-requests: write
@@ -134,7 +134,7 @@ jobs:
           docker compose -f compose.obds-fhir-to-opal.yaml up
 
       - name: upload the CSV
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: opal-df
           path: |
@@ -165,7 +165,7 @@ jobs:
 
       - name: Upload compose dump
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: compose-logs
           path: |
@@ -240,7 +240,7 @@ jobs:
 
       - name: Upload cluster dump
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: kind-cluster-dump.txt
           path: |
