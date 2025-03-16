@@ -1,6 +1,6 @@
 services:
   obds-fhir-to-opal:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal:v2.3.1 # x-release-please-version
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal:${OBDS_FHIR_TO_OPAL_IMAGE_TAG:-v2.3.1} # x-release-please-version
     restart: no
     cap_drop:
       - ALL
@@ -18,5 +18,7 @@ services:
       KAFKA_OBSERVATION_TOPIC: "fhir.obds.Observation"
       KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
+      STUDY_NAME: "PoC"
+      OUTPUT_FILENAME: "df-poc.csv"
     volumes:
       - ./opal-output:/home/spark/opal-output:rw

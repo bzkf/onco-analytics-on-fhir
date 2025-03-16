@@ -248,7 +248,8 @@ def main():
 
 
 """     finally:
-        # Gracefully stop the Spark session in the 'finally' block to ensure it always runs
+        # Gracefully stop the Spark session in the 'finally' block
+        # to ensure it always runs
         if 'spark' in locals() and spark is not None:
             print("Stopping Spark session end of main...")
             spark.stop()

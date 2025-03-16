@@ -388,7 +388,8 @@ def map_death_cause_tumor(
     )
 
 
-# UDF for sorting with None first, then empty string, then 0, then '0' and ascending order for other values
+# UDF for sorting with None first, then empty string, then 0,
+# then '0' and ascending order for other values
 
 
 def sort_and_last(values):
@@ -429,7 +430,8 @@ def find_first(df, date_diagnosis_col, other_date_col, obs_id):
         col(other_date_col).isNotNull()
     )
 
-    # Aggregate by condition_id, keeping the last/highest non-null value (handles the case where I have the same other_date but different obs values
+    # Aggregate by condition_id, keeping the last/highest non-null value
+    # (handles the case where I have the same other_date but different obs values
     # - keeps the highest e.g. TNM or gleason for that date
     agg_expr = [
         sort_and_last_udf(collect_list(col_name)).alias(col_name)
@@ -1006,11 +1008,13 @@ def extract_df_study_protocol_a(
             columns=[
                 exp("id", "obs_id_gleason"),
                 exp(
-                    "Observation.where(code.coding.system.first()='http://loinc.org' and code.coding.code.first()='35266-6').valueInteger",
+                    "Observation.where(code.coding.system.first()='http://loinc.org' "
+                    + "and code.coding.code.first()='35266-6').valueInteger",
                     "gleason",
                 ),
                 exp(
-                    "Observation.where(code.coding.system.first()='http://loinc.org' and code.coding.code.first()='35266-6').effectiveDateTime",
+                    "Observation.where(code.coding.system.first()='http://loinc.org' "
+                    + "and code.coding.code.first()='35266-6').effectiveDateTime",
                     "gleason_date",
                 ),
                 exp(
@@ -1019,7 +1023,9 @@ def extract_df_study_protocol_a(
                 ),
             ],
             filters=[
-                "reverseResolve(Condition.stage.assessment).code.coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code.first() = 'C61'"
+                "reverseResolve(Condition.stage.assessment).code.coding.where("
+                + "system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code."
+                + "first() = 'C61'"
             ],
         )
         logger.info("gleason extract")
