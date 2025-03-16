@@ -345,6 +345,8 @@ def map_tnm_column(df: DataFrame, col_name: str) -> DataFrame:
             )
             .otherwise("-1")
         )
+    else:
+        raise ValueError(f"Unexpected TNM column: {col_name}")
 
     df = df.withColumn(f"{col_name}_mapped", mapped_col.cast(IntegerType()))
 
