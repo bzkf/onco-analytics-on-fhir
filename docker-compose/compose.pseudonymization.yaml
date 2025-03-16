@@ -1,6 +1,6 @@
 services:
   fhir-gateway:
-    image: ghcr.io/miracum/fhir-gateway:v3.12.8@sha256:2cf2d887b25594c04af3d6be302f8ccaea12dee90965fe4e2f81d24786ac3b6d
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/fhir-gateway:v3.12.8@sha256:2cf2d887b25594c04af3d6be302f8ccaea12dee90965fe4e2f81d24786ac3b6d
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -21,8 +21,6 @@ services:
       SERVICES_FHIRSERVER_ENABLED: "false"
       MANAGEMENT_ENDPOINT_HEALTH_PROBES_ADD_ADDITIONAL_PATHS: "true"
       MANAGEMENT_SERVER_PORT: "8081"
-      OPENTRACING_JAEGER_ENABLED: "false"
-      JAEGER_SERVICE_NAME: "fhir-gateway"
       SERVICES_KAFKA_ENABLED: "true"
       INPUT_TOPIC: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
       OUTPUT_TOPIC: "fhir.post-gateway"
@@ -32,7 +30,7 @@ services:
       SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
 
   fhir-pseudonymizer:
-    image: ghcr.io/miracum/fhir-pseudonymizer:v2.21.6@sha256:f250919efe324d31d9d442058256d6af58c0ea26980fc5852544a93cf8a71b1d
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/fhir-pseudonymizer:v2.22.6@sha256:c2652779d173dba020305775da4f1a52ba7dae8c9bb51ab3595f20bd187ee936
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -43,9 +41,9 @@ services:
     privileged: false
     environment:
       DOTNET_EnableDiagnostics: "0"
-      PseudonymizationService: "gPAS"
+      PseudonymizationService: "${FHIR_PSEUDONYMIZER_PSEUDONYMIZATION_SERVICE:-gPAS}"
       AnonymizationEngineConfigPath: "/etc/fhir-pseudonymizer/anonymization.yaml"
-      Anonymization__CryptoHashKey: ""
+      Anonymization__CryptoHashKey: "${FHIR_PSEUDONYMIZER_CRYPTO_HASH_KEY:?}"
       gPAS__Url: ""
       gPAS__Auth__Basic__Username: ""
       gPAS__Auth__Basic__Password: ""

@@ -1,0 +1,108 @@
+services:
+  trino:
+    image: docker.io/trinodb/trino:472@sha256:cc9cab2afd71637176e94c729a05862d1b2d07f5b13b109f1ae041d3e78428dd
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:?}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:?}"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./config/etc:/usr/lib/trino/etc:ro
+      - ./config/catalog:/etc/trino/catalog:ro
+    depends_on:
+      - hive-metastore
+      - minio
+
+  minio:
+    image: docker.io/bitnami/minio:2024.10.13@sha256:faf554135d50ff8b382f79df7795e080726cb2d6f4ce7f056d733a6437546f6a
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: unless-stopped
+    environment:
+      MINIO_UPDATE: "off"
+      MINIO_CALLHOME_ENABLE: "off"
+      MINIO_ROOT_USER: "${AWS_ACCESS_KEY_ID:?}"
+      # kics-scan ignore-line
+      MINIO_ROOT_PASSWORD: "${AWS_SECRET_ACCESS_KEY:?}" # gitleaks:allow
+      MINIO_DEFAULT_BUCKETS: "fhir,spark-streaming-checkpoints"
+      MINIO_SCHEME: "http"
+    volumes:
+      - minio-data:/bitnami/minio/data:rw
+    ports:
+      - "127.0.0.1:9001:9001"
+
+  fhir-to-delta:
+    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.8.0@sha256:c82dfa80708186d6165f5abb5d0784aa765b31beda72aa550058394f343cc114
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: unless-stopped
+    environment:
+      SPARK_S3_ENDPOINT: minio:9000
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:?}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:?}"
+      SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-delta
+      SPARK_DRIVER_MEMORY: 8g
+      SPARK_UPKEEP_INTERVAL: 10
+      DELTA_DATABASE_DIR: "s3a://fhir/default"
+      METASTORE_URL: "thrift://hive-metastore:9083"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      # TODO: change, if pseudonymization is enabled
+      KAFKA_TOPICS: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
+
+  hive-metastore-db:
+    image: docker.io/bitnami/postgresql:17.4.0@sha256:41ad4f03c7842bed273dc308878a81c25131f55e038eb14979c43c4cc7ba9faf
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: unless-stopped
+    environment:
+      POSTGRESQL_USERNAME: hive
+      POSTGRESQL_PASSWORD: "${HIVE_METASTORE_DB_PASSWORD:?}"
+      POSTGRESQL_DATABASE: metastore
+    volumes:
+      - hive-metastore-db-data:/bitnami/postgresql:rw
+
+  hive-metastore:
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.0@sha256:d8f99a4a16ede640f184dca9bd84bef84f84b26f41b10eb5c62a57bb796268c8
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      # kics-scan ignore-line
+      SERVICE_OPTS: -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=hive
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:?}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:?}"
+      AWS_DEFAULT_REGION: "eu-central-1"
+    volumes:
+      - ./config/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+    depends_on:
+      hive-metastore-db:
+        condition: service_started
+
+volumes:
+  minio-data: {}
+  hive-metastore-db-data: {}

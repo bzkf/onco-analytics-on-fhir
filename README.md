@@ -5,16 +5,16 @@
 This software is used to transform oncological basic data set (oBDS) XML files from tumor documentation systems to HL7® FHIR® and to a tabular format.
 
 ## Modular Pipeline
+
 ![Figure Modular Pipeline](img/fig1.png)
 
 [publication to be cited here]
 
-
 ## Installation
 
 ### Installation: Docker Compose Setup
-Please follow along here: [docker-compose/README.md](docker-compose/README.md)
 
+Please follow along here: [docker-compose/README.md](docker-compose/README.md)
 
 ### Installation: kubernetes setup
 

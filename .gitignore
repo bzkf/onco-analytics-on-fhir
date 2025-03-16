@@ -19,3 +19,7 @@ bundles-delta/
 .vscode
 
 .venv/
+
+*.jar
+
+*.tar.gz.*

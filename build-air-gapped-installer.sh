@@ -80,12 +80,15 @@ AIR_GAPPED_COMPOSE_INSTALL_DIR=${AIR_GAPPED_COMPOSE_INSTALL_DIR:-"./dist/compose
 mkdir -p "$AIR_GAPPED_COMPOSE_INSTALL_DIR"
 
 # generate save-images.sh
+# TODO: re-add -f docker-compose/trino-pathling/compose.yaml \
 docker compose --profile=kafka-connect \
-  -f docker-compose/compose.full.yaml \
+  -f docker-compose/compose.kafka.yaml \
   -f docker-compose/compose.obds-to-fhir.yaml \
+  -f docker-compose/compose.obds-fhir-to-opal.yaml \
   -f docker-compose/compose.decompose-xmls.yaml \
   -f docker-compose/compose.fhir-server.yaml \
   -f docker-compose/compose.pseudonymization.yaml \
+  --env-file=docker-compose/.demo.env \
   config -o docker-compose/compose.normalized.yaml
 
 docker run \
@@ -95,7 +98,7 @@ docker run \
   --rm \
   --volume "${PWD}/docker-compose:/data" \
   --user "${UID}" \
-  docker.io/senzing/docker-compose-air-gapper:1.0.4@sha256:f519089580c5422c02100042965f14ac2bb7bab5c3321e8a668b4f4b6b03902a
+  ghcr.io/bzkf/docker-compose-air-gapper:main@sha256:379143f28a40ac258769070d005e8098c27f28e3c3d39dfded62fcac402fee04
 
 chmod +x ./docker-compose/save-images.sh
 
@@ -104,4 +107,4 @@ MY_HOME="${AIR_GAPPED_COMPOSE_INSTALL_DIR}" ./docker-compose/save-images.sh
 
 find "$AIR_GAPPED_COMPOSE_INSTALL_DIR" -name "docker-compose-air-gapper-*.tgz" -exec mv '{}' "./docker-compose/" \;
 
-tar -zcvf compose-air-gapped-installer.tgz "./docker-compose"
+tar cvzf - "./docker-compose" | split --bytes=1GB - compose-air-gapped-installer.tar.gz.

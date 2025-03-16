@@ -89,6 +89,88 @@ jobs:
           cd src/decompose_xmls
           pytest
 
+  test-compose:
+    runs-on: ubuntu-24.04
+    needs:
+      - build-decompose-xml-image
+      - build-obds-fhir-to-opal-image
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: start Kafka & Kafka Connect
+        working-directory: docker-compose/
+        run: |
+          docker compose -f compose.kafka.yaml up -d
+          # 😬
+          sleep 60
+
+      - name: load the obds reports from disk, turn them into individual reports and send them to Kafka
+        working-directory: docker-compose/
+        run: |
+          USER_ID=${UID} GROUP_ID=${GID} docker compose -f compose.decompose-xmls.yaml up
+
+      - name: convert reports to FHIR resources
+        working-directory: docker-compose/
+        run: |
+          docker compose -f compose.obds-to-fhir.yaml up -d
+          # not a great idea, probably better to create an init container
+          # exiting if the output topic contains the expected number of resources after some tries.
+          sleep 60
+
+      - name: de-identify the resources
+        working-directory: docker-compose/
+        run: |
+          docker compose --env-file=.demo.env -f compose.pseudonymization.yaml up -d
+          # again, not a great idea.
+          sleep 60
+
+      # this currently uses the original, non-de-identified resources!
+      - name: convert the FHIR resources to the CSV dataset
+        working-directory: docker-compose/
+        run: |
+          sudo chown -R 1001:1001 ./opal-output/
+          docker compose -f compose.obds-fhir-to-opal.yaml up
+
+      - name: upload the CSV
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: opal-df
+          path: |
+            docker-compose/opal-output/
+
+      - name: load the resources into Delta Lake tables
+        working-directory: docker-compose/
+        run: |
+          docker compose --project-name=docker-compose --env-file=.demo.env -f trino-pathling/compose.yaml up -d
+          # once again, a bad idea
+          sleep 60
+
+      - name: query them using trino
+        run: |
+          curl -o trino-cli.jar https://repo1.maven.org/maven2/io/trino/trino-cli/472/trino-cli-472-executable.jar
+          java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
+
+      - name: Print compose logs
+        if: always()
+        working-directory: docker-compose/
+        run: |
+          docker compose --env-file=.demo.env \
+            -f compose.kafka.yaml \
+            -f compose.decompose-xmls.yaml \
+            -f compose.obds-to-fhir.yaml \
+            -f compose.obds-fhir-to-opal.yaml \
+            -f trino-pathling/compose.yaml logs | tee compose-logs.txt
+
+      - name: Upload compose dump
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: compose-logs
+          path: |
+            docker-compose/compose-logs.txt
+
   test-k8s:
     runs-on: ubuntu-24.04
     # disabled since the major deployment platform is currently
@@ -168,6 +250,17 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'pull_request' }}
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - run: |

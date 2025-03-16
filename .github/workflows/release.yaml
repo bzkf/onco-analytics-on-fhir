@@ -87,7 +87,7 @@ jobs:
           path: |
             air-gapped-installer.tgz
             air-gapped-prerequisites-installer.tgz
-            compose-air-gapped-installer.tgz
+            compose-air-gapped-installer.tar.gz.*
 
   prepare-artifacts:
     name: prepare artifacts
@@ -126,14 +126,14 @@ jobs:
           cp /tmp/prerequisites-chart.tgz dist/
           # cp /tmp/air-gapped-installer.tgz dist/
           # cp /tmp/air-gapped-prerequisites-installer.tgz dist/
-          cp /tmp/compose-air-gapped-installer.tgz dist/
+          cp /tmp/compose-air-gapped-installer.tar.gz.* dist/
 
       - name: Generate SLSA subject for release assets
         id: hash
         working-directory: dist
         run: |
           # air-gapped-installer.tgz air-gapped-prerequisites-installer.tgz
-          sha256sum onco-analytics-on-fhir-chart.tgz prerequisites-chart.tgz compose-air-gapped-installer.tgz > checksums.sha256
+          sha256sum onco-analytics-on-fhir-chart.tgz prerequisites-chart.tgz compose-air-gapped-installer.tar.gz.* > checksums.sha256
           echo "hashes=$(base64 -w0 < checksums.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: upload assets to release
@@ -141,6 +141,7 @@ jobs:
         with:
           files: |
             dist/*.tgz
+            dist/*.tar.gz.*
             dist/*.sha256
 
   provenance:

@@ -9,7 +9,7 @@ tasks:
     cmds:
       - |
         docker compose \
-          -f compose.full.yaml \
+          -f compose.kafka.yaml \
           -f compose.decompose-xmls.yaml \
           -f compose.obds-to-fhir.yaml up --detach
 
@@ -23,4 +23,4 @@ tasks:
   clean:
     dir: docker-compose/
     cmd: |
-      docker compose -f compose.full.yaml down --volumes --remove-orphans
+      docker compose -f compose.kafka.yaml down --volumes --remove-orphans

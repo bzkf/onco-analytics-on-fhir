@@ -5,42 +5,60 @@
 ## Installation
 
 ### 1. Prepare Data Import
+
 #### a) ONKOSTAR data base connector
-Configure kafka-connect in [compose.full-yaml](compose.full.yaml) and [docker-compose/kafka-connect-passwords.properties](kafka-connect-passwords.properties).
+
+Configure kafka-connect in [compose.kafka.yaml](compose.kafka.yaml) and [docker-compose/kafka-connect-passwords.properties](kafka-connect-passwords.properties).
 The oBDS single report XML-files will be loaded into the Kafka cluster.
 For more information about kafka-connect, refer to [7. Enable Kafka Connect and the connector.](#7-enable-kafka-konnect-and-the-connector)
-#### b) Folder import
-Copy your oBDS collection report XML-files to [docker-compose/input-obds-reports]().
 
+#### b) Folder import
+
+Copy your oBDS collection report XML-files to [docker-compose/input-obds-reports]().
 
 ### 2. Start the Kafka Cluster
 
 ```sh
-docker compose -f compose.full.yaml up
+docker compose -f compose.kafka.yaml up
 ```
 
 Open <http://localhost:8084/> to view the cluster's topics and the progress of your pipeline.
 
-
 ### 3. Load data
-#### a) ONKOSTAR data base connector
-The oBDS single report XML-files from ONKOSTAR data base will be loaded into the Kafka cluster with step 2.
 
+#### a) ONKOSTAR data base connector
+
+The oBDS single report XML-files from the ONKOSTAR database will be loaded into the Kafka cluster with step 2.
 
 #### b) Folder import
+
 Decompose oBDS collection report XML-files from [docker-compose/input-obds-reports](docker-compose/input-obds-reports) into single XML reports and load them into the Kafka cluster.
 
 ```sh
-docker compose -f compose.decompose-xmls.yaml up
+USER_ID=${UID} GROUP_ID=${GID} docker compose -f compose.decompose-xmls.yaml up
 ```
+
+The `USER_ID` and `GROUP_ID` env vars are used to make the container run as the current user,
+assuming the [docker-compose/output-obds-reports](docker-compose/output-obds-reports) is owned by them.
 
 ### 4. Transform oBDS XML-data to FHIR
 
 ```sh
 docker compose -f compose.obds-to-fhir.yaml up
 ```
-We currently use the FHIR profiles defined under https://simplifier.net/oncology.
 
+We currently use the FHIR profiles defined under <https://simplifier.net/oncology>.
+
+Note that this streaming job runs indefinitely. You can check the progress via akhq at <http://localhost:8084/>.
+There should be 4 messages in both the `fhir.obds.Patient` and `fhir.obds.Condition` topics respectively.
+
+You can then shutdown the job using Ctrl+C.
+
+### 4.1 (Optional) Load the FHIR resources as Delta Lake tables in MinIO
+
+```sh
+docker compose --project-name=docker-compose --env-file=.demo.env -f trino-pathling/compose.yaml up
+```
 
 ### 5. Convert the FHIR resources to a CSV dataset
 
@@ -52,7 +70,7 @@ docker compose -f compose.obds-fhir-to-opal.yaml up
 ### 6. Start the entire stack
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml -f compose.decompose-xmls.yaml -f compose.obds-fhir-to-opal.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.decompose-xmls.yaml -f compose.obds-fhir-to-opal.yaml up
 ```
 
 ### 7. Enable Kafka Connect and the connector
@@ -118,7 +136,7 @@ SELECT * FROM (
 ```
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml up
 ```
 
 ```sh
@@ -134,15 +152,14 @@ curl -X POST \
 > Requires gPAS to be set-up and the [anonymization.yaml](anonymization.yaml) to be configured
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml -f compose.pseudonymization.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.pseudonymization.yaml up
 ```
 
 ### 9. Run with enabled pseudonymization and sending resources to a FHIR server
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.full.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
+docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
 ```
-
 
 ### 10. Air-gapped installation
 
@@ -163,3 +180,26 @@ Extract the archive:
 ```sh
 tar xvzf ./air-gapped-installer.tgz
 ```
+
+## Customize any compose file
+
+The easiest way to configure any settings or environment variables of the compose files is to merge them with customized ones: <https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/>.
+
+For example, to modify the configuration of the [compose.pseudonymization.yaml](compose.pseudonymization.yaml) file you can create an override file called [compose.pseudonymization.overrides.yaml](compose.pseudonymization.yaml) like this one:
+
+```yaml
+services:
+  fhir-pseudonymizer:
+    environment:
+      gPAS__Url: "https://gpas.example.com/ttp-fhir/fhir/gpas/"
+      gPAS__Auth__Basic__Username: "user"
+      gPAS__Auth__Basic__Password: ${FHIR_PSEUDONYMIZER_GPAS_AUTH_BASIC_PASSWORD:?}
+```
+
+and run it like so:
+
+```sh
+docker compose --env-file=.demo.env -f compose.pseudonymization.yaml -f compose.pseudonymization.overrides.yaml up
+```
+
+this assumes that the `FHIR_PSEUDONYMIZER_GPAS_AUTH_BASIC_PASSWORD` env var is set in the .demo.env file.
