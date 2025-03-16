@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 
 from loguru import logger
@@ -228,9 +229,9 @@ def main():
     save_final_df(df, settings)
 
     # Clean up the delta folder after processing
-    # dir_path = os.path.join(settings.output_folder, "bundles-delta")
-    # if os.path.exists(dir_path) and os.path.isdir(dir_path):
-    #    shutil.rmtree(dir_path)
+    dir_path = os.path.join(settings.output_folder, "bundles-delta")
+    if os.path.exists(dir_path) and os.path.isdir(dir_path):
+        shutil.rmtree(dir_path)
 
     # Generate the data dictionary
     generate_data_dictionary(
