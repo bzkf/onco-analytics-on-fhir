@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.4.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.1...v2.4.0) (2025-03-16)
+
+
+### Features
+
+* added trino-pathling setup ([#209](https://github.com/bzkf/onco-analytics-on-fhir/issues/209)) ([b4833d9](https://github.com/bzkf/onco-analytics-on-fhir/commit/b4833d9fcc90a623b990204610e05ceeb93256ab))
+* enable modul prostata mapping by default ([2dbf0d2](https://github.com/bzkf/onco-analytics-on-fhir/commit/2dbf0d21a44099532dbb1b063c1216384b8e26a2))
+* Study protocol c data extraction for c2 + c3 ([#220](https://github.com/bzkf/onco-analytics-on-fhir/issues/220)) ([641a635](https://github.com/bzkf/onco-analytics-on-fhir/commit/641a635a827b9fdab09118de89bba083d6cf1913))
+
 ## [2.3.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.0...v2.3.1) (2024-10-08)
 
 
