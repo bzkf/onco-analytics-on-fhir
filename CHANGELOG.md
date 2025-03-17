@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.4.1...v2.5.0) (2025-03-17)
+
+
+### Features
+
+* added study Protocol A with C61 ([#226](https://github.com/bzkf/onco-analytics-on-fhir/issues/226)) ([571fee6](https://github.com/bzkf/onco-analytics-on-fhir/commit/571fee6cf1be91f4580b90d48653fb6f63a9db94))
+
 ## [2.4.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.4.0...v2.4.1) (2025-03-16)
 
 
