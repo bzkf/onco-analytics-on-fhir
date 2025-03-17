@@ -50,7 +50,7 @@ Download the air-gapped installer and move it to the deployment machine:
 <!-- x-release-please-start-version -->
 
 ```sh
-curl -L -O https://github.com/bzkf/onco-analytics-on-fhir/releases/download/v2.4.1/air-gapped-installer.tgz
+curl -L -O https://github.com/bzkf/onco-analytics-on-fhir/releases/download/v2.5.0/air-gapped-installer.tgz
 ```
 
 <!-- x-release-please-end -->
@@ -91,7 +91,7 @@ IMAGE_FOLDER=./dist/air-gapped/images ./dist/air-gapped/bin/import-images-into-k
 <!-- x-release-please-start-version -->
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=2.4.1 prerequisites oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/prerequisites
+helm upgrade --install --wait --timeout=10m --version=2.5.0 prerequisites oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/prerequisites
 
 kubectl apply -f k8s/kafka-cluster.yaml
 kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
@@ -106,7 +106,7 @@ kubectl get all -A
 ##### Install onco-analytics-on-fhir
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=2.4.1 onco-analytics-on-fhir oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/onco-analytics-on-fhir
+helm upgrade --install --wait --timeout=10m --version=2.5.0 onco-analytics-on-fhir oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/onco-analytics-on-fhir
 
 # test the installation
 helm test onco-analytics-on-fhir
