@@ -124,6 +124,7 @@ jobs:
           path: /tmp
 
       - name: Load image
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           docker load --input /tmp/image.tar
           docker image ls
@@ -136,6 +137,7 @@ jobs:
           path: /tmp
 
       - name: Load image
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           docker load --input /tmp/image.tar
           docker image ls
