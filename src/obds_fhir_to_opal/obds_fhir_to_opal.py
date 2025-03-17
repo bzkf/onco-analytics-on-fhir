@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     master: str = "local[*]"
     kafka_bootstrap_server: str = "kafka:9092"
 
+    spark_jars_ivy: str = "/home/spark/.ivy2"
     spark_driver_memory: str = "16g"
 
 
@@ -65,6 +66,7 @@ def setup_spark_session(app_name: str, master: str):
         .config("spark.driver.memory", settings.spark_driver_memory)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.jars.packages", ",".join(settings.jar_list))
+        .config("spark.jars.ivy", settings.spark_jars_ivy)
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
