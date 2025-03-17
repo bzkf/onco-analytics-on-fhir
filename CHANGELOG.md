@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.0...v2.5.1) (2025-03-17)
+
+
+### Bug Fixes
+
+* set spark ivy dir back to default ([#231](https://github.com/bzkf/onco-analytics-on-fhir/issues/231)) ([0bca509](https://github.com/bzkf/onco-analytics-on-fhir/commit/0bca50935d97190ccb388af191ac0c05e477e4bb))
+
 ## [2.5.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.4.1...v2.5.0) (2025-03-17)
 
 
