@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 import time
 
 from loguru import logger
@@ -40,6 +41,7 @@ class Settings(BaseSettings):
 
     spark_jars_ivy: str = "/home/spark/.ivy2"
     spark_driver_memory: str = "16g"
+    spark_install_packages_and_exit: bool = False
 
 
 settings = Settings()
@@ -204,6 +206,10 @@ def main():
 
     spark = setup_spark_session(settings.spark_app_name, settings.master)
     pc = PathlingContext.create(spark=spark, enable_extensions=True)
+
+    if settings.spark_install_packages_and_exit:
+        logger.info("Exiting after installing packages")
+        sys.exit()
 
     # try:
     read_data_from_kafka_save_delta(spark, kafka_topics, pc)
