@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.4.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.4.0...v2.4.1) (2025-03-16)
+
+
+### Bug Fixes
+
+* release please token ([a6d8f00](https://github.com/bzkf/onco-analytics-on-fhir/commit/a6d8f00b364478b85f6cf59d7aeec0b45fa6013c))
+* release-please config ([#227](https://github.com/bzkf/onco-analytics-on-fhir/issues/227)) ([5564c0a](https://github.com/bzkf/onco-analytics-on-fhir/commit/5564c0a0042a2932b497390c2c467da23d8b9311))
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency ipython to v9 ([#224](https://github.com/bzkf/onco-analytics-on-fhir/issues/224)) ([ac56581](https://github.com/bzkf/onco-analytics-on-fhir/commit/ac5658129d897d26407f9b15628661995fc3e2de))
+* **deps:** update dependency numpy to v2 ([#217](https://github.com/bzkf/onco-analytics-on-fhir/issues/217)) ([ca276c4](https://github.com/bzkf/onco-analytics-on-fhir/commit/ca276c47186591665b3079d069038a82b56b4f78))
+* **deps:** update dependency pytest to v8 ([#152](https://github.com/bzkf/onco-analytics-on-fhir/issues/152)) ([d974808](https://github.com/bzkf/onco-analytics-on-fhir/commit/d974808afa02478f8910651f0b81a3f2291a9062))
+* **deps:** update dependency pytest-cov to v6 ([#211](https://github.com/bzkf/onco-analytics-on-fhir/issues/211)) ([93bc683](https://github.com/bzkf/onco-analytics-on-fhir/commit/93bc683f9fbe577c7a939ac35a7c16430a472d41))
+* **deps:** update docker.io/bitnami/kafka:3.6.1 docker digest to 9f05290 ([#159](https://github.com/bzkf/onco-analytics-on-fhir/issues/159)) ([78d5036](https://github.com/bzkf/onco-analytics-on-fhir/commit/78d5036bbf3ec38634777e0edc0717c1a1faf3ef))
+
+## [2.4.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.1...v2.4.0) (2025-03-16)
+
+
+### Features
+
+* added trino-pathling setup ([#209](https://github.com/bzkf/onco-analytics-on-fhir/issues/209)) ([b4833d9](https://github.com/bzkf/onco-analytics-on-fhir/commit/b4833d9fcc90a623b990204610e05ceeb93256ab))
+* enable modul prostata mapping by default ([2dbf0d2](https://github.com/bzkf/onco-analytics-on-fhir/commit/2dbf0d21a44099532dbb1b063c1216384b8e26a2))
+* Study protocol c data extraction for c2 + c3 ([#220](https://github.com/bzkf/onco-analytics-on-fhir/issues/220)) ([641a635](https://github.com/bzkf/onco-analytics-on-fhir/commit/641a635a827b9fdab09118de89bba083d6cf1913))
+
 ## [2.3.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.3.0...v2.3.1) (2024-10-08)
 
 
