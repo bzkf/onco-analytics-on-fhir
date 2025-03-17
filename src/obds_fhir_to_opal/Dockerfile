@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 USER 1001:1001
 RUN spark-shell -v --conf spark.jars.ivy=${SPARK_JARS_IVY}\
-    --packages "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5,au.csiro.pathling:library-api:7.2.0,io.delta:delta-spark_2.12:3.2.0"
+    --packages "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5,au.csiro.pathling:library-runtime:7.2.0,io.delta:delta-spark_2.12:3.2.0"
 
 WORKDIR /home/spark
 
