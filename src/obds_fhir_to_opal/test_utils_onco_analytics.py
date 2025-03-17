@@ -74,6 +74,7 @@ def test_group_icd_groups():
         (320, 3),  # (318, 322, 3),  # Dickdarm und Rektum (C18-C21)
         (321, 3),  # (318, 322, 3),  # Dickdarm und Rektum (C18-C21)
         (395, 23),  # (391, 396, 23),  # Leukämien (C91-C95)
+        (None, None),
     ],
 )
 def test_group_entities(icd10_grouped, expected):

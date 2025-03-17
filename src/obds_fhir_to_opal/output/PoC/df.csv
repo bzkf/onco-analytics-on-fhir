@@ -1,3 +1,0 @@
-ID,condition_id,icd10_code,icd10_mapped,icd10_grouped,icd10_entity,date_diagnosis,date_diagnosis_year,date_diagnosis_month,date_diagnosis_day,gender,gender_mapped
-0,4d894939aabb8883d54f1193ec273f1202e142b89134106b2b41310db2059d3f,D07.3,407.3,407,-100,1900-08-08,1900,8,8,female,1
-1,69778e3e81986f370848ef0a36501db7dbff9faaa80315a59bf2aeea9a98906a,C61,361.0,361,14,1900-07-29,1900,7,29,male,2

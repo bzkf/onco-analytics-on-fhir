@@ -13,9 +13,6 @@ __pycache__/
 .pytest_cache
 .coverage
 
-bundles-delta/
-*.csv
-
 .vscode
 
 .venv/
