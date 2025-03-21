@@ -21,7 +21,7 @@ services:
       - minio
 
   minio:
-    image: docker.io/bitnami/minio:2024.10.13@sha256:faf554135d50ff8b382f79df7795e080726cb2d6f4ce7f056d733a6437546f6a
+    image: docker.io/bitnami/minio:2024.12.18@sha256:c0ede65eb88e47138470202c517bacf55ab3c27df848030b7b46e69d34b7d192
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -43,7 +43,7 @@ services:
       - "127.0.0.1:9001:9001"
 
   fhir-to-delta:
-    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.8.0@sha256:c82dfa80708186d6165f5abb5d0784aa765b31beda72aa550058394f343cc114
+    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.10.0@sha256:8bf8c66c632a7cf6328765d5ea40737fba754f8069d084f5769e439af87c6d73
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -81,7 +81,7 @@ services:
       - hive-metastore-db-data:/bitnami/postgresql:rw
 
   hive-metastore:
-    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.0@sha256:d8f99a4a16ede640f184dca9bd84bef84f84b26f41b10eb5c62a57bb796268c8
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.3@sha256:bcf828e2fbe6f14732390aee3bc2380cea5d4b3fb0c388f7b34ea80bddc64172
     ipc: none
     security_opt:
       - "no-new-privileges:true"
