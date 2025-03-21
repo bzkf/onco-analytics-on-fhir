@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.1...v2.5.2) (2025-03-17)
+
+
+### Bug Fixes
+
+* add option to install Spark packages and exit ([#235](https://github.com/bzkf/onco-analytics-on-fhir/issues/235)) ([660ce90](https://github.com/bzkf/onco-analytics-on-fhir/commit/660ce902a42ef1d3554da5c359bbfb6514e1c6dc))
+* load image only on PRs and corrected dependency names ([#233](https://github.com/bzkf/onco-analytics-on-fhir/issues/233)) ([b3a5ff9](https://github.com/bzkf/onco-analytics-on-fhir/commit/b3a5ff94dc80a457f7ce273552b97fd64dd26f99))
+
 ## [2.5.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.0...v2.5.1) (2025-03-17)
 
 
