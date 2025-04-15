@@ -75,8 +75,7 @@ def setup_spark_session(app_name: str, master: str):
         )
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
         .config("spark.network.timeout", "6000s")
-        # .config("spark.driver.maxResultSize", "8g")
-        .config("spark.sql.debug.maxToStringFields", "1000")  #
+        .config("spark.sql.debug.maxToStringFields", "1000")
         .config("spark.sql.broadcastTimeout", "1200s")
         .config("spark.executor.heartbeatInterval", "1200s")
         .config(
@@ -85,7 +84,6 @@ def setup_spark_session(app_name: str, master: str):
             + "-XX:InitiatingHeapOccupancyPercent=35 -verbose:gc -XX:+PrintGCDetails "
             + "-XX:+PrintGCDateStamps -XX:OnOutOfMemoryError='kill -9 %p'",
         )
-        .config("spark.task.maxDirectResultSize", "256MB")
         # try to avoid multiple spark contexts in one python process
         .config("spark.driver.allowMultipleContexts", "false")
         .getOrCreate()
