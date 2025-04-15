@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.2...v2.5.3) (2025-04-15)
+
+
+### Bug Fixes
+
+* rm hard-coded spark settings ([#243](https://github.com/bzkf/onco-analytics-on-fhir/issues/243)) ([6ab5fcc](https://github.com/bzkf/onco-analytics-on-fhir/commit/6ab5fcc76575fb34f52aebc69d7e60734600cf23))
+
 ## [2.5.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.1...v2.5.2) (2025-03-17)
 
 
