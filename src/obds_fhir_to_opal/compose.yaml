@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      OUTPUT_FOLDER: "/opt/bitnami/spark/opal-output/"
+      OUTPUT_FOLDER: "/home/spark/opal-output" # env var rausnehmen hier
       OUTPUT_FILENAME: "df.csv"
       STUDY_NAME: "study_protocol_a" #"study_protocol_a_c61" #"study_protocol_c" #"study_protocol_a" #"study_protocol_c" # "PoC"
       KAFKA_TOPIC_YEAR_SUFFIX: "" #".2022"
@@ -15,6 +15,6 @@ services:
       KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
     volumes:
-      - ./opal-output:/opt/bitnami/spark/opal-output
+      - ./opal-output:/home/spark/opal-output:rw
     ports:
       - "4040:4040" # Weiterleitung des Spark UI Ports

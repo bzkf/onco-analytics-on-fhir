@@ -89,6 +89,8 @@ def setup_spark_session(app_name: str, master: str):
         .getOrCreate()
     )
 
+    spark.sparkContext.setCheckpointDir("/tmp/spark-checkpoint")
+
     return spark
 
 
