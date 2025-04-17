@@ -3,12 +3,15 @@ import re
 import shutil
 from datetime import datetime
 from typing import List, Optional
+from io import StringIO
+import sys
 
 import pandas as pd
 from loguru import logger
 from pathling import Expression as exp
 from pathling import PathlingContext, datasource
 from pydantic import BaseSettings
+from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import (
     abs,
@@ -571,9 +574,12 @@ def extract_df_study_protocol_a(
             ),
         ],
     )
-    a_unique_condids = a_unique_condids.cache()
 
-    logger.info("cached condition ids")
+    # checkpoint + action after extract
+    a_unique_condids = a_unique_condids.checkpoint(eager=True)
+    logger.info("a_unique_condids.count() = {}".format(a_unique_condids.count()))
+
+    logger.info("checkpoint condition ids")
 
     # save conditions
     """ file_path = os.path.join(
@@ -601,9 +607,11 @@ def extract_df_study_protocol_a(
             ),
         ],
     )
-    a_cond_ctnm = a_cond_ctnm.cache()
+    # checkpoint + action after extract
+    a_cond_ctnm = a_cond_ctnm.checkpoint(eager=True)
+    logger.info("a_cond_ctnm.count() = {}".format(a_cond_ctnm.count()))
 
-    logger.info("cached a_cond_ctnm")
+    logger.info("checkpoint a_cond_ctnm")
 
     a_cond_ptnm = data.extract(
         "Condition",
@@ -618,9 +626,11 @@ def extract_df_study_protocol_a(
             ),
         ],
     )
-    a_cond_ptnm = a_cond_ptnm.cache()
+    # checkpoint + action after extract
+    a_cond_ptnm = a_cond_ptnm.checkpoint(eager=True)
+    logger.info("a_cond_ptnm.count() = {}".format(a_cond_ptnm.count()))
 
-    logger.info("cached a_cond_ptnm")
+    logger.info("checkpoint a_cond_ptnm")
 
     # extract cTNM and pTNM observations separately
     a_observations_c_tnm = data.extract(
@@ -661,9 +671,12 @@ def extract_df_study_protocol_a(
             ),
         ],
     )
-    a_observations_c_tnm = a_observations_c_tnm.cache()
+    # checkpoint + action after extract
+    a_observations_c_tnm = a_observations_c_tnm.checkpoint(eager=True)
+    logger.info("a_observations_c_tnm.count() = {}".format(
+        a_observations_c_tnm.count()))
 
-    logger.info("cached a_observations_c_tnm")
+    logger.info("checkpoint a_observations_c_tnm")
 
     a_observations_p_tnm = data.extract(
         "Observation",
@@ -703,9 +716,12 @@ def extract_df_study_protocol_a(
             ),
         ],
     )
-    a_observations_p_tnm = a_observations_p_tnm.cache()
+    # checkpoint + action after extract
+    a_observations_p_tnm = a_observations_p_tnm.checkpoint(eager=True)
+    logger.info("a_observations_p_tnm.count() = {}".format(
+        a_observations_p_tnm.count()))
 
-    logger.info("cached a_observations_p_tnm")
+    logger.info("checkpoint a_observations_p_tnm")
 
     # group "multiplied" columns by observation id, merge non-null values for one
     # observation into one line
@@ -723,6 +739,8 @@ def extract_df_study_protocol_a(
         first("pM", ignorenulls=True).alias("pM"),
         first("p_UICC", ignorenulls=True).alias("p_UICC"),
     )
+    logger.info("a_observations_p_tnm.count() = {}".format(
+        a_observations_p_tnm_grouped.count()))
 
     logger.info("Done grouping")
 
@@ -742,6 +760,19 @@ def extract_df_study_protocol_a(
     a_cond_p_tnm = a_cond_p_tnm.dropna(how="all")
 
     logger.info("Done joining")
+
+    # checkpoint + action after join
+    a_cond_c_tnm = a_cond_c_tnm.checkpoint(eager=True)
+    logger.info("a_cond_c_tnm.count() = {}".format(
+        a_cond_c_tnm.count()))
+
+    logger.info("checkpoint a_cond_c_tnm")
+
+    a_cond_p_tnm = a_cond_p_tnm.checkpoint(eager=True)
+    logger.info("a_cond_p_tnm.count() = {}".format(
+        a_cond_p_tnm.count()))
+
+    logger.info("checkpoint a_cond_p_tnm")
 
     # find first cTNM and pTNM observation date closest to diagnosis date for each
     # condition
@@ -768,9 +799,13 @@ def extract_df_study_protocol_a(
     a_unique_condids_cp_tnm = a_unique_condids_c_tnm.join(
         a_cond_p_tnm_first, on=["condition_id"], how="left"
     )
-    a_unique_condids_cp_tnm = a_unique_condids_cp_tnm.cache()
 
-    logger.info("Cached a_unique_condids_cp_tnm")
+    # checkpoint + action after join
+    a_unique_condids_cp_tnm = a_unique_condids_cp_tnm.checkpoint(eager=True)
+    logger.info("a_unique_condids_cp_tnm.count() = {}".format(
+        a_unique_condids_cp_tnm.count()))
+
+    logger.info("checkpoint a_unique_condids_cp_tnm")
 
     # add death information from observation
     a6_7_obs = data.extract(
@@ -806,9 +841,12 @@ def extract_df_study_protocol_a(
             ),
         ],
     )
-    a6_7_obs = a6_7_obs.cache()
+    # checkpoint + action after extract
+    a6_7_obs = a6_7_obs.checkpoint(eager=True)
+    logger.info("a6_7_obs.count() = {}".format(
+        a6_7_obs.count()))
 
-    logger.info("Cached a6_7_obs")
+    logger.info("checkpoint a6_7_obs")
 
     # group "multiplied" cols to comine all non-null values into one row per obds-id
     a6_7_obs_grouped = a6_7_obs.groupBy("observation_id").agg(
@@ -990,7 +1028,10 @@ def extract_df_study_protocol_a(
         "date_death_year",
         "dead_bool_mapped",
     ]
+    # checkpoint + action select after many transformations
+    a0_7_final = a0_7_final.checkpoint(eager=True)
 
+    logger.info("checkpoint a0_7_final")
     a0_7_final = a0_7_final.select(*desired_order)
 
     logger.info("select desired order")
@@ -1059,6 +1100,17 @@ def extract_df_study_protocol_a(
     return a0_7_final
 
 
+def log_df_show(df, logger, n=20, truncate=False):
+    buffer = StringIO()
+    sys_stdout = sys.stdout  # Backup original stdout
+    sys.stdout = buffer      # Redirect stdout to buffer
+    try:
+        df.show(n=n, truncate=truncate)
+    finally:
+        sys.stdout = sys_stdout  # Restore stdout
+    logger.info("DataFrame preview:\n" + buffer.getvalue())
+
+
 def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource):
     df = data.extract(
         "Condition",
@@ -1078,6 +1130,8 @@ def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource
             ),
         ],
     )
+    logger.info("df.count() = {}".format(df.count()))   # 524288
+    log_df_show(df, logger)
 
     # map icd10 A= 1, B = 2, C = 3, D = 4
     df = df.withColumn(
@@ -1129,6 +1183,17 @@ def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource
     )
 
     df = df.dropDuplicates()
+
+    logger.info("df.count() = {}".format(df.count()))  # 2
+
+    df = df.persist(StorageLevel.DISK_ONLY)
+
+    logger.info("df.count() = {}".format(df.count()))  # 2
+
+    df = df.checkpoint(eager=True)
+
+    # achtung - nach checkpoint braucht es eine action, damit checkpoint ausgeführt wird
+    logger.info("df.count() = {}".format(df.count()))  # 2
 
     return df
 
