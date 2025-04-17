@@ -46,4 +46,4 @@ services:
       KAFKA_TOPICS: "fhir.obds.Patient,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.MedicationStatement"
 
 volumes:
-  minio-data: {}
+  fhir-to-delta-minio-data: {}
