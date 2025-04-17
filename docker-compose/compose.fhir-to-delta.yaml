@@ -1,0 +1,49 @@
+services:
+  minio:
+    image: docker.io/bitnami/minio:2025.3.12@sha256:31d778a4bfa5be550c00b4789b27257b67da6c6b8ed81047dde357ec8cc7f48b
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      MINIO_UPDATE: "off"
+      MINIO_CALLHOME_ENABLE: "off"
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:?}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?}
+      MINIO_DEFAULT_BUCKETS: "fhir,spark-streaming-checkpoints,results"
+      MINIO_SCHEME: "http"
+    env_file:
+      - path: .demo.env
+        required: false
+    volumes:
+      - minio-data:/bitnami/minio/data:rw
+    ports:
+      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:9000:9000"
+
+  kafka-fhir-to-delta:
+    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.10.0@sha256:8bf8c66c632a7cf6328765d5ea40737fba754f8069d084f5769e439af87c6d73
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    env_file:
+      - path: .demo.env
+        required: false
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPARK_S3_ENDPOINT: minio:9000
+      SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-delta
+      DELTA_DATABASE_DIR: "s3a://fhir/"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
+      KAFKA_TOPICS: "fhir.obds.Patient,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.MedicationStatement"
+
+volumes:
+  minio-data: {}

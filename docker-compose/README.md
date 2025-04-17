@@ -203,3 +203,13 @@ docker compose --env-file=.demo.env -f compose.pseudonymization.yaml -f compose.
 ```
 
 this assumes that the `FHIR_PSEUDONYMIZER_GPAS_AUTH_BASIC_PASSWORD` env var is set in the .demo.env file.
+
+## Loading FHIR resources from Kafka to Delta tables
+
+This assumes that Kafka already contains the `fhir.obds.*` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
+
+```sh
+docker compose --env-file=.demo.env -f compose.kafka.yaml -f compose.fhir-to-delta.yaml up
+```
+
+To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.
