@@ -65,7 +65,7 @@ services:
       KAFKA_TOPICS: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
 
   hive-metastore-db:
-    image: docker.io/bitnami/postgresql:17.4.0@sha256:41ad4f03c7842bed273dc308878a81c25131f55e038eb14979c43c4cc7ba9faf
+    image: docker.io/bitnami/postgresql:17.4.0@sha256:9d75ed4556cedefaff8f3aa2ccd39093dcf3f7968d013a82f175bff25c2761e4
     ipc: private
     security_opt:
       - "no-new-privileges:true"

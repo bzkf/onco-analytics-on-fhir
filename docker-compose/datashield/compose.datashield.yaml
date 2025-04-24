@@ -32,7 +32,7 @@ services:
       - rock-2
 
   opal-db:
-    image: docker.io/bitnami/postgresql:17.4.0@sha256:be6c1ca552492e8418cdd57b0e7799ba63205b604ac8534ea81724ce4be839dd
+    image: docker.io/bitnami/postgresql:17.4.0@sha256:9d75ed4556cedefaff8f3aa2ccd39093dcf3f7968d013a82f175bff25c2761e4
     restart: unless-stopped
     ipc: private
     security_opt:
