@@ -21,7 +21,7 @@ services:
       - minio
 
   minio:
-    image: docker.io/bitnami/minio:2024.10.13@sha256:faf554135d50ff8b382f79df7795e080726cb2d6f4ce7f056d733a6437546f6a
+    image: docker.io/bitnami/minio:2025.4.22@sha256:d7cd0e172c4cc0870f4bdc3142018e2a37be9acf04d68f386600daad427e0cab
     ipc: none
     security_opt:
       - "no-new-privileges:true"
