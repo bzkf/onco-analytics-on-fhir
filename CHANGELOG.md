@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.6.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.2...v2.6.0) (2025-05-07)
+
+
+### Features
+
+* added fhir-to-delta ([#246](https://github.com/bzkf/onco-analytics-on-fhir/issues/246)) ([8581d3d](https://github.com/bzkf/onco-analytics-on-fhir/commit/8581d3dc0e9cc20c61f945a1b67a9003f5b067b0))
+
+
+### Bug Fixes
+
+* rm hard-coded spark settings ([#243](https://github.com/bzkf/onco-analytics-on-fhir/issues/243)) ([6ab5fcc](https://github.com/bzkf/onco-analytics-on-fhir/commit/6ab5fcc76575fb34f52aebc69d7e60734600cf23))
+
+
+### Miscellaneous Chores
+
+* **deps:** update docker.io/bitnami/minio docker tag to v2025 ([#239](https://github.com/bzkf/onco-analytics-on-fhir/issues/239)) ([73a4c6b](https://github.com/bzkf/onco-analytics-on-fhir/commit/73a4c6b7a78b9482e434facd8a45d40067c06f54))
+* **deps:** update github-actions ([#237](https://github.com/bzkf/onco-analytics-on-fhir/issues/237)) ([2369d1d](https://github.com/bzkf/onco-analytics-on-fhir/commit/2369d1d35dd10bd6d912529da81937f705a468f3))
+
 ## [2.5.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.1...v2.5.2) (2025-03-17)
 
 
