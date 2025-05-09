@@ -1,6 +1,6 @@
 services:
   minio:
-    image: docker.io/bitnami/minio:2025.3.12@sha256:31d778a4bfa5be550c00b4789b27257b67da6c6b8ed81047dde357ec8cc7f48b
+    image: docker.io/bitnami/minio:2025.4.22@sha256:d7cd0e172c4cc0870f4bdc3142018e2a37be9acf04d68f386600daad427e0cab
     restart: unless-stopped
     cap_drop:
       - ALL
