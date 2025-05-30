@@ -21,7 +21,7 @@ services:
       - minio
 
   minio:
-    image: docker.io/bitnami/minio:2025.4.22@sha256:d7cd0e172c4cc0870f4bdc3142018e2a37be9acf04d68f386600daad427e0cab
+    image: docker.io/bitnami/minio:2025.4.22@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -65,7 +65,7 @@ services:
       KAFKA_TOPICS: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
 
   hive-metastore-db:
-    image: docker.io/bitnami/postgresql:17.4.0@sha256:41ad4f03c7842bed273dc308878a81c25131f55e038eb14979c43c4cc7ba9faf
+    image: docker.io/bitnami/postgresql:17.4.0@sha256:ee4a4905642645dbf947a9990eb121eb8fbd06703549f358b5b2ad73eb2973c4
     ipc: private
     security_opt:
       - "no-new-privileges:true"
