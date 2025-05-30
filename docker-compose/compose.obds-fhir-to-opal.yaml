@@ -9,17 +9,14 @@ services:
     security_opt:
       - "no-new-privileges:true"
     user: "1001:1001"
+    env_file:
+      - .demo.env
     environment:
       OUTPUT_FOLDER: "/home/spark/opal-output"
-      KAFKA_TOPIC_YEAR_SUFFIX: "" # e.g. ".2023"
-      KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
-      KAFKA_PATIENT_TOPIC: "fhir.obds.Patient"
-      KAFKA_CONDITION_TOPIC: "fhir.obds.Condition"
-      KAFKA_OBSERVATION_TOPIC: "fhir.obds.Observation"
-      KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
-      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
       STUDY_NAME: "${STUDY_NAME:-PoC}"
-      OUTPUT_FILENAME: "${OUTPUT_FILENAME:-df-poc.csv}"
       SPARK_DRIVER_MEMORY: "${SPARK_DRIVER_MEMORY:-10g}"
+      SPARK_S3_ENDPOINT: minio:9000
+      SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-delta
+      DELTA_DATABASE_DIR: "s3a://fhir/"
     volumes:
       - ./opal-output:/home/spark/opal-output:rw

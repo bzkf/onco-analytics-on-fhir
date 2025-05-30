@@ -3,17 +3,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .demo.env
     environment:
-      OUTPUT_FOLDER: "/home/spark/opal-output" # env var rausnehmen hier
-      OUTPUT_FILENAME: "df.csv"
-      STUDY_NAME: "study_protocol_a" #"study_protocol_a_c61" #"study_protocol_c" #"study_protocol_a" #"study_protocol_c" # "PoC"
-      KAFKA_TOPIC_YEAR_SUFFIX: "" #".2022"
-      KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
-      KAFKA_PATIENT_TOPIC: "fhir.obds.Patient"
-      KAFKA_CONDITION_TOPIC: "fhir.obds.Condition"
-      KAFKA_OBSERVATION_TOPIC: "fhir.obds.Observation"
-      KAFKA_PROCEDURE_TOPIC: "fhir.obds.Procedure"
-      KAFKA_MEDICATIONSTATEMENT_TOPIC: "fhir.obds.MedicationStatement"
+      OUTPUT_FOLDER: "/home/spark/opal-output"
+      STUDY_NAME: "PoC" #"study_protocol_c" #study_protocol_a0_1_3_7 # "PoC"
+      SPARK_S3_ENDPOINT: minio:9000
+      SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-delta
+      DELTA_DATABASE_DIR: "s3a://fhir/"
     volumes:
       - ./opal-output:/home/spark/opal-output:rw
     ports:
