@@ -238,7 +238,7 @@ jobs:
     runs-on: ubuntu-24.04
     # disabled since the major deployment platform is currently
     # docker compose anyways
-    if: ${{ false }}
+    if: false
     # run tests only on PRs
     # ${{ github.event_name == 'pull_request' }}
     needs:
