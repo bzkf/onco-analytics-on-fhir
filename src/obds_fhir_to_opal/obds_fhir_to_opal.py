@@ -90,7 +90,6 @@ def setup_spark_session(app_name: str, master: str):
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         .config("spark.worker.cleanup.enabled", "true")
         .config("spark.sql.adaptive.enabled", "true")
-
         .getOrCreate()
     )
 
@@ -119,7 +118,8 @@ def main():
         case "study_protocol_a0_1_3_7":
             df = extract_df_study_protocol_a0_1_3_7(pc, data, settings, spark)
             df = datashield_preps_wrapper(
-                df, condition=True, patient=True, death=True, gleason=True)
+                df, condition=True, patient=True, death=True, gleason=True
+            )
             dtypes_list_df, description_list_df_dictionary = prepare_data_dictionary(df)
         case "study_protocol_c":
             df = extract_df_study_protocol_c(pc, data)
@@ -137,9 +137,7 @@ def main():
 
     # Generate one data dictionary for all studies and save in parent folder
     generate_data_dictionary(
-        file_path=os.path.join(
-            settings.output_folder, "data_dictionary_df.xlsx"
-        ),
+        file_path=os.path.join(settings.output_folder, "data_dictionary_df.xlsx"),
         table_name="df_" + settings.study_name,
         colnames_list=df.columns,
         value_type_list=dtypes_list_df,
