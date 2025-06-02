@@ -175,34 +175,6 @@ jobs:
           # again, not a great idea.
           sleep 60
 
-      # we could use a matrix strategy to run this in parallel
-      - name: convert the FHIR resources to the CSV dataset (PoC)
-        working-directory: docker-compose/
-        env:
-          STUDY_NAME: "PoC"
-          OUTPUT_FILENAME: "df-poc.csv"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
-        run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose -f compose.obds-fhir-to-opal.yaml up
-
-      - name: convert the FHIR resources to the CSV dataset (study_protocol_a_c61)
-        working-directory: docker-compose/
-        env:
-          STUDY_NAME: "study_protocol_a_c61"
-          OUTPUT_FILENAME: "df-study_protocol_a_c61.csv"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
-        run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose -f compose.obds-fhir-to-opal.yaml up
-
-      - name: upload the CSV
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: opal-df
-          path: |
-            docker-compose/opal-output/
-
       - name: load the resources into Delta Lake tables
         working-directory: docker-compose/
         run: |
@@ -214,6 +186,46 @@ jobs:
         run: |
           curl -o trino-cli.jar https://repo1.maven.org/maven2/io/trino/trino-cli/472/trino-cli-472-executable.jar
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
+          java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Observation'
+          java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Condition'
+
+      # we could use a matrix strategy to run this in parallel
+      - name: convert the FHIR resources to the CSV dataset (PoC)
+        working-directory: docker-compose/
+        env:
+          STUDY_NAME: "PoC"
+          OUTPUT_FILENAME: "df-poc.csv"
+          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
+        run: |
+          sudo chown -R 1001:1001 ./opal-output/
+          docker compose -f compose.obds-fhir-to-opal.yaml up
+
+      - name: convert the FHIR resources to the CSV dataset (study_protocol_c)
+        working-directory: docker-compose/
+        env:
+          STUDY_NAME: "study_protocol_c"
+          OUTPUT_FILENAME: "df-study_protocol_c.csv"
+          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
+        run: |
+          sudo chown -R 1001:1001 ./opal-output/
+          docker compose -f compose.obds-fhir-to-opal.yaml up
+
+      - name: convert the FHIR resources to the CSV dataset (study_protocol_a0_1_3_7)
+        working-directory: docker-compose/
+        env:
+          STUDY_NAME: "study_protocol_a0_1_3_7"
+          OUTPUT_FILENAME: "df-study_protocol_a0_1_3_7.csv"
+          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
+        run: |
+          sudo chown -R 1001:1001 ./opal-output/
+          docker compose -f compose.obds-fhir-to-opal.yaml up
+
+      - name: upload the CSV
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: opal-df
+          path: |
+            docker-compose/opal-output/
 
       - name: Print compose logs
         if: always()
