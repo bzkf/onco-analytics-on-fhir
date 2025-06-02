@@ -1,34 +1,32 @@
+import glob
 import os
 import re
 import shutil
-from datetime import datetime
-from typing import List, Optional
-from io import StringIO
 import sys
-import glob
+from datetime import datetime
+from io import StringIO
+from typing import List, Optional
+
 import pandas as pd
 from loguru import logger
 from pathling import Expression as exp
 from pathling import PathlingContext, datasource
 from pydantic import BaseSettings
-from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import (
     abs,
     col,
-    collect_list,
     dayofmonth,
     first,
     greatest,
-    lit,
     lower,
     month,
     regexp_extract,
+    regexp_replace,
     row_number,
     udf,
     when,
     year,
-    regexp_replace,
 )
 from pyspark.sql.types import DoubleType, IntegerType, StringType
 from pyspark.sql.window import Window
@@ -717,9 +715,7 @@ def extract_df_study_protocol_a0_1_3_7(
     observations_gleason_conditions_patients_death_c61 = (
         observations_gleason_conditions_patients_death_c61.checkpoint(eager=True)
     )
-    observations_gleason_conditions_patients_death_c61_count = (
-        observations_gleason_conditions_patients_death_c61.count()
-    )
+
     observations_gleason_conditions_patients_death_c61_count = (
         observations_gleason_conditions_patients_death_c61.count()
     )
