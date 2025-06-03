@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.6.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.2...v2.6.0) (2025-06-03)
+
+
+### Features
+
+* added fhir-to-delta ([#246](https://github.com/bzkf/onco-analytics-on-fhir/issues/246)) ([8581d3d](https://github.com/bzkf/onco-analytics-on-fhir/commit/8581d3dc0e9cc20c61f945a1b67a9003f5b067b0))
+
+
+### Bug Fixes
+
+* optimize extract a ([#245](https://github.com/bzkf/onco-analytics-on-fhir/issues/245)) ([ad4b269](https://github.com/bzkf/onco-analytics-on-fhir/commit/ad4b26963e2c97837a8d0c861017d21451b022cd))
+* rm hard-coded spark settings ([#243](https://github.com/bzkf/onco-analytics-on-fhir/issues/243)) ([6ab5fcc](https://github.com/bzkf/onco-analytics-on-fhir/commit/6ab5fcc76575fb34f52aebc69d7e60734600cf23))
+* tag name ([#254](https://github.com/bzkf/onco-analytics-on-fhir/issues/254)) ([1edce98](https://github.com/bzkf/onco-analytics-on-fhir/commit/1edce98d24f8b30048e92c910d96df5439704606))
+
+
+### Miscellaneous Chores
+
+* **deps:** update actions/create-github-app-token action to v2 ([#251](https://github.com/bzkf/onco-analytics-on-fhir/issues/251)) ([5081970](https://github.com/bzkf/onco-analytics-on-fhir/commit/508197068d53d979f09aa434ed34f74accdb4448))
+* **deps:** update all digest updates ([#248](https://github.com/bzkf/onco-analytics-on-fhir/issues/248)) ([a488eea](https://github.com/bzkf/onco-analytics-on-fhir/commit/a488eeaa18391c4a4543583cdf4dbc4ab5e56268))
+* **deps:** update docker.io/bitnami/minio docker tag to v2025 ([#239](https://github.com/bzkf/onco-analytics-on-fhir/issues/239)) ([73a4c6b](https://github.com/bzkf/onco-analytics-on-fhir/commit/73a4c6b7a78b9482e434facd8a45d40067c06f54))
+* **deps:** update docker.io/trinodb/trino docker tag to v475 ([#249](https://github.com/bzkf/onco-analytics-on-fhir/issues/249)) ([cda2f6a](https://github.com/bzkf/onco-analytics-on-fhir/commit/cda2f6a349af8d1a6520946147289b6f1adac909))
+* **deps:** update github-actions ([#237](https://github.com/bzkf/onco-analytics-on-fhir/issues/237)) ([2369d1d](https://github.com/bzkf/onco-analytics-on-fhir/commit/2369d1d35dd10bd6d912529da81937f705a468f3))
+* **deps:** update github-actions ([#250](https://github.com/bzkf/onco-analytics-on-fhir/issues/250)) ([abd8d67](https://github.com/bzkf/onco-analytics-on-fhir/commit/abd8d679127bc3b36f7fb655bf8d6deae138f3e2))
+
+
+### CI/CD
+
+* use releaser app instead of pat ([#247](https://github.com/bzkf/onco-analytics-on-fhir/issues/247)) ([11e41fb](https://github.com/bzkf/onco-analytics-on-fhir/commit/11e41fb5fafd0ba029432d7f498f78b2ea8c188c))
+
 ## [2.5.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.1...v2.5.2) (2025-03-17)
 
 
