@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     spark_s3_endpoint: str = "minio:9000"
     delta_bucket: str = "fhir/default"
 
+    spark_checkpoint_dir: str = "/tmp/spark-checkpoints"
+
 
 settings = Settings()
 
@@ -93,7 +95,7 @@ def setup_spark_session(app_name: str, master: str):
         .getOrCreate()
     )
 
-    spark.sparkContext.setCheckpointDir("/home/spark/opal-output/spark-checkpoint")
+    spark.sparkContext.setCheckpointDir(settings.spark_checkpoint_dir)
 
     return spark
 

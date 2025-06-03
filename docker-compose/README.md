@@ -54,11 +54,15 @@ There should be 4 messages in both the `fhir.obds.Patient` and `fhir.obds.Condit
 
 You can then shutdown the job using Ctrl+C.
 
-### 4.1 (Optional) Load the FHIR resources as Delta Lake tables in MinIO
+### 4.1 Load the FHIR resources as Delta Lake tables in MinIO
+
+This assumes that Kafka already contains the `fhir.obds.*` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
 
 ```sh
-docker compose --project-name=docker-compose --env-file=.demo.env -f trino-pathling/compose.yaml up
+docker compose --env-file=.demo.env -f compose.fhir-to-delta.yaml up
 ```
+
+To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.
 
 ### 5. Convert the FHIR resources to a CSV dataset
 
@@ -203,13 +207,3 @@ docker compose --env-file=.demo.env -f compose.pseudonymization.yaml -f compose.
 ```
 
 this assumes that the `FHIR_PSEUDONYMIZER_GPAS_AUTH_BASIC_PASSWORD` env var is set in the .demo.env file.
-
-## Loading FHIR resources from Kafka to Delta tables
-
-This assumes that Kafka already contains the `fhir.obds.*` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
-
-```sh
-docker compose --env-file=.demo.env -f compose.kafka.yaml -f compose.fhir-to-delta.yaml up
-```
-
-To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.

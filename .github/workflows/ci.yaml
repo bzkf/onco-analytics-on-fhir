@@ -178,9 +178,9 @@ jobs:
       - name: load the resources into Delta Lake tables
         working-directory: docker-compose/
         run: |
-          docker compose --project-name=docker-compose --env-file=.demo.env -f trino-pathling/compose.yaml up -d
+          docker compose --project-name=docker-compose --env-file=.demo.env -f compose.fhir-to-delta.yaml -f trino-pathling/compose.yaml up -d
           # once again, a bad idea
-          sleep 60
+          sleep 120
 
       - name: query them using trino
         run: |
