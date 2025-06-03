@@ -20,7 +20,7 @@ env:
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@a80e26ca723f047064376d08380d28eb8d69a632 # v1.16.16
+    uses: miracum/.github/.github/workflows/standard-build.yaml@ea119ab4361974cc57f38719dd14ede3a289724a # v1.16.17
     permissions:
       contents: write
       id-token: write
@@ -37,7 +37,7 @@ jobs:
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@a80e26ca723f047064376d08380d28eb8d69a632 # v1.16.16
+    uses: miracum/.github/.github/workflows/standard-build.yaml@ea119ab4361974cc57f38719dd14ede3a289724a # v1.16.17
     permissions:
       contents: write
       id-token: write
@@ -53,7 +53,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@a80e26ca723f047064376d08380d28eb8d69a632 # v1.16.16
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@ea119ab4361974cc57f38719dd14ede3a289724a # v1.16.17
     permissions:
       contents: read
       pull-requests: write
@@ -221,7 +221,7 @@ jobs:
           docker compose -f compose.obds-fhir-to-opal.yaml up
 
       - name: upload the CSV
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: opal-df
           path: |
