@@ -32,6 +32,8 @@ from pyspark.sql.types import DoubleType, IntegerType, StringType
 from pyspark.sql.window import Window
 
 FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
+FHIR_SYSTEM_JNU = "http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS"
+FHIR_SYSTEM_LOINC = "http://loinc.org"
 
 
 def map_icd10(icd10_code):
@@ -582,8 +584,8 @@ def extract_df_study_protocol_a0_1_3_7(
                 "death_cause_icd10",
             ),
             exp(
-                """valueCodeableConcept.coding
-                        .where(system='http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS')
+                f"""valueCodeableConcept.coding
+                        .where(system='{FHIR_SYSTEM_JNU}')
                         .code.first()
                 """,
                 "death_cause_tumor",
@@ -593,8 +595,9 @@ def extract_df_study_protocol_a0_1_3_7(
         ],
         filters=[
             # filter for death cause observations
-            """code.coding
-                    .where(system = 'http://loinc.org' and code = '68343-3').exists()"""
+            f"""code.coding
+                    .where(system = '{FHIR_SYSTEM_LOINC}' and code = '68343-3')
+                    .exists()"""
         ],
     )
     observations_deathcause = observations_deathcause.checkpoint(eager=True)
@@ -663,8 +666,8 @@ def extract_df_study_protocol_a0_1_3_7(
             exp("subject.reference", "obs_subject_reference"),
         ],
         filters=[
-            """code.coding
-                    .where(system = 'http://loinc.org' and code = '35266-6')
+            f"""code.coding
+                    .where(system = '{FHIR_SYSTEM_LOINC}' and code = '35266-6')
                     .exists()
             """,
             f"""reverseResolve(Condition.stage.assessment).code.coding
