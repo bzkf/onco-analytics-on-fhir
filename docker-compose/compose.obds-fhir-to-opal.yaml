@@ -16,6 +16,6 @@ services:
       STUDY_NAME: "${STUDY_NAME:-PoC}"
       SPARK_DRIVER_MEMORY: "${SPARK_DRIVER_MEMORY:-10g}"
       SPARK_S3_ENDPOINT: minio:9000
-      DELTA_DATABASE_DIR: "s3a://fhir/"
+      DELTA_DATABASE_DIR: "s3a://fhir/default/"
     volumes:
       - ./opal-output:/home/spark/opal-output:rw
