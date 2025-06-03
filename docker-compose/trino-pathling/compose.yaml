@@ -1,6 +1,6 @@
 services:
   trino:
-    image: docker.io/trinodb/trino:472@sha256:cc9cab2afd71637176e94c729a05862d1b2d07f5b13b109f1ae041d3e78428dd
+    image: docker.io/trinodb/trino:475@sha256:a04abba5e99d614dfe28dd16e0d5dec9e99dfea2a694cf8d0685f5c9e3c0df60
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -21,7 +21,7 @@ services:
       - minio
 
   minio:
-    image: docker.io/bitnami/minio:2024.10.13@sha256:faf554135d50ff8b382f79df7795e080726cb2d6f4ce7f056d733a6437546f6a
+    image: docker.io/bitnami/minio:2025.4.22@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -65,7 +65,7 @@ services:
       KAFKA_TOPICS: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
 
   hive-metastore-db:
-    image: docker.io/bitnami/postgresql:17.4.0@sha256:41ad4f03c7842bed273dc308878a81c25131f55e038eb14979c43c4cc7ba9faf
+    image: docker.io/bitnami/postgresql:17.4.0@sha256:ee4a4905642645dbf947a9990eb121eb8fbd06703549f358b5b2ad73eb2973c4
     ipc: private
     security_opt:
       - "no-new-privileges:true"

@@ -9,6 +9,7 @@ from pydantic import BaseSettings
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from utils_onco_analytics import (
+    datashield_preps_wrapper,
     extract_df_PoC,
     extract_df_study_protocol_a0_1_3_7,
     extract_df_study_protocol_c,

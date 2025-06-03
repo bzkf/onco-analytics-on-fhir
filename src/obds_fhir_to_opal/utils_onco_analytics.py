@@ -1,37 +1,36 @@
+import glob
 import os
 import re
 import shutil
-from datetime import datetime
-from typing import List, Optional
-from io import StringIO
 import sys
-import glob
+from datetime import datetime
+from io import StringIO
+from typing import List, Optional
 import pandas as pd
 from loguru import logger
 from pathling import Expression as exp
 from pathling import PathlingContext, datasource
 from pydantic import BaseSettings
-from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import (
     abs,
     col,
-    collect_list,
     dayofmonth,
     first,
     greatest,
-    lit,
     lower,
     month,
     regexp_extract,
+    regexp_replace,
     row_number,
     udf,
     when,
     year,
-    regexp_replace,
 )
 from pyspark.sql.types import DoubleType, IntegerType, StringType
 from pyspark.sql.window import Window
+
+FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 
 
 def map_icd10(icd10_code):
@@ -443,8 +442,8 @@ def extract_df_PoC(pc: PathlingContext, data: datasource.DataSource):
             exp("id", "condition_id"),
             exp("onsetDateTime", "date_diagnosis"),
             exp(
-                """code.coding
-            .where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code""",
+                f"""code.coding
+                    .where(system='{FHIR_SYSTEM_ICD10}').code""",
                 "icd10_code",
             ),
             exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
@@ -494,7 +493,8 @@ def extract_df_PoC(pc: PathlingContext, data: datasource.DataSource):
     return df
 
 
-# changes: directly checkpoint after extract, remove resolves completely, split A into sub dfs
+# changes: directly checkpoint after extract,
+# remove resolves completely, split A into sub dfs
 # A0 + A1 + A3 + A7
 def extract_df_study_protocol_a0_1_3_7(
     pc: PathlingContext,
@@ -528,7 +528,7 @@ def extract_df_study_protocol_a0_1_3_7(
             exp("id", "condition_id"),
             exp("onsetDateTime", "date_diagnosis"),
             exp(
-                "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code",
+                f"code.coding.where(system='{FHIR_SYSTEM_ICD10}').code",
                 "icd10_code",
             ),
             exp("subject.reference", "cond_subject_reference"),
@@ -576,11 +576,15 @@ def extract_df_study_protocol_a0_1_3_7(
         columns=[
             exp("id", "observation_id"),
             exp(
-                "valueCodeableConcept.coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code.first()",
+                f"""valueCodeableConcept.coding
+                        .where(system='{FHIR_SYSTEM_ICD10}').code.first()""",
                 "death_cause_icd10",
             ),
             exp(
-                "valueCodeableConcept.coding.where(system='http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS').code.first()",
+                """valueCodeableConcept.coding
+                        .where(system='http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS')
+                        .code.first()
+                """,
                 "death_cause_tumor",
             ),
             exp("effectiveDateTime", "date_death"),
@@ -588,7 +592,8 @@ def extract_df_study_protocol_a0_1_3_7(
         ],
         filters=[
             # filter for death cause observations
-            "code.coding.where(system = 'http://loinc.org' and code = '68343-3').exists()"
+            """code.coding
+                    .where(system = 'http://loinc.org' and code = '68343-3').exists()"""
         ],
     )
     observations_deathcause = observations_deathcause.checkpoint(eager=True)
@@ -657,14 +662,19 @@ def extract_df_study_protocol_a0_1_3_7(
             exp("subject.reference", "obs_subject_reference"),
         ],
         filters=[
-            "code.coding.where(system = 'http://loinc.org' and code = '35266-6').exists()",
-            "reverseResolve(Condition.stage.assessment).code.coding.where(system = 'http://fhir.de/CodeSystem/bfarm/icd-10-gm' and code = 'C61').exists()",
+            """code.coding
+                    .where(system = 'http://loinc.org' and code = '35266-6')
+                    .exists()
+            """,
+            f"""reverseResolve(Condition.stage.assessment).code.coding
+                    .where(system = '{FHIR_SYSTEM_ICD10}' and code = 'C61')
+                    .exists()
+            """,
         ],
     )
     if observations_gleason.isEmpty():
-        logger.warning("No GLEASON observations found – skipping join.")
-        # conditions_patients_death = conditions_patients_death.drop(
-        #    "cond_subject_reference", "patient_resource_id")
+        logger.warning("No GLEASON observations found - skipping join.")
+
         return conditions_patients_death
 
     observations_gleason = observations_gleason.checkpoint(eager=True)
@@ -717,9 +727,7 @@ def extract_df_study_protocol_a0_1_3_7(
     observations_gleason_conditions_patients_death_c61 = (
         observations_gleason_conditions_patients_death_c61.checkpoint(eager=True)
     )
-    observations_gleason_conditions_patients_death_c61_count = (
-        observations_gleason_conditions_patients_death_c61.count()
-    )
+
     observations_gleason_conditions_patients_death_c61_count = (
         observations_gleason_conditions_patients_death_c61.count()
     )
@@ -745,7 +753,8 @@ def extract_df_study_protocol_a0_1_3_7(
 
     logger.info("df_duplicates_count = {}", df_duplicates_count)
 
-    # filter singular cond_ids so we can later concatenate the singular ones and the duplicates on which we perform find closest
+    # filter singular cond_ids so we can later concatenate the singular
+    # ones and the duplicates on which we perform find closest
     df_singular = observations_gleason_conditions_patients_death_c61.join(
         duplicates, on="condition_id", how="left_anti"
     ).orderBy("condition_id")
@@ -755,7 +764,8 @@ def extract_df_study_protocol_a0_1_3_7(
 
     logger.info("df_singular_count = {}", df_singular_count)
 
-    # filter only one row per condition id from the duplicates where the gleason date is closest to the diagnosis date
+    # filter only one row per condition id from the duplicates where the
+    # gleason date is closest to the diagnosis date
     df_duplicates_closest = find_closest_to_diagnosis(
         df=df_duplicates,
         date_diagnosis_col="date_diagnosis",
@@ -775,7 +785,8 @@ def extract_df_study_protocol_a0_1_3_7(
 
     logger.info("df_reunite_count = {}", df_reunite_count)
 
-    # and now final join - join conditions_patients_c61_gleason_closest back to condition_patients
+    # and now final join - join conditions_patients_c61_gleason_closest
+    # back to condition_patients
     conditions_patients_death_gleason_closest = (
         conditions_patients_death.alias("cp")
         .join(df_reunite.alias("c61"), "condition_id", "left")
@@ -803,7 +814,7 @@ def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource
             exp("id", "condition_id"),
             exp("onsetDateTime", "date_diagnosis"),
             exp(
-                "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code",
+                f"code.coding.where(system='{FHIR_SYSTEM_ICD10}').code",
                 "icd10_code",
             ),
             exp("subject.reference", "cond_subject_reference"),
@@ -1064,7 +1075,8 @@ def generate_data_dictionary(
         # Excel-Datei existiert – alte Daten einlesen
         df_existing = pd.read_excel(file_path, sheet_name="Variables")
 
-        # Duplikate anhand von table + name filtern (kombinierter index aus table + name)
+        # Duplikate anhand von table + name filtern
+        # (kombinierter index aus table + name)
         existing_index = df_existing.set_index(["table", "name"]).index
         current_index = df.set_index(["table", "name"]).index
 
