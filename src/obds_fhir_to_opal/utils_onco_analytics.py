@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 from io import StringIO
 from typing import List, Optional
+
 import pandas as pd
 from loguru import logger
 from pathling import Expression as exp
