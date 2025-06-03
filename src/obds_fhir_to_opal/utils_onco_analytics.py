@@ -1,7 +1,10 @@
+import glob
 import os
 import re
 import shutil
+import sys
 from datetime import datetime
+from io import StringIO
 from typing import List, Optional
 
 import pandas as pd
@@ -13,15 +16,13 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import (
     abs,
     col,
-    collect_list,
     dayofmonth,
     first,
     greatest,
-    lit,
     lower,
-    monotonically_increasing_id,
     month,
     regexp_extract,
+    regexp_replace,
     row_number,
     udf,
     when,
@@ -29,6 +30,10 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import DoubleType, IntegerType, StringType
 from pyspark.sql.window import Window
+
+FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
+FHIR_SYSTEM_JNU = "http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS"
+FHIR_SYSTEM_LOINC = "http://loinc.org"
 
 
 def map_icd10(icd10_code):
@@ -390,21 +395,6 @@ def map_death_cause_tumor(
     )
 
 
-# UDF for sorting with None first, then empty string, then 0,
-# then '0' and ascending order for other values
-
-
-def sort_and_last(values):
-    if values is None:
-        return None
-    # Custom sorting: (None -> empty string -> 0 -> '0' -> other values ascending)
-    sorted_arr = sorted(
-        values, key=lambda x: (x is not None, x != "", x != 0, x != "0", x)
-    )
-    print(sorted_arr)
-    return sorted_arr[-1] if sorted_arr else None
-
-
 # UDFs
 map_icd10_udf = udf(lambda x: map_icd10(x), StringType())
 group_icd_groups_udf = udf(lambda x: group_icd_groups(x), StringType())
@@ -412,67 +402,37 @@ group_entities_udf = udf(lambda x: group_entities(x), StringType())
 calculate_age_at_condition_date_udf = udf(
     lambda x, y: calculate_age_at_condition_date(x, y), StringType()
 )
-sort_and_last_udf = udf(sort_and_last, StringType())
 map_tnm_column_udf = udf(map_tnm_column, IntegerType())
 group_to_icd_chapter_udf = udf(group_to_icd_chapter, IntegerType())
 
 
-def find_first(df, date_diagnosis_col, other_date_col, obs_id):
-    # get duplicate rows
-    df_duplicate_counts = df.groupBy("condition_id").count().where("count > 1")
-    df_duplicate_counts_rows = df.join(
-        df_duplicate_counts, on="condition_id", how="inner"
-    ).drop("count")
+def find_closest_to_diagnosis(df, date_diagnosis_col, other_date_col):
+    df_filtered = df.filter(col(other_date_col).isNotNull())
 
-    # store singular rows where condition_id only appears once for joining back later
-    df_single_rows = df.join(df_duplicate_counts, on="condition_id", how="left_anti")
-
-    # remove rows where other_date_col is null
-    df_duplicate_counts_rows = df_duplicate_counts_rows.filter(
-        col(other_date_col).isNotNull()
-    )
-
-    # Aggregate by condition_id, keeping the last/highest non-null value
-    # (handles the case where I have the same other_date but different obs values
-    # - keeps the highest e.g. TNM or gleason for that date
-    agg_expr = [
-        sort_and_last_udf(collect_list(col_name)).alias(col_name)
-        for col_name in df_duplicate_counts_rows.columns
-        if col_name not in ["condition_id", other_date_col, date_diagnosis_col, obs_id]
-    ]
-
-    df_duplicate_counts_rows = df_duplicate_counts_rows.groupBy(
-        "condition_id", other_date_col, date_diagnosis_col
-    ).agg(*agg_expr)
-
-    # define window spec to order by closest date
-    window_spec = Window.partitionBy("condition_id").orderBy(
+    window = Window.partitionBy("condition_id").orderBy(
         abs(
-            when(
-                col(other_date_col).isNotNull(), col(other_date_col).cast("timestamp")
-            ).otherwise(lit(None).cast("timestamp"))
+            col(other_date_col).cast("timestamp")
             - col(date_diagnosis_col).cast("timestamp")
-        ).asc()
+        )
     )
 
-    # select the closest date = first row number in the ordered rows
-    df_duplicate_counts_rows = df_duplicate_counts_rows.withColumn(
-        "row_num", row_number().over(window_spec)
+    return (
+        df_filtered.withColumn("row_num", row_number().over(window))
+        .filter(col("row_num") == 1)
+        .drop("row_num")
+        .withColumnRenamed(other_date_col, other_date_col + "_first")
     )
-    df_closest = df_duplicate_counts_rows.filter(col("row_num") == 1).drop("row_num")
 
-    # rename other_date_col to other_date_col_first
-    df_closest = df_closest.withColumnRenamed(other_date_col, other_date_col + "_first")
 
-    # rename other_date_col and drop obs_id in df_single_rows
-    df_single_rows = df_single_rows.withColumnRenamed(
-        other_date_col, other_date_col + "_first"
-    ).drop(obs_id)
-
-    # merge both DataFrames
-    final_df = df_closest.unionByName(df_single_rows)
-
-    return final_df
+def log_df_show(df, logger, n=20, truncate=False):
+    buffer = StringIO()
+    sys_stdout = sys.stdout  # Backup original stdout
+    sys.stdout = buffer  # Redirect stdout to buffer
+    try:
+        df.show(n=n, truncate=truncate)
+    finally:
+        sys.stdout = sys_stdout  # Restore stdout
+    logger.info("DataFrame preview:\n" + buffer.getvalue())
 
 
 # EXTRACT FUNCTIONS
@@ -485,8 +445,8 @@ def extract_df_PoC(pc: PathlingContext, data: datasource.DataSource):
             exp("id", "condition_id"),
             exp("onsetDateTime", "date_diagnosis"),
             exp(
-                """code.coding
-            .where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code""",
+                f"""code.coding
+                    .where(system='{FHIR_SYSTEM_ICD10}').code""",
                 "icd10_code",
             ),
             exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
@@ -536,31 +496,338 @@ def extract_df_PoC(pc: PathlingContext, data: datasource.DataSource):
     return df
 
 
-def extract_df_study_protocol_a(
+# changes: directly checkpoint after extract,
+# remove resolves completely, split A into sub dfs
+# A0 + A1 + A3 + A7
+def extract_df_study_protocol_a0_1_3_7(
     pc: PathlingContext,
     data: datasource.DataSource,
     settings: BaseSettings,
     spark: SparkSession,
-    c61: bool = False,
 ):
-    # get all unique condition ids
-    a_unique_condids = data.extract(
+    logger.info("logger start, extract patients.")
+    # patients
+    patients = data.extract(
+        "Patient",
+        columns=[
+            exp("id", "patient_resource_id"),
+            exp("identifier.value", "patid_pseudonym"),
+            exp("birthDate", "birthdate"),
+            exp("gender", "gender"),
+            exp("deceasedDateTime", "deceased_datetime"),
+            exp("deceasedBoolean", "deceased_boolean"),
+        ],
+    )
+
+    patients = patients.checkpoint(eager=True)
+    patients.count()  # enforce checkpoint
+
+    save_final_df(patients, settings, suffix="patients")
+    logger.info("saved patients.")
+
+    conditions = data.extract(
         "Condition",
         columns=[
             exp("id", "condition_id"),
-            exp(
-                "Condition.subject.resolve().ofType(Patient).identifier.value",
-                "patid_pseudonym",
-            ),
             exp("onsetDateTime", "date_diagnosis"),
             exp(
-                "code.coding.where( \
-                    system='http://fhir.de/CodeSystem/bfarm/icd-10-gm' \
-                    ).code",
+                f"code.coding.where(system='{FHIR_SYSTEM_ICD10}').code",
                 "icd10_code",
             ),
+            exp("subject.reference", "cond_subject_reference"),
+        ],
+    )
+    # conditions
+    conditions = conditions.checkpoint(eager=True)
+    conditions_count = conditions.count()  # enforce checkpoint
+
+    logger.info("conditions_count = {}", conditions_count)
+
+    # remove the "Patient/" from cond_subject_reference before the join
+    conditions = conditions.withColumn(
+        "cond_subject_reference",
+        regexp_replace("cond_subject_reference", "^Patient/", ""),
+    )
+    conditions = conditions.checkpoint(eager=True)
+    conditions.count()  # enforce checkpoint
+
+    logger.info("remove the Patient/ from cond_subject_reference before the join")
+
+    # join patients + conditions
+    conditions_patients = (
+        conditions.alias("c")
+        .join(
+            patients.alias("p"),  # Alias for patients DataFrame
+            # Join condition
+            conditions["cond_subject_reference"] == patients["patient_resource_id"],
+            "left",  # Left join
+        )
+        .select("c.*", "p.*")
+    )
+
+    conditions_patients = conditions_patients.checkpoint(eager=True)
+    conditions_patients_count = conditions_patients.count()
+
+    logger.info("conditions_patients_count = {}", conditions_patients_count)
+
+    save_final_df(conditions_patients, settings, suffix="conditions_patients")
+    logger.info("saved conditions_patients.")
+
+    # death observations
+    observations_deathcause = data.extract(
+        "Observation",
+        columns=[
+            exp("id", "observation_id"),
+            exp(
+                f"""valueCodeableConcept.coding
+                        .where(system='{FHIR_SYSTEM_ICD10}').code.first()""",
+                "death_cause_icd10",
+            ),
+            exp(
+                f"""valueCodeableConcept.coding
+                        .where(system='{FHIR_SYSTEM_JNU}')
+                        .code.first()
+                """,
+                "death_cause_tumor",
+            ),
+            exp("effectiveDateTime", "date_death"),
+            exp("subject.reference", "subject_reference"),
+        ],
+        filters=[
+            # filter for death cause observations
+            f"""code.coding
+                    .where(system = '{FHIR_SYSTEM_LOINC}' and code = '68343-3')
+                    .exists()"""
+        ],
+    )
+    observations_deathcause = observations_deathcause.checkpoint(eager=True)
+    observations_deathcause_count = observations_deathcause.count()
+    logger.info("observations_deathcause_count = {}", observations_deathcause_count)
+
+    # replace patient string for join
+    observations_deathcause = observations_deathcause.withColumn(
+        "subject_reference", regexp_replace("subject_reference", "^Patient/", "")
+    )
+    observations_deathcause = observations_deathcause.checkpoint(eager=True)
+    observations_deathcause_count = (
+        observations_deathcause.count()
+    )  # enforce checkpoint
+    logger.info("observations_deathcause_count = {}", observations_deathcause_count)
+
+    # count distinct patients - remove duplicates
+    observations_deathcause_distinct_patients_count = (
+        observations_deathcause.select("subject_reference").distinct().count()
+    )
+    logger.info(
+        "observations_deathcause_distinct_patients_count = {}",
+        observations_deathcause_distinct_patients_count,
+    )
+
+    # safety groupby to avoid row explosion later
+    # groupby patient id
+    observations_deathcause = observations_deathcause.groupBy("subject_reference").agg(
+        first("observation_id", ignorenulls=True).alias("observation_id"),
+        first("death_cause_icd10", ignorenulls=True).alias("death_cause_icd10"),
+        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
+        first("date_death", ignorenulls=True).alias("date_death"),
+    )
+
+    observations_deathcause = observations_deathcause.checkpoint(eager=True)
+    observations_deathcause_count = (
+        observations_deathcause.count()
+    )  # enforce checkpoint
+    logger.info(
+        "observations_deathcause_count after groupby = {}",
+        observations_deathcause_count,
+    )
+
+    # join death observations to conditions_patients
+    conditions_patients_death = (
+        conditions_patients.alias("c")
+        .join(
+            observations_deathcause.alias("o"),
+            conditions_patients["patient_resource_id"]
+            == observations_deathcause["subject_reference"],
+            "left",
+        )
+        .select("c.*", "o.*")
+    )
+    conditions_patients_death = conditions_patients_death.checkpoint(eager=True)
+    conditions_patients_death_count = conditions_patients_death.count()
+    logger.info("conditions_patients_death_count = {}", conditions_patients_death_count)
+
+    # GLEASON observations
+    observations_gleason = data.extract(
+        "Observation",
+        columns=[
+            exp("id", "obs_id_gleason"),
+            exp("valueInteger", "gleason"),
+            exp("effectiveDateTime", "gleason_date"),
+            exp("subject.reference", "obs_subject_reference"),
+        ],
+        filters=[
+            f"""code.coding
+                    .where(system = '{FHIR_SYSTEM_LOINC}' and code = '35266-6')
+                    .exists()
+            """,
+            f"""reverseResolve(Condition.stage.assessment).code.coding
+                    .where(system = '{FHIR_SYSTEM_ICD10}' and code = 'C61')
+                    .exists()
+            """,
+        ],
+    )
+    if observations_gleason.isEmpty():
+        logger.warning("No GLEASON observations found - skipping join.")
+
+        return conditions_patients_death
+
+    observations_gleason = observations_gleason.checkpoint(eager=True)
+    observations_gleason_count = observations_gleason.count()
+    logger.info("observations_gleason_count = {}", observations_gleason_count)
+
+    # remove the "Patient/" from cond_subject_reference before the join
+    observations_gleason = observations_gleason.withColumn(
+        "obs_subject_reference",
+        regexp_replace("obs_subject_reference", "^Patient/", ""),
+    )
+
+    observations_gleason = observations_gleason.checkpoint(eager=True)
+    observations_gleason.count()  # enforce checkpoint
+    logger.info("remove the Patient/ from obs_subject_reference before the join")
+
+    save_final_df(observations_gleason, settings, suffix="observations_gleason")
+    logger.info("saved observations_gleason.")
+
+    # filter conditions_patients C61
+    conditions_patients_death_c61 = conditions_patients_death.filter(
+        col("icd10_code").startswith("C61")
+    )
+    conditions_patients_death_c61 = conditions_patients_death_c61.checkpoint(eager=True)
+    conditions_patients_death_c61_count = (
+        conditions_patients_death_c61.count()
+    )  # enforce checkpoint
+
+    logger.info(
+        "conditions_patients_death_c61_count = {}", conditions_patients_death_c61_count
+    )
+
+    # join gleason obs with c61
+    observations_gleason_conditions_patients_death_c61 = (
+        conditions_patients_death_c61.alias("c")
+        .join(
+            observations_gleason.alias("o"),
+            conditions_patients_death_c61["cond_subject_reference"]
+            == observations_gleason["obs_subject_reference"],
+            "left",
+        )
+        .select(
+            "c.condition_id",
+            "c.date_diagnosis",
+            "c.cond_subject_reference",
+            "c.condition_id",
+            "o.*",
+        )
+    )
+    observations_gleason_conditions_patients_death_c61 = (
+        observations_gleason_conditions_patients_death_c61.checkpoint(eager=True)
+    )
+
+    observations_gleason_conditions_patients_death_c61_count = (
+        observations_gleason_conditions_patients_death_c61.count()
+    )
+
+    logger.info(
+        "observations_gleason_conditions_patients_death_c61_count = {}",
+        observations_gleason_conditions_patients_death_c61_count,
+    )
+
+    # filter double cond_ids for find closest to diagnosis
+    duplicates = (
+        observations_gleason_conditions_patients_death_c61.groupBy("condition_id")
+        .count()
+        .filter(col("count") > 1)
+        .select("condition_id")
+    )
+
+    df_duplicates = observations_gleason_conditions_patients_death_c61.join(
+        duplicates, on="condition_id", how="inner"
+    ).orderBy("condition_id")
+    df_duplicates = df_duplicates.checkpoint(eager=True)
+    df_duplicates_count = df_duplicates.count()
+
+    logger.info("df_duplicates_count = {}", df_duplicates_count)
+
+    # filter singular cond_ids so we can later concatenate the singular
+    # ones and the duplicates on which we perform find closest
+    df_singular = observations_gleason_conditions_patients_death_c61.join(
+        duplicates, on="condition_id", how="left_anti"
+    ).orderBy("condition_id")
+
+    df_singular = df_singular.checkpoint(eager=True)
+    df_singular_count = df_singular.count()
+
+    logger.info("df_singular_count = {}", df_singular_count)
+
+    # filter only one row per condition id from the duplicates where the
+    # gleason date is closest to the diagnosis date
+    df_duplicates_closest = find_closest_to_diagnosis(
+        df=df_duplicates,
+        date_diagnosis_col="date_diagnosis",
+        other_date_col="gleason_date",
+    )
+    df_duplicates_closest = df_duplicates_closest.checkpoint(eager=True)
+    df_duplicates_closest_count = df_duplicates_closest.count()
+
+    logger.info("df_duplicates_closest_count = {}", df_duplicates_closest_count)
+
+    # reunite the split c61 dfs
+    df_singular = df_singular.withColumnRenamed("gleason_date", "gleason_date_first")
+    df_reunite = df_singular.unionByName(df_duplicates_closest)
+
+    df_reunite = df_reunite.checkpoint(eager=True)
+    df_reunite_count = df_reunite.count()
+
+    logger.info("df_reunite_count = {}", df_reunite_count)
+
+    # and now final join - join conditions_patients_c61_gleason_closest
+    # back to condition_patients
+    conditions_patients_death_gleason_closest = (
+        conditions_patients_death.alias("cp")
+        .join(df_reunite.alias("c61"), "condition_id", "left")
+        .select("cp.*", "c61.obs_id_gleason", "c61.gleason", "c61.gleason_date_first")
+    )
+    conditions_patients_death_gleason_closest = (
+        conditions_patients_death_gleason_closest.checkpoint(eager=True)
+    )
+    conditions_patients_death_gleason_closest_count = (
+        conditions_patients_death_gleason_closest.count()
+    )
+
+    logger.info(
+        "conditions_patients_death_gleason_closest_count = {}",
+        conditions_patients_death_gleason_closest_count,
+    )
+
+    return conditions_patients_death_gleason_closest
+
+
+def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource):
+    df = data.extract(
+        "Condition",
+        columns=[
+            exp("id", "condition_id"),
+            exp("onsetDateTime", "date_diagnosis"),
+            exp(
+                f"code.coding.where(system='{FHIR_SYSTEM_ICD10}').code",
+                "icd10_code",
+            ),
+            exp("subject.reference", "cond_subject_reference"),
             exp("Condition.subject.resolve().ofType(Patient).birthDate", "birthdate"),
             exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
+            exp(
+                "Condition.subject.resolve().ofType(Patient).address.postalCode",
+                "postal_code",
+            ),
             exp(
                 "Condition.subject.resolve().ofType(Patient).deceasedDateTime",
                 "deceased_datetime",
@@ -571,582 +838,163 @@ def extract_df_study_protocol_a(
             ),
         ],
     )
-    a_unique_condids = a_unique_condids.cache()
+    df = df.checkpoint(eager=True)
+    df_count = df.count()
 
-    logger.info("cached condition ids")
-
-    # save conditions
-    """ file_path = os.path.join(
-        settings.output_folder,
-        settings.study_name,
-        "pathling-data-extracted",
-        "a_unique_condids/",
-    ) """
-
-    # a_unique_condids.write.mode("overwrite").format("delta").save(file_path)
-    # a_unique_condids = spark.read.format("delta").load(file_path)
-
-    # extract the conditions with cTNM and pTNM separately for joining observations
-    # later
-    a_cond_ctnm = data.extract(
-        "Condition",
-        columns=[
-            exp("id", "condition_id"),
-            exp("onsetDateTime", "date_diagnosis"),
-            exp(
-                """Condition.stage.assessment.resolve().ofType(Observation)
-                .where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21908-9').id""",
-                "cond_tnm_id",
-            ),
-        ],
-    )
-    a_cond_ctnm = a_cond_ctnm.cache()
-
-    logger.info("cached a_cond_ctnm")
-
-    a_cond_ptnm = data.extract(
-        "Condition",
-        columns=[
-            exp("id", "condition_id"),
-            exp("onsetDateTime", "date_diagnosis"),
-            exp(
-                "Condition.stage.assessment.resolve().ofType(Observation) \
-                .where(code.coding.system.first()='http://loinc.org' and  \
-                code.coding.code.first()='21902-2').id",
-                "cond_tnm_id",
-            ),
-        ],
-    )
-    a_cond_ptnm = a_cond_ptnm.cache()
-
-    logger.info("cached a_cond_ptnm")
-
-    # extract cTNM and pTNM observations separately
-    a_observations_c_tnm = data.extract(
-        "Observation",
-        columns=[
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21908-9').id""",
-                "obs_tnm_id",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21908-9').component.where(
-                code.coding.code.first()='21905-5').valueCodeableConcept.coding.code""",
-                "cT",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21908-9').component.where(code.coding.code.first()='201906-3')
-                .valueCodeableConcept.coding.code""",
-                "cN",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21908-9').component.where(code.coding.code.first()='21907-1')
-                .valueCodeableConcept.coding.code""",
-                "cM",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21908-9').valueCodeableConcept.coding.code""",
-                "c_UICC",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21908-9').effectiveDateTime""",
-                "cTNM_date",
-            ),
-        ],
-    )
-    a_observations_c_tnm = a_observations_c_tnm.cache()
-
-    logger.info("cached a_observations_c_tnm")
-
-    a_observations_p_tnm = data.extract(
-        "Observation",
-        columns=[
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org'
-                and code.coding.code.first()='21902-2').id""",
-                "obs_tnm_id",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21902-2').component.where(
-                code.coding.code.first()='21899-0').valueCodeableConcept.coding.code""",
-                "pT",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21902-2').component.where(
-                code.coding.code.first()='21900-6').valueCodeableConcept.coding.code""",
-                "pN",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21902-2').component.where(
-                code.coding.code.first()='21901-4').valueCodeableConcept.coding.code""",
-                "pM",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21902-2').valueCodeableConcept.coding.code""",
-                "p_UICC",
-            ),
-            exp(
-                """Observation.where(code.coding.system.first()='http://loinc.org' and
-                code.coding.code.first()='21902-2').effectiveDateTime""",
-                "pTNM_date",
-            ),
-        ],
-    )
-    a_observations_p_tnm = a_observations_p_tnm.cache()
-
-    logger.info("cached a_observations_p_tnm")
-
-    # group "multiplied" columns by observation id, merge non-null values for one
-    # observation into one line
-    a_observations_c_tnm_grouped = a_observations_c_tnm.groupBy("obs_tnm_id").agg(
-        first("cTNM_date", ignorenulls=True).alias("cTNM_date"),
-        first("cT", ignorenulls=True).alias("cT"),
-        first("cN", ignorenulls=True).alias("cN"),
-        first("cM", ignorenulls=True).alias("cM"),
-        first("c_UICC", ignorenulls=True).alias("c_UICC"),
-    )
-    a_observations_p_tnm_grouped = a_observations_p_tnm.groupBy("obs_tnm_id").agg(
-        first("pTNM_date", ignorenulls=True).alias("pTNM_date"),
-        first("pT", ignorenulls=True).alias("pT"),
-        first("pN", ignorenulls=True).alias("pN"),
-        first("pM", ignorenulls=True).alias("pM"),
-        first("p_UICC", ignorenulls=True).alias("p_UICC"),
-    )
-
-    logger.info("Done grouping")
-
-    # join with condition data
-    a_cond_c_tnm = a_cond_ctnm.join(
-        a_observations_c_tnm_grouped,
-        a_cond_ctnm["cond_tnm_id"] == a_observations_c_tnm_grouped["obs_tnm_id"],
-        "right",
-    )
-    a_cond_c_tnm = a_cond_c_tnm.dropna(how="all")
-
-    a_cond_p_tnm = a_cond_ptnm.join(
-        a_observations_p_tnm_grouped,
-        a_cond_ptnm["cond_tnm_id"] == a_observations_p_tnm_grouped["obs_tnm_id"],
-        "right",
-    )
-    a_cond_p_tnm = a_cond_p_tnm.dropna(how="all")
-
-    logger.info("Done joining")
-
-    # find first cTNM and pTNM observation date closest to diagnosis date for each
-    # condition
-    a_cond_c_tnm_first = find_first(
-        a_cond_c_tnm, "date_diagnosis", "cTNM_date", "obs_tnm_id"
-    )
-    a_cond_p_tnm_first = find_first(
-        a_cond_p_tnm, "date_diagnosis", "pTNM_date", "obs_tnm_id"
-    )
-
-    logger.info("Done find_first")
-
-    # join cTNM first and pTNM first to all unique condition ids from above to also
-    # include those where TNM is missing
-    a_cond_c_tnm_first = a_cond_c_tnm_first.drop("date_diagnosis")
-    a_cond_p_tnm_first = a_cond_p_tnm_first.drop("date_diagnosis")
-    a_unique_condids_c_tnm = a_unique_condids.join(
-        a_cond_c_tnm_first, on=["condition_id"], how="left"
-    )
-    a_unique_condids_c_tnm = a_unique_condids_c_tnm.drop("cond_tnm_id", "obs_tnm_id")
-    a_cond_p_tnm_first = a_cond_p_tnm_first.drop(
-        "cond_tnm_id", "obs_tnm_id", "date_diagnosis"
-    )
-    a_unique_condids_cp_tnm = a_unique_condids_c_tnm.join(
-        a_cond_p_tnm_first, on=["condition_id"], how="left"
-    )
-    a_unique_condids_cp_tnm = a_unique_condids_cp_tnm.cache()
-
-    logger.info("Cached a_unique_condids_cp_tnm")
-
-    # add death information from observation
-    a6_7_obs = data.extract(
-        "Observation",
-        columns=[
-            exp(
-                "Observation.where(code.coding.system.first()='http://loinc.org' and \
-                code.coding.code.first()='68343-3').id",
-                "observation_id",
-            ),
-            exp(
-                "Observation.where(code.coding.system.first()='http://loinc.org' and \
-                code.coding.code.first()='68343-3').valueCodeableConcept.coding.where( \
-                system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code",
-                "death_cause_icd10",
-            ),
-            exp(
-                "Observation.where(code.coding.system.first()='http://loinc.org' and \
-                code.coding.code.first()='68343-3').valueCodeableConcept.coding.where( \
-                system='http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS').code",
-                "death_cause_tumor",
-            ),
-            exp(
-                "Observation.where(code.coding.system.first()='http://loinc.org' and \
-                code.coding.code.first()='68343-3').effectiveDateTime",
-                "date_death",
-            ),
-            exp(
-                "Observation.where(code.coding.system.first()='http://loinc.org' and \
-                code.coding.code.first()='68343-3').subject.resolve().ofType(Patient) \
-                .identifier.value",
-                "patid_pseudonym",
-            ),
-        ],
-    )
-    a6_7_obs = a6_7_obs.cache()
-
-    logger.info("Cached a6_7_obs")
-
-    # group "multiplied" cols to comine all non-null values into one row per obds-id
-    a6_7_obs_grouped = a6_7_obs.groupBy("observation_id").agg(
-        first("death_cause_icd10", ignorenulls=True).alias("death_cause_icd10"),
-        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
-        first("date_death", ignorenulls=True).alias("date_death"),
-        first("patid_pseudonym", ignorenulls=True).alias("patid_pseudonym"),
-    )
-    # join to rest
-    a0_7 = a_unique_condids_cp_tnm.join(
-        a6_7_obs_grouped, on="patid_pseudonym", how="left"
-    )
-
-    logger.info("joined a0_7")
-
-    # group by condition id and date and prioritize non-null values
-    a0_7_grouped = a0_7.groupBy("condition_id", "date_diagnosis").agg(
-        first("patid_pseudonym", ignorenulls=True).alias("patid_pseudonym"),
-        first("icd10_code", ignorenulls=True).alias("icd10_code"),
-        first("birthdate", ignorenulls=True).alias("birthdate"),
-        first("gender", ignorenulls=True).alias("gender"),
-        first("deceased_datetime", ignorenulls=True).alias("deceased_datetime"),
-        first("deceased_boolean", ignorenulls=True).alias("deceased_boolean"),
-        first("cTNM_date_first", ignorenulls=True).alias("cTNM_date_first"),
-        first("cT", ignorenulls=True).alias("cT"),
-        first("cN", ignorenulls=True).alias("cN"),
-        first("cM", ignorenulls=True).alias("cM"),
-        first("c_UICC", ignorenulls=True).alias("c_UICC"),
-        first("pTNM_date_first", ignorenulls=True).alias("pTNM_date_first"),
-        first("pT", ignorenulls=True).alias("pT"),
-        first("pN", ignorenulls=True).alias("pN"),
-        first("pM", ignorenulls=True).alias("pM"),
-        first("p_UICC", ignorenulls=True).alias("p_UICC"),
-        first("death_cause_icd10", ignorenulls=True).alias("death_cause_icd10"),
-        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
-        first("date_death", ignorenulls=True).alias("date_death"),
-    )
-
-    logger.info("group by condition id and date and prioritize non-null values")
-
-    # DataSHIELD preparations
-    # deconstruct date to extract year in new col for datashield
-    a0_7_final = deconstruct_date_year_only(a0_7_grouped, "date_diagnosis")
-    a0_7_final = deconstruct_date_year_only(a0_7_final, "deceased_datetime")
-    a0_7_final = deconstruct_date_year_only(a0_7_final, "cTNM_date_first")
-    a0_7_final = deconstruct_date_year_only(a0_7_final, "pTNM_date_first")
-    a0_7_final = deconstruct_date_year_only(a0_7_final, "date_death")
-
-    logger.info("deconstruct date to extract year in new col for datashield")
-
-    # map TNM, UICC
-    a0_7_final = map_tnm_column(a0_7_final, "cT")
-    a0_7_final = map_tnm_column(a0_7_final, "cN")
-    a0_7_final = map_tnm_column(a0_7_final, "cM")
-    a0_7_final = map_tnm_column(a0_7_final, "pT")
-    a0_7_final = map_tnm_column(a0_7_final, "pN")
-    a0_7_final = map_tnm_column(a0_7_final, "pM")
-    a0_7_final = map_uicc_column(a0_7_final, "c_UICC")
-    a0_7_final = map_uicc_column(a0_7_final, "p_UICC")
-
-    logger.info("map TNM, UICC")
-
-    # map ICD10
-    a0_7_final = a0_7_final.withColumn(
-        "icd10_mapped",
-        map_icd10_udf(a0_7_final.icd10_code).cast(DoubleType()),
-    )
-    a0_7_final = a0_7_final.withColumn(
-        "icd10_grouped",
-        group_icd_groups_udf(a0_7_final.icd10_mapped).cast(IntegerType()),
-    )
-
-    # we do need the entity groups for smaller subsets to not only generate NA in DS
-    a0_7_final = a0_7_final.withColumn(
-        "icd10_entity",
-        group_entities_udf(a0_7_final.icd10_grouped).cast(IntegerType()),
-    )
-    a0_7_final = map_gender(a0_7_final, "gender")
-
-    # age at diagnosis
-    a0_7_final = a0_7_final.withColumn(
-        "age_at_diagnosis",
-        calculate_age_at_condition_date_udf(
-            a0_7_final.birthdate, a0_7_final.date_diagnosis
-        ).cast(IntegerType()),
-    )
-    # add age groups
-    a0_7_final = add_age_group_small(a0_7_final, "age_at_diagnosis")
-    a0_7_final = add_age_group_large(a0_7_final, "age_at_diagnosis")
-
-    a0_7_final = map_death_cause_tumor(df=a0_7_final, column_name="death_cause_tumor")
-
-    a0_7_final = a0_7_final.withColumn(
-        "death_cause_icd10_mapped",
-        map_icd10_udf(a0_7_final.death_cause_icd10).cast(DoubleType()),
-    )
-
-    a0_7_final = a0_7_final.withColumn(
-        "death_cause_icd10_grouped",
-        group_icd_groups_udf(a0_7_final.death_cause_icd10_mapped).cast(IntegerType()),
-    )
-
-    a0_7_final = a0_7_final.withColumn(
-        "death_cause_entity",
-        group_entities_udf(a0_7_final.death_cause_icd10_grouped).cast(IntegerType()),
-    )
-
-    a0_7_final = a0_7_final.withColumn(
-        "death_cause_icd10_chapter",
-        group_to_icd_chapter_udf(a0_7_final.death_cause_icd10_mapped).cast(
-            IntegerType()
-        ),
-    )
-
-    # map death from multiple cols to new col dead_bool_mapped
-    columns_to_check = [
-        "deceased_datetime",
-        # "deceased_boolean",
-        "death_cause_icd10",
-        "death_cause_tumor",
-        "date_death",
-    ]
-
-    # if any of the columns contains a non-null value: dead
-    a0_7_final = a0_7_final.withColumn(
-        "dead_bool_mapped",
-        greatest(*[col(column).isNotNull().cast("int") for column in columns_to_check]),
-    )
-
-    logger.info("if any of the columns contains a non-null value: dead")
-
-    # fix order
-    desired_order = [
-        "condition_id",
-        "patid_pseudonym",
-        "birthdate",
-        "age_at_diagnosis",
-        "age_group_small",
-        "age_group_large",
-        "gender",
-        "gender_mapped",
-        "date_diagnosis",
-        "date_diagnosis_year",
-        "icd10_code",
-        "icd10_mapped",
-        "icd10_grouped",
-        "icd10_entity",
-        "cTNM_date_first",
-        "cTNM_date_first_year",
-        "cT",
-        "cN",
-        "cM",
-        "c_UICC",
-        "pTNM_date_first",
-        "pTNM_date_first_year",
-        "pT",
-        "pN",
-        "pM",
-        "p_UICC",
-        "cT_mapped",
-        "cN_mapped",
-        "cM_mapped",
-        "c_UICC_mapped",
-        "pT_mapped",
-        "pN_mapped",
-        "pM_mapped",
-        "p_UICC_mapped",
-        "deceased_datetime",
-        "deceased_datetime_year",
-        "deceased_boolean",
-        "death_cause_icd10",
-        "death_cause_icd10_mapped",
-        "death_cause_icd10_grouped",
-        "death_cause_entity",
-        "death_cause_icd10_chapter",
-        "death_cause_tumor",
-        "death_cause_tumor_mapped",
-        "date_death",
-        "date_death_year",
-        "dead_bool_mapped",
-    ]
-
-    a0_7_final = a0_7_final.select(*desired_order)
-
-    logger.info("select desired order")
-
-    # filter years
-    a0_7_final = a0_7_final[a0_7_final["date_diagnosis_year"].between(2012, 2022)]
-
-    logger.info("filter years")
-
-    if c61 is True:
-        logger.info("filter c61")
-        # filter for ICD10 Code C61
-        a0_7_final_c61 = a0_7_final.filter(a0_7_final["icd10_entity"].cast("int") == 14)
-        # add gleason
-        observations_gleason = data.extract(
-            "Observation",
-            columns=[
-                exp("id", "obs_id_gleason"),
-                exp(
-                    "Observation.where(code.coding.system.first()='http://loinc.org' "
-                    + "and code.coding.code.first()='35266-6').valueInteger",
-                    "gleason",
-                ),
-                exp(
-                    "Observation.where(code.coding.system.first()='http://loinc.org' "
-                    + "and code.coding.code.first()='35266-6').effectiveDateTime",
-                    "gleason_date",
-                ),
-                exp(
-                    "Observation.subject.resolve().ofType(Patient).identifier.value",
-                    "patid_pseudonym",
-                ),
-            ],
-            filters=[
-                "reverseResolve(Condition.stage.assessment).code.coding.where("
-                + "system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code."
-                + "first() = 'C61'"
-            ],
-        )
-        logger.info("gleason extract")
-        observations_gleason = observations_gleason.filter(
-            (observations_gleason["gleason"].isNotNull())  # &
-            # (observations_gleason["gleason_date"].isNotNull())
-        )
-        # join gleason observations to whole df
-        a0_7_final_c61_gleason = a0_7_final_c61.join(
-            observations_gleason,
-            a0_7_final_c61["patid_pseudonym"]
-            == observations_gleason["patid_pseudonym"],
-            "left",
-        )
-        logger.info("gleason join")
-
-        a0_7_final_c61_gleason = a0_7_final_c61_gleason.drop("patid_pseudonym")
-        # a0_7_final_c61_gleason = a0_7_final_c61_gleason.drop("patid_pseudonym")
-        a0_7_final_c61_gleason = a0_7_final_c61_gleason.withColumn(
-            "deceased_boolean", col("deceased_boolean").cast("string")
-        )
-        # return a0_7_final_c61_gleason
-        a0_7_final_c61_gleason_first = find_first(
-            a0_7_final_c61_gleason, "date_diagnosis", "gleason_date", "obs_id_gleason"
-        )
-        logger.info("return a0_7_final_c61_gleason")
-        return a0_7_final_c61_gleason_first
-
-    return a0_7_final
-
-
-def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource):
-    df = data.extract(
-        "Condition",
-        columns=[
-            exp("id", "condition_id"),
-            exp("onsetDateTime", "date_diagnosis"),
-            exp(
-                "code.coding \
-                    .where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm').code",
-                "icd10_code",
-            ),
-            exp("Condition.subject.resolve().ofType(Patient).birthDate", "birthdate"),
-            exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
-            exp(
-                "Condition.subject.resolve().ofType(Patient).address.postalCode",
-                "postal_code",
-            ),
-        ],
-    )
-
-    # map icd10 A= 1, B = 2, C = 3, D = 4
-    df = df.withColumn(
-        "icd10_mapped",
-        map_icd10_udf(df.icd10_code).cast(DoubleType()),
-    )
-
-    df = df.withColumn(
-        "icd10_grouped",
-        group_icd_groups_udf(df.icd10_mapped).cast(IntegerType()),
-    )
-
-    df = df.withColumn(
-        "icd10_entity",
-        group_entities_udf(df.icd10_grouped).cast(IntegerType()),
-    )
-
-    df = map_gender(df, "gender")
-
-    df = df.withColumn(
-        "age_at_diagnosis",
-        calculate_age_at_condition_date_udf(df.birthdate, df.date_diagnosis).cast(
-            IntegerType()
-        ),
-    )
-
-    df = add_age_group_small(df, "age_at_diagnosis")
-    df = add_age_group_large(df, "age_at_diagnosis")
-
-    df = deconstruct_date_year_only(df, "date_diagnosis")
-
-    df = df.select(
-        [
-            "condition_id",
-            "icd10_code",
-            "icd10_mapped",
-            "icd10_grouped",
-            "icd10_entity",
-            "date_diagnosis",
-            "date_diagnosis_year",
-            "birthdate",
-            "age_at_diagnosis",
-            "age_group_small",
-            "age_group_large",
-            "gender",
-            "gender_mapped",
-            "postal_code",
-        ]
-    )
-
-    df = df.dropDuplicates()
+    logger.info("df.count() = {}".format(df_count))
+    log_df_show(df, logger)
 
     return df
 
 
-def save_final_df(df, settings):
-    df_with_id = df.withColumn("ID", monotonically_increasing_id())
-    cols = ["ID"] + [col for col in df.columns]
-    df_with_id = df_with_id.select(*cols)
-    df_with_id = df_with_id.coalesce(1)
+def save_final_df(df, settings, suffix=""):
+    logger.info("start save df with df.coalesce(1).write...csv() ")
     output_dir = os.path.join(settings.output_folder, settings.study_name)
-    temp_dir = os.path.join(settings.output_folder, settings.study_name, "temp")
+    os.makedirs(output_dir, exist_ok=True)
 
-    os.makedirs(temp_dir, exist_ok=True)
-    df_with_id.write.mode("overwrite").csv(temp_dir, header=True)
-    output_file = os.path.join(output_dir, settings.output_filename)
-    part_file = [f for f in os.listdir(temp_dir) if f.startswith("part-")][0]
-    shutil.move(os.path.join(temp_dir, part_file), output_file)
-    shutil.rmtree(temp_dir)
+    final_csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
+
+    df.coalesce(1).write.option("header", "true").mode("overwrite").csv(output_dir)
+
+    part_file = glob.glob(os.path.join(output_dir, "part-*.csv"))[0]
+
+    shutil.move(part_file, final_csv_path)
+    logger.info("end save df")
+
+
+def datashield_preps_wrapper(
+    df,
+    condition: bool = False,
+    patient: bool = False,
+    death: bool = False,
+    gleason: bool = False,
+):
+    if condition:
+        df = deconstruct_date_year_only(df, "date_diagnosis")
+        df = df.checkpoint(eager=True)
+        df.count()
+
+        df = df.withColumn(
+            "icd10_mapped",
+            map_icd10_udf(df.icd10_code).cast(DoubleType()),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("icd10_mapped")
+
+        df = df.withColumn(
+            "icd10_grouped",
+            group_icd_groups_udf(df.icd10_mapped).cast(IntegerType()),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("icd10_grouped")
+
+        df = df.withColumn(
+            "icd10_entity",
+            group_entities_udf(df.icd10_grouped).cast(IntegerType()),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("icd10_entity")
+
+    if patient:
+        df = deconstruct_date_year_only(df, "deceased_datetime")
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("deconstruct_date_year_only - deceased_datetime")
+
+        df = map_gender(df, "gender")
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("map_gender")
+
+        df = df.withColumn(
+            "age_at_diagnosis",
+            calculate_age_at_condition_date_udf(df.birthdate, df.date_diagnosis).cast(
+                IntegerType()
+            ),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("calculate_age_at_condition_date_udf")
+
+        df = add_age_group_small(df, "age_at_diagnosis")
+        df = add_age_group_large(df, "age_at_diagnosis")
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("age groups")
+
+        columns_to_check = [
+            "deceased_datetime",
+            "deceased_boolean",
+        ]
+
+        df = df.withColumn(
+            "dead_bool_mapped_patient",
+            greatest(
+                *[col(column).isNotNull().cast("int") for column in columns_to_check]
+            ),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("dead_bool_mapped_patient")
+
+    if death:
+        df = deconstruct_date_year_only(df, "date_death")
+        columns_to_check = ["death_cause_icd10", "death_cause_tumor", "date_death"]
+        df = df.withColumn(
+            "dead_bool_mapped_observation",
+            greatest(
+                *[col(column).isNotNull().cast("int") for column in columns_to_check]
+            ),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("dead_bool_mapped_observation")
+
+        # map death cause tumor
+        df = map_death_cause_tumor(df=df, column_name="death_cause_tumor")
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("map_death_cause_tumor")
+
+        df = df.withColumn(
+            "death_cause_icd10_mapped",
+            map_icd10_udf(df.death_cause_icd10).cast(DoubleType()),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("death_cause_icd10_mapped")
+
+        df = df.withColumn(
+            "death_cause_icd10_grouped",
+            group_icd_groups_udf(df.death_cause_icd10_mapped).cast(IntegerType()),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("death_cause_icd10_grouped")
+
+        df = df.withColumn(
+            "death_cause_entity",
+            group_entities_udf(df.death_cause_icd10_grouped).cast(IntegerType()),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("death_cause_entity")
+
+        df = df.withColumn(
+            "death_cause_icd10_chapter",
+            group_to_icd_chapter_udf(df.death_cause_icd10_mapped).cast(IntegerType()),
+        )
+        df = df.checkpoint(eager=True)
+        df.count()
+        logger.info("death_cause_icd10_chapter")
+
+    if gleason:
+        pass  # nothing to map for now
+
+    return df
 
 
 def prepare_data_dictionary(df):
@@ -1181,7 +1029,6 @@ def generate_data_dictionary(
     if not len(colnames_list) == len(value_type_list):
         raise ValueError("All lists must have the same length as colnames_list")
 
-    # OPAL data_dictionary predefined colnames
     columns = [
         "table",
         "name",
@@ -1197,15 +1044,13 @@ def generate_data_dictionary(
         "description",
         "categories",
     ]
-    # exchange data type namings to fit OPAL requirements
+
     updated_value_types = [
         "integer" if dtype == "int" else "decimal" if dtype == "double" else dtype
         for dtype in value_type_list
     ]
 
-    # create data_dictionary
     df = pd.DataFrame(columns=columns)
-
     df["name"] = colnames_list
     df["table"] = table_name
     df["valueType"] = updated_value_types
@@ -1222,15 +1067,45 @@ def generate_data_dictionary(
     )
     df["categories"] = categories
 
-    # create second (empty) sheet for data dictionary "Categories"
-    categories_columns = ["table", "variable", "name", "code", "missing"]
-    df_categories = pd.DataFrame(columns=categories_columns)
+    # leeres Categories-Datenblatt
+    df_categories = pd.DataFrame(
+        columns=["table", "variable", "name", "code", "missing"]
+    )
 
-    parent_dir = os.path.dirname(file_path)
-    os.makedirs(parent_dir, exist_ok=True)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="Variables")
-        df_categories.to_excel(writer, index=False, sheet_name="Categories")
+    # create one dictionary for all tables - tested
+    if os.path.exists(file_path):
+        # Excel-Datei existiert – alte Daten einlesen
+        df_existing = pd.read_excel(file_path, sheet_name="Variables")
+
+        # Duplikate anhand von table + name filtern
+        # (kombinierter index aus table + name)
+        existing_index = df_existing.set_index(["table", "name"]).index
+        current_index = df.set_index(["table", "name"]).index
+
+        # nur neue Zeilen behalten
+        df_unique = df[~current_index.isin(existing_index)]
+
+        with pd.ExcelWriter(
+            file_path, engine="openpyxl", mode="a", if_sheet_exists="overlay"
+        ) as writer:
+            ws_vars = writer.book["Variables"]
+            startrow_vars = ws_vars.max_row
+
+            if not df_unique.empty:
+                df_unique.to_excel(
+                    writer,
+                    sheet_name="Variables",
+                    index=False,
+                    header=False,
+                    startrow=startrow_vars,
+                )
+
+    else:
+        # datadictionary existiert noch nicht --> neu erstellen
+        with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+            df.to_excel(writer, index=False, sheet_name="Variables")
+            df_categories.to_excel(writer, index=False, sheet_name="Categories")
 
     return df
