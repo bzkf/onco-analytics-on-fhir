@@ -20,49 +20,9 @@ services:
       - hive-metastore
       - minio
 
-  minio:
-    image: docker.io/bitnami/minio:2025.4.22@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01
-    ipc: none
-    security_opt:
-      - "no-new-privileges:true"
-    cap_drop:
-      - ALL
-    privileged: false
-    restart: unless-stopped
+  kafka-fhir-to-delta:
     environment:
-      MINIO_UPDATE: "off"
-      MINIO_CALLHOME_ENABLE: "off"
-      MINIO_ROOT_USER: "${AWS_ACCESS_KEY_ID:?}"
-      # kics-scan ignore-line
-      MINIO_ROOT_PASSWORD: "${AWS_SECRET_ACCESS_KEY:?}" # gitleaks:allow
-      MINIO_DEFAULT_BUCKETS: "fhir,spark-streaming-checkpoints"
-      MINIO_SCHEME: "http"
-    volumes:
-      - minio-data:/bitnami/minio/data:rw
-    ports:
-      - "127.0.0.1:9001:9001"
-
-  fhir-to-delta:
-    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.8.0@sha256:c82dfa80708186d6165f5abb5d0784aa765b31beda72aa550058394f343cc114
-    ipc: none
-    security_opt:
-      - "no-new-privileges:true"
-    cap_drop:
-      - ALL
-    privileged: false
-    restart: unless-stopped
-    environment:
-      SPARK_S3_ENDPOINT: minio:9000
-      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:?}"
-      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:?}"
-      SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-delta
-      SPARK_DRIVER_MEMORY: 8g
-      SPARK_UPKEEP_INTERVAL: 10
-      DELTA_DATABASE_DIR: "s3a://fhir/default"
       METASTORE_URL: "thrift://hive-metastore:9083"
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-      # TODO: change, if pseudonymization is enabled
-      KAFKA_TOPICS: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
 
   hive-metastore-db:
     image: docker.io/bitnami/postgresql:17.4.0@sha256:ee4a4905642645dbf947a9990eb121eb8fbd06703549f358b5b2ad73eb2973c4
@@ -104,5 +64,4 @@ services:
         condition: service_started
 
 volumes:
-  minio-data: {}
   hive-metastore-db-data: {}

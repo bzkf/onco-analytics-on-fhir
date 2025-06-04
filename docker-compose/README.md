@@ -54,26 +54,30 @@ There should be 4 messages in both the `fhir.obds.Patient` and `fhir.obds.Condit
 
 You can then shutdown the job using Ctrl+C.
 
-### 4.1 (Optional) Load the FHIR resources as Delta Lake tables in MinIO
+### 5. Load the FHIR resources as Delta Lake tables in MinIO
+
+This assumes that Kafka already contains the `fhir.obds.*` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
 
 ```sh
-docker compose --project-name=docker-compose --env-file=.demo.env -f trino-pathling/compose.yaml up
+docker compose --env-file=.demo.env -f compose.fhir-to-delta.yaml up
 ```
 
-### 5. Convert the FHIR resources to a CSV dataset
+To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.
+
+### 6. Convert the FHIR resources to a CSV dataset
 
 ```sh
 sudo chown -R 1001:1001 ./opal-output/
 docker compose -f compose.obds-fhir-to-opal.yaml up
 ```
 
-### 6. Start the entire stack
+### 7. Start the entire stack
 
 ```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.decompose-xmls.yaml -f compose.obds-fhir-to-opal.yaml up
+docker compose -f compose.kafka.yaml -f compose.decompose-xmls.yaml -f compose.obds-to-fhir.yaml --env-file=.demo.env -f compose.fhir-to-delta.yaml -f compose.obds-fhir-to-opal.yaml up
 ```
 
-### 7. Enable Kafka Connect and the connector
+### 8. Enable Kafka Connect and the connector
 
 Make sure to have access to Onkostar tables `lkr_meldung`, `lkr_meldung_export` and `erkrankung`.
 
@@ -146,7 +150,7 @@ curl -X POST \
   http://localhost:8083/connectors
 ```
 
-### 8. Run with enabled pseudonymization
+### 9. Run with enabled pseudonymization
 
 > **Warning**
 > Requires gPAS to be set-up and the [anonymization.yaml](anonymization.yaml) to be configured
@@ -155,13 +159,13 @@ curl -X POST \
 docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.pseudonymization.yaml up
 ```
 
-### 9. Run with enabled pseudonymization and sending resources to a FHIR server
+### 10. Run with enabled pseudonymization and sending resources to a FHIR server
 
 ```sh
 docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
 ```
 
-### 10. Air-gapped installation
+### 11. Air-gapped installation
 
 In case of absence of Internet connectivity, container images cannot be pulled from the registry. Instead, download the air-gapped installer and move it to the deployment machine:
 
@@ -203,13 +207,3 @@ docker compose --env-file=.demo.env -f compose.pseudonymization.yaml -f compose.
 ```
 
 this assumes that the `FHIR_PSEUDONYMIZER_GPAS_AUTH_BASIC_PASSWORD` env var is set in the .demo.env file.
-
-## Loading FHIR resources from Kafka to Delta tables
-
-This assumes that Kafka already contains the `fhir.obds.*` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
-
-```sh
-docker compose --env-file=.demo.env -f compose.kafka.yaml -f compose.fhir-to-delta.yaml up
-```
-
-To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.
