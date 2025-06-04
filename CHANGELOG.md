@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.0...v2.6.1) (2025-06-04)
+
+
+### Bug Fixes
+
+* made checkpoint dir configurable ([#255](https://github.com/bzkf/onco-analytics-on-fhir/issues/255)) ([70e2d5a](https://github.com/bzkf/onco-analytics-on-fhir/commit/70e2d5ab1a11856cef2d172073e79a12806b52aa))
+
+
+### Miscellaneous Chores
+
+* **deps:** update ghcr.io/samply/blaze docker tag to v1 ([#253](https://github.com/bzkf/onco-analytics-on-fhir/issues/253)) ([cc379d7](https://github.com/bzkf/onco-analytics-on-fhir/commit/cc379d762c06b7684dd66aaf35c22c581a4d3b64))
+* **deps:** update github-actions ([#252](https://github.com/bzkf/onco-analytics-on-fhir/issues/252)) ([04a321f](https://github.com/bzkf/onco-analytics-on-fhir/commit/04a321f5fe7552558b359c95eca0f617fc9cbd33))
+
 ## [2.6.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.5.2...v2.6.0) (2025-06-03)
 
 
