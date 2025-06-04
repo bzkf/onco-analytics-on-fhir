@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.1...v2.6.2) (2025-06-04)
+
+
+### Miscellaneous Chores
+
+* **deps:** update ghcr.io/miracum/kafka-fhir-to-server docker tag to v3 ([#241](https://github.com/bzkf/onco-analytics-on-fhir/issues/241)) ([eaf7b8d](https://github.com/bzkf/onco-analytics-on-fhir/commit/eaf7b8d06f2e8ea8a1f248f81056301ed99b3f99))
+
 ## [2.6.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.0...v2.6.1) (2025-06-04)
 
 
