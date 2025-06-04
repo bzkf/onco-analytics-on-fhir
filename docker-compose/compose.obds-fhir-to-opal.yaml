@@ -13,7 +13,7 @@ services:
       - .demo.env
     environment:
       OUTPUT_FOLDER: "/home/spark/opal-output"
-      STUDY_NAME: "${STUDY_NAME:-PoC}"
+      STUDY_NAME: "${STUDY_NAME:-study_protocol_a0_1_3_7}"
       SPARK_DRIVER_MEMORY: "${SPARK_DRIVER_MEMORY:-10g}"
       SPARK_S3_ENDPOINT: minio:9000
       DELTA_DATABASE_DIR: "s3a://fhir/default/"
