@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.2...v2.6.3) (2025-06-05)
+
+
+### Bug Fixes
+
+* change relative path to input/output folder ([#261](https://github.com/bzkf/onco-analytics-on-fhir/issues/261)) ([aecf2f8](https://github.com/bzkf/onco-analytics-on-fhir/commit/aecf2f87c20eb8d0718162660912ade054d9ad65))
+* kafka kraft cluster-id environment var name ([#260](https://github.com/bzkf/onco-analytics-on-fhir/issues/260)) ([c76d216](https://github.com/bzkf/onco-analytics-on-fhir/commit/c76d216fe7a28e892b457279adb3e96006c111be))
+
+
+### CI/CD
+
+* fix merge queue ([#263](https://github.com/bzkf/onco-analytics-on-fhir/issues/263)) ([4558ba5](https://github.com/bzkf/onco-analytics-on-fhir/commit/4558ba5f3e309d1fac1128b28c75cbe52eda91c3))
+
 ## [2.6.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.1...v2.6.2) (2025-06-04)
 
 
