@@ -32,14 +32,14 @@ The oBDS single report XML-files from the ONKOSTAR database will be loaded into 
 
 #### b) Folder import
 
-Decompose oBDS collection report XML-files from [docker-compose/input-obds-reports](docker-compose/input-obds-reports) into single XML reports and load them into the Kafka cluster.
+Decompose oBDS collection report XML-files from [docker-compose/input-obds-reports](input-obds-reports) into single XML reports and load them into the Kafka cluster.
 
 ```sh
 USER_ID=${UID} GROUP_ID=${GID} docker compose -f compose.decompose-xmls.yaml up
 ```
 
 The `USER_ID` and `GROUP_ID` env vars are used to make the container run as the current user,
-assuming the [docker-compose/output-obds-reports](docker-compose/output-obds-reports) is owned by them.
+assuming the [docker-compose/output-obds-reports](output-obds-reports) is owned by them.
 
 ### 4. Transform oBDS XML-data to FHIR
 
