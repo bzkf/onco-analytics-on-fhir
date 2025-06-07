@@ -10,7 +10,7 @@ services:
       - "127.0.0.1:8083:8080"
 
   fhir-to-server:
-    image: ghcr.io/miracum/kafka-fhir-to-server:v3.0.0@sha256:c407d03f0c520f1d804dc1aa964e4a774e9b4dc6869ea489d918a5a9a2e7edb1
+    image: ghcr.io/miracum/kafka-fhir-to-server:v3.0.2@sha256:62cba1bc050e3529b8e7e2dd4b1a3866792dec6a4a421420320ccd01254faf27
     restart: unless-stopped
     cap_drop:
       - ALL
