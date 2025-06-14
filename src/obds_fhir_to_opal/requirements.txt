@@ -1,5 +1,5 @@
 pathling==7.2.0
-pydantic==1.10.22
+pydantic==2.11.7
 pandas==2.3.0
 python-dateutil==2.9.0.post0
 xlsxwriter==3.2.3
