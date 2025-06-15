@@ -1,6 +1,6 @@
 # onco-analytics-on-fhir
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bzkf/onco-analytics-on-fhir/badge)](https://api.securityscorecards.dev/projects/github.com/bzkf/onco-analytics-on-fhir)
+[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/bzkf/onco-analytics-on-fhir?label=openssf%20scorecard&style=flat)](https://scorecard.dev/viewer/?uri=github.com/bzkf/onco-analytics-on-fhir)
 
 This software is used to transform oncological basic data set (oBDS) XML files from tumor documentation systems to HL7® FHIR® and to a tabular format.
 
