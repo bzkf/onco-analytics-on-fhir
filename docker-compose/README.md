@@ -2,6 +2,14 @@
 
 ![Figure Modular Pipeline](../img/fig1.png)
 
+#### Citation
+If you use this work, please cite:
+
+Ziegler J, Erpenbeck MP, Fuchs T, Saibold A, Volkmer PC, Schmidt G, Eicher J, Pallaoro P, De Souza Falguera R, Aubele F, Hagedorn M, Vansovich E, Raffler J, Ringshandl S, Kerscher A, Maurer JK, Kühnel B, Schenkirsch G, Kampf M, Kapsner LA, Ghanbarian H, Spengler H, Soto-Rey I, Albashiti F, Hellwig D, Ertl M, Fette G, Kraska D, Boeker M, Prokosch HU, Gulden C
+Bridging Data Silos in Oncology with Modular Software for Federated Analysis on Fast Healthcare Interoperability Resources: Multisite Implementation Study
+J Med Internet Res 2025;27:e65681
+[doi: 10.2196/65681](https://doi.org/10.2196/65681) PMID: 40233352 PMCID: 12041822
+
 ## Installation
 
 ### 1. Prepare Data Import
@@ -32,14 +40,14 @@ The oBDS single report XML-files from the ONKOSTAR database will be loaded into 
 
 #### b) Folder import
 
-Decompose oBDS collection report XML-files from [docker-compose/input-obds-reports](docker-compose/input-obds-reports) into single XML reports and load them into the Kafka cluster.
+Decompose oBDS collection report XML-files from [docker-compose/input-obds-reports](input-obds-reports) into single XML reports and load them into the Kafka cluster.
 
 ```sh
 USER_ID=${UID} GROUP_ID=${GID} docker compose -f compose.decompose-xmls.yaml up
 ```
 
 The `USER_ID` and `GROUP_ID` env vars are used to make the container run as the current user,
-assuming the [docker-compose/output-obds-reports](docker-compose/output-obds-reports) is owned by them.
+assuming the [docker-compose/output-obds-reports](output-obds-reports) is owned by them.
 
 ### 4. Transform oBDS XML-data to FHIR
 

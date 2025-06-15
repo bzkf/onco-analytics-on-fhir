@@ -1,6 +1,6 @@
 services:
   minio:
-    image: docker.io/bitnami/minio:2025.3.12@sha256:31d778a4bfa5be550c00b4789b27257b67da6c6b8ed81047dde357ec8cc7f48b
+    image: docker.io/bitnami/minio:2025.5.24@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -24,7 +24,7 @@ services:
       - "127.0.0.1:9001:9001"
 
   kafka-fhir-to-delta:
-    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.10.0@sha256:8bf8c66c632a7cf6328765d5ea40737fba754f8069d084f5769e439af87c6d73
+    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.11.3@sha256:af51bfcc18260e4cb3e38378590d891ed79fa0b48e4161182817ebc6fc7aaed1
     restart: unless-stopped
     cap_drop:
       - ALL

@@ -25,7 +25,7 @@ services:
       METASTORE_URL: "thrift://hive-metastore:9083"
 
   hive-metastore-db:
-    image: docker.io/bitnami/postgresql:17.4.0@sha256:ee4a4905642645dbf947a9990eb121eb8fbd06703549f358b5b2ad73eb2973c4
+    image: docker.io/bitnami/postgresql:17.5.0@sha256:c27c790a4fcabf93299e5f67617016e0301f0cc237e12e2f06871d119207e064
     ipc: private
     security_opt:
       - "no-new-privileges:true"
@@ -41,7 +41,7 @@ services:
       - hive-metastore-db-data:/bitnami/postgresql:rw
 
   hive-metastore:
-    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.0@sha256:d8f99a4a16ede640f184dca9bd84bef84f84b26f41b10eb5c62a57bb796268c8
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.4@sha256:d35d9dcb389953cff78171c36f40e7097aaee4bf97e5b09dbe8d0d90521fad5b
     ipc: none
     security_opt:
       - "no-new-privileges:true"
