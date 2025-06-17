@@ -1,6 +1,6 @@
 services:
   blaze:
-    image: ghcr.io/samply/blaze:1.0.1@sha256:977e121ae9dd54c982ffd197e2ee8f722be7f20e5518559769cc071b9b97d700
+    image: ghcr.io/samply/blaze:1.0.3@sha256:583548592476155530a52d0d5ee4fa56f5ad57147c22a6f49a16a8d0848c7bed
     environment:
       JAVA_TOOL_OPTIONS: "-Xmx16g"
       BASE_URL: "http://blaze:8080"

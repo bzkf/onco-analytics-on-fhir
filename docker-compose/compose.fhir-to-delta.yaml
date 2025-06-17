@@ -24,7 +24,7 @@ services:
       - "127.0.0.1:9001:9001"
 
   kafka-fhir-to-delta:
-    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.11.3@sha256:af51bfcc18260e4cb3e38378590d891ed79fa0b48e4161182817ebc6fc7aaed1
+    image: ghcr.io/bzkf/fhir-to-lakehouse:v1.11.4@sha256:b04d7a5f40083644c800b2c057c7bbbb99607e60d34f4f637ee9cb64fd406323
     restart: unless-stopped
     cap_drop:
       - ALL
