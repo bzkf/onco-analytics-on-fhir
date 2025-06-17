@@ -25,7 +25,7 @@ services:
       METASTORE_URL: "thrift://hive-metastore:9083"
 
   hive-metastore-db:
-    image: docker.io/bitnami/postgresql:17.5.0@sha256:c27c790a4fcabf93299e5f67617016e0301f0cc237e12e2f06871d119207e064
+    image: docker.io/bitnami/postgresql:17.5.0@sha256:85198aae0aed6a7099005ad5b2c0b1d2d66541af3e6337f23eda502b38ac2bcd
     ipc: private
     security_opt:
       - "no-new-privileges:true"
