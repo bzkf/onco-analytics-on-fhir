@@ -829,6 +829,9 @@ def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource
                 "postal_code",
             ),
             exp(
+                "Condition.subject.resolve().ofType(Patient).address.country", "country"
+            ),
+            exp(
                 "Condition.subject.resolve().ofType(Patient).deceasedDateTime",
                 "deceased_datetime",
             ),

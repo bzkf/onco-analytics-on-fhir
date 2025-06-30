@@ -65,3 +65,4 @@ subject_reference,"subject reference pointing to patient resource used for joini
 observation_id,"id of observation resource"
 dead_bool_mapped_patient,"true if one of the patients elements deceased_datetime or deceased_boolean is not null"
 dead_bool_mapped_observation,"true if one of the death observations elements death_cause_icd10, death_cause_tumor or date_death is not null"
+country,"patient adress country"
