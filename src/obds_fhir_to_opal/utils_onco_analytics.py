@@ -16,6 +16,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import (
     abs,
     col,
+    count,
     dayofmonth,
     first,
     greatest,
@@ -498,8 +499,8 @@ def extract_df_PoC(pc: PathlingContext, data: datasource.DataSource):
 
 # changes: directly checkpoint after extract,
 # remove resolves completely, split A into sub dfs
-# A0 + A1 + A3 + A7
-def extract_df_study_protocol_a0_1_3_7(
+# A0 + A1 + A3 + A7 + Add double patid column for study protocol D
+def extract_df_study_protocol_a0_1_3_7_d(
     pc: PathlingContext,
     data: datasource.DataSource,
     settings: BaseSettings,
@@ -655,6 +656,22 @@ def extract_df_study_protocol_a0_1_3_7(
     conditions_patients_death = conditions_patients_death.checkpoint(eager=True)
     conditions_patients_death_count = conditions_patients_death.count()
     logger.info("conditions_patients_death_count = {}", conditions_patients_death_count)
+
+    # add double_patid column for studyprotocol D
+    window_spec = Window.partitionBy("patid_pseudonym")
+
+    conditions_patients_death = conditions_patients_death.withColumn(
+        "double_patid",
+        when(count("patid_pseudonym").over(window_spec) > 1, 1).otherwise(0),
+    ).orderBy("patid_pseudonym")
+
+    conditions_patients_death = conditions_patients_death.checkpoint(eager=True)
+    conditions_patients_death_count = conditions_patients_death.count()
+    logger.info(
+        "added double_patid col for study protocol D, \
+        conditions_patients_death_count = {}",
+        conditions_patients_death_count,
+    )
 
     # GLEASON observations
     observations_gleason = data.extract(
