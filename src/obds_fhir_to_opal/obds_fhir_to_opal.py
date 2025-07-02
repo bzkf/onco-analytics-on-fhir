@@ -11,7 +11,7 @@ from pyspark.sql import SparkSession
 from utils_onco_analytics import (
     datashield_preps_wrapper,
     extract_df_PoC,
-    extract_df_study_protocol_a0_1_3_7,
+    extract_df_study_protocol_a0_1_3_7_d,
     extract_df_study_protocol_c,
     generate_data_dictionary,
     prepare_data_dictionary,
@@ -118,8 +118,8 @@ def main():
         case "PoC":
             df = extract_df_PoC(pc, data)
             dtypes_list_df, description_list_df_dictionary = prepare_data_dictionary(df)
-        case "study_protocol_a0_1_3_7":
-            df = extract_df_study_protocol_a0_1_3_7(pc, data, settings, spark)
+        case "study_protocol_a0_1_3_7_d":
+            df = extract_df_study_protocol_a0_1_3_7_d(pc, data, settings, spark)
             df = datashield_preps_wrapper(
                 df, condition=True, patient=True, death=True, gleason=True
             )

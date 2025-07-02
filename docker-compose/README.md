@@ -62,6 +62,11 @@ There should be 4 messages in both the `fhir.obds.Patient` and `fhir.obds.Condit
 
 You can then shutdown the job using Ctrl+C.
 
+> [!IMPORTANT]
+> For more information about this ETL job, see <https://github.com/bzkf/obds-to-fhir>
+> Looking for the latest version supporting oBDS version 3 and the MII FHIR Profiles?
+> Head to the `beta` branch: <https://github.com/bzkf/obds-to-fhir/tree/beta>
+
 ### 5. Load the FHIR resources as Delta Lake tables in MinIO
 
 This assumes that Kafka already contains the `fhir.obds.*` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
@@ -73,7 +78,7 @@ docker compose --env-file=.demo.env -f compose.fhir-to-delta.yaml up
 To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.
 
 ### 6. Convert the FHIR resources to a CSV dataset
-
+- Select the study name in the compose.obds-fhir-to-opal.yaml file. Find out more about the available studies [here](../src/obds_fhir_to_opal/README.md).
 ```sh
 sudo chown -R 1001:1001 ./opal-output/
 docker compose -f compose.obds-fhir-to-opal.yaml up
