@@ -42,7 +42,7 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          CHART_VERSION="$(yq .version charts/onco-analytics-on-fhir/Chart.yaml)"
+          CHART_VERSION=$(yq .version charts/onco-analytics-on-fhir/Chart.yaml)
 
           # onco-analytics-on-fhir
           helm package charts/onco-analytics-on-fhir
@@ -54,7 +54,7 @@ jobs:
 
           # prerequisites
           helm package charts/prerequisites
-          helm push "prerequisites-${CHART_VERSION}.tgz" oci://ghcr.io/${GITHUB_REPOSITORY}/charts
+          helm push "prerequisites-${CHART_VERSION}.tgz" "oci://ghcr.io/${GITHUB_REPOSITORY}/charts"
 
           cp "prerequisites-${CHART_VERSION}.tgz" prerequisites-chart.tgz
 
