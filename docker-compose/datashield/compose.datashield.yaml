@@ -1,6 +1,6 @@
 services:
   opal:
-    image: docker.io/obiba/opal:5.1.5@sha256:eff7bd7c3467334c4add444386932ee300919c17f079913105b3e5f8a4f2377b
+    image: docker.io/obiba/opal:5.1.5@sha256:c437d64e17d425af26356089c46d41a61130050695f501728eb3ed09b3060262
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -32,7 +32,7 @@ services:
       - rock-2
 
   opal-db:
-    image: docker.io/bitnami/postgresql:17.5.0@sha256:85198aae0aed6a7099005ad5b2c0b1d2d66541af3e6337f23eda502b38ac2bcd
+    image: docker.io/bitnami/postgresql:17.5.0@sha256:68bc11736c11e5a90675a0c25e78b9f2b82774d44d74996464adad6d12de2afa
     restart: unless-stopped
     ipc: private
     security_opt:
