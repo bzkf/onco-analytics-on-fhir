@@ -1,6 +1,6 @@
 services:
   trino:
-    image: docker.io/trinodb/trino:475@sha256:a04abba5e99d614dfe28dd16e0d5dec9e99dfea2a694cf8d0685f5c9e3c0df60
+    image: docker.io/trinodb/trino:476@sha256:00125e40d063bc4816d165482f6044872b18b56026fb959d3b28ce1f96ffbbee
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -25,7 +25,7 @@ services:
       METASTORE_URL: "thrift://hive-metastore:9083"
 
   hive-metastore-db:
-    image: docker.io/bitnami/postgresql:17.5.0@sha256:c27c790a4fcabf93299e5f67617016e0301f0cc237e12e2f06871d119207e064
+    image: docker.io/bitnami/postgresql:17.5.0@sha256:68bc11736c11e5a90675a0c25e78b9f2b82774d44d74996464adad6d12de2afa
     ipc: private
     security_opt:
       - "no-new-privileges:true"
