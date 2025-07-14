@@ -41,7 +41,7 @@ services:
       - hive-metastore-db-data:/bitnami/postgresql:rw
 
   hive-metastore:
-    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.4@sha256:d35d9dcb389953cff78171c36f40e7097aaee4bf97e5b09dbe8d0d90521fad5b
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.5@sha256:1a36b317127f82813e558c28f6801dd8d5535f8daab8b286c631cc95778d138f
     ipc: none
     security_opt:
       - "no-new-privileges:true"
