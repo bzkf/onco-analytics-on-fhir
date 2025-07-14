@@ -42,7 +42,7 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          CHART_VERSION=$(yq .version charts/onco-analytics-on-fhir/Chart.yaml)
+          CHART_VERSION="$(yq .version charts/onco-analytics-on-fhir/Chart.yaml)"
 
           # onco-analytics-on-fhir
           helm package charts/onco-analytics-on-fhir
