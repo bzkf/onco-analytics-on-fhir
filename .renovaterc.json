@@ -1,6 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>miracum/.github//renovate/default"],
+  "pip-compile": {
+    "managerFilePatterns": [
+      "/requirements\\.txt$/",
+      "/requirements-test\\.txt$/"
+    ]
+  },
   "ignoreDeps": [
     "docker.io/bitnami/spark",
     "docker.io/library/python",
