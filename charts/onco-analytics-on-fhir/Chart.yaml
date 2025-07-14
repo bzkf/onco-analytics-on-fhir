@@ -8,19 +8,19 @@ dependencies:
   - name: akhq
     condition: akhq.enabled
     repository: https://akhq.io/
-    version: 0.25.1
+    version: 0.26.0
   - condition: stream-processors.enabled
     name: stream-processors
     repository: https://miracum.github.io/charts
-    version: 1.10.1
+    version: 1.10.3
   - condition: hapi-fhir-jpaserver.enabled
     name: hapi-fhir-jpaserver
     repository: https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-    version: 0.19.0
+    version: 0.20.0
   - condition: fhir-gateway.enabled
     name: fhir-gateway
     repository: https://miracum.github.io/charts
-    version: 6.3.115
+    version: 6.3.121
 # x-release-please-start-version
 version: 2.6.2
 appVersion: 2.6.2
