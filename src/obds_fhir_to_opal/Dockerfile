@@ -1,4 +1,4 @@
-FROM docker.io/bitnami/spark:3.5.5@sha256:46c2784c4f47d3f8c481c4f6ab775cfb2994fb24eaff2d8feb55b66335129ce0
+FROM docker.io/apache/spark:3.5.6-scala2.12-java17-python3-ubuntu@sha256:702d82ecea50c6f8344d3df753ba26f05ffd9d1d052e180fed9c3d6c04f77730
 ENV SPARK_JARS_IVY="/home/spark/.ivy"
 WORKDIR /opt/bitnami/spark
 USER 0
