@@ -1,4 +1,4 @@
-FROM docker.io/bitnami/spark:3.5.5@sha256:46c2784c4f47d3f8c481c4f6ab775cfb2994fb24eaff2d8feb55b66335129ce0
+FROM docker.io/bitnami/spark:3.5.6@sha256:353e23d86c7952781042b4e91d1e2b018335f565430e449fff017269a273097f
 ENV SPARK_JARS_IVY="/home/spark/.ivy"
 WORKDIR /opt/bitnami/spark
 USER 0
@@ -6,7 +6,7 @@ RUN groupadd -g 1001 spark && \
     useradd spark -u 1001 -g spark -m -s /bin/bash
 
 COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 
 WORKDIR /home/spark
 

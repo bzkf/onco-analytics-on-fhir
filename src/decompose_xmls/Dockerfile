@@ -21,7 +21,7 @@ RUN adduser \
 # into this layer.
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install --no-cache-dir -r requirements.txt
+    python -m pip install --no-cache-dir --require-hashes -r requirements.txt
 
 RUN chown -R appuser:appuser /app
 
@@ -31,7 +31,7 @@ COPY decompose_xmls.py /app
 FROM base AS test
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements-test.txt,target=requirements-test.txt \
-    python -m pip install --no-cache-dir -r requirements-test.txt
+    python -m pip install --no-cache-dir --require-hashes -r requirements-test.txt
 
 COPY . .
 
