@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.0...v2.7.1) (2025-07-14)
+
+
+### Miscellaneous Chores
+
+* **deps:** update github-actions ([#267](https://github.com/bzkf/onco-analytics-on-fhir/issues/267)) ([001e6f0](https://github.com/bzkf/onco-analytics-on-fhir/commit/001e6f062bf5e65b662bb598453b05905e2c9b6b))
+* maintenance to improve scorecard score ([#273](https://github.com/bzkf/onco-analytics-on-fhir/issues/273)) ([8ddcd0a](https://github.com/bzkf/onco-analytics-on-fhir/commit/8ddcd0a1b45e37c931240f1ead660c54d188179e))
+
 ## [2.7.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.2...v2.7.0) (2025-07-14)
 
 
