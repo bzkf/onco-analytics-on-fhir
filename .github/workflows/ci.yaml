@@ -86,14 +86,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
+        working-directory: src/decompose_xmls
         run: |
-          cd src/decompose_xmls
-          pip install pytest
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run decompose_xmls tests
+        working-directory: src/decompose_xmls
         run: |
-          cd src/decompose_xmls
           pytest
 
   test-compose:
@@ -248,83 +247,6 @@ jobs:
           name: compose-logs
           path: |
             docker-compose/compose-logs.txt
-
-  test-k8s:
-    runs-on: ubuntu-24.04
-    # disabled since the major deployment platform is currently
-    # docker compose anyways
-    if: false
-    # run tests only on PRs
-    # ${{ github.event_name == 'pull_request' }}
-    needs:
-      - build-decompose-xml-image
-      - build-obds-fhir-to-opal-image
-    steps:
-      - name: install k3s
-        run: |
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.28.3+k3s2 sh -
-
-      - name: setup .kube/config
-        run: |
-          mkdir ~/.kube
-          sudo k3s kubectl config view --raw | tee ~/.kube/config > /dev/null
-          chmod 600 ~/.kube/config
-
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-
-      - name: install dependencies
-        run: |
-          kubectl get node
-
-          # via <https://stackoverflow.com/a/65411733>
-          kubectl create namespace "${ONCO_ANALYTICS_NAMESPACE_NAME}" --dry-run=client -o yaml | kubectl apply -f -
-          kubectl config set-context --current --namespace="${ONCO_ANALYTICS_NAMESPACE_NAME}"
-
-          kubectl config view
-
-          helm dependency build charts/prerequisites
-          helm upgrade --install --wait --timeout=10m --set strimzi-kafka-operator.generateNetworkPolicy=false onco-analytics-on-fhir-prerequisites charts/prerequisites
-
-          kubectl apply -f k8s/
-          kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=600s
-
-          kubectl apply -f k8s/kafka-bridge.yaml
-          kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=600s
-
-          kubectl get all -A
-
-      - name: install onco-analytics-on-fhir
-        run: |
-          helm repo add miracum https://miracum.github.io/charts
-          helm repo add akhq https://akhq.io/
-          helm repo add hapi-fhir-jpaserver-starter https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-
-          helm dependency build charts/onco-analytics-on-fhir
-          helm upgrade --install --wait --timeout=10m onco-analytics-on-fhir charts/onco-analytics-on-fhir
-
-          kubectl get all -A
-
-      - name: test deployments
-        run: |
-          helm test onco-analytics-on-fhir
-
-          kubectl wait deployment/onco-analytics-on-fhir-stream-processors-obds-to-fhir --for=condition=Available --timeout=300s
-          kubectl wait deployment/onco-analytics-on-fhir-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
-
-      - name: Print cluster logs
-        if: always()
-        run: |
-          kubectl cluster-info dump -o yaml | tee kind-cluster-dump.txt
-
-      - name: Upload cluster dump
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: kind-cluster-dump.txt
-          path: |
-            kind-cluster-dump.txt
 
   build-air-gapped-installer:
     runs-on: ubuntu-24.04
