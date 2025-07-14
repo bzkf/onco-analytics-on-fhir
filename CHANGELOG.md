@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.7.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.2...v2.7.0) (2025-07-14)
+
+
+### Features
+
+* C adaptions and D preparations ([#269](https://github.com/bzkf/onco-analytics-on-fhir/issues/269)) ([88d5d86](https://github.com/bzkf/onco-analytics-on-fhir/commit/88d5d868ddc502726c60a457b40330822b1a0134))
+
+
+### Bug Fixes
+
+* change relative path to input/output folder ([#261](https://github.com/bzkf/onco-analytics-on-fhir/issues/261)) ([aecf2f8](https://github.com/bzkf/onco-analytics-on-fhir/commit/aecf2f87c20eb8d0718162660912ade054d9ad65))
+* kafka kraft cluster-id environment var name ([#260](https://github.com/bzkf/onco-analytics-on-fhir/issues/260)) ([c76d216](https://github.com/bzkf/onco-analytics-on-fhir/commit/c76d216fe7a28e892b457279adb3e96006c111be))
+
+
+### Documentation
+
+* updated scorecard link and cleaned up ci based on scorecard complaints ([#259](https://github.com/bzkf/onco-analytics-on-fhir/issues/259)) ([76f0bb8](https://github.com/bzkf/onco-analytics-on-fhir/commit/76f0bb8e80a2c2370a21fc1124b4fa7d06d9ea39))
+
+
+### Miscellaneous Chores
+
+* Add paper citation to readme ([#264](https://github.com/bzkf/onco-analytics-on-fhir/issues/264)) ([1a06708](https://github.com/bzkf/onco-analytics-on-fhir/commit/1a067083fcef11461f78c17c82f7e2bd73eefe76))
+* **deps:** update all digest updates ([#270](https://github.com/bzkf/onco-analytics-on-fhir/issues/270)) ([9e1b135](https://github.com/bzkf/onco-analytics-on-fhir/commit/9e1b1354819bddcb29dd8eed17d75f3c4aaef240))
+* **deps:** update all non-major dependencies ([#162](https://github.com/bzkf/onco-analytics-on-fhir/issues/162)) ([7df77ee](https://github.com/bzkf/onco-analytics-on-fhir/commit/7df77ee7a4f7d9bd01ce628f1c70c2f20e13ef13))
+* **deps:** update all non-major dependencies ([#266](https://github.com/bzkf/onco-analytics-on-fhir/issues/266)) ([605346d](https://github.com/bzkf/onco-analytics-on-fhir/commit/605346d3a90b81b7bb05d498c124635a0e37bd24))
+* **deps:** update all non-major dependencies ([#271](https://github.com/bzkf/onco-analytics-on-fhir/issues/271)) ([1dfdd1b](https://github.com/bzkf/onco-analytics-on-fhir/commit/1dfdd1b24ffd8457e08f252c327b3912d11e6807))
+* **deps:** update docker.io/bitnami/postgresql:17.5.0 docker digest to 85198aa ([#265](https://github.com/bzkf/onco-analytics-on-fhir/issues/265)) ([5e2052e](https://github.com/bzkf/onco-analytics-on-fhir/commit/5e2052e29ef2dbafaa22aaaf2a2658758131d862))
+* **deps:** update docker.io/trinodb/trino docker tag to v476 ([#268](https://github.com/bzkf/onco-analytics-on-fhir/issues/268)) ([929d25a](https://github.com/bzkf/onco-analytics-on-fhir/commit/929d25a447383968fcf1b823b6ee14f78747d314))
+* **deps:** updated obds to fhir ([#272](https://github.com/bzkf/onco-analytics-on-fhir/issues/272)) ([6756733](https://github.com/bzkf/onco-analytics-on-fhir/commit/6756733d145995b5f2058957a564c7d99287340c))
+
+
+### CI/CD
+
+* fix merge queue ([#263](https://github.com/bzkf/onco-analytics-on-fhir/issues/263)) ([4558ba5](https://github.com/bzkf/onco-analytics-on-fhir/commit/4558ba5f3e309d1fac1128b28c75cbe52eda91c3))
+
 ## [2.6.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.6.1...v2.6.2) (2025-06-04)
 
 
