@@ -72,6 +72,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   tests:
+    name: run decompose-xmls tests
     strategy:
       matrix:
         # Python versions to run tests for
@@ -96,6 +97,7 @@ jobs:
           pytest
 
   test-compose:
+    name: run compose e2e tests
     runs-on: ubuntu-24.04
     needs:
       - build-decompose-xml-image
@@ -249,6 +251,7 @@ jobs:
             docker-compose/compose-logs.txt
 
   build-air-gapped-installer:
+    name: build air-gapped installer package
     runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'pull_request' }}
     steps:
