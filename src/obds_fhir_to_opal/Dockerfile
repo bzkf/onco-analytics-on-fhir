@@ -6,7 +6,7 @@ RUN groupadd -g 1001 spark && \
     useradd spark -u 1001 -g spark -m -s /bin/bash
 
 COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 
 WORKDIR /home/spark
 
