@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.1...v2.7.2) (2025-07-16)
+
+
+### Miscellaneous Chores
+
+* **deps:** bumped Kafka connect ([#276](https://github.com/bzkf/onco-analytics-on-fhir/issues/276)) ([bcaf6f3](https://github.com/bzkf/onco-analytics-on-fhir/commit/bcaf6f3171f69b58f958ad5b6e8599a5c624bb02))
+
 ## [2.7.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.0...v2.7.1) (2025-07-14)
 
 
