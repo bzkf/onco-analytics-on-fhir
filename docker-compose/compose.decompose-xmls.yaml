@@ -1,6 +1,6 @@
 services:
   decompose-xmls:
-    image: ghcr.io/bzkf/onco-analytics-on-fhir/decompose-xmls:${DECOMPOSE_XMLS_IMAGE_TAG:-v2.7.1} # x-release-please-version
+    image: ghcr.io/bzkf/onco-analytics-on-fhir/decompose-xmls:${DECOMPOSE_XMLS_IMAGE_TAG:-v2.7.2} # x-release-please-version
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     environment:
       KAFKA_ENABLED: "true"
