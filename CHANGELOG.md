@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.2...v2.7.3) (2025-07-25)
+
+
+### Miscellaneous Chores
+
+* **deps:** update docker.io/bitnami/kafka docker tag to v4 ([#238](https://github.com/bzkf/onco-analytics-on-fhir/issues/238)) ([29d915f](https://github.com/bzkf/onco-analytics-on-fhir/commit/29d915f0ec54eefe75b94b928b6a3bff7c48ab26))
+
 ## [2.7.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.1...v2.7.2) (2025-07-16)
 
 
