@@ -13,6 +13,7 @@
     "pathling",
     "pyspark",
     "ghcr.io/bzkf/onco-analytics-on-fhir/decompose-xmls",
-    "ghcr.io/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal"
+    "ghcr.io/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal",
+    "py4j"
   ]
 }
