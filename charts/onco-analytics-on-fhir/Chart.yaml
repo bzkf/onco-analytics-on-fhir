@@ -20,7 +20,7 @@ dependencies:
   - condition: fhir-gateway.enabled
     name: fhir-gateway
     repository: https://miracum.github.io/charts
-    version: 6.3.121
+    version: 6.3.126
 # x-release-please-start-version
 version: 2.7.2
 appVersion: 2.7.2
