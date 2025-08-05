@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.7.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.2...v2.7.3) (2025-08-05)
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency regex to v2025 ([#282](https://github.com/bzkf/onco-analytics-on-fhir/issues/282)) ([18436de](https://github.com/bzkf/onco-analytics-on-fhir/commit/18436de5e1518ee6ed151e58ae7bdf8fb701c2ea))
+* **deps:** update docker.io/bitnami/kafka docker tag to v4 ([#238](https://github.com/bzkf/onco-analytics-on-fhir/issues/238)) ([29d915f](https://github.com/bzkf/onco-analytics-on-fhir/commit/29d915f0ec54eefe75b94b928b6a3bff7c48ab26))
+* **deps:** update docker.io/bitnami/postgresql:17.5.0 docker digest to 42a8200 ([#280](https://github.com/bzkf/onco-analytics-on-fhir/issues/280)) ([7a8ec9a](https://github.com/bzkf/onco-analytics-on-fhir/commit/7a8ec9a27a2a4828f98fb6eecbffc8455fdd8c4e))
+* **deps:** update github-actions ([#281](https://github.com/bzkf/onco-analytics-on-fhir/issues/281)) ([0619429](https://github.com/bzkf/onco-analytics-on-fhir/commit/0619429cf18372f751fe92739f8b384761e301ee))
+
 ## [2.7.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.1...v2.7.2) (2025-07-16)
 
 
