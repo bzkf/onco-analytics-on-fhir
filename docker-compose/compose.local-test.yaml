@@ -92,7 +92,7 @@ services:
       - ./output-obds-reports:/app/output-obds-reports:rw
 
   obds-to-fhir:
-    image: ghcr.io/bzkf/obds-to-fhir:v2.3.1@sha256:d1855c1fb8dad3c5bbbdc373500d5afd608ff4212642e5d18cbaade08e1afa8a
+    image: ghcr.io/bzkf/obds-to-fhir:v2.4.0@sha256:4f3f59afb92ec9beccee55d0d793ad7f10a0b9bba8a4d8e5d32f18be1485e11b
     restart: unless-stopped
     cap_drop:
       - ALL
