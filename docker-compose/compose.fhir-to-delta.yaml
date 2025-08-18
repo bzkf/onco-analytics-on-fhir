@@ -15,9 +15,6 @@ services:
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?}
       MINIO_DEFAULT_BUCKETS: "fhir,spark-streaming-checkpoints,results"
       MINIO_SCHEME: "http"
-    env_file:
-      - path: .demo.env
-        required: false
     volumes:
       - fhir-to-delta-minio-data:/bitnami/minio/data:rw
     ports:
@@ -32,9 +29,6 @@ services:
     ipc: private
     security_opt:
       - "no-new-privileges:true"
-    env_file:
-      - path: .demo.env
-        required: false
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPARK_S3_ENDPOINT: minio:9000
