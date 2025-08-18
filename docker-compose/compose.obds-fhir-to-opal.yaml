@@ -18,5 +18,10 @@ services:
       SPARK_S3_ENDPOINT: minio:9000
       DELTA_DATABASE_DIR: "s3a://fhir/default/"
       SPARK_CHECKPOINT_DIR: "/tmp/spark-checkpoints/fhir-to-opal"
+      KAFKA_PATIENT_TOPIC: "${KAFKA_PATIENT_TOPIC:-fhir.obds.Patient}"
+      KAFKA_CONDITION_TOPIC: "${KAFKA_CONDITION_TOPIC:-fhir.obds.Condition}"
+      KAFKA_OBSERVATION_TOPIC: "${KAFKA_OBSERVATION_TOPIC:-fhir.obds.Observation}"
+      KAFKA_PROCEDURE_TOPIC: "${KAFKA_PROCEDURE_TOPIC:-fhir.obds.Procedure}"
+      KAFKA_MEDICATIONSTATEMENT_TOPIC: "${KAFKA_MEDICATIONSTATEMENT_TOPIC:-fhir.obds.MedicationStatement}"
     volumes:
       - ./opal-output:/home/spark/opal-output:rw

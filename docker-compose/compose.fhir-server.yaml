@@ -22,9 +22,11 @@ services:
       SECURITY_PROTOCOL: PLAINTEXT
       BOOTSTRAP_SERVERS: kafka:9092
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
-      FHIR_URL: http://blaze:8080/fhir
-      # TODO: change if pseudonymization is enabled
-      TOPIC: fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient
+      FHIR_URL: ${FHIR_URL:-http://blaze:8080/fhir}
+      FHIR_AUTH_BASIC_ENABLED: "${FHIR_AUTH_BASIC_ENABLED:-false}"
+      FHIR_AUTH_BASIC_USERNAME: "${FHIR_AUTH_BASIC_USERNAME}"
+      FHIR_AUTH_BASIC_PASSWORD: "${FHIR_AUTH_BASIC_PASSWORD}"
+      TOPIC: ${TOPIC:-fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient}
 
 volumes:
   blaze-data: {}
