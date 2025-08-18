@@ -9,8 +9,6 @@ services:
     security_opt:
       - "no-new-privileges:true"
     user: "1001:1001"
-    env_file:
-      - .demo.env
     environment:
       OUTPUT_FOLDER: "/home/spark/opal-output"
       STUDY_NAME: "${STUDY_NAME:-study_protocol_a0_1_3_7_d}"
