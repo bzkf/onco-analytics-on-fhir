@@ -1,27 +1,64 @@
 services:
   minio:
-    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/bitnami/minio:2025.6.13@sha256:628d6a09902e59001eadc82590735eda210bf5d5a68cd72dfbb6894b3c1f97eb
-    restart: unless-stopped
-    cap_drop:
-      - ALL
-    privileged: false
+    image: docker.io/minio/minio:RELEASE.2025-07-23T15-54-02Z@sha256:d249d1fb6966de4d8ad26c04754b545205ff15a62e4fd19ebd0f26fa5baacbc0
     ipc: private
-    security_opt:
-      - "no-new-privileges:true"
+    command: server /data --console-address ":9001"
     environment:
       MINIO_UPDATE: "off"
       MINIO_CALLHOME_ENABLE: "off"
+      MINIO_BROWSER: "on"
       MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:?}
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?}
-      MINIO_DEFAULT_BUCKETS: "fhir,spark-streaming-checkpoints,results"
       MINIO_SCHEME: "http"
     env_file:
       - path: .demo.env
         required: false
     volumes:
-      - fhir-to-delta-minio-data:/bitnami/minio/data:rw
+      - fhir-to-delta-minio-data:/data:rw
     ports:
       - "127.0.0.1:9001:9001"
+
+  wait-for-minio:
+    image: docker.io/curlimages/curl:8.14.1@sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: "no"
+    environment:
+      S3_ENDPOINT_URL: http://minio:9000
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ "$(curl -s -o /dev/null -L -w "%{http_code}" "$$S3_ENDPOINT_URL/minio/health/live")" == "200" ]; do
+            echo "$(date): Waiting for minio server @ $$S3_ENDPOINT_URL to be up";
+            sleep 5;
+        done;
+    depends_on:
+      minio:
+        condition: service_started
+
+  create-default-buckets:
+    image: docker.io/minio/minio:RELEASE.2025-07-23T15-54-02Z@sha256:d249d1fb6966de4d8ad26c04754b545205ff15a62e4fd19ebd0f26fa5baacbc0
+    restart: on-failure
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    depends_on:
+      wait-for-minio:
+        condition: service_completed_successfully
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        /usr/bin/mc alias set minio http://minio:9000 admin miniopass;
+        /usr/bin/mc mb --ignore-existing minio/fhir;
+        /usr/bin/mc mb --ignore-existing minio/spark-streaming-checkpoints;
+        /usr/bin/mc mb --ignore-existing minio/results;
 
   kafka-fhir-to-delta:
     image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/fhir-to-lakehouse:v1.12.0@sha256:f3c8c37fcc560856458f6b637e2132520fba682155c0b3232f7d9659737742c4
@@ -43,6 +80,11 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
       KAFKA_TOPICS: "fhir.obds.Patient,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.MedicationStatement"
+    depends_on:
+      wait-for-minio:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:4041:4040"
 
 volumes:
   fhir-to-delta-minio-data: {}

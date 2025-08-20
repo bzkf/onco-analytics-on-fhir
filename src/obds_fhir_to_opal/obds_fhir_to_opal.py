@@ -25,15 +25,14 @@ class Settings(BaseSettings):
     study_name: str = "study_protocol_PoC"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
-        "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5",
         "au.csiro.pathling:library-runtime:7.2.0",
-        "io.delta:delta-spark_2.12:3.2.0",
+        "io.delta:delta-spark_2.12:3.3.0",
+        "org.apache.hadoop:hadoop-aws:3.3.4",
     ]
 
     spark_app_name: str = "oBDS-FHIR-to-Opal"
     master: str = "local[*]"
 
-    spark_jars_ivy: str = "/home/spark/.ivy2"
     spark_driver_memory: str = "16g"
     spark_install_packages_and_exit: bool = False
 
@@ -68,7 +67,6 @@ def setup_spark_session(app_name: str, master: str):
         .config("spark.driver.memory", settings.spark_driver_memory)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.jars.packages", ",".join(settings.jar_list))
-        .config("spark.jars.ivy", settings.spark_jars_ivy)
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",

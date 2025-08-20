@@ -8,7 +8,7 @@
     ]
   },
   "ignoreDeps": [
-    "docker.io/bitnami/spark",
+    "docker.io/apache/spark",
     "docker.io/library/python",
     "pathling",
     "pyspark",
