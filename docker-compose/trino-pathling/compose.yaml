@@ -48,14 +48,12 @@ services:
     environment:
       SERVICE_NAME: metastore
       DB_DRIVER: postgres
-      SERVICE_OPTS: |
-        -Djavax.jdo.option.ConnectionUserName=hive
-        -Djavax.jdo.option.ConnectionPassword=hive
+      SERVICE_OPTS: "-Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=${HIVE_METASTORE_DB_PASSWORD:?}"
       AWS_ACCESS_KEY_ID: "admin"
       AWS_SECRET_ACCESS_KEY: "miniopass"
       AWS_DEFAULT_REGION: "eu-central-1"
     volumes:
-      - $PWD/hack/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+      - ./config/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
     depends_on:
       hive-metastore-db:
         condition: service_started
