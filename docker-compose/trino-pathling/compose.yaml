@@ -25,23 +25,19 @@ services:
       METASTORE_URL: "thrift://hive-metastore:9083"
 
   hive-metastore-db:
-    image: docker.io/bitnami/postgresql:17.5.0@sha256:42a8200d35971f931b869ef5252d996e137c6beb4b8f1b6d2181dc7d1b6f62e0
+    image: docker.io/library/postgres:17.6@sha256:29e0bb09c8e7e7fc265ea9f4367de9622e55bae6b0b97e7cce740c2d63c2ebc0
     ipc: private
-    security_opt:
-      - "no-new-privileges:true"
-    cap_drop:
-      - ALL
     privileged: false
     restart: unless-stopped
     environment:
-      POSTGRESQL_USERNAME: hive
-      POSTGRESQL_PASSWORD: "${HIVE_METASTORE_DB_PASSWORD:?}"
-      POSTGRESQL_DATABASE: metastore
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: ${HIVE_METASTORE_DB_PASSWORD:?}
+      POSTGRES_DB: metastore
     volumes:
-      - hive-metastore-db-data:/bitnami/postgresql:rw
+      - hive-metastore-db-data:/var/lib/postgresql/data:rw
 
   hive-metastore:
-    image: ghcr.io/miracum/util-images/hive-metastore:v1.2.5@sha256:1a36b317127f82813e558c28f6801dd8d5535f8daab8b286c631cc95778d138f
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.3.0@sha256:4b83eb4b7efd3f3dcd70d255336605e6cc5e028115460016837009664753d021
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -52,10 +48,9 @@ services:
     environment:
       SERVICE_NAME: metastore
       DB_DRIVER: postgres
-      # kics-scan ignore-line
-      SERVICE_OPTS: -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=hive
-      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:?}"
-      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:?}"
+      SERVICE_OPTS: "-Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=${HIVE_METASTORE_DB_PASSWORD:?}"
+      AWS_ACCESS_KEY_ID: "admin"
+      AWS_SECRET_ACCESS_KEY: "miniopass"
       AWS_DEFAULT_REGION: "eu-central-1"
     volumes:
       - ./config/hive-site.xml:/opt/hive/conf/hive-site.xml:ro

@@ -239,6 +239,7 @@ jobs:
             -f compose.decompose-xmls.yaml \
             -f compose.obds-to-fhir.yaml \
             -f compose.obds-fhir-to-opal.yaml \
+            -f compose.fhir-to-delta.yaml \
             -f trino-pathling/compose.yaml logs | tee compose-logs.txt
 
       - name: Upload compose dump
