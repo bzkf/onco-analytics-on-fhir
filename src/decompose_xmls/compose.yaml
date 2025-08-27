@@ -12,7 +12,7 @@ services:
       - ./output-obds-reports:/app/output-obds-reports:rw
 
   kafka:
-    image: docker.io/bitnami/kafka:4.0.0@sha256:f45d5b813412e1ef7ce67b467309a84e4c6dc03d7626a0b6da867db9b69bd107
+    image: docker.io/apache/kafka:4.0.0@sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75
     restart: unless-stopped
     profiles:
       - kafka

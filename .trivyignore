@@ -7,3 +7,6 @@ AVD-KSV-0048
 AVD-KSV-0049
 AVD-KSV-0050
 AVD-KSV-0056
+
+# seems like trivy can't handle heredoc syntax yet
+DS017
