@@ -8,8 +8,7 @@ from pathling import PathlingContext
 from pydantic import BaseSettings
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-
-from obds_fhir_to_opal.utils_onco_analytics import (
+from utils_onco_analytics import (
     add_age_col,
     add_deceased_flag,
     clean_df,
