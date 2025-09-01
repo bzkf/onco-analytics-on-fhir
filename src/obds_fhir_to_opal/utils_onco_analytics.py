@@ -1826,14 +1826,18 @@ def plot_sankey(
     for t in ["ST", "HO", "CH", "OP", "OTHER"]:
         nodes_labels.append(f"{t} (3) (n={get_sum(th3_values_list, t2=t)})")
 
-    nodes_labels.append(
-        f"""reported dead (n={get_sum(th2_values_list, 'dead') +
-            get_sum(th3_values_list, 'dead') + get_sum(th4_values_list, 'dead')})"""
+    n_reported_dead = (
+        get_sum(th2_values_list, "dead")
+        + get_sum(th3_values_list, "dead")
+        + get_sum(th4_values_list, "dead")
     )
-    nodes_labels.append(
-        f"""unknown/alive (n={get_sum(th2_values_list, 'alive') +
-            get_sum(th3_values_list, 'alive') + get_sum(th4_values_list, 'alive')})"""
+    nodes_labels.append(f"""reported dead (n={n_reported_dead})""")
+    n_unknown_alive = (
+        get_sum(th2_values_list, "alive")
+        + get_sum(th3_values_list, "alive")
+        + get_sum(th4_values_list, "alive")
     )
+    nodes_labels.append(f"""unknown/alive (n={n_unknown_alive})""")
 
     # --- Node Colors ---
     nodes_colors = [
@@ -2167,15 +2171,15 @@ def plot_summary_statistics(
     x = np.arange(2)
 
     for i, (name, df) in enumerate(groups.items()):
-        if df.empty:
-            ordered: List[float] = [0.0, 0.0]
-            total = 0
-        else:
+        ordered: List[float] = [0.0, 0.0]
+        total = 0
+
+        if not df.empty:
             tmp = df.copy()
             tmp[deceased_col] = tmp[deceased_col].fillna(False)
             counts_val = tmp[deceased_col].value_counts()
             total = len(tmp)
-            ordered: List[float] = [
+            ordered = [
                 float(counts_val.get(False, 0)),
                 float(counts_val.get(True, 0)),
             ]
