@@ -9,20 +9,29 @@ from pydantic import BaseSettings
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from utils_onco_analytics import (
+    add_age_col,
+    add_deceased_flag,
+    clean_df,
     datashield_preps_wrapper,
     extract_df_PoC,
     extract_df_study_protocol_a0_1_3_7_d,
     extract_df_study_protocol_c,
+    extract_filter_df_c61,
+    extract_pca_ops,
+    extract_pca_st,
+    extract_pca_sys,
     generate_data_dictionary,
+    plot,
     prepare_data_dictionary,
     save_final_df,
+    union_sort_pivot_join,
 )
 
 
 class Settings(BaseSettings):
     output_folder: str = "./opal-output"
     output_filename: str = "df.csv"
-    study_name: str = "study_protocol_PoC"
+    study_name: str = "pca_therapies1"
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
         "au.csiro.pathling:library-runtime:7.2.0",
@@ -49,11 +58,10 @@ settings = Settings()
 
 
 def setup_spark_session(app_name: str, master: str):
-    # muss ich ein sigint signal abfangen ctrl+c zb?
     existing_spark = SparkSession.getActiveSession()
     if existing_spark is not None:
         print("Stopping existing Spark session before creating a new one...")
-        existing_spark.catalog.clearCache()  # see i
+        existing_spark.catalog.clearCache()
         existing_spark.stop()  # Stop any active session
         SparkContext._active_spark_context = None
     elif existing_spark is None:
@@ -102,6 +110,9 @@ def setup_spark_session(app_name: str, master: str):
 def main():
     start = time.monotonic()
 
+    dtypes_list_df: list[str] = []
+    description_list_df_dictionary: dict = {}
+
     spark = setup_spark_session(settings.spark_app_name, settings.master)
     pc = PathlingContext.create(spark=spark, enable_extensions=True)
 
@@ -126,6 +137,23 @@ def main():
             df = extract_df_study_protocol_c(pc, data)
             df = datashield_preps_wrapper(df, condition=True, patient=True)
             dtypes_list_df, description_list_df_dictionary = prepare_data_dictionary(df)
+        case "pca_therapies1":
+            df_c61 = extract_filter_df_c61(pc, data, settings, spark)
+            ops_final = extract_pca_ops(pc, data, settings, spark)
+            radiotherapies_final = extract_pca_st(pc, data, settings, spark)
+            systemtherapies_final = extract_pca_sys(pc, data, settings, spark)
+            df = union_sort_pivot_join(
+                df_c61, ops_final, systemtherapies_final, radiotherapies_final
+            )
+            df = add_deceased_flag(df)
+            df = add_age_col(
+                df=df,
+                birthdate_col="birthdate",
+                refdate_col="date_diagnosis",
+                age_colname="age_at_diagnosis",
+            )
+            df = clean_df(df=df)
+            plot(df, settings)
         case _:
             raise ValueError(f"Unknown study type: {settings.study_name}")
 
@@ -137,13 +165,14 @@ def main():
         shutil.rmtree(dir_path)
 
     # Generate one data dictionary for all studies and save in parent folder
-    generate_data_dictionary(
-        file_path=os.path.join(settings.output_folder, "data_dictionary_df.xlsx"),
-        table_name="df_" + settings.study_name,
-        colnames_list=df.columns,
-        value_type_list=dtypes_list_df,
-        description=description_list_df_dictionary,
-    )
+    if settings.study_name != "pca_therapies1":
+        generate_data_dictionary(
+            file_path=os.path.join(settings.output_folder, "data_dictionary_df.xlsx"),
+            table_name="df_" + settings.study_name,
+            colnames_list=df.columns,
+            value_type_list=dtypes_list_df,
+            description=description_list_df_dictionary,
+        )
     end = time.monotonic()
 
     print(f"time elapsed: {end - start}s")

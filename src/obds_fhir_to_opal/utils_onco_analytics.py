@@ -4,16 +4,23 @@ import re
 import shutil
 import sys
 from datetime import datetime
+from functools import reduce
 from io import StringIO
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 from loguru import logger
+from matplotlib.figure import Figure
 from pathling import Expression as exp
 from pathling import PathlingContext, datasource
 from pydantic import BaseSettings
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import (
+from pyspark.sql import functions as F
+from pyspark.sql.functions import (  # to do: hier auch F verwenden
     abs,
     col,
     count,
@@ -873,12 +880,16 @@ def save_final_df(df, settings, suffix=""):
     os.makedirs(output_dir, exist_ok=True)
 
     final_csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
+    temp_dir = os.path.join(output_dir, "_tmp_csv")
 
-    df.coalesce(1).write.option("header", "true").mode("overwrite").csv(output_dir)
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
 
-    part_file = glob.glob(os.path.join(output_dir, "part-*.csv"))[0]
-
+    df.coalesce(1).write.option("header", "true").mode("overwrite").csv(temp_dir)
+    part_file = glob.glob(os.path.join(temp_dir, "part-*.csv"))[0]
     shutil.move(part_file, final_csv_path)
+    shutil.rmtree(temp_dir)
+
     logger.info("end save df")
 
 
@@ -1129,3 +1140,1188 @@ def generate_data_dictionary(
             df_categories.to_excel(writer, index=False, sheet_name="Categories")
 
     return df
+
+
+# prostate-ca therapies
+def add_months_diff_col(df, therapy_startdate: str, date_diagnosis: str):
+    df = df.withColumn(
+        "months_diff",
+        F.round(
+            F.months_between(F.col(therapy_startdate), F.col(date_diagnosis)), 2
+        ).cast("double"),
+    )
+
+    df = df.checkpoint(eager=True)
+    print(f" count = {df.count()}")
+
+    return df
+
+
+def preprocess_therapy_df(df: DataFrame) -> DataFrame:
+    # Transform dates
+    df = df.withColumn(
+        "therapy_startdate", F.to_date(F.col("therapy_startdate"))
+    ).withColumn("date_diagnosis", F.to_date(F.col("date_diagnosis")))
+
+    logger.info(
+        "distinct therapy_id count = {}", df.select("therapy_id").distinct().count()
+    )
+    logger.info(
+        "distinct condition_id count = {}", df.select("condition_id").distinct().count()
+    )
+
+    # Group one therapy per condition_id per startdate
+    df_grouped = df.groupBy("therapy_startdate", "condition_id").agg(
+        F.first("therapy_id", ignorenulls=True).alias("therapy_id"),
+        F.first("therapy_type", ignorenulls=True).alias("therapy_type"),
+        F.first("therapy_intention", ignorenulls=True).alias("therapy_intention"),
+        F.first("date_diagnosis", ignorenulls=True).alias("date_diagnosis"),
+        F.first("icd10_code", ignorenulls=True).alias("icd10_code"),
+    )
+    df_grouped = df_grouped.checkpoint(eager=True)
+    logger.info("systemtherapies_grouped_count = {}", df_grouped.count())
+    logger.info(
+        "distinct therapy_id count (grouped) = {}",
+        df_grouped.select("therapy_id").distinct().count(),
+    )
+
+    # Add months_diff
+    df_grouped = df_grouped.withColumn(
+        "months_diff",
+        F.round(
+            F.months_between(F.col("therapy_startdate"), F.col("date_diagnosis")), 2
+        ).cast("double"),
+    )
+    df_grouped = df_grouped.checkpoint(eager=True)
+
+    # Remove negative diffs
+    df_final = df_grouped.filter(F.col("months_diff") >= 0)
+    df_final = df_final.checkpoint(eager=True)
+
+    logger.info("systemtherapies_final (months_diff >= 0) count = {}", df_final.count())
+    logger.info(
+        "systemtherapies_final distinct condition_id count = {}",
+        df_final.select("condition_id").distinct().count(),
+    )
+
+    return df_final
+
+
+def extract_filter_df_c61(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings: BaseSettings,
+    spark: SparkSession,
+):
+    df = extract_df_study_protocol_a0_1_3_7_d(pc, data, settings, spark)
+    df_c61 = df.filter(F.col("icd10_code").startswith("C61"))
+
+    df_c61 = df_c61.drop(
+        "cond_subject_reference", "subject_reference", "patid_pseudonym"
+    )
+    df_c61 = df_c61.checkpoint(eager=True)
+    logger.info("df_c61_count = {}", df_c61.count())
+
+    return df_c61
+
+
+def extract_pca_ops(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings: BaseSettings,
+    spark: SparkSession,
+):
+
+    logger.info("extract op.")
+    ops = (
+        data.extract(
+            "Procedure",
+            columns=[
+                exp("id", "therapy_id"),
+                exp("category.coding.code", "therapy_type"),
+                exp(
+                    """code.coding
+                        .where(system='http://fhir.de/CodeSystem/bfarm/ops')
+                        .code""",
+                    "ops_code",
+                ),
+                exp("partOf.reference", "partOf"),
+                exp("performedDateTime", "therapy_startdate"),
+                exp(
+                    """extension(
+                        'http://dktk.dkfz.de/fhir/StructureDefinition/onco-core-Extension-OPIntention')
+                        .valueCodeableConcept.first().coding.code""",
+                    "therapy_intention",
+                ),  # cardinality 0...1 for the extension of typ intention
+                exp(
+                    """Procedure.reasonReference.resolve().ofType(Condition).code.
+                    coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm')
+                    .code""",
+                    "icd10_code",
+                ),
+                exp(
+                    "Procedure.reasonReference.resolve().ofType(Condition).id",
+                    "condition_id",
+                ),
+                exp(
+                    """Procedure.reasonReference.resolve().ofType(Condition)
+                    .onsetDateTime""",
+                    "date_diagnosis",
+                ),
+            ],
+        )
+        .filter((F.col("therapy_type") == "OP") & F.col("icd10_code").like("C61%"))
+        .orderBy(F.col("condition_id"))
+    )
+
+    ops = ops.checkpoint(eager=True)
+    logger.info("ops_count = {}", ops.count())  # count action for checkpoint
+    # cast dates, group one therapy per cond id per start date, add months diff,
+    # filter negative months diff
+    ops_final = preprocess_therapy_df(ops)
+
+    return ops_final
+
+
+def extract_pca_sys(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings: BaseSettings,
+    spark: SparkSession,
+):
+
+    # systemtherapies
+    logger.info("extract systemtherapies.")
+    systemtherapies = (
+        data.extract(
+            "MedicationStatement",
+            columns=[
+                exp("id", "therapy_id"),
+                exp("category.coding.code", "therapy_type"),
+                exp("effectivePeriod.start", "therapy_startdate"),
+                exp("medicationCodeableConcept.text", "substance"),
+                exp(
+                    """extension(
+                        'http://dktk.dkfz.de/fhir/StructureDefinition/onco-core-Extension-SYSTIntention')
+                        .valueCodeableConcept.first().coding.code""",
+                    "therapy_intention",
+                ),
+                exp(
+                    """MedicationStatement.reasonReference.resolve().ofType(Condition)
+                    .code.coding.where(system=
+                    'http://fhir.de/CodeSystem/bfarm/icd-10-gm').code""",
+                    "icd10_code",
+                ),
+                exp(
+                    """MedicationStatement.reasonReference.resolve()
+                    .ofType(Condition).id""",
+                    "condition_id",
+                ),
+                exp(
+                    """MedicationStatement.reasonReference.resolve()
+                    .ofType(Condition).onsetDateTime""",
+                    "date_diagnosis",
+                ),
+            ],
+        )
+        .filter(F.col("icd10_code").like("C61%"))
+        .orderBy("condition_id")
+    )
+    systemtherapies = systemtherapies.checkpoint(eager=True)
+    logger.info(
+        "systemtherapies.count() = {}", systemtherapies.count()
+    )  # count action for checkpoint
+
+    # cast dates, group one therapy per cond id per start date, add months diff,
+    # filter negative months diff
+    systemtherapies_final = preprocess_therapy_df(systemtherapies)
+
+    return systemtherapies_final
+
+
+def extract_pca_st(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings: BaseSettings,
+    spark: SparkSession,
+):
+
+    # radiotherapies
+    logger.info("extract radiotherapies.")
+    radiotherapies = (
+        data.extract(
+            "Procedure",
+            columns=[
+                exp("id", "therapy_id"),
+                exp("category.coding.code", "therapy_type"),
+                exp("performedPeriod.start", "therapy_startdate"),
+                exp(
+                    """extension(
+                        'http://dktk.dkfz.de/fhir/StructureDefinition/onco-core-
+                        Extension-SYSTIntention').valueCodeableConcept.first().coding
+                        .code""",
+                    "therapy_intention",
+                ),  # cardinality 0...1 for the extension of typ intention
+                exp(
+                    """Procedure.reasonReference.resolve().ofType(Condition).code
+                    .coding.where(system='http://fhir.de/CodeSystem/bfarm/icd-10-gm')
+                    .code""",
+                    "icd10_code",
+                ),
+                exp(
+                    "Procedure.reasonReference.resolve().ofType(Condition).id",
+                    "condition_id",
+                ),
+                exp(
+                    """Procedure.reasonReference.resolve().ofType(Condition)
+                    .onsetDateTime""",
+                    "date_diagnosis",
+                ),
+            ],
+        )
+        .filter(
+            (F.col("therapy_type") == "ST")  # radiotherapy
+            & F.col("icd10_code").like("C61%")  # cohort selection
+        )
+        .orderBy(F.col("condition_id"))
+    )
+    radiotherapies = radiotherapies.checkpoint(eager=True)
+    logger.info(
+        "radiotherapies.count() = {}", radiotherapies.count()
+    )  # count action for checkpoint
+
+    # cast dates, group one therapy per cond id per start date, add months diff,
+    # filter negative months diff
+    radiotherapies_final = preprocess_therapy_df(radiotherapies)
+
+    return radiotherapies_final
+
+
+def union_sort_pivot_join(
+    df_c61, ops_final, systemtherapies_final, radiotherapies_final
+):
+    # union
+    radiotherapy_systemtherapy_op_long = radiotherapies_final.unionByName(
+        systemtherapies_final
+    ).unionByName(ops_final)
+    radiotherapy_systemtherapy_op_long.checkpoint(eager=True)
+    logger.info(
+        "radiotherapy_systemtherapy_op_long.count() = {}",
+        radiotherapy_systemtherapy_op_long.count(),
+    )  # count action for checkpoint
+
+    # sort therapy sequence by sorting months_diff
+    w = Window.partitionBy("condition_id").orderBy("months_diff")
+
+    radiotherapy_systemtherapy_op_long = radiotherapy_systemtherapy_op_long.withColumn(
+        "therapy_index", F.row_number().over(w)
+    )
+
+    # pivot to wide form and rename dynamically
+    pivot_cols = [
+        "therapy_type",
+        "therapy_id",
+        "therapy_intention",
+        "therapy_startdate",
+        "months_diff",
+    ]
+
+    id_cols = ["condition_id"]
+    pivoted_dfs = []
+
+    # maximalen therapy_index-Wert ermitteln
+    max_index = radiotherapy_systemtherapy_op_long.agg(
+        F.max("therapy_index")
+    ).collect()[0][0]
+
+    # Abbruch, falls keine Therapiedaten vorhanden
+    if max_index is None:
+        raise ValueError(
+            "Abbruch: Keine Daten in 'radiotherapy_systemtherapy_op_long' gefunden. "
+            "Die Auswertungen können ohne Therapiedaten nicht durchgeführt werden."
+        )
+
+    for col_name in pivot_cols:
+        df_pivot = (
+            radiotherapy_systemtherapy_op_long.select(
+                id_cols + ["therapy_index", col_name]
+            )
+            .groupBy(id_cols)
+            .pivot("therapy_index")
+            .agg(F.first(col_name))
+        )
+
+        # dynamisch Spalten umbenennen
+        for i in range(1, max_index + 1):
+            old_col = str(i)
+            new_col = f"{col_name}_{i}"
+            if old_col in df_pivot.columns:
+                df_pivot = df_pivot.withColumnRenamed(old_col, new_col)
+
+        pivoted_dfs.append(df_pivot)
+
+    radiotherapy_systemtherapy_op_wide = reduce(
+        lambda a, b: a.join(b, on=id_cols, how="left"), pivoted_dfs
+    )
+    radiotherapy_systemtherapy_op_wide.checkpoint(eager=True)
+    logger.info(
+        "radiotherapy_systemtherapy_op_long.count() = {}",
+        radiotherapy_systemtherapy_op_wide.count(),
+    )
+
+    if "gleason" not in df_c61.columns:
+        raise ValueError(
+            "Abbruch: Die Spalte 'gleason' ist in df_c61 nicht vorhanden. "
+            "Die Auswertungen können ohne Gleason-Werte nicht durchgeführt werden."
+        )
+
+    # join to df_c61
+    df_final = (
+        df_c61.alias("df_c61")
+        .join(
+            radiotherapy_systemtherapy_op_wide.alias("df_wide"),
+            F.col("df_c61.condition_id") == F.col("df_wide.condition_id"),
+            "left",
+        )
+        .select(
+            "df_wide.*",
+            "df_c61.condition_id",
+            "df_c61.date_diagnosis",
+            "df_c61.icd10_code",
+            "df_c61.birthdate",
+            "df_c61.deceased_datetime",
+            "df_c61.deceased_boolean",
+            "df_c61.death_cause_icd10",
+            "df_c61.death_cause_tumor",
+            "df_c61.date_death",
+            "df_c61.gleason",
+        )
+        .drop(F.col("df_wide.condition_id"))
+    )
+
+    df_final = df_final.checkpoint(eager=True)
+    logger.info("radiotherapy_systemtherapy_op_long.count() = {}", df_final.count())
+
+    return df_final
+
+
+def add_deceased_flag(df: DataFrame) -> DataFrame:
+    return df.withColumn(
+        "deceased",
+        (
+            F.col("deceased_boolean")
+            | F.col("deceased_datetime").isNotNull()
+            | F.col("death_cause_icd10").isNotNull()
+            | F.col("death_cause_tumor").isNotNull()
+            | F.col("date_death").isNotNull()
+        ),
+    )
+
+
+def add_age_col(
+    df: DataFrame,
+    birthdate_col: str,
+    refdate_col: str,
+    age_colname: str = "age_at_diagnosis",
+) -> DataFrame:
+    df = df.withColumn(
+        age_colname,
+        calculate_age_at_condition_date_udf(
+            F.col(birthdate_col), F.col(refdate_col)
+        ).cast(IntegerType()),
+    )
+
+    df = df.checkpoint(eager=True)
+    logger.info("add_age_col df.count() = {}", df.count())
+
+    return df
+
+
+def filter_young_highrisk_cohort(
+    df: DataFrame, age_col: str = "age_at_diagnosis", gleason_col: str = "gleason"
+) -> DataFrame:
+    cohort = df.filter((F.col(age_col) < 65) & (F.col(gleason_col) >= 8))
+
+    cohort = cohort.checkpoint(eager=True)
+    logger.info("Filtered cohort count = {}", cohort.count())
+
+    return cohort
+
+
+def clean_df(df: DataFrame) -> DataFrame:
+    logger.info("df count before cleaning = {}", df.count())
+
+    # 1. Age >= 0
+    df_clean = df.filter(F.col("age_at_diagnosis") >= 0)
+    logger.info(
+        "df_clean count after df.filter(F.col(age_at_diagnosis) >= 0 = {}",
+        df_clean.count(),
+    )
+
+    # 2. Alle months_diff_* Spalten prüfen
+    months_cols = [c for c in df.columns if c.startswith("months_diff_")]
+    for column in months_cols:
+        df_clean = df_clean.filter((F.col(column) >= 0) | F.col(column).isNull())
+    logger.info(
+        "df_clean count after filtering all monts_diff_* cols >= 0 = {}",
+        df_clean.count(),
+    )
+
+    df_clean = df_clean.filter(F.year("date_diagnosis") >= 1950)
+    logger.info(
+        "df_clean count after df.filter(F.col(date_diagnosis) >= 1950 = {}",
+        df_clean.count(),
+    )
+
+    return df_clean
+
+
+# Sankey Stuff - to be optimized
+
+
+def count_therapy_combinations(
+    df: DataFrame,
+    therapy1: Optional[str] = None,
+    therapy2: Optional[str] = None,
+    deceased: str = "all",
+    therapy1_col: str = "therapy_type_1",
+    therapy2_col: str = "therapy_type_2",
+) -> int:
+    # Count number of patients with given therapy combinations and deceased status.
+    cond = F.lit(True)
+
+    # therapy1 filter
+    if therapy1 is not None:
+        col1 = F.col(therapy1_col)
+        if therapy1 == "OTHER":
+            cond &= col1.isNotNull() & (~col1.isin("ST", "HO", "CH", "OP"))
+        elif therapy1 == "no therapy":
+            cond &= col1.isNull() | (F.trim(col1) == "")
+        else:
+            cond &= col1 == therapy1
+
+    # therapy2 filter
+    if therapy2 is not None:
+        col2 = F.col(therapy2_col)
+        if therapy2 == "OTHER":
+            cond &= col2.isNotNull() & (~col2.isin("ST", "HO", "CH", "OP"))
+        elif therapy2 == "no therapy":
+            cond &= col2.isNull() | (F.trim(col2) == "")
+        else:
+            cond &= col2 == therapy2
+
+    # deceased filter
+    if deceased == "true":
+        cond &= F.col("deceased") == "true"
+    elif deceased == "false":
+        cond &= F.col("deceased").isNull()
+
+    return df.filter(cond).count()
+
+
+def get_sum(values_list, status=None, t1=None, t2=None):
+    total = 0
+    # unpack tuple in values_list
+    for tup_status, tup_t1, tup_t2, value in values_list:
+        if (
+            (status is None or tup_status == status)
+            and (t1 is None or tup_t1 == t1)
+            and (t2 is None or tup_t2 == t2)
+        ):
+            total += value
+
+    return total
+
+
+def get_therapy_values(
+    df: DataFrame,
+    therapy_types: List[str],
+    level: int,
+    therapy1_col: str = "therapy_type_1",
+    therapy2_col: str = "therapy_type_2",
+) -> List[Tuple[str, Optional[str], Optional[str], int]]:
+    """
+    get therapy counts for my Sankey diagram levels 1-4,
+    Args:
+        df: Spark DataFrame
+        therapy_types: List of therapy types = NODES in my sankey levels
+        level: Sankey level (1, 2, 3, 4)
+        therapy1_col: Column name for therapy1 (left node or starting node)
+        therapy2_col: Column name for therapy2 (right node or goal node)
+    Returns:
+        List of tuples (status, therapy1, therapy2, count)
+    """
+    values_list: List[Tuple[str, Optional[str], Optional[str], int]] = []
+
+    if level == 1:
+        # Level 1: only therapy1, no dead/alive split
+        for t in therapy_types:
+            count = count_therapy_combinations(
+                df, therapy1=t, deceased="all", therapy1_col=therapy1_col
+            )
+            values_list.append(("all", t, None, count))
+
+    elif level == 2:
+        for t1 in therapy_types:
+            for t2 in therapy_types:
+                if t2 == "no therapy":
+                    count_dead = count_therapy_combinations(
+                        df,
+                        therapy1=t1,
+                        therapy2=t2,
+                        deceased="true",
+                        therapy1_col=therapy1_col,
+                        therapy2_col=therapy2_col,
+                    )
+                    count_alive = count_therapy_combinations(
+                        df,
+                        therapy1=t1,
+                        therapy2=t2,
+                        deceased="false",
+                        therapy1_col=therapy1_col,
+                        therapy2_col=therapy2_col,
+                    )
+                    values_list.append(("dead", t1, t2, count_dead))
+                    values_list.append(("alive", t1, t2, count_alive))
+                elif t1 == "no therapy":
+                    continue
+                else:
+                    count_all = count_therapy_combinations(
+                        df,
+                        therapy1=t1,
+                        therapy2=t2,
+                        deceased="all",
+                        therapy1_col=therapy1_col,
+                        therapy2_col=therapy2_col,
+                    )
+                    values_list.append(("all", t1, t2, count_all))
+
+    elif level == 3:
+        for t1 in therapy_types:
+            for t2 in therapy_types:
+                if t1 == "no therapy":
+                    continue
+                elif t2 == "no therapy":
+                    count_dead = count_therapy_combinations(
+                        df,
+                        therapy1=t1,
+                        therapy2=t2,
+                        deceased="true",
+                        therapy1_col=therapy1_col,
+                        therapy2_col=therapy2_col,
+                    )
+                    count_alive = count_therapy_combinations(
+                        df,
+                        therapy1=t1,
+                        therapy2=t2,
+                        deceased="false",
+                        therapy1_col=therapy1_col,
+                        therapy2_col=therapy2_col,
+                    )
+                    values_list.append(("dead", t1, t2, count_dead))
+                    values_list.append(("alive", t1, t2, count_alive))
+                else:
+                    count_all = count_therapy_combinations(
+                        df,
+                        therapy1=t1,
+                        therapy2=t2,
+                        deceased="all",
+                        therapy1_col=therapy1_col,
+                        therapy2_col=therapy2_col,
+                    )
+                    values_list.append(("all", t1, t2, count_all))
+
+    elif level == 4:
+        # Only therapy2 matters, therapy1=None, dead/alive split
+        for t in therapy_types:
+            count_dead = count_therapy_combinations(
+                df, therapy2=t, deceased="true", therapy2_col=therapy2_col
+            )
+            count_alive = count_therapy_combinations(
+                df, therapy2=t, deceased="false", therapy2_col=therapy2_col
+            )
+            values_list.append(("dead", None, t, count_dead))
+            values_list.append(("alive", None, t, count_alive))
+
+    else:
+        raise ValueError("Level must be 1, 2, 3, or 4")
+
+    return values_list
+
+
+def prepare_sankey(df):
+    therapy_types = ["ST", "HO", "CH", "OP", "no therapy", "OTHER"]
+
+    th1_values_list = get_therapy_values(
+        df, therapy_types, level=1, therapy1_col="therapy_type_1"
+    )
+
+    if "therapy_type_2" in df.columns:
+        th2_values_list = get_therapy_values(
+            df,
+            therapy_types,
+            level=2,
+            therapy1_col="therapy_type_1",
+            therapy2_col="therapy_type_2",
+        )
+    else:
+        th2_values_list = []
+
+    # to do: nochmal überdenken ob ich hier den "no therapy" type brauche
+    if "therapy_type_3" in df.columns:
+        th3_values_list = get_therapy_values(
+            df,
+            therapy_types,
+            level=3,
+            therapy1_col="therapy_type_2",
+            therapy2_col="therapy_type_3",
+        )
+    else:
+        th3_values_list = []
+
+    therapy_types_level4 = ["ST", "HO", "CH", "OP", "OTHER"]
+    if "therapy_type_3" in df.columns:
+        th4_values_list = get_therapy_values(
+            df, therapy_types_level4, level=4, therapy2_col="therapy_type_3"
+        )
+    else:
+        th4_values_list = []
+
+    return th1_values_list, th2_values_list, th3_values_list, th4_values_list
+
+
+def lighten_hex(hex_color, factor=0.5):
+    hex_color = hex_color.lstrip("#")
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    r = int(r + (255 - r) * factor)
+    g = int(g + (255 - g) * factor)
+    b = int(b + (255 - b) * factor)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+# TO DO: optimize this later - besonders links, ggf. mithilfe der Tupel und einer
+# Funktion, die die Layer und Node Links dynamisch baut
+# oder bau die links automatisch in der value funktion mit!
+def plot_sankey(
+    th1_values_list,
+    th2_values_list,
+    th3_values_list,
+    th4_values_list,
+    plot_title: str = "Therapy Sankey Diagram",
+    show_plot: bool = True,
+):
+    # Labels
+    nodes_labels = []
+
+    nodes_labels.append(f"cohort (n={get_sum(th1_values_list, status='all')})")
+
+    for t in ["ST", "HO", "CH", "OP", "no therapy", "OTHER"]:
+        nodes_labels.append(
+            f"{t} (1) (n={get_sum(th1_values_list, status='all', t1=t)})"
+        )
+
+    for t in ["ST", "HO", "CH", "OP", "OTHER"]:
+        nodes_labels.append(f"{t} (2) (n={get_sum(th2_values_list, t2=t)})")
+
+    for t in ["ST", "HO", "CH", "OP", "OTHER"]:
+        nodes_labels.append(f"{t} (3) (n={get_sum(th3_values_list, t2=t)})")
+
+    nodes_labels.append(
+        f"""reported dead (n={get_sum(th2_values_list, 'dead') +
+            get_sum(th3_values_list, 'dead') + get_sum(th4_values_list, 'dead')})"""
+    )
+    nodes_labels.append(
+        f"""unknown/alive (n={get_sum(th2_values_list, 'alive') +
+            get_sum(th3_values_list, 'alive') + get_sum(th4_values_list, 'alive')})"""
+    )
+
+    # --- Node Colors ---
+    nodes_colors = [
+        "#9e9e9e",  # all patients
+        "#4a90e2",
+        "#50e3c2",
+        "#d77aff",
+        "#f5a623",
+        "#7ed321",
+        "#f8e71c",  # 1. Therapie
+        lighten_hex("#4a90e2", 0.3),
+        lighten_hex("#50e3c2", 0.3),
+        lighten_hex("#d77aff", 0.3),
+        lighten_hex("#f5a623", 0.3),
+        lighten_hex("#f8e71c", 0.3),  # 2. Therapie
+        lighten_hex("#4a90e2", 0.6),
+        lighten_hex("#50e3c2", 0.6),
+        lighten_hex("#d77aff", 0.6),
+        lighten_hex("#f5a623", 0.6),
+        lighten_hex("#f8e71c", 0.6),  # 3. Therapie
+        lighten_hex("#9e9e9e", 0.6),
+        lighten_hex("#9e9e9e", 0.6),  # deceased / alive
+    ]
+
+    nodes = dict(label=nodes_labels, color=nodes_colors)
+
+    # source: Indizes der Quellen
+    # target: # Indizes der Ziele
+    # values: Werte der Verbindungen
+    # (source, target)
+    links_data = [
+        # 1st therapy: all - (1)
+        (0, 1),  # all - ST (1)
+        (0, 2),  # all - HO
+        (0, 3),  # all - CH
+        (0, 4),  # all - OP
+        (0, 5),  # all - no therapy
+        (0, 6),  # all - OTHER
+        # 2nd therapy: (1) - (2)
+        (1, 7),  # ST (1) - ST (2)
+        (1, 8),  # ST - HO
+        (1, 9),  # ST - CH
+        (1, 10),  # ST - OP
+        (1, 17),  # ST - no therapy DEAD
+        (1, 18),  # ST - no therapy ALIVE
+        (1, 11),  # ST - OTHER
+        (2, 7),  # HO - ST
+        (2, 8),  # HO - HO
+        (2, 9),  # HO - CH
+        (2, 10),  # HO - OP
+        (2, 17),  # HO - no therapy DEAD
+        (2, 18),  # HO - no therapy ALIVE
+        (2, 11),  # HO - OTHER
+        (3, 7),  # CH - ST
+        (3, 8),  # CH - HO
+        (3, 9),  # CH - CH
+        (3, 10),  # CH - OP
+        (3, 17),  # CH - no therapy DEAD
+        (3, 18),  # CH - no therapy ALIVE
+        (3, 11),  # CH - OTHER
+        (4, 7),  # OP - ST
+        (4, 8),  # OP - HO
+        (4, 9),  # OP - CH
+        (4, 10),  # OP - OP
+        (4, 17),  # OP - no therapy DEAD
+        (4, 18),  # OP - no therapy ALIVE
+        (4, 11),  # OP - OTHER
+        (5, 17),  # no therapy - DEAD
+        (5, 18),  # no therapy - ALIVE
+        (6, 7),  # OTHER - ST
+        (6, 8),  # OTHER - HO
+        (6, 9),  # OTHER - CH
+        (6, 10),  # OTHER - OP
+        (6, 17),  # OTHER - no therapy DEAD
+        (6, 18),  # OTHER - no therapy ALIVE
+        (6, 11),  # OTHER - OTHER
+        # 3rd therapy: (2) - (3)
+        (7, 12),  # ST (2) - ST (3)
+        (7, 13),  # ST (2) - HO (3)
+        (7, 14),  # ST (2) - CH
+        (7, 15),  # ST (2) - OP
+        (7, 17),  # ST (2) - no therapy DEAD
+        (7, 18),  # ST (2) - no therapy ALIVE
+        (7, 16),  # ST (2) - OTHER
+        (8, 12),  # HO (2) - ST (3)
+        (8, 13),  # HO (2) - HO
+        (8, 14),  # HO (2) - CH
+        (8, 15),  # HO (2) - OP
+        (8, 17),  # HO (2) - no therapy DEAD
+        (8, 18),  # HO (2) - no therapy ALIVE
+        (8, 16),  # HO (2) - OTHER
+        (9, 12),  # CH (2) - ST (3)
+        (9, 13),  # CH - HO
+        (9, 14),  # CH - CH
+        (9, 15),  # CH - OP
+        (9, 17),  # CH - no therapy DEAD
+        (9, 18),  # CH - no therapy ALIVE
+        (9, 16),  # CH - OTHER
+        (10, 12),  # OP (2) - ST (3)
+        (10, 13),  # OP (2) - HO (3)
+        (10, 14),  # OP (2) - CH
+        (10, 15),  # OP (2) - OP
+        (10, 17),  # OP - no therapy DEAD
+        (10, 18),  # OP - no therapy ALIVE
+        (10, 16),  # OP (2) - OTHER
+        (11, 12),  # OTHER (2) - ST (3)
+        (11, 13),  # OTHER (2) - HO (3)
+        (11, 14),  # OTHER (2) - CH (3)
+        (11, 15),  # OTHER (2) - OP (3)
+        (11, 17),  # OTHER (2) - DEAD
+        (11, 17),  # OTHER (2) - ALIVE
+        (11, 16),  # OTHER (2) - OTHER (3)
+        # deceased/alive
+        (12, 17),  # ST (3) - DEAD
+        (12, 18),  # ST (3) - ALIVE
+        (13, 17),  # HO (3) - DEAD
+        (13, 18),  # HO (3) - ALIVE
+        (14, 17),  # CH (3) - DEAD
+        (14, 18),  # CH (3) - ALIVE
+        (15, 17),  # OP (3) - DEAD
+        (15, 18),  # OP (3) - ALIVE
+        (16, 17),  # OTHER (3) - DEAD
+        (16, 18),  # OTHER (3) - ALIVE
+    ]
+
+    # values aus meinen listen je level
+    all_values = th1_values_list + th2_values_list + th3_values_list + th4_values_list
+
+    # val[-1] letzter Eintrag aus meinem Tupel
+    links_with_values = [
+        (src, tgt, val[-1])  # val[-1] = eigentlicher Zahlenwert
+        for (src, tgt), val in zip(links_data, all_values)
+    ]
+    # umwandeln in separate Listen für Plotly
+    source, target, value = zip(*links_with_values)
+
+    # gleiche Farbe wie die Source-Node
+    link_colors = [nodes["color"][src] for src in source]
+
+    links = dict(
+        source=list(source), target=list(target), value=list(value), color=link_colors
+    )
+
+    # Sankey-Diagramm
+    fig = go.Figure(
+        data=[
+            go.Sankey(
+                node=dict(
+                    pad=15,
+                    thickness=20,
+                    line=dict(color="black", width=0.5),
+                    label=nodes["label"],
+                    color=nodes["color"],
+                ),
+                link=links,
+            )
+        ]
+    )
+
+    fig.update_layout(title_text=plot_title, font_size=12, width=1800, height=800)
+
+    if show_plot:
+        fig.show(renderer="notebook")
+
+    return fig
+
+
+# wrapper
+def prepare_and_plot_sankey(
+    df, settings: BaseSettings, plot_name: str = "", show_plot=False
+):
+    # Prepare therapy counts for Sankey
+    th1_values_list, th2_values_list, th3_values_list, th4_values_list = prepare_sankey(
+        df
+    )
+
+    # Create Sankey plot
+    fig = plot_sankey(
+        th1_values_list,
+        th2_values_list,
+        th3_values_list,
+        th4_values_list,
+        plot_title=plot_name,
+        show_plot=show_plot,
+    )
+
+    # Save plot to file
+    output_dir = os.path.join(settings.output_folder, settings.study_name)
+    os.makedirs(output_dir, exist_ok=True)
+    final_plot_path = os.path.join(output_dir, f"{plot_name}.html")
+    fig.write_html(final_plot_path)
+
+
+def save_plot(plot: Figure, settings: BaseSettings, plot_name: str = "") -> None:
+    logger.info("start save plot")
+    output_dir = os.path.join(settings.output_folder, settings.study_name)
+    os.makedirs(output_dir, exist_ok=True)
+
+    final_plot_path = os.path.join(output_dir, f"{plot_name}.png")
+    plot.savefig(final_plot_path, bbox_inches="tight", dpi=300)
+    logger.info("end save plot")
+
+
+# summary statistic plots
+def styled_bar(ax, x, values, color, label, width=0.6, offset=0.0, relative=False):
+    # Füllung
+    ax.bar(x + offset, values, width=width, color=color, alpha=0.4, label=None)
+    # Rahmen
+    bars = ax.bar(
+        x + offset,
+        values,
+        width=width,
+        fill=False,
+        edgecolor=color,
+        linewidth=2,
+        label=label,
+    )
+    # Werte drüber schreiben
+    for bar, v in zip(bars, values):
+        if relative:
+            text = f"{v:.1f}%"
+        else:
+            text = str(int(v))
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            v + max(values) * 0.01,
+            text,
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+
+def plot_summary_statistics(
+    groups: Dict[str, pd.DataFrame],
+    settings: BaseSettings,
+    relative: bool = False,
+    age_col: str = "age_at_diagnosis",
+    deceased_col: str = "deceased",
+    date_col: str = "date_diagnosis",
+):
+    colors = {"All C61": "tab:blue", "Cohort": "tab:orange", "Rest": "tab:green"}
+
+    plot_names = [
+        "distinct_condition_count",
+        "age_at_diagnosis",
+        "survival_status",
+        "diagnosis_year",
+    ]
+
+    num_groups = len(groups)
+    if relative:
+        plot_names = [f"{name}_rel_{num_groups}" for name in plot_names]
+    else:
+        plot_names = [f"{name}_{num_groups}" for name in plot_names]
+
+    # --- 0. Distinct condition_id counts ---
+    counts_abs = {
+        name: df["condition_id"].nunique() if not df.empty else 0
+        for name, df in groups.items()
+    }
+    if relative:
+        total = sum(counts_abs.values())
+        if total > 0:
+            counts = {k: v / total * 100 for k, v in counts_abs.items()}
+        else:
+            counts = {k: 0 for k in counts_abs}
+        ylabel = "Percentage (%)"
+    else:
+        counts = counts_abs
+        ylabel = "Count"
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    x = np.arange(len(counts))
+    for i, (name, v) in enumerate(counts.items()):
+        styled_bar(
+            ax,
+            np.array([i]),
+            [v],
+            color=colors.get(name, "gray"),
+            label=f"{name} (n={counts_abs[name]})",
+            width=0.6,
+            relative=relative,
+        )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(counts.keys())
+    ax.set_ylabel(ylabel)
+    ax.set_title("Distinct diagnosis count distribution")
+    ax.legend()
+    fig.tight_layout()
+    save_plot(fig, settings, plot_names[0])
+    plt.show()
+
+    # --- 1. Altersverteilung ---
+    fig, ax = plt.subplots(figsize=(12, 5))
+    bins = range(30, 91, 2)
+    for name, df in groups.items():
+        if df.empty:
+            continue
+        valid_ages = df[age_col][df[age_col].between(0, 120)]
+        if valid_ages.empty:
+            continue
+        color = colors.get(name, "gray")
+        ax.hist(valid_ages, bins=bins, alpha=0.5, color=color, density=relative)
+        ax.hist(
+            valid_ages,
+            bins=bins,
+            histtype="step",
+            linewidth=2,
+            color=color,
+            label=f"{name} (n={len(valid_ages)})",
+            density=relative,
+        )
+
+    ax.set_xlabel("Age at Diagnosis")
+    ax.set_ylabel("Percentage (%)" if relative else "Count")
+    ax.set_title(
+        "Age at Diagnosis Distribution" + (" (Relative %)" if relative else "")
+    )
+    if relative:
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y*100:.0f}%"))
+    ax.legend()
+    fig.tight_layout()
+    save_plot(fig, settings, plot_names[1])
+    plt.show()
+
+    # --- 2. Survival status ---
+    fig, ax = plt.subplots(figsize=(8, 5))
+    width = 0.25
+    x = np.arange(2)
+
+    for i, (name, df) in enumerate(groups.items()):
+        if df.empty:
+            ordered: List[float] = [0.0, 0.0]
+            total = 0
+        else:
+            tmp = df.copy()
+            tmp[deceased_col] = tmp[deceased_col].fillna(False)
+            counts_val = tmp[deceased_col].value_counts()
+            total = len(tmp)
+            ordered: List[float] = [
+                float(counts_val.get(False, 0)),
+                float(counts_val.get(True, 0)),
+            ]
+            if relative:
+                if total > 0:
+                    ordered = [v / total * 100 for v in ordered]
+                else:
+                    ordered = [0.0, 0.0]
+
+        styled_bar(
+            ax,
+            x,
+            ordered,
+            color=colors.get(name, "gray"),
+            label=f"{name} (n={total})",
+            width=width,
+            offset=i * width,
+            relative=relative,
+        )
+
+    ax.set_xticks(x + width * (len(groups) - 1) / 2)
+    ax.set_xticklabels(["Alive / Unknown", "Reported dead"])
+    ax.set_ylabel("Percentage (%)" if relative else "Count")
+    ax.set_title("Survival Status by Group" + (" (Relative %)" if relative else ""))
+    ax.legend()
+    fig.tight_layout()
+    save_plot(fig, settings, plot_names[2])
+    plt.show()
+
+    # --- 3. Diagnosis year ---
+    fig, ax = plt.subplots(figsize=(12, 5))
+    for name, df in groups.items():
+        if df.empty:
+            continue
+        if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+            df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+        years = df[date_col].dt.year.dropna()
+        years = years[years >= 1950]
+        if years.empty:
+            continue
+        color = colors.get(name, "gray")
+        ax.hist(years, bins=20, alpha=0.5, color=color, density=relative)
+        ax.hist(
+            years,
+            bins=20,
+            histtype="step",
+            linewidth=2,
+            color=color,
+            label=f"{name} (n={len(years)})",
+            density=relative,
+        )
+
+    ax.set_xlabel("Year of Diagnosis")
+    ax.set_ylabel("Percentage (%)" if relative else "Count")
+    ax.set_title(
+        "Diagnosis Year Distribution (from 1950 onwards)"
+        + (" (Relative %)" if relative else "")
+    )
+    if relative:
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y*100:.0f}%"))
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+    plt.xticks(rotation=45)
+    ax.legend()
+    fig.tight_layout()
+    save_plot(fig, settings, plot_names[3])
+    plt.show()
+
+
+def prepare_dfs_for_plotting(
+    df_final_all_c61: DataFrame, df_cohort: DataFrame
+) -> DataFrame:
+    # Create df group
+    df_rest = df_final_all_c61.join(df_cohort, on="condition_id", how="left_anti")
+
+    # Convert Spark DataFrames to Pandas dataframes pdfs
+    pdf_all = pd.DataFrame(df_final_all_c61.collect(), columns=df_final_all_c61.columns)
+    pdf_cohort = pd.DataFrame(df_cohort.collect(), columns=df_cohort.columns)
+    pdf_rest = pd.DataFrame(df_rest.collect(), columns=df_rest.columns)
+
+    logger.info(
+        "start save plot print(len(pdf_all), len(pdf_cohort), len(pdf_rest))",
+        len(pdf_all),
+        len(pdf_cohort),
+        len(pdf_rest),
+    )
+    return pdf_all, pdf_cohort, pdf_rest
+
+
+# wrapper
+def plot(df_final_all_c61, settings):
+    # Plot Sankey-Diagramme
+    # all c61
+    prepare_and_plot_sankey(
+        df_final_all_c61,
+        settings=settings,
+        plot_name="Therapy sequence of all C61 patients",
+        show_plot=False,
+    )
+
+    # Filtered cohort
+    df_cohort = filter_young_highrisk_cohort(df_final_all_c61)
+    prepare_and_plot_sankey(
+        df_cohort,
+        settings=settings,
+        plot_name="Therapy sequence of C61 young high risk cohort",
+        show_plot=False,
+    )
+
+    # prep for summary statistics
+    pdf_all, pdf_cohort, pdf_rest = prepare_dfs_for_plotting(
+        df_final_all_c61, df_cohort
+    )
+
+    # summary statistics
+    plot_summary_statistics(
+        groups={"All C61": pdf_all, "Cohort": pdf_cohort, "Rest": pdf_rest},
+        settings=settings,
+        relative=False,
+        age_col="age_at_diagnosis",
+        deceased_col="deceased",
+        date_col="date_diagnosis",
+    )
+    plot_summary_statistics(
+        groups={
+            "All C61": pdf_all,
+            "Cohort": pdf_cohort,
+        },
+        settings=settings,
+        relative=False,
+        age_col="age_at_diagnosis",
+        deceased_col="deceased",
+        date_col="date_diagnosis",
+    )
+    plot_summary_statistics(
+        groups={"Cohort": pdf_cohort, "Rest": pdf_rest},
+        settings=settings,
+        relative=False,
+        age_col="age_at_diagnosis",
+        deceased_col="deceased",
+        date_col="date_diagnosis",
+    )
+    plot_summary_statistics(
+        groups={"Cohort": pdf_cohort, "Rest": pdf_rest},
+        settings=settings,
+        relative=True,
+        age_col="age_at_diagnosis",
+        deceased_col="deceased",
+        date_col="date_diagnosis",
+    )
