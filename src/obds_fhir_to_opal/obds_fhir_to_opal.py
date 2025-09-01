@@ -111,8 +111,8 @@ def setup_spark_session(app_name: str, master: str):
 def main():
     start = time.monotonic()
 
-    dtypes_list_df = None
-    description_list_df_dictionary = None
+    dtypes_list_df: list[str] = []
+    description_list_df_dictionary: dict = {}
 
     spark = setup_spark_session(settings.spark_app_name, settings.master)
     pc = PathlingContext.create(spark=spark, enable_extensions=True)

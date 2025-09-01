@@ -1828,11 +1828,11 @@ def plot_sankey(
 
     nodes_labels.append(
         f"""reported dead (n={get_sum(th2_values_list, 'dead') +
-        get_sum(th3_values_list, 'dead') + get_sum(th4_values_list, 'dead')})"""
+            get_sum(th3_values_list, 'dead') + get_sum(th4_values_list, 'dead')})"""
     )
     nodes_labels.append(
         f"""unknown/alive (n={get_sum(th2_values_list, 'alive') +
-        get_sum(th3_values_list, 'alive') + get_sum(th4_values_list, 'alive')})"""
+            get_sum(th3_values_list, 'alive') + get_sum(th4_values_list, 'alive')})"""
     )
 
     # --- Node Colors ---
@@ -2168,19 +2168,22 @@ def plot_summary_statistics(
 
     for i, (name, df) in enumerate(groups.items()):
         if df.empty:
-            ordered = [0, 0]
+            ordered: List[float] = [0.0, 0.0]
             total = 0
         else:
             tmp = df.copy()
             tmp[deceased_col] = tmp[deceased_col].fillna(False)
             counts_val = tmp[deceased_col].value_counts()
             total = len(tmp)
-            ordered = [counts_val.get(False, 0), counts_val.get(True, 0)]
+            ordered: List[float] = [
+                float(counts_val.get(False, 0)),
+                float(counts_val.get(True, 0)),
+            ]
             if relative:
                 if total > 0:
                     ordered = [v / total * 100 for v in ordered]
                 else:
-                    ordered = [0, 0]
+                    ordered = [0.0, 0.0]
 
         styled_bar(
             ax,
