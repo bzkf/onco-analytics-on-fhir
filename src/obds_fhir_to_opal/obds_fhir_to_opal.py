@@ -8,7 +8,8 @@ from pathling import PathlingContext
 from pydantic import BaseSettings
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-from utils_onco_analytics import (
+
+from obds_fhir_to_opal.utils_onco_analytics import (
     add_age_col,
     add_deceased_flag,
     clean_df,
@@ -109,6 +110,9 @@ def setup_spark_session(app_name: str, master: str):
 
 def main():
     start = time.monotonic()
+
+    dtypes_list_df = None
+    description_list_df_dictionary = None
 
     spark = setup_spark_session(settings.spark_app_name, settings.master)
     pc = PathlingContext.create(spark=spark, enable_extensions=True)

@@ -17,7 +17,6 @@ from loguru import logger
 from matplotlib.figure import Figure
 from pathling import Expression as exp
 from pathling import PathlingContext, datasource
-from plotly.io import write_html
 from pydantic import BaseSettings
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
@@ -1582,8 +1581,8 @@ def clean_df(df: DataFrame) -> DataFrame:
 
 def count_therapy_combinations(
     df: DataFrame,
-    therapy1: str = None,
-    therapy2: str = None,
+    therapy1: Optional[str] = None,
+    therapy2: Optional[str] = None,
     deceased: str = "all",
     therapy1_col: str = "therapy_type_1",
     therapy2_col: str = "therapy_type_2",
@@ -1652,7 +1651,7 @@ def get_therapy_values(
     Returns:
         List of tuples (status, therapy1, therapy2, count)
     """
-    values_list = []
+    values_list: List[Tuple[str, Optional[str], Optional[str], int]] = []
 
     if level == 1:
         # Level 1: only therapy1, no dead/alive split
