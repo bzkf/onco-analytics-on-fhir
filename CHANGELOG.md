@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.8.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.0...v2.8.1) (2025-09-02)
+
+
+### Bug Fixes
+
+* possible lint fixes ([#287](https://github.com/bzkf/onco-analytics-on-fhir/issues/287)) ([b8cd490](https://github.com/bzkf/onco-analytics-on-fhir/commit/b8cd490281d8f5f62c2fdd6e36000e8caa0cc342))
+
+
+### Miscellaneous Chores
+
+* **renovate:** ignore py4j ([#279](https://github.com/bzkf/onco-analytics-on-fhir/issues/279)) ([2a12bb9](https://github.com/bzkf/onco-analytics-on-fhir/commit/2a12bb967ca8ebd0a6729fedf900d00fb9a1bfed))
+
 ## [2.8.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.7.2...v2.8.0) (2025-09-01)
 
 
