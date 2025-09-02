@@ -49,4 +49,4 @@ services:
       gPAS__Auth__Basic__Password: ""
       gPAS__Version: "1.10.3"
     volumes:
-      - ${FHIR_PSEUDONYMIZER_ANONYMIZATION_FILE_PATH:-./anonymization.yaml}:/etc/fhir-pseudonymizer/anonymization.yaml:ro
+      - ${FHIR_PSEUDONYMIZER_ANONYMIZATION_FILE_PATH:-?}:/etc/fhir-pseudonymizer/anonymization.yaml:ro
