@@ -7,7 +7,7 @@ services:
       - .demo.env
     environment:
       OUTPUT_FOLDER: "/home/spark/opal-output"
-      STUDY_NAME: "study_protocol_a0_1_3_7_d" #"study_protocol_c" #study_protocol_a0_1_3_7_d # "PoC"
+      STUDY_NAME: "pca_therapies1" #"study_protocol_c" #study_protocol_a0_1_3_7_d # "PoC"
       SPARK_S3_ENDPOINT: minio:9000
       SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-delta
       DELTA_DATABASE_DIR: "s3a://fhir/"
