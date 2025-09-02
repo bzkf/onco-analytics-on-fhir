@@ -694,10 +694,6 @@ def extract_df_study_protocol_a0_1_3_7_d(
                     .where(system = '{FHIR_SYSTEM_LOINC}' and code = '35266-6')
                     .exists()
             """,
-            f"""reverseResolve(Condition.stage.assessment).code.coding
-                    .where(system = '{FHIR_SYSTEM_ICD10}' and code = 'C61')
-                    .exists()
-            """,
         ],
     )
     if observations_gleason.isEmpty():
