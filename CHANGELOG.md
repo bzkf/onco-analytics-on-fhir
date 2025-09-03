@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.1...v2.8.2) (2025-09-03)
+
+
+### Miscellaneous Chores
+
+* streamline deployment ([#284](https://github.com/bzkf/onco-analytics-on-fhir/issues/284)) ([ba89777](https://github.com/bzkf/onco-analytics-on-fhir/commit/ba89777562865e409d8cb3a769420965452566dd))
+
 ## [2.8.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.0...v2.8.1) (2025-09-02)
 
 
