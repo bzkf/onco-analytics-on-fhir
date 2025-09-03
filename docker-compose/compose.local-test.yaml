@@ -25,7 +25,7 @@ services:
       - "kafka_data:/var/lib/kafka/data:rw"
 
   kafka-connect:
-    image: ghcr.io/miracum/util-images/cricketeerone-kafka-connect:v1.6.5@sha256:fc1c777aedc7f302970e7e75bb6c7ec127af0a7b4628d6f8fe35e3f2706993f7
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/util-images/cricketeerone-kafka-connect:v1.6.5@sha256:fc1c777aedc7f302970e7e75bb6c7ec127af0a7b4628d6f8fe35e3f2706993f7
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -52,7 +52,7 @@ services:
       - 8083:8083
 
   akhq:
-    image: docker.io/tchiotludo/akhq:0.26.0@sha256:833f9c3c32786e06c858589b2b1655a60caf3ca235c840308ad5754414945dd0
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/tchiotludo/akhq:0.26.0@sha256:833f9c3c32786e06c858589b2b1655a60caf3ca235c840308ad5754414945dd0
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -76,7 +76,7 @@ services:
       - kafka
 
   decompose-xmls:
-    image: ghcr.io/bzkf/onco-analytics-on-fhir/decompose-xmls:v2.3.1 # x-release-please-version
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/decompose-xmls:v2.3.1 # x-release-please-version
     user: "${UID:-1000}:${GID:-1000}"
     environment:
       KAFKA_ENABLED: "true"
@@ -90,7 +90,7 @@ services:
       - ./output-obds-reports:/app/output-obds-reports:rw
 
   obds-to-fhir:
-    image: ghcr.io/bzkf/obds-to-fhir:v2.3.1@sha256:d1855c1fb8dad3c5bbbdc373500d5afd608ff4212642e5d18cbaade08e1afa8a
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/obds-to-fhir:v2.3.1@sha256:d1855c1fb8dad3c5bbbdc373500d5afd608ff4212642e5d18cbaade08e1afa8a
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -118,7 +118,7 @@ services:
       - decompose-xmls
 
   obds-fhir-to-opal:
-    image: ghcr.io/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal:v2.3.1 # x-release-please-version
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/obds-fhir-to-opal:v2.3.1 # x-release-please-version
     restart: no
     cap_drop:
       - ALL

@@ -1,6 +1,6 @@
 services:
   decompose-xmls:
-    image: ghcr.io/bzkf/onco-analytics-on-fhir/decompose-xmls:${DECOMPOSE_XMLS_IMAGE_TAG:-v2.8.1} # x-release-please-version
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/decompose-xmls:${DECOMPOSE_XMLS_IMAGE_TAG:-v2.8.1} # x-release-please-version
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     environment:
       KAFKA_ENABLED: "true"
@@ -10,5 +10,5 @@ services:
       # Set to 'true' to enable removing of leading zeros in patient IDs
       REMOVE_LEADING_PATIENTID_ZEROS: "false"
     volumes:
-      - ./input-obds-reports:/app/input-obds-reports:ro
+      - ${DECOMPOSE_XMLS_INPUT_OBDS_DIR:-./input-obds-reports}:/app/input-obds-reports:ro
       - ./output-obds-reports:/app/output-obds-reports:rw

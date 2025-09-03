@@ -161,7 +161,7 @@ jobs:
         env:
           DECOMPOSE_XMLS_IMAGE_TAG: ${{ needs.build-decompose-xml-image.outputs.image-version }}
         run: |
-          USER_ID=${UID} GROUP_ID=${GID} docker compose -f compose.decompose-xmls.yaml up
+          USER_ID=${UID} GROUP_ID=${GID} docker compose --env-file=.demo.env -f compose.decompose-xmls.yaml up
 
       - name: convert reports to FHIR resources
         working-directory: docker-compose/
@@ -218,6 +218,15 @@ jobs:
         env:
           STUDY_NAME: "study_protocol_a0_1_3_7"
           OUTPUT_FILENAME: "df-study_protocol_a0_1_3_7.csv"
+          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
+        run: |
+          sudo chown -R 1001:1001 ./opal-output/
+          docker compose -f compose.obds-fhir-to-opal.yaml up
+
+      - name: convert the FHIR resources to the CSV dataset (pca_therapies1)
+        working-directory: docker-compose/
+        env:
+          STUDY_NAME: "pca_therapies1"
           OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
         run: |
           sudo chown -R 1001:1001 ./opal-output/
