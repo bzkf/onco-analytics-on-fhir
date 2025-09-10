@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.1...v2.8.2) (2025-09-10)
+
+
+### Miscellaneous Chores
+
+* streamline deployment ([#284](https://github.com/bzkf/onco-analytics-on-fhir/issues/284)) ([ba89777](https://github.com/bzkf/onco-analytics-on-fhir/commit/ba89777562865e409d8cb3a769420965452566dd))
+* update compose.fhir-to-delta.yaml with image registry env vars ([#291](https://github.com/bzkf/onco-analytics-on-fhir/issues/291)) ([44705f9](https://github.com/bzkf/onco-analytics-on-fhir/commit/44705f94b8740cff785c6ef6297b793e2b218bc4))
+
 ## [2.8.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.0...v2.8.1) (2025-09-02)
 
 
