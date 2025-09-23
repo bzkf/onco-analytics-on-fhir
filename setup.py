@@ -13,4 +13,5 @@ setup(
     packages=find_packages(where="src"),
     install_requires=requirements,
     python_requires=">=3.10",
+    package_dir={"": "src"},
 )
