@@ -297,9 +297,9 @@ regex==2025.9.1 \
     --hash=sha256:fcdeb38de4f7f3d69d798f4f371189061446792a84e7c92b50054c87aae9c07c \
     --hash=sha256:ff62a3022914fc19adaa76b65e03cf62bc67ea16326cbbeb170d280710a7d719
     # via -r requirements.txt
-syrupy==4.9.1 \
-    --hash=sha256:b7d0fcadad80a7d2f6c4c71917918e8ebe2483e8c703dfc8d49cdbb01081f9a4 \
-    --hash=sha256:b94cc12ed0e5e75b448255430af642516842a2374a46936dd2650cfb6dd20eda
+syrupy==5.0.0 \
+    --hash=sha256:3282fe963fa5d4d3e47231b16d1d4d0f4523705e8199eeb99a22a1bc9f5942f2 \
+    --hash=sha256:c848e1a980ca52a28715cd2d2b4d434db424699c05653bd1158fb31cf56e9546
     # via -r requirements-test.in
 typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
