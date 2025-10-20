@@ -1,7 +1,10 @@
 from pathling import Expression as exp
 from pathling import datasource
 from pyspark.sql import functions as F
-from src.obds_fhir_to_opal.utils_onco_analytics import FHIR_SYSTEM_ICD10, FHIR_SYSTEM_IDENTIFIER_TYPE
+from src.obds_fhir_to_opal.utils_onco_analytics import (
+    FHIR_SYSTEM_ICD10,
+    FHIR_SYSTEM_IDENTIFIER_TYPE,
+)
 
 
 def tso500_classification_extract(data: datasource.DataSource):
@@ -24,9 +27,10 @@ def tso500_classification_extract(data: datasource.DataSource):
         columns=[
             exp("id", "patient_id"),
             exp(
-                f"""identifier
-                    .where(type.coding
-                        .where(system='{FHIR_SYSTEM_IDENTIFIER_TYPE}' and code='MR').exists()
+                f"""identifier.where(
+                        type.coding.where(
+                            system='{FHIR_SYSTEM_IDENTIFIER_TYPE}' and code='MR'
+                        ).exists()
                     ).value""",
                 "medical_record_number",
             ),
