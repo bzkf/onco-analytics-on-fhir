@@ -27,6 +27,8 @@ from utils_onco_analytics import (
     union_sort_pivot_join,
 )
 
+from tso500_classification import tso500_classification_extract
+
 
 class Settings(BaseSettings):
     output_folder: str = "./opal-output"
@@ -154,6 +156,8 @@ def main():
             )
             df = clean_df(df=df)
             plot(df, settings)
+        case "tso500_classification":
+            df = tso500_classification_extract(data)
         case _:
             raise ValueError(f"Unknown study type: {settings.study_name}")
 

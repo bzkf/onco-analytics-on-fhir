@@ -42,6 +42,7 @@ from pyspark.sql.window import Window
 FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_SYSTEM_JNU = "http://dktk.dkfz.de/fhir/onco/core/CodeSystem/JNUCS"
 FHIR_SYSTEM_LOINC = "http://loinc.org"
+FHIR_SYSTEM_IDENTIFIER_TYPE="http://terminology.hl7.org/CodeSystem/v2-0203"
 
 
 def map_icd10(icd10_code):
