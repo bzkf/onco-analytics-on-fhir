@@ -1,7 +1,7 @@
 from pathling import Expression as exp
 from pathling import datasource
 from pyspark.sql import functions as F
-from src.obds_fhir_to_opal.utils_onco_analytics import (
+from utils_onco_analytics import (
     FHIR_SYSTEM_ICD10,
     FHIR_SYSTEM_IDENTIFIER_TYPE,
 )
