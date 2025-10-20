@@ -48,6 +48,11 @@ def tso500_classification_extract(data: datasource.DataSource):
         how="left",
     )
 
-    df = conditions.dropDuplicates()
+    conditions = conditions.withColumn(
+        "age_at_onset",
+        F.datediff(conditions["onset_date_time"], conditions["birth_date"]) / 365.25,
+    ).drop("birth_date")
+
+    df = conditions
 
     return df
