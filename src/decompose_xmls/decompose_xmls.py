@@ -33,8 +33,7 @@ def save_xml_files(meldung_root, patient_id, meldung_id):
 
     conditional_folder_create(settings.output_folder_xml)
     tree.write(
-        f"{settings.output_folder_xml}/patient_{patient_id}"
-        f"_meldung_{meldung_id}.xml",
+        f"{settings.output_folder_xml}/patient_{patient_id}_meldung_{meldung_id}.xml",
         encoding="UTF-8",
         xml_declaration=True,
     )
