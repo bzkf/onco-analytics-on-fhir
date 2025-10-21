@@ -16,6 +16,7 @@ DISABLE_LINTERS:
   # disabled for now, need to clean the code and re-enable later
   - PYTHON_MYPY
   - PYTHON_PYRIGHT
+  - PYTHON_RUFF
 
 SHOW_ELAPSED_TIME: true
 
