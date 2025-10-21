@@ -99,7 +99,6 @@ def map_icd10(icd10_code):
 
 
 def group_icd_groups(icd10_code_mapped, start_range=0, end_range=2700):
-
     if icd10_code_mapped is None:
         return None
 
@@ -1052,7 +1051,6 @@ def generate_data_dictionary(
     description: Optional[dict] = None,
     categories: str = "",
 ) -> pd.DataFrame:
-
     if not len(colnames_list) == len(value_type_list):
         raise ValueError("All lists must have the same length as colnames_list")
 
@@ -1227,7 +1225,6 @@ def extract_pca_ops(
     settings: BaseSettings,
     spark: SparkSession,
 ):
-
     logger.info("extract op.")
     ops = (
         data.extract(
@@ -1285,7 +1282,6 @@ def extract_pca_sys(
     settings: BaseSettings,
     spark: SparkSession,
 ):
-
     # systemtherapies
     logger.info("extract systemtherapies.")
     systemtherapies = (
@@ -1341,7 +1337,6 @@ def extract_pca_st(
     settings: BaseSettings,
     spark: SparkSession,
 ):
-
     # radiotherapies
     logger.info("extract radiotherapies.")
     radiotherapies = (
@@ -2155,7 +2150,7 @@ def plot_summary_statistics(
         "Age at Diagnosis Distribution" + (" (Relative %)" if relative else "")
     )
     if relative:
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y*100:.0f}%"))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y * 100:.0f}%"))
     ax.legend()
     fig.tight_layout()
     save_plot(fig, settings, plot_names[1])
@@ -2235,7 +2230,7 @@ def plot_summary_statistics(
         + (" (Relative %)" if relative else "")
     )
     if relative:
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y*100:.0f}%"))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y * 100:.0f}%"))
     ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
     plt.xticks(rotation=45)
     ax.legend()
