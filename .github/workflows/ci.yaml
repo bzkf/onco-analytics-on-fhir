@@ -201,7 +201,7 @@ jobs:
           OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
         run: |
           sudo chown -R 1001:1001 ./opal-output/
-          docker compose -f compose.obds-fhir-to-opal.yaml up
+          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 
       - name: convert the FHIR resources to the CSV dataset (study_protocol_c)
         working-directory: docker-compose/
@@ -211,7 +211,7 @@ jobs:
           OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
         run: |
           sudo chown -R 1001:1001 ./opal-output/
-          docker compose -f compose.obds-fhir-to-opal.yaml up
+          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 
       - name: convert the FHIR resources to the CSV dataset (study_protocol_a0_1_3_7)
         working-directory: docker-compose/
@@ -221,7 +221,7 @@ jobs:
           OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
         run: |
           sudo chown -R 1001:1001 ./opal-output/
-          docker compose -f compose.obds-fhir-to-opal.yaml up
+          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 
       - name: convert the FHIR resources to the CSV dataset (pca_therapies1)
         working-directory: docker-compose/
@@ -230,7 +230,7 @@ jobs:
           OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
         run: |
           sudo chown -R 1001:1001 ./opal-output/
-          docker compose -f compose.obds-fhir-to-opal.yaml up
+          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 
       - name: upload the CSV
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
