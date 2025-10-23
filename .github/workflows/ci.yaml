@@ -231,7 +231,7 @@ jobs:
         run: |
           sudo chown -R 1001:1001 ./opal-output/
           docker compose -f compose.obds-fhir-to-opal.yaml up      
-          
+
       - name: convert the FHIR resources to the CSV dataset (tso500_classification)
         working-directory: docker-compose/
         env:
