@@ -169,7 +169,7 @@ def main():
         shutil.rmtree(dir_path)
 
     # Generate one data dictionary for all studies and save in parent folder
-    if settings.study_name != "pca_therapies1":
+    if settings.study_name not in ["pca_therapies1", "tso500_classification"]:
         generate_data_dictionary(
             file_path=os.path.join(settings.output_folder, "data_dictionary_df.xlsx"),
             table_name="df_" + settings.study_name,
