@@ -529,9 +529,6 @@ def extract_df_study_protocol_a0_1_3_7_d(
     patients = patients.checkpoint(eager=True)
     patients.count()  # enforce checkpoint
 
-    save_final_df(patients, settings, suffix="patients")
-    logger.info("saved patients.")
-
     conditions = data.extract(
         "Condition",
         columns=[
@@ -576,9 +573,6 @@ def extract_df_study_protocol_a0_1_3_7_d(
     conditions_patients_count = conditions_patients.count()
 
     logger.info("conditions_patients_count = {}", conditions_patients_count)
-
-    save_final_df(conditions_patients, settings, suffix="conditions_patients")
-    logger.info("saved conditions_patients.")
 
     # death observations
     observations_deathcause = data.extract(
@@ -713,9 +707,6 @@ def extract_df_study_protocol_a0_1_3_7_d(
     observations_gleason = observations_gleason.checkpoint(eager=True)
     observations_gleason.count()  # enforce checkpoint
     logger.info("remove the Patient/ from obs_subject_reference before the join")
-
-    save_final_df(observations_gleason, settings, suffix="observations_gleason")
-    logger.info("saved observations_gleason.")
 
     # filter conditions_patients C61
     conditions_patients_death_c61 = conditions_patients_death.filter(
