@@ -81,7 +81,7 @@ To change the default password used by MinIO, please modify the [.demo.env](.dem
 - Select the study name in the compose.obds-fhir-to-opal.yaml file. Find out more about the available studies [here](../src/obds_fhir_to_opal/README.md).
 ```sh
 sudo chown -R 1001:1001 ./opal-output/
-docker compose -f compose.obds-fhir-to-opal.yaml up
+docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 ```
 
 
