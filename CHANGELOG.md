@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.9.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.1...v2.9.0) (2025-10-27)
+
+
+### Features
+
+* added extract script for tso500 classification ([#308](https://github.com/bzkf/onco-analytics-on-fhir/issues/308)) ([b44f29c](https://github.com/bzkf/onco-analytics-on-fhir/commit/b44f29c68fef59f36863f32d1f861f3fd4ef4b17))
+
+
+### Bug Fixes
+
+* add aws env vars ([#310](https://github.com/bzkf/onco-analytics-on-fhir/issues/310)) ([72f4b44](https://github.com/bzkf/onco-analytics-on-fhir/commit/72f4b4458e2c4bc6cd37d3374eb2ee1b2bb2aea9))
+* extract day and month from dates for datashield kaplan meier test ([#312](https://github.com/bzkf/onco-analytics-on-fhir/issues/312)) ([6de9546](https://github.com/bzkf/onco-analytics-on-fhir/commit/6de95468be56373d531073016714366a57541213))
+* use credentials from env vars ([#309](https://github.com/bzkf/onco-analytics-on-fhir/issues/309)) ([6a3fed2](https://github.com/bzkf/onco-analytics-on-fhir/commit/6a3fed2b49cf7fc695ab7e206f078a4cce947fa0))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#275](https://github.com/bzkf/onco-analytics-on-fhir/issues/275)) ([185497f](https://github.com/bzkf/onco-analytics-on-fhir/commit/185497f95d04647489a83557c4ca3a6d8fbc8b91))
+* **deps:** update all non-major dependencies ([#296](https://github.com/bzkf/onco-analytics-on-fhir/issues/296)) ([681fa95](https://github.com/bzkf/onco-analytics-on-fhir/commit/681fa957bd7ad7a6871176645ab1dee22be456fa))
+* **deps:** update dependency pytest-cov to v7 ([#300](https://github.com/bzkf/onco-analytics-on-fhir/issues/300)) ([6dca241](https://github.com/bzkf/onco-analytics-on-fhir/commit/6dca241c991c6d250300427eeaccd61aa46088f6))
+* **deps:** update dependency syrupy to v5 ([#301](https://github.com/bzkf/onco-analytics-on-fhir/issues/301)) ([144b3da](https://github.com/bzkf/onco-analytics-on-fhir/commit/144b3da39036460ee57224b3e207c8c815b182a5))
+* **deps:** update docker.io/library/postgres docker tag to v18 ([#302](https://github.com/bzkf/onco-analytics-on-fhir/issues/302)) ([c750ca9](https://github.com/bzkf/onco-analytics-on-fhir/commit/c750ca9a7fba826f915a8d9e5100105fe5c58e00))
+* **deps:** update docker.io/library/postgres:17.6 docker digest to feff5b2 ([#292](https://github.com/bzkf/onco-analytics-on-fhir/issues/292)) ([8ca6509](https://github.com/bzkf/onco-analytics-on-fhir/commit/8ca65093a069581320bf8a770cf782133751b104))
+* **deps:** update docker.io/library/postgres:18.0 docker digest to 67a7c38 ([#295](https://github.com/bzkf/onco-analytics-on-fhir/issues/295)) ([94759d8](https://github.com/bzkf/onco-analytics-on-fhir/commit/94759d8f97e41d3e491fc39aa419a649c9a0356b))
+* **deps:** update docker.io/library/postgres:18.0 docker digest to 78f1aed ([#306](https://github.com/bzkf/onco-analytics-on-fhir/issues/306)) ([4bdf235](https://github.com/bzkf/onco-analytics-on-fhir/commit/4bdf23575329c635c2dac952a93fd808f43a6073))
+* **deps:** update docker.io/trinodb/trino docker tag to v477 ([#303](https://github.com/bzkf/onco-analytics-on-fhir/issues/303)) ([ec8009b](https://github.com/bzkf/onco-analytics-on-fhir/commit/ec8009bd7ac1e5b5cf2cd43e02d01c74b9faa633))
+* **deps:** update github-actions ([#293](https://github.com/bzkf/onco-analytics-on-fhir/issues/293)) ([04986a8](https://github.com/bzkf/onco-analytics-on-fhir/commit/04986a80a1622717592121e964adc4c3d4d7bf97))
+* **deps:** update github-actions ([#294](https://github.com/bzkf/onco-analytics-on-fhir/issues/294)) ([998f960](https://github.com/bzkf/onco-analytics-on-fhir/commit/998f960147d0448014f8ddf5609723921b9e5534))
+* **deps:** update helm release fhir-gateway to v9 ([#304](https://github.com/bzkf/onco-analytics-on-fhir/issues/304)) ([a8bb3ad](https://github.com/bzkf/onco-analytics-on-fhir/commit/a8bb3ad983a447e7223e8b92ad93114132925a88))
+* streamline deployment ([#284](https://github.com/bzkf/onco-analytics-on-fhir/issues/284)) ([ba89777](https://github.com/bzkf/onco-analytics-on-fhir/commit/ba89777562865e409d8cb3a769420965452566dd))
+* update compose.fhir-to-delta.yaml with image registry env vars ([#291](https://github.com/bzkf/onco-analytics-on-fhir/issues/291)) ([44705f9](https://github.com/bzkf/onco-analytics-on-fhir/commit/44705f94b8740cff785c6ef6297b793e2b218bc4))
+
 ## [2.8.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.0...v2.8.1) (2025-09-02)
 
 
