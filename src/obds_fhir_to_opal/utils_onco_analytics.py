@@ -887,7 +887,7 @@ def datashield_preps_wrapper(
     gleason: bool = False,
 ):
     if condition:
-        df = deconstruct_date_year_only(df, "date_diagnosis")
+        df = deconstruct_date(df, "date_diagnosis")
         df = df.checkpoint(eager=True)
         df.count()
 
@@ -916,10 +916,10 @@ def datashield_preps_wrapper(
         logger.info("icd10_entity")
 
     if patient:
-        df = deconstruct_date_year_only(df, "deceased_datetime")
+        df = deconstruct_date(df, "deceased_datetime")
         df = df.checkpoint(eager=True)
         df.count()
-        logger.info("deconstruct_date_year_only - deceased_datetime")
+        logger.info("deconstruct_date - deceased_datetime")
 
         df = map_gender(df, "gender")
         df = df.checkpoint(eager=True)
@@ -958,7 +958,7 @@ def datashield_preps_wrapper(
         logger.info("dead_bool_mapped_patient")
 
     if death:
-        df = deconstruct_date_year_only(df, "date_death")
+        df = deconstruct_date(df, "date_death")
         columns_to_check = ["death_cause_icd10", "death_cause_tumor", "date_death"]
         df = df.withColumn(
             "dead_bool_mapped_observation",
