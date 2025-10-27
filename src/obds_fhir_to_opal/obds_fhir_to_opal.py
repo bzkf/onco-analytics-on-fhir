@@ -27,6 +27,8 @@ from utils_onco_analytics import (
     union_sort_pivot_join,
 )
 
+from tso500_classification import tso500_classification_extract
+
 
 class Settings(BaseSettings):
     output_folder: str = "./opal-output"
@@ -154,6 +156,8 @@ def main():
             )
             df = clean_df(df=df)
             plot(df, settings)
+        case "tso500_classification":
+            df = tso500_classification_extract(data)
         case _:
             raise ValueError(f"Unknown study type: {settings.study_name}")
 
@@ -165,7 +169,7 @@ def main():
         shutil.rmtree(dir_path)
 
     # Generate one data dictionary for all studies and save in parent folder
-    if settings.study_name != "pca_therapies1":
+    if settings.study_name not in ["pca_therapies1", "tso500_classification"]:
         generate_data_dictionary(
             file_path=os.path.join(settings.output_folder, "data_dictionary_df.xlsx"),
             table_name="df_" + settings.study_name,
