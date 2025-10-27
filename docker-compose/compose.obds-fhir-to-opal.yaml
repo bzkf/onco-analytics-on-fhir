@@ -21,5 +21,7 @@ services:
       KAFKA_OBSERVATION_TOPIC: "${KAFKA_OBSERVATION_TOPIC:-fhir.obds.Observation}"
       KAFKA_PROCEDURE_TOPIC: "${KAFKA_PROCEDURE_TOPIC:-fhir.obds.Procedure}"
       KAFKA_MEDICATIONSTATEMENT_TOPIC: "${KAFKA_MEDICATIONSTATEMENT_TOPIC:-fhir.obds.MedicationStatement}"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
     volumes:
       - ./opal-output:/home/spark/opal-output:rw
