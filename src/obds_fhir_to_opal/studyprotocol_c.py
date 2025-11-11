@@ -65,57 +65,63 @@ df_all = df_all.withColumn(
 df_all = df_all.drop("birthdate", "condition_id", "date_diagnosis", "cond_subject_reference", "patient_resource_id", "patid_pseudonym", "subject_reference", "observation_id")
 df_all.show()
 
-# read in allgemeine gemeindeschlüssel ags.csv
-ags = spark.read.csv("ags.csv", header=True, inferSchema=True)
-ags = ags.withColumnRenamed("einwohner", "einwohner_ags")
+# TO DO HIER: failsafe für alle standorte
+# überprüfe ob postal_code vollständig ist oder nur zweistellig, mach den rest nur wenn sie vollständig ist
+if df_all.filter(col("postal_code").rlike("^[0-9]{5}$")).count() > 0:
+    print("Mindestens eine vollständige PLZ vorhanden. Verarbeitung starten")
 
-# kreis code (first 5 digits of AGS)
-ags = ags.withColumn("kreis", F.substring(F.col("ags"), 1, 5))
+    # read in allgemeine gemeindeschlüssel ags.csv
+    ags = spark.read.csv("ags.csv", header=True, inferSchema=True)
+    ags = ags.withColumnRenamed("einwohner", "einwohner_ags")
 
-# aggregiere pro kreis: zähle verschiedene AGS und summiere Einwohner
-ags_kreis_info = (
-    ags.groupBy("kreis")
-       .agg(
-           F.countDistinct("ags").alias("ags_count"),
-           F.sum("einwohner_ags").alias("sum_einwohner_kreis")
-       )
-)
+    # kreis code (first 5 digits of AGS)
+    ags = ags.withColumn("kreis", F.substring(F.col("ags"), 1, 5))
 
-ags = ags.join(ags_kreis_info, on="kreis", how="left")
+    # aggregiere pro kreis: zähle verschiedene AGS und summiere Einwohner
+    ags_kreis_info = (
+        ags.groupBy("kreis")
+        .agg(
+            F.countDistinct("ags").alias("ags_count"),
+            F.sum("einwohner_ags").alias("sum_einwohner_kreis")
+        )
+    )
 
-# einwohner_kreis_kreisfreie_stadt_stadtstaat
-# wenn die letzten 3 Ziffern der AGS "000" sind (kreifreie stadt oder stadtstaat), dann einwohner_ags
-# wenn es mehrere AGS pro Kreis gibt, dann summe der einwohner im Kreis
-ags = ags.withColumn(
-    "einwohner_kreis_kreisfreie_stadt_stadtstaat",
-    F.when(F.col("ags").substr(-3, 3) == "000", F.col("einwohner_ags"))
-     .when(F.col("ags_count") > 1, F.col("sum_einwohner_kreis"))
-     .otherwise(F.col("einwohner_ags"))
-)
+    ags = ags.join(ags_kreis_info, on="kreis", how="left")
 
-ags = ags.drop("ags_count", "sum_einwohner_kreis")
+    # einwohner_kreis_kreisfreie_stadt_stadtstaat
+    # wenn die letzten 3 Ziffern der AGS "000" sind (kreifreie stadt oder stadtstaat), dann einwohner_ags
+    # wenn es mehrere AGS pro Kreis gibt, dann summe der einwohner im Kreis
+    ags = ags.withColumn(
+        "einwohner_kreis_kreisfreie_stadt_stadtstaat",
+        F.when(F.col("ags").substr(-3, 3) == "000", F.col("einwohner_ags"))
+        .when(F.col("ags_count") > 1, F.col("sum_einwohner_kreis"))
+        .otherwise(F.col("einwohner_ags"))
+    )
 
-ags.show(200, truncate=False)
+    ags = ags.drop("ags_count", "sum_einwohner_kreis")
 
-# JOIN df_all u ags
-ags_selected_cols = [
-    "kreis",
-    "ags",
-    "plz",
-    "einwohner_ags",
-    "prim_plz",
-    "einwohner_kreis_kreisfreie_stadt_stadtstaat"
-]
+    ags.show(200, truncate=False)
 
-# Join durchführen
-df_all = df_all.join(
-    ags.select(*ags_selected_cols),
-    df_all["postal_code"] == ags["plz"],
-    how="left"
-)
+    # JOIN df_all u ags
+    ags_selected_cols = [
+        "kreis",
+        "ags",
+        "plz",
+        "einwohner_ags",
+        "prim_plz",
+        "einwohner_kreis_kreisfreie_stadt_stadtstaat"
+    ]
 
-df_all.show(100, truncate=False)
+    df_all = df_all.join(
+        ags.select(*ags_selected_cols),
+        df_all["postal_code"] == ags["plz"],
+        how="left"
+    )
 
+    df_all.show(100, truncate=False)
+
+else:
+    print("Keine vollständige PLZ gefunden - abbrechen")
 
 
 # CAST ALL DATES
