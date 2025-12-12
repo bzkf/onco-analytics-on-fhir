@@ -137,7 +137,7 @@ jobs:
           echo "hashes=$(base64 -w0 < checksums.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: upload assets to release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           files: |
             dist/*.tgz
