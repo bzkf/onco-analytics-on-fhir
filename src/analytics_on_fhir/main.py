@@ -4,6 +4,7 @@ from settings import settings
 from loguru import logger
 from pyspark.sql import SparkSession
 
+
 def main():
     spark_config = (
         SparkSession.builder.master(settings.spark.master)  # type: ignore
