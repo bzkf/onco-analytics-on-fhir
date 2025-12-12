@@ -55,6 +55,23 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  build-analytics-on-fhir-image:
+    name: build analytics-on-fhir container image
+    uses: miracum/.github/.github/workflows/standard-build.yaml@0b72274fb79ff2e45b917bdb7426f575e2e2e0ea # v1.17.0
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+      pull-requests: write
+      actions: read
+      security-events: write
+    with:
+      image: ghcr.io/${{ github.repository }}/analytics-on-fhir
+      build-context: src/analytics_on_fhir
+      enable-build-test-layer: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
   lint:
     uses: miracum/.github/.github/workflows/standard-lint.yaml@4a5ed0cb8f87fe5197b33c2619b3431786e9b6a5 # v1.19.2
     permissions:

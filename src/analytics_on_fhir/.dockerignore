@@ -1,0 +1,4 @@
+*
+!*.py
+!uv.lock
+!pyproject.toml
