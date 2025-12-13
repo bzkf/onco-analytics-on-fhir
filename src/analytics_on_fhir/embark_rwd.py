@@ -72,23 +72,23 @@ def extract(data: DataSource) -> DataFrame:
                         "name": "tnm_value",
                     },
                 ],
-            "select": [
-                {
-                    "forEach": "code.coding",
-                    "column": [
-                        {
-                            "description": "Observation code",
-                            "path": "code",
-                            "name": "code",
-                        },
-                        {
-                            "description": "Observation display",
-                            "path": "display",
-                            "name": "display",
-                        },
-                    ],
-                },
-            ]
+                "select": [
+                    {
+                        "forEach": "code.coding",
+                        "column": [
+                            {
+                                "description": "Observation code",
+                                "path": "code",
+                                "name": "code",
+                            },
+                            {
+                                "description": "Observation display",
+                                "path": "display",
+                                "name": "display",
+                            },
+                        ],
+                    },
+                ],
             }
         ],
         where=[
