@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.13"
 
 [[package]]
-name = "analytic"
+name = "analytics-on-fhir"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
