@@ -14,7 +14,7 @@
 - **see sample output from extracting test patient data in folder**
 `src/obds_fhir_to_opal/output/PoC` or `src/obds_fhir_to_opal/output/study_protocol_c`
 
-
+## poc Proof of Concept (JMIR Paper Ziegler et al, 2025)
 #### File Structure of the data extraction results
 - `poc`:
   - `ID`: Unique identifier for the record.
@@ -28,6 +28,9 @@
   - `icd10_grouped_entities`: Grouped ICD-10 entities.
   - `gender`: Gender of the patient.
   - `gender_mapped`: Mapped gender information.
+
+## study protocol A (0, 1, 3, 7) and D
+#### File Structure of the data extraction results
 - `study_protocol_a0_1_3_7_d`:
   - `condition_id`: Identifier for the medical condition.
   - `date_diagnosis`: Date when the diagnosis was made.
@@ -67,6 +70,10 @@
   - `dead_bool_mapped_patient`: Deceased flag mapped (patient level).
   - `dead_bool_mapped_observation`: Deceased flag mapped (death observation level).
   - `double_patid`: `1` if the same `patid_pseudonym` occurs more than once; `0` otherwise.
+
+## study protocol C - geostatistical analyses
+#### thanks pcvolkmer for the ags.csv file taken from https://github.com/pcvolkmer/ags-example/blob/master/src/resources/ags.csv
+#### File Structure of the data extraction results
 - `study_protocol_c`:
   - `ID`: Unique identifier for the record.
   - `condition_id`: Identifier for the medical condition.
