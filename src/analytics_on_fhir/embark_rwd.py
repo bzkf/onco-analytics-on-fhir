@@ -132,12 +132,15 @@ def extract(data: DataSource) -> DataFrame:
                     {
                         "description": "Medication Code",
                         "path": "medication.ofType(CodeableConcept).coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
-                        "name": "medication_code",
+                        "name": "medication_atc_code",
                     },
                 ],
             }
         ],
     )
+
+    # TODO: flowchart: num c61 patients, num M0 oder N0 (jeweils), num enzalutamid, 
+    # num vor april 2024, num nach april 2024 
 
     return medication_statements
 
