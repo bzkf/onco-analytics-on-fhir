@@ -290,8 +290,10 @@ def extract(data: DataSource) -> DataFrame:
         "A",
         "All C61 patients\n"
         + f"n = {counts['num_c61_patients']}\n"
-        + f"Diagnosis years: {counts['min_asserted_date']} - {counts['max_asserted_date']}\n"
-        + f"Recorded years: {counts['min_recorded_date']} - {counts['max_recorded_date']}",
+        + f"Diagnosis years: {counts['min_asserted_date']} - "
+        + f"{counts['max_asserted_date']}\n"
+        + f"Recorded years: {counts['min_recorded_date']} - "
+        + f"{counts['max_recorded_date']}",
     )
     dot.node("B", "With TNM c/p M0 or N0\n" + f"n = {counts['num_tnm_m0_or_n0']}")
     dot.node(
