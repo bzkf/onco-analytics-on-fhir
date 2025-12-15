@@ -1,0 +1,307 @@
+from pyspark.sql.dataframe import DataFrame
+from pathling import DataSource, PathlingContext
+from pyspark.sql.functions import (
+    col,
+    lit,
+    to_date,
+    to_timestamp,
+    round,
+    min,
+    nth_value,
+    count_distinct,
+    when,
+)
+from pyspark.sql.window import Window
+from loguru import logger
+
+from analytics_on_fhir.utils import find_closest_to_diagnosis
+from graphviz import Digraph
+
+import os
+import pathlib
+
+HERE = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
+
+
+def extract(data: DataSource) -> DataFrame:
+    conditions = data.view(
+        "Condition",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Condition ID",
+                        "path": "getResourceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "patient_id",
+                    },
+                    {
+                        "description": "Asserted Date",
+                        "path": "extension('http://hl7.org/fhir/StructureDefinition/condition-assertedDate').value.ofType(dateTime)",
+                        "name": "asserted_date",
+                    },
+                ],
+            }
+        ],
+        where=[
+            {
+                "description": "Only PCa",
+                "path": "code.coding.exists(system = 'http://fhir.de/CodeSystem/bfarm/icd-10-gm' and code='C61')",
+            }
+        ],
+    )
+
+    tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "patient_id",
+                    },
+                    {
+                        "description": "Condition ID",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "Observation date time",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "effective_date_time",
+                    },
+                    {
+                        "description": "Code",
+                        "path": "code.coding.where(system = 'http://snomed.info/sct').code",
+                        "name": "code_coding_sct",
+                    },
+                    {
+                        "description": "Observation value",
+                        "path": "value.ofType(CodeableConcept).coding.where(system = 'https://www.uicc.org/resources/tnm').code",
+                        "name": "tnm_value",
+                    },
+                ],
+                "select": [
+                    {
+                        "forEach": "code.coding",
+                        "column": [
+                            {
+                                "description": "Observation code",
+                                "path": "code",
+                                "name": "code",
+                            },
+                            {
+                                "description": "Observation display",
+                                "path": "display",
+                                "name": "display",
+                            },
+                        ],
+                    },
+                ],
+            }
+        ],
+        where=[
+            {
+                "description": "p/cM and p/cN TNM categories",
+                "path": "code.coding.exists(system = 'http://snomed.info/sct' and (code='399387003' or code='371497001' or code='371494008' or code='399534004'))",
+            }
+        ],
+    )
+
+    medication_statements = data.view(
+        "MedicationStatement",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "MedicationStatement ID",
+                        "path": "getResourceKey()",
+                        "name": "id",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "patient_id",
+                    },
+                    {
+                        "description": "Condition ID",
+                        "path": "reasonReference.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "Effective Start Date",
+                        "path": "effective.ofType(Period).start",
+                        "name": "medication_start_date",
+                    },
+                    {
+                        "description": "Medication Text",
+                        "path": "medication.ofType(CodeableConcept).text",
+                        "name": "medication_text",
+                    },
+                    {
+                        "description": "Medication Code",
+                        "path": "medication.ofType(CodeableConcept).coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+                        "name": "medication_atc_code",
+                    },
+                ],
+            }
+        ],
+    )
+
+    # TODO: flowchart: num c61 patients, num M0 oder N0 (jeweils), num enzalutamid,
+    # num vor april 2024, num nach april 2024
+
+    counts = {}
+
+    row = conditions.select(
+        count_distinct(conditions.patient_id).alias("n_patients")
+    ).first()
+
+    if row is not None:
+        counts["num_c61_patients"] = row["n_patients"]
+
+    logger.info(
+        "Num C61 patients: {num_c61_patients}",
+        num_c61_patients=counts["num_c61_patients"],
+    )
+
+    tnm_with_condition = tnm.join(
+        conditions.withColumnRenamed("patient_id", "condition_patient_id"),
+        on="condition_id",
+        how="inner",
+    )
+
+    tnm_closest_to_diagnosis = find_closest_to_diagnosis(
+        tnm_with_condition, "asserted_date", "effective_date_time"
+    )
+
+    logger.info("Number of patients by TNM (Closest to diagnosis)")
+
+    tnm_closest_to_diagnosis.groupby("code", "display", "tnm_value").agg(
+        count_distinct("patient_id").alias("num_patients")
+    ).show()
+
+    tnm_closest_to_diagnosis.show()
+
+    n0_or_m0_staging = tnm_closest_to_diagnosis.where(col("tnm_value").isin("N0", "M0"))
+
+    row = n0_or_m0_staging.select(
+        count_distinct(n0_or_m0_staging.patient_id).alias("n_patients")
+    ).first()
+    if row is not None:
+        counts["num_tnm_m0_or_n0"] = row["n_patients"]
+
+    logger.info(
+        "Num TNM M0 or N0 patients: {num_tnm_m0_or_n0}",
+        num_tnm_m0_or_n0=counts["num_tnm_m0_or_n0"],
+    )
+
+    cohort = n0_or_m0_staging.join(
+        medication_statements.withColumnRenamed(
+            "patient_id", "medication_statement_patient_id"
+        ),
+        on="condition_id",
+    )
+    cohort.show()
+
+    logger.info(
+        "Number of C61 patients with TNM of M0/N0 by system therapy medications"
+    )
+
+    cohort.groupby("medication_text", "medication_atc_code").agg(
+        count_distinct("patient_id").alias("num_patients")
+    ).show()
+
+    cohort = cohort.where(col("medication_atc_code") == "L02BB04")
+
+    row = cohort.select(count_distinct(cohort.patient_id).alias("n_patients")).first()
+    if row is not None:
+        counts["num_treated_with_enzalutamide"] = row["n_patients"]
+
+    logger.info(
+        "Number of C61 patients with TNM of M0/N0 treated with Enzalutamide: "
+        + "{num_treated_with_enzalutamide}",
+        num_treated_with_enzalutamide=counts["num_treated_with_enzalutamide"],
+    )
+
+    enzalutamide_reference_date = lit("2024-04-01")
+    logger.info(
+        "Number of C61 patients with TNM of M0/N0 treated with "
+        + "Enzalutamide after or before {enzalutamide_reference_date}",
+        enzalutamide_reference_date=enzalutamide_reference_date,
+    )
+
+    result = cohort.groupBy("medication_atc_code").agg(
+        count_distinct(
+            when(
+                col("medication_start_date") < enzalutamide_reference_date,
+                col("patient_id"),
+            )
+        ).alias("num_patients_before"),
+        count_distinct(
+            when(
+                col("medication_start_date") >= enzalutamide_reference_date,
+                col("patient_id"),
+            )
+        ).alias("num_patients_after"),
+    )
+
+    result.show()
+
+    row = result.first()
+    if row is not None:
+        counts["num_treated_with_enzalutamide_before_april_2024"] = row[
+            "num_patients_before"
+        ]
+        counts["num_treated_with_enzalutamide_after_april_2024"] = row[
+            "num_patients_after"
+        ]
+
+    logger.info("Counts: {counts}", counts=counts)
+
+    dot = Digraph(name="embark-rwd-flowchart", format="png")
+    dot.attr(rankdir="TB", dpi="100")
+
+    dot.node("A", f"All C61 patients\nn = {counts['num_c61_patients']}")
+    dot.node("B", f"With TNM c/p M0 or N0\nn = {counts['num_tnm_m0_or_n0']}")
+    dot.node(
+        "C", f"Treated with enzalutamide\nn = {counts['num_treated_with_enzalutamide']}"
+    )
+    dot.node(
+        "D",
+        "Before 2024-04-01\nn = "
+        + f"{counts['num_treated_with_enzalutamide_before_april_2024']}",
+    )
+    dot.node(
+        "E",
+        "After 2024-04-01\nn = "
+        + f"{counts['num_treated_with_enzalutamide_after_april_2024']}",
+    )
+
+    dot.edge("A", "B")
+    dot.edge("B", "C")
+    dot.edge("C", "D")
+    dot.edge("C", "E")
+
+    logger.info(dot.source)
+
+    dot.render(
+        directory=(HERE / "results").as_posix(),
+        format="png",
+    )
+
+    return result
+
+
+def run(data: DataSource):
+    extract(data)
