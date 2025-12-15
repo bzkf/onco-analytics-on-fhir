@@ -12,7 +12,7 @@ class SparkSettings:
     s3_endpoint: str = "localhost:9000"
     s3_connection_ssl_enabled: str = "false"
     warehouse_dir: str = os.path.join(HERE, "warehouse")
-    checkpoint_dir: str = "s3a://fhir/checkpoint"
+    checkpoint_dir: str = ".spark/checkpoints/"
     driver_memory: str = "4g"
 
 
@@ -21,7 +21,8 @@ class Settings:
     spark: SparkSettings
     aws_access_key_id: str = "admin"
     aws_secret_access_key: str = ts.secret(default="miniopass")
-    delta_database_dir: str = "s3a://fhir/warehouse"
+    delta_database_path: str = ""
+    fhir_bundles_path: str = os.path.join(HERE, "tests/fixtures/fhir/")
     study_name: str = "embark_rwd"
 
 

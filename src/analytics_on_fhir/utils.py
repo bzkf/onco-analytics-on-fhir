@@ -1,10 +1,10 @@
+from pyspark.sql import DataFrame
 from pyspark.sql.functions import (
     abs,
     col,
     row_number,
 )
 from pyspark.sql.window import Window
-from pyspark.sql import DataFrame
 
 
 def find_closest_to_diagnosis(

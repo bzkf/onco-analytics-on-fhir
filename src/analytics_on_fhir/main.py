@@ -1,8 +1,12 @@
 import sys
-from pathling.context import PathlingContext
-from settings import settings
+
 from loguru import logger
+from pathling.context import PathlingContext
+from pathling.datasource import DataSource
 from pyspark.sql import SparkSession
+
+from embark_rwd import run
+from settings import settings
 
 
 def main():
@@ -66,9 +70,23 @@ def main():
         terminology_server_url="http://localhost/not-a-real-server",
     )
 
-    # TODO: implement
-    # if settings.study_name == "embark_rwd":
-    #     analytics_on_fhir.embark_rwd.run(pc.)
+    data: DataSource
+
+    if settings.delta_database_path:
+        data = pc.read.delta(settings.delta_database_path)
+    else:
+        data = pc.read.bundles(
+            settings.fhir_bundles_path,
+            resource_types=[
+                "Patient",
+                "Condition",
+                "Observation",
+                "MedicationStatement",
+            ],
+        )
+
+    if settings.study_name == "embark_rwd":
+        run(data)
 
 
 if __name__ == "__main__":

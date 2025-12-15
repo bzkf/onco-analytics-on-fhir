@@ -1,24 +1,18 @@
-from pyspark.sql.dataframe import DataFrame
-from pathling import DataSource, PathlingContext
-from pyspark.sql.functions import (
-    col,
-    lit,
-    to_date,
-    to_timestamp,
-    round,
-    min,
-    nth_value,
-    count_distinct,
-    when,
-)
-from pyspark.sql.window import Window
-from loguru import logger
-
-from analytics_on_fhir.utils import find_closest_to_diagnosis
-from graphviz import Digraph
-
 import os
 import pathlib
+
+from graphviz import Digraph
+from loguru import logger
+from pathling import DataSource
+from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.functions import (
+    col,
+    count_distinct,
+    lit,
+    when,
+)
+
+from utils import find_closest_to_diagnosis
 
 HERE = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
@@ -50,7 +44,8 @@ def extract(data: DataSource) -> DataFrame:
         where=[
             {
                 "description": "Only PCa",
-                "path": "code.coding.exists(system = 'http://fhir.de/CodeSystem/bfarm/icd-10-gm' and code='C61')",
+                "path": "code.coding.exists(system = "
+                + "'http://fhir.de/CodeSystem/bfarm/icd-10-gm' and code='C61')",
             }
         ],
     )
@@ -87,7 +82,8 @@ def extract(data: DataSource) -> DataFrame:
                     },
                     {
                         "description": "Observation value",
-                        "path": "value.ofType(CodeableConcept).coding.where(system = 'https://www.uicc.org/resources/tnm').code",
+                        "path": "value.ofType(CodeableConcept).coding.where(system = "
+                        + "'https://www.uicc.org/resources/tnm').code",
                         "name": "tnm_value",
                     },
                 ],
@@ -113,7 +109,9 @@ def extract(data: DataSource) -> DataFrame:
         where=[
             {
                 "description": "p/cM and p/cN TNM categories",
-                "path": "code.coding.exists(system = 'http://snomed.info/sct' and (code='399387003' or code='371497001' or code='371494008' or code='399534004'))",
+                "path": "code.coding.exists(system = 'http://snomed.info/sct' and "
+                + "(code='399387003' or code='371497001' "
+                + "or code='371494008' or code='399534004'))",
             }
         ],
     )
