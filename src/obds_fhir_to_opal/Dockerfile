@@ -27,6 +27,10 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 USER 1001:1001
 
-RUN SPARK_INSTALL_PACKAGES_AND_EXIT=1 python3 /app/obds_fhir_to_opal.py
+RUN <<EOF
+set -e
+SPARK_INSTALL_PACKAGES_AND_EXIT=1 python3 /app/obds_fhir_to_opal.py
+rm -rf /tmp/spark*
+EOF
 
 ENTRYPOINT [ "python3", "/app/obds_fhir_to_opal.py" ]
