@@ -9,7 +9,10 @@ from pyspark.sql.functions import (
     col,
     count_distinct,
     lit,
+    max,
+    min,
     when,
+    year,
 )
 
 from utils import find_closest_to_diagnosis
@@ -37,6 +40,11 @@ def extract(data: DataSource) -> DataFrame:
                         "description": "Asserted Date",
                         "path": "extension('http://hl7.org/fhir/StructureDefinition/condition-assertedDate').value.ofType(dateTime)",
                         "name": "asserted_date",
+                    },
+                    {
+                        "description": "Recorded Date",
+                        "path": "recordedDate",
+                        "name": "recorded_date",
                     },
                 ],
             }
@@ -156,17 +164,25 @@ def extract(data: DataSource) -> DataFrame:
         ],
     )
 
-    # TODO: flowchart: num c61 patients, num M0 oder N0 (jeweils), num enzalutamid,
-    # num vor april 2024, num nach april 2024
-
     counts = {}
 
     row = conditions.select(
         count_distinct(conditions.patient_id).alias("n_patients")
     ).first()
-
     if row is not None:
         counts["num_c61_patients"] = row["n_patients"]
+
+    row = conditions.select(
+        min(year("asserted_date")).alias("min_asserted_date"),
+        max(year("asserted_date")).alias("max_asserted_date"),
+        min(year("recorded_date")).alias("min_recorded_date"),
+        max(year("recorded_date")).alias("max_recorded_date"),
+    ).first()
+    if row is not None:
+        counts["min_asserted_date"] = row["min_asserted_date"]
+        counts["max_asserted_date"] = row["max_asserted_date"]
+        counts["min_recorded_date"] = row["min_recorded_date"]
+        counts["max_recorded_date"] = row["max_recorded_date"]
 
     logger.info(
         "Num C61 patients: {num_c61_patients}",
@@ -270,8 +286,14 @@ def extract(data: DataSource) -> DataFrame:
     dot = Digraph(name="embark-rwd-flowchart", format="png")
     dot.attr(rankdir="TB", dpi="100")
 
-    dot.node("A", f"All C61 patients\nn = {counts['num_c61_patients']}")
-    dot.node("B", f"With TNM c/p M0 or N0\nn = {counts['num_tnm_m0_or_n0']}")
+    dot.node(
+        "A",
+        "All C61 patients\n"
+        + f"n = {counts['num_c61_patients']}\n"
+        + f"Diagnosis years: {counts['min_asserted_date']} - {counts['max_asserted_date']}\n"
+        + f"Recorded years: {counts['min_recorded_date']} - {counts['max_recorded_date']}",
+    )
+    dot.node("B", "With TNM c/p M0 or N0\n" + f"n = {counts['num_tnm_m0_or_n0']}")
     dot.node(
         "C", f"Treated with enzalutamide\nn = {counts['num_treated_with_enzalutamide']}"
     )
