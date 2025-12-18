@@ -169,6 +169,7 @@ def extract(data: DataSource) -> DataFrame:
     row = conditions.select(
         count_distinct(conditions.patient_id).alias("n_patients")
     ).first()
+    # TODO: for every row is not none, set count to 0 if it is None
     if row is not None:
         counts["num_c61_patients"] = row["n_patients"]
 
