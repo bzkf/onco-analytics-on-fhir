@@ -17,6 +17,10 @@ from pyspark.sql.functions import (
 
 from utils import find_closest_to_diagnosis
 
+FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
+    "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
+)
+
 HERE = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
 
@@ -38,7 +42,8 @@ def extract(data: DataSource) -> DataFrame:
                     },
                     {
                         "description": "Asserted Date",
-                        "path": "extension('http://hl7.org/fhir/StructureDefinition/condition-assertedDate').value.ofType(dateTime)",
+                        "path": f"extension('{FHIR_SYSTEMS_CONDITION_ASSERTED_DATE}')"
+                        + ".value.ofType(dateTime)",
                         "name": "asserted_date",
                     },
                     {
@@ -85,7 +90,8 @@ def extract(data: DataSource) -> DataFrame:
                     },
                     {
                         "description": "Code",
-                        "path": "code.coding.where(system = 'http://snomed.info/sct').code",
+                        "path": "code.coding"
+                        + ".where(system = 'http://snomed.info/sct').code",
                         "name": "code_coding_sct",
                     },
                     {
@@ -156,7 +162,8 @@ def extract(data: DataSource) -> DataFrame:
                     },
                     {
                         "description": "Medication Code",
-                        "path": "medication.ofType(CodeableConcept).coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+                        "path": "medication.ofType(CodeableConcept).coding"
+                        + ".where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
                         "name": "medication_atc_code",
                     },
                 ],
