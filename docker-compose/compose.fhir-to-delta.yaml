@@ -72,7 +72,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPARK_S3_ENDPOINT: minio:9000
-      SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-delta
+      SPARK_CHECKPOINT_DIR: s3a://spark-streaming-checkpoints/fhir-to-lakehouse
       DELTA_DATABASE_DIR: "s3a://fhir/default"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
