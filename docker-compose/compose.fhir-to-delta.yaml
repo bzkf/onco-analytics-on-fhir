@@ -61,7 +61,7 @@ services:
         /usr/bin/mc mb --ignore-existing minio/results;
 
   kafka-fhir-to-delta:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/fhir-to-lakehouse:v1.12.0@sha256:f3c8c37fcc560856458f6b637e2132520fba682155c0b3232f7d9659737742c4
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/fhir-to-lakehouse:v1.13.7@sha256:5648643accfca2e3dc5a289b6120f9d74cfeff6016837f6b4af98d36a926eb76
     restart: unless-stopped
     cap_drop:
       - ALL
