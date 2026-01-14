@@ -128,11 +128,12 @@ jobs:
         with:
           enable-cache: true
           activate-environment: true
+          working-directory: src/analytics_on_fhir
 
       - uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
         with:
           distribution: "temurin"
-          java-version-file: ".java-version"
+          java-version-file: "src/analytics_on_fhir/.java-version"
 
       - name: Install test dependencies
         run: |
