@@ -88,7 +88,7 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  tests:
+  test-decompose-xml:
     name: run decompose-xmls tests
     strategy:
       matrix:
@@ -111,6 +111,43 @@ jobs:
         working-directory: src/decompose_xmls
         run: |
           pytest
+
+  test-analytics-on-fhir:
+    name: run analytics-on-fhir tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/analytics_on_fhir
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
+        with:
+          enable-cache: true
+          activate-environment: true
+
+      - uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: "temurin"
+          java-version-file: ".java-version"
+
+      - name: Install test dependencies
+        run: |
+          uv sync --locked --all-extras --dev
+
+      - name: Run tests
+        run: |
+          uv run pytest -vv --log-cli-level=20 --cov=analytics_on_fhir --cov-report=html --capture=no
+
+      - name: Upload test coverage
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: analytics-on-fhir-test-coverage
+          path: htmlcov/
 
   test-compose:
     name: run compose e2e tests

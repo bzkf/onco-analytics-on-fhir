@@ -9,7 +9,7 @@ dependencies = [
     "delta-spark==4.0.0",
     "typed-settings[attrs]==25.3.0",
     "loguru==0.7.3",
-    "graphviz==0.21"
+    "graphviz==0.21",
 ]
 
 [dependency-groups]
@@ -17,6 +17,7 @@ dev = [
     "pytest==9.0.2",
     "pytest-cov==7.0.0",
     "ruff==0.14.8",
+    "syrupy==5.0.0",
 ]
 
 [tool.ruff.lint]

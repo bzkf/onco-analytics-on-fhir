@@ -7,9 +7,17 @@ Collection of analytics scripts.
 ### Prerequisites
 
 * uv: <https://docs.astral.sh/uv/getting-started/installation/>
+* Java JDK 21
+* graphviz
 
 ### Install
 
 ```sh
 uv sync
+```
+
+### Test
+
+```sh
+uv run pytest -v
 ```

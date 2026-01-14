@@ -12,19 +12,16 @@ from pyspark.sql.functions import (
     max,
     min,
     when,
-    year,
 )
 
-from utils import find_closest_to_diagnosis
+from analytics_on_fhir.utils import find_closest_to_diagnosis
 
 FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
     "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
 )
 
-HERE = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
-
-def extract(data: DataSource) -> DataFrame:
+def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
     conditions = data.view(
         "Condition",
         select=[
@@ -181,10 +178,10 @@ def extract(data: DataSource) -> DataFrame:
         counts["num_c61_patients"] = row["n_patients"]
 
     row = conditions.select(
-        min(year("asserted_date")).alias("min_asserted_date"),
-        max(year("asserted_date")).alias("max_asserted_date"),
-        min(year("recorded_date")).alias("min_recorded_date"),
-        max(year("recorded_date")).alias("max_recorded_date"),
+        min("asserted_date").alias("min_asserted_date"),
+        max("asserted_date").alias("max_asserted_date"),
+        min("recorded_date").alias("min_recorded_date"),
+        max("recorded_date").alias("max_recorded_date"),
     ).first()
     if row is not None:
         counts["min_asserted_date"] = row["min_asserted_date"]
@@ -240,9 +237,14 @@ def extract(data: DataSource) -> DataFrame:
         "Number of C61 patients with TNM of M0/N0 by system therapy medications"
     )
 
-    cohort.groupby("medication_text", "medication_atc_code").agg(
+    medication_counts = cohort.groupby("medication_text", "medication_atc_code").agg(
         count_distinct("patient_id").alias("num_patients")
-    ).show()
+    )
+
+    medication_counts_csv_file_path = results_directory / "medication-counts.csv"
+    medication_counts.coalesce(1).write.mode("overwrite").option("header", "true").csv(
+        medication_counts_csv_file_path.as_posix()
+    )
 
     cohort = cohort.where(col("medication_atc_code") == "L02BB04")
 
@@ -298,9 +300,9 @@ def extract(data: DataSource) -> DataFrame:
         "A",
         "All C61 patients\n"
         + f"n = {counts['num_c61_patients']}\n"
-        + f"Diagnosis years: {counts['min_asserted_date']} - "
+        + f"Diagnosis dates: {counts['min_asserted_date']} - "
         + f"{counts['max_asserted_date']}\n"
-        + f"Recorded years: {counts['min_recorded_date']} - "
+        + f"Recorded dates: {counts['min_recorded_date']} - "
         + f"{counts['max_recorded_date']}",
     )
     dot.node("B", "With TNM c/p M0 or N0\n" + f"n = {counts['num_tnm_m0_or_n0']}")
@@ -326,12 +328,12 @@ def extract(data: DataSource) -> DataFrame:
     logger.info(dot.source)
 
     dot.render(
-        directory=(HERE / "results").as_posix(),
+        directory=results_directory.as_posix(),
         format="png",
     )
 
     return result
 
 
-def run(data: DataSource):
-    extract(data)
+def run(data: DataSource, results_directory: pathlib.Path):
+    extract(data, results_directory)

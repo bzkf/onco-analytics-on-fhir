@@ -5,9 +5,17 @@ import pytest
 from pathling import DataSource, PathlingContext
 from pyspark.sql import SparkSession
 
+from syrupy import SnapshotAssertion
+
+
 from analytics_on_fhir.embark_rwd import extract
 
 HERE = Path(os.path.abspath(os.path.dirname(__file__)))
+
+
+def read_spark_csv_dir(csv_directory_path: Path):
+    parts = sorted(csv_directory_path.glob("part-*.csv"))
+    return "\n".join(p.read_text() for p in parts)
 
 
 @pytest.fixture(scope="session")
@@ -41,8 +49,15 @@ def data_source_fixture() -> DataSource:
     return ds
 
 
-def test_extract_with_(data_source_fixture: DataSource):
-    df = extract(data_source_fixture)
-    print(df)
-    df.show()
-    assert df is not None
+def test_extract_with_sample_data_should_write_csv_and_dotfile(
+    data_source_fixture: DataSource, tmp_path: Path, snapshot: SnapshotAssertion
+):
+    extract(data_source_fixture, tmp_path)
+
+    csv_content = read_spark_csv_dir(tmp_path / "medication-counts.csv")
+    dot_content = (tmp_path / "embark-rwd-flowchart.gv").read_text()
+
+    assert {
+        "csv": csv_content,
+        "dot": dot_content,
+    } == snapshot
