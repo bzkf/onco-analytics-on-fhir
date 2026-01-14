@@ -123,6 +123,10 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: install graphviz
+        run: |
+          sudo apt install -y graphviz
+
       - name: Install uv
         uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
         with:
