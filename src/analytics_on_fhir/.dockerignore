@@ -1,5 +1,5 @@
 *
-!*.py
 !uv.lock
 !pyproject.toml
+!analytics_on_fhir/
 tests/

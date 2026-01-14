@@ -8,7 +8,7 @@ from pyspark.sql import SparkSession
 from syrupy import SnapshotAssertion
 
 
-from ..embark_rwd import extract
+from analytics_on_fhir.embark_rwd import extract
 
 HERE = Path(os.path.abspath(os.path.dirname(__file__)))
 

@@ -5,8 +5,8 @@ from pathling.context import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import SparkSession
 
-from embark_rwd import run
-from settings import settings
+from .embark_rwd import run
+from .settings import settings
 
 
 def main():

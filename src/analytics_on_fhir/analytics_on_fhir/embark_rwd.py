@@ -1,4 +1,3 @@
-import os
 import pathlib
 
 from graphviz import Digraph

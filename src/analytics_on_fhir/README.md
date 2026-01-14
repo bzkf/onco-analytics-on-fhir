@@ -19,5 +19,5 @@ uv sync
 ### Test
 
 ```sh
-uv run pytest -v
+uv run pytest -vv --log-cli-level=20 --cov=analytics_on_fhir --cov-report=html --capture=no
 ```
