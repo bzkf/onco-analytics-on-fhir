@@ -4,9 +4,7 @@ from pathlib import Path
 import pytest
 from pathling import DataSource, PathlingContext
 from pyspark.sql import SparkSession
-
 from syrupy import SnapshotAssertion
-
 
 from analytics_on_fhir.embark_rwd import extract
 

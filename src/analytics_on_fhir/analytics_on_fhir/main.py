@@ -1,5 +1,5 @@
-import sys
 import pathlib
+import sys
 
 from loguru import logger
 from pathling.context import PathlingContext
