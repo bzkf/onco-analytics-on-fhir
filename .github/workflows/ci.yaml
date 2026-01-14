@@ -23,7 +23,7 @@ env:
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4a5ed0cb8f87fe5197b33c2619b3431786e9b6a5 # v1.19.2
+    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
     permissions:
       contents: write
       id-token: write
@@ -40,7 +40,7 @@ jobs:
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4a5ed0cb8f87fe5197b33c2619b3431786e9b6a5 # v1.19.2
+    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
     permissions:
       contents: write
       id-token: write
@@ -57,7 +57,7 @@ jobs:
 
   build-analytics-on-fhir-image:
     name: build analytics-on-fhir container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@0b72274fb79ff2e45b917bdb7426f575e2e2e0ea # v1.17.0
+    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
     permissions:
       contents: write
       id-token: write
