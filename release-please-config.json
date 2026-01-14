@@ -44,6 +44,10 @@
         },
         {
           "type": "generic",
+          "path": "docker-compose/compose.analytics-on-fhir.yaml"
+        },
+        {
+          "type": "generic",
           "path": "README.md"
         }
       ]
