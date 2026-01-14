@@ -14,7 +14,7 @@ from pyspark.sql.functions import (
     when,
 )
 
-from analytics_on_fhir.utils import find_closest_to_diagnosis
+from .utils import find_closest_to_diagnosis
 
 FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
     "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
