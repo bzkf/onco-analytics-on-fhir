@@ -22,8 +22,9 @@ class Settings:
     aws_access_key_id: str = "admin"
     aws_secret_access_key: str = ts.secret(default="miniopass")
     delta_database_path: str = ""
-    fhir_bundles_path: str = os.path.join(HERE, "tests/fixtures/fhir/")
+    fhir_bundles_path: str = os.path.join(HERE, "../tests/fixtures/fhir/")
     study_name: str = "embark_rwd"
+    results_directory_path: str = os.path.join(HERE, "results/")
 
 
 settings = ts.load(Settings, appname="analytics_on_fhir", env_prefix="")

@@ -1,12 +1,13 @@
 import sys
+import pathlib
 
 from loguru import logger
 from pathling.context import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import SparkSession
 
-from .embark_rwd import run
-from .settings import settings
+from analytics_on_fhir.embark_rwd import run
+from analytics_on_fhir.settings import settings
 
 
 def main():
@@ -86,7 +87,7 @@ def main():
         )
 
     if settings.study_name == "embark_rwd":
-        run(data)
+        run(data, pathlib.Path(settings.results_directory_path))
 
 
 if __name__ == "__main__":
