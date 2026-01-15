@@ -23,7 +23,7 @@ env:
 jobs:
   build-decompose-xml-image:
     name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4a5ed0cb8f87fe5197b33c2619b3431786e9b6a5 # v1.19.2
+    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
     permissions:
       contents: write
       id-token: write
@@ -40,7 +40,7 @@ jobs:
 
   build-obds-fhir-to-opal-image:
     name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@4a5ed0cb8f87fe5197b33c2619b3431786e9b6a5 # v1.19.2
+    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
     permissions:
       contents: write
       id-token: write
@@ -51,6 +51,23 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository }}/obds-fhir-to-opal
       build-context: src/obds_fhir_to_opal
+      enable-build-test-layer: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-analytics-on-fhir-image:
+    name: build analytics-on-fhir container image
+    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+      pull-requests: write
+      actions: read
+      security-events: write
+    with:
+      image: ghcr.io/${{ github.repository }}/analytics-on-fhir
+      build-context: src/analytics_on_fhir
       enable-build-test-layer: false
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +88,7 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  tests:
+  test-decompose-xml:
     name: run decompose-xmls tests
     strategy:
       matrix:
@@ -94,6 +111,48 @@ jobs:
         working-directory: src/decompose_xmls
         run: |
           pytest
+
+  test-analytics-on-fhir:
+    name: run analytics-on-fhir tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/analytics_on_fhir
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: install graphviz
+        run: |
+          sudo apt install -y graphviz
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
+        with:
+          enable-cache: true
+          activate-environment: true
+          working-directory: src/analytics_on_fhir
+
+      - uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: "temurin"
+          java-version-file: "src/analytics_on_fhir/.java-version"
+
+      - name: Install test dependencies
+        run: |
+          uv sync --locked --all-extras --dev
+
+      - name: Run tests
+        run: |
+          uv run pytest -vv --log-cli-level=20 --cov=analytics_on_fhir --cov-report=html --capture=no
+
+      - name: Upload test coverage
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: analytics-on-fhir-test-coverage
+          path: src/analytics_on_fhir/htmlcov/
 
   test-compose:
     name: run compose e2e tests
@@ -118,6 +177,15 @@ jobs:
           cat /etc/docker/daemon.json
           sudo systemctl restart docker
           docker info -f '{{ .DriverStatus }}'
+
+      - name: Free disk space
+        uses: endersonmenezes/free-disk-space@e6ed9b02e683a3b55ed0252f1ee469ce3b39a885 # v3.1.0
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          rm_cmd: "rmz"
 
       - name: Download image
         if: ${{ github.event_name == 'pull_request' }}
@@ -268,28 +336,28 @@ jobs:
           path: |
             docker-compose/compose-logs.txt
 
-  build-air-gapped-installer:
-    name: build air-gapped installer package
-    runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'pull_request' }}
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+  # build-air-gapped-installer:
+  #   name: build air-gapped installer package
+  #   runs-on: ubuntu-24.04
+  #   if: ${{ github.event_name == 'pull_request' }}
+  #   steps:
+  #     - name: Free Disk Space (Ubuntu)
+  #       uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+  #       with:
+  #         tool-cache: false
+  #         android: true
+  #         dotnet: true
+  #         haskell: true
+  #         large-packages: true
+  #         docker-images: true
+  #         swap-storage: true
 
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-        with:
-          persist-credentials: false
+  #     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+  #       with:
+  #         persist-credentials: false
 
-      - run: |
-          ./build-air-gapped-installer.sh
+  #     - run: |
+  #         ./build-air-gapped-installer.sh
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -301,4 +369,5 @@ jobs:
     needs:
       - build-decompose-xml-image
       - build-obds-fhir-to-opal-image
+      - build-analytics-on-fhir-image
     uses: ./.github/workflows/release.yaml

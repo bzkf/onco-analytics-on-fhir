@@ -85,6 +85,7 @@ docker compose --profile=kafka-connect \
   -f docker-compose/compose.kafka.yaml \
   -f docker-compose/compose.obds-to-fhir.yaml \
   -f docker-compose/compose.obds-fhir-to-opal.yaml \
+  -f docker-compose/compose.analytics-on-fhir.yaml \
   -f docker-compose/compose.decompose-xmls.yaml \
   -f docker-compose/compose.fhir-server.yaml \
   -f docker-compose/compose.pseudonymization.yaml \
