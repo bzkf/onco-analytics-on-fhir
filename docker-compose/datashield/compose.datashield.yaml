@@ -42,7 +42,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: opal
     volumes:
-      - "opal_db_data:/var/lib/postgresql/data:rw"
+      - "opal_db_data:/var/lib/postgresql:rw"
 
   rock-0:
     image: docker.io/datashield/rock-base:6.3.4@sha256:d46e06e801868628d2deb6e608405db6758f3492fdf6a7756870c2a1cd9f3486
