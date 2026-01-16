@@ -1,42 +1,22 @@
 import glob
 import os
-import re
 import shutil
-import sys
-from datetime import datetime
-from functools import reduce
-from io import StringIO
-from typing import Dict, List, Optional, Tuple
 
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import numpy as np
-import pandas as pd
-import plotly.graph_objects as go
 from loguru import logger
 from matplotlib.figure import Figure
 from pathling import Expression as exp
 from pathling import PathlingContext, datasource
 from pydantic import BaseSettings
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
 from pyspark.sql.functions import (  # to do: hier auch F verwenden
     abs,
     col,
     count,
-    dayofmonth,
     first,
-    greatest,
-    lower,
-    month,
-    regexp_extract,
     regexp_replace,
     row_number,
-    udf,
     when,
-    year,
 )
-from pyspark.sql.types import DoubleType, IntegerType, StringType
 from pyspark.sql.window import Window
 
 FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"

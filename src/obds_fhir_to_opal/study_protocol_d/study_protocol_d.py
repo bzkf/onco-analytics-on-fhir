@@ -1,13 +1,11 @@
 from typing import Optional
 
-import pandas as pd
 from loguru import logger
 from pathling import PathlingContext
 from pathling.datasource import DataSource
 from pydantic import BaseSettings
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.window import Window
 from utils.analytics import extract_df_study_protocol_a0_1_3_7_d, save_final_df
 
 from .study_protocol_d_utils import (
@@ -19,7 +17,6 @@ from .study_protocol_d_utils import (
     group_entity_or_parent,
     pivot_multi_single,
     plot_pair_boxplot_horizontal_custom,
-    plot_pair_bubble,
     plot_pair_bubble_gender,
 )
 
