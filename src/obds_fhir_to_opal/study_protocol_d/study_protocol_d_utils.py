@@ -2,6 +2,7 @@ from functools import reduce
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 
 # import pandas as pd
@@ -10,7 +11,7 @@ from loguru import logger
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from utils_onco_analytics import save_plot  # save_final_df
+from utils.analytics import save_plot  # save_final_df
 
 
 def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_parent"):
@@ -57,7 +58,7 @@ def cast_study_dates(df: DataFrame) -> DataFrame:
         "date_diagnosis",
         "deceased_datetime",
         "date_death",
-        "gleason_date_first",
+        # "gleason_date_first",
     ]:
         df = df.withColumn(c, F.to_date(c))
     return df
@@ -77,6 +78,7 @@ def compute_age(df: DataFrame) -> DataFrame:
         "age_at_diagnosis",
         F.round((F.datediff(df["date_diagnosis"], df["birthdate"]) / 365.25), 2),
     ).drop("birthdate")
+    return df
 
 
 def create_2_mals_df(df: DataFrame) -> DataFrame:
