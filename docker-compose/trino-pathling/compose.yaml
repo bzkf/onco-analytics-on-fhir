@@ -34,7 +34,7 @@ services:
       POSTGRES_PASSWORD: ${HIVE_METASTORE_DB_PASSWORD:?}
       POSTGRES_DB: metastore
     volumes:
-      - hive-metastore-db-data:/var/lib/postgresql/data:rw
+      - hive-metastore-db-data:/var/lib/postgresql:rw
 
   hive-metastore:
     image: ghcr.io/miracum/util-images/hive-metastore:v1.3.0@sha256:4b83eb4b7efd3f3dcd70d255336605e6cc5e028115460016837009664753d021
