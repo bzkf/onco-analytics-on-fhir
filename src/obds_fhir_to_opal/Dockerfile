@@ -1,4 +1,4 @@
-FROM docker.io/library/python:3.13.7-slim-bookworm@sha256:9b8102b7b3a61db24fe58f335b526173e5aeaaf7d13b2fbfb514e20f84f5e386
+FROM docker.io/library/python:3.11.14-slim-bookworm@sha256:bcbbec29f7a3f9cbee891e3cd69d7fe4dec7e281daf36cbd415ddd8ee2ba0077
 ENV PYTHONUNBUFFERED=1 \
     SPARK_CONF_DIR=/app/spark/conf
 

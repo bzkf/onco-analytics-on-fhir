@@ -929,9 +929,13 @@ def datashield_preps_wrapper(
 
         df = df.withColumn(
             "age_at_diagnosis",
-            calculate_age_at_condition_date_udf(df.birthdate, df.date_diagnosis).cast(
-                IntegerType()
-            ),
+            F.floor(
+                F.months_between(
+                    F.to_date("date_diagnosis", "yyyy-MM-dd"),
+                    F.to_date("birthdate", "yyyy-MM"),
+                )
+                / 12
+            ).cast("int"),
         )
         df = df.checkpoint(eager=True)
         df.count()
@@ -2016,12 +2020,12 @@ def prepare_and_plot_sankey(
 
 def save_plot(plot: Figure, settings: BaseSettings, plot_name: str = "") -> None:
     logger.info("start save plot")
-    output_dir = os.path.join(settings.output_folder, settings.study_name)
+    output_dir = os.path.join(settings.output_folder, settings.study_name, "plots")
     os.makedirs(output_dir, exist_ok=True)
 
     final_plot_path = os.path.join(output_dir, f"{plot_name}.png")
     plot.savefig(final_plot_path, bbox_inches="tight", dpi=300)
-    logger.info("end save plot")
+    logger.info(f"Plot saved to: {final_plot_path}")
 
 
 # summary statistic plots

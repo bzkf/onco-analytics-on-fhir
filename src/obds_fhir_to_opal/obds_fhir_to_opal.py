@@ -3,11 +3,15 @@ import shutil
 import sys
 import time
 
+import pyspark.sql.functions as F
 from loguru import logger
 from pathling import PathlingContext
 from pydantic import BaseSettings
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
+from pyspark.sql.types import ArrayType
+from study_protocol_d.study_protocol_d import StudyProtocolD
+from tso500_classification import tso500_classification_extract
 from utils_onco_analytics import (
     add_age_col,
     add_deceased_flag,
@@ -27,13 +31,12 @@ from utils_onco_analytics import (
     union_sort_pivot_join,
 )
 
-from tso500_classification import tso500_classification_extract
-
 
 class Settings(BaseSettings):
     output_folder: str = "./opal-output"
     output_filename: str = "df.csv"
-    study_name: str = "pca_therapies1"
+    study_name: str = "study_protocol_d"
+    location: str = "UKER"  # set this in compose file and add to readme
     # ⚠️ make sure these are consistent with the ones downloaded inside the Dockerfile
     jar_list: list = [
         "au.csiro.pathling:library-runtime:7.2.0",
@@ -158,6 +161,20 @@ def main():
             plot(df, settings)
         case "tso500_classification":
             df = tso500_classification_extract(data)
+        case "study_protocol_d":
+            study_protocol_d = StudyProtocolD(
+                pc=pc,
+                data=data,
+                settings=settings,
+                spark=spark,
+            )
+
+            df = study_protocol_d.run()
+
+            # concat array cols to strings before save_final_df
+            for field in df.schema.fields:
+                if isinstance(field.dataType, ArrayType):
+                    df = df.withColumn(field.name, F.concat_ws(",", F.col(field.name)))
         case _:
             raise ValueError(f"Unknown study type: {settings.study_name}")
 
@@ -169,7 +186,12 @@ def main():
         shutil.rmtree(dir_path)
 
     # Generate one data dictionary for all studies and save in parent folder
-    if settings.study_name not in ["pca_therapies1", "tso500_classification"]:
+    # for DataSHIELD studies only, exclude the others here
+    if settings.study_name not in [
+        "pca_therapies1",
+        "tso500_classification",
+        "study_protocol_d",
+    ]:
         generate_data_dictionary(
             file_path=os.path.join(settings.output_folder, "data_dictionary_df.xlsx"),
             table_name="df_" + settings.study_name,

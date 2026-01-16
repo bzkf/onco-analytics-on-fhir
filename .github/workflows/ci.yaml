@@ -281,6 +281,15 @@ jobs:
           sudo chown -R 1001:1001 ./opal-output/
           docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 
+      - name: convert the FHIR resources to the CSV dataset (study_protocol_d)
+        working-directory: docker-compose/
+        env:
+          STUDY_NAME: "study_protocol_d"
+          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
+        run: |
+          sudo chown -R 1001:1001 ./opal-output/
+          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
+
       - name: convert the FHIR resources to the CSV dataset (study_protocol_a0_1_3_7)
         working-directory: docker-compose/
         env:
