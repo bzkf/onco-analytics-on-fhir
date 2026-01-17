@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "pathling==9.1.0",
-    "delta-spark==4.0.0",
+    "delta-spark==4.0.1",
     "typed-settings[attrs]==25.3.0",
     "loguru==0.7.3",
     "graphviz==0.21",
@@ -16,7 +16,7 @@ dependencies = [
 dev = [
     "pytest==9.0.2",
     "pytest-cov==7.0.0",
-    "ruff==0.14.8",
+    "ruff==0.14.13",
     "syrupy==5.0.0",
 ]
 
