@@ -1,8 +1,8 @@
-ipykernel==6.30.1
-ipython==9.6.0
-matplotlib==3.10.6
-matplotlib-inline==0.1.7
-numpy==2.3.3
+ipykernel==6.31.0
+ipython==9.9.0
+matplotlib==3.10.8
+matplotlib-inline==0.2.1
+numpy==2.4.1
 pandas==2.3.3
 seaborn==0.13.2
 
