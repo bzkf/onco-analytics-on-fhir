@@ -574,7 +574,8 @@ def plot_pair_boxplot_horizontal_custom(
                 patch.set_facecolor(color_val)
 
         else:
-            # Nur ein Boxplot pro Pair (z.B. für months_between wo der boxplot für entity1 keinen Sinn macht)
+            # Nur ein Boxplot pro Pair (z.B. für months_between wo der boxplot für
+            # entity1 keinen Sinn macht)
             bp = ax.bxp(
                 [
                     {
@@ -635,7 +636,8 @@ def plot_pair_boxplot_horizontal_custom(
     ax.xaxis.set_major_locator(mticker.MultipleLocator(20))
     ax.set_xlabel(var_name)
     ax.set_title(
-        f"{plot_name}: distribution for entity or parent pairs\n{period} — {settings.location}",
+        f"""{plot_name}: distribution for entity or parent pairs\n{period} —
+        {settings.location}""",
         fontsize=14,
     )
     plt.tight_layout()
