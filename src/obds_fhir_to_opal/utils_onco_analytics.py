@@ -821,9 +821,32 @@ def extract_df_study_protocol_a0_1_3_7_d(
 
     return conditions_patients_death_gleason_closest
 
+# refactor this later - its the same as study protocol A0_1_3_7_D except without gleason
+def extract_df_study_protocol_c(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings: BaseSettings,
+    spark: SparkSession,
+):
+    logger.info("logger start, extract patients.")
+    # patients
+    patients = data.extract(
+        "Patient",
+        columns=[
+            exp("id", "patient_resource_id"),
+            exp("identifier.value", "patid_pseudonym"),
+            exp("birthDate", "birthdate"),
+            exp("gender", "gender"),
+            exp("deceasedDateTime", "deceased_datetime"),
+            exp("deceasedBoolean", "deceased_boolean"),
+            exp("address.postalCode", "postal_code"),
+        ],
+    )
 
-def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource):
-    df = data.extract(
+    patients = patients.checkpoint(eager=True)
+    patients.count()  # enforce checkpoint
+
+    conditions = data.extract(
         "Condition",
         columns=[
             exp("id", "condition_id"),
@@ -833,32 +856,140 @@ def extract_df_study_protocol_c(pc: PathlingContext, data: datasource.DataSource
                 "icd10_code",
             ),
             exp("subject.reference", "cond_subject_reference"),
-            exp("Condition.subject.resolve().ofType(Patient).birthDate", "birthdate"),
-            exp("Condition.subject.resolve().ofType(Patient).gender", "gender"),
-            exp(
-                "Condition.subject.resolve().ofType(Patient).address.postalCode",
-                "postal_code",
-            ),
-            exp(
-                "Condition.subject.resolve().ofType(Patient).address.country", "country"
-            ),
-            exp(
-                "Condition.subject.resolve().ofType(Patient).deceasedDateTime",
-                "deceased_datetime",
-            ),
-            exp(
-                "Condition.subject.resolve().ofType(Patient).deceasedBoolean",
-                "deceased_boolean",
-            ),
         ],
     )
-    df = df.checkpoint(eager=True)
-    df_count = df.count()
+    # conditions
+    conditions = conditions.checkpoint(eager=True)
+    conditions_count = conditions.count()  # enforce checkpoint
 
-    logger.info("df.count() = {}".format(df_count))
-    log_df_show(df, logger)
+    logger.info("conditions_count = {}", conditions_count)
 
-    return df
+    # remove the "Patient/" from cond_subject_reference before the join
+    conditions = conditions.withColumn(
+        "cond_subject_reference",
+        regexp_replace("cond_subject_reference", "^Patient/", ""),
+    )
+    conditions = conditions.checkpoint(eager=True)
+    conditions.count()  # enforce checkpoint
+
+    logger.info("remove the Patient/ from cond_subject_reference before the join")
+
+    # join patients + conditions
+    conditions_patients = (
+        conditions.alias("c")
+        .join(
+            patients.alias("p"),  # Alias for patients DataFrame
+            # Join condition
+            conditions["cond_subject_reference"] == patients["patient_resource_id"],
+            "left",  # Left join
+        )
+        .select("c.*", "p.*")
+    )
+
+    conditions_patients = conditions_patients.checkpoint(eager=True)
+    conditions_patients_count = conditions_patients.count()
+
+    logger.info("conditions_patients_count = {}", conditions_patients_count)
+
+    # death observations
+    observations_deathcause = data.extract(
+        "Observation",
+        columns=[
+            exp("id", "observation_id"),
+            exp(
+                f"""valueCodeableConcept.coding
+                        .where(system='{FHIR_SYSTEM_ICD10}').code.first()""",
+                "death_cause_icd10",
+            ),
+            exp(
+                f"""valueCodeableConcept.coding
+                        .where(system='{FHIR_SYSTEM_JNU}')
+                        .code.first()
+                """,
+                "death_cause_tumor",
+            ),
+            exp("effectiveDateTime", "date_death"),
+            exp("subject.reference", "subject_reference"),
+        ],
+        filters=[
+            # filter for death cause observations
+            f"""code.coding
+                    .where(system = '{FHIR_SYSTEM_LOINC}' and code = '68343-3')
+                    .exists()"""
+        ],
+    )
+    observations_deathcause = observations_deathcause.checkpoint(eager=True)
+    observations_deathcause_count = observations_deathcause.count()
+    logger.info("observations_deathcause_count = {}", observations_deathcause_count)
+
+    # replace patient string for join
+    observations_deathcause = observations_deathcause.withColumn(
+        "subject_reference", regexp_replace("subject_reference", "^Patient/", "")
+    )
+    observations_deathcause = observations_deathcause.checkpoint(eager=True)
+    observations_deathcause_count = (
+        observations_deathcause.count()
+    )  # enforce checkpoint
+    logger.info("observations_deathcause_count = {}", observations_deathcause_count)
+
+    # count distinct patients - remove duplicates
+    observations_deathcause_distinct_patients_count = (
+        observations_deathcause.select("subject_reference").distinct().count()
+    )
+    logger.info(
+        "observations_deathcause_distinct_patients_count = {}",
+        observations_deathcause_distinct_patients_count,
+    )
+
+    # safety groupby to avoid row explosion later
+    # groupby patient id
+    observations_deathcause = observations_deathcause.groupBy("subject_reference").agg(
+        first("observation_id", ignorenulls=True).alias("observation_id"),
+        first("death_cause_icd10", ignorenulls=True).alias("death_cause_icd10"),
+        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
+        first("date_death", ignorenulls=True).alias("date_death"),
+    )
+
+    observations_deathcause = observations_deathcause.checkpoint(eager=True)
+    observations_deathcause_count = (
+        observations_deathcause.count()
+    )  # enforce checkpoint
+    logger.info(
+        "observations_deathcause_count after groupby = {}",
+        observations_deathcause_count,
+    )
+
+    # join death observations to conditions_patients
+    conditions_patients_death = (
+        conditions_patients.alias("c")
+        .join(
+            observations_deathcause.alias("o"),
+            conditions_patients["patient_resource_id"]
+            == observations_deathcause["subject_reference"],
+            "left",
+        )
+        .select("c.*", "o.*")
+    )
+    conditions_patients_death = conditions_patients_death.checkpoint(eager=True)
+    conditions_patients_death_count = conditions_patients_death.count()
+    logger.info("conditions_patients_death_count = {}", conditions_patients_death_count)
+
+    # add double_patid column for studyprotocol D
+    window_spec = Window.partitionBy("patid_pseudonym")
+
+    conditions_patients_death = conditions_patients_death.withColumn(
+        "double_patid",
+        when(count("patid_pseudonym").over(window_spec) > 1, 1).otherwise(0),
+    ).orderBy("patid_pseudonym")
+
+    conditions_patients_death = conditions_patients_death.checkpoint(eager=True)
+    conditions_patients_death_count = conditions_patients_death.count()
+    logger.info(
+        "added double_patid col for study protocol D, \
+        conditions_patients_death_count = {}",
+        conditions_patients_death_count,
+    )
+    return conditions_patients_death
 
 
 def save_final_df(df, settings, suffix=""):
