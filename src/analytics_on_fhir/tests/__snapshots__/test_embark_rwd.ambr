@@ -1,0 +1,32 @@
+# serializer version: 1
+# name: test_extract_with_sample_data_should_write_csv_and_dotfile
+  dict({
+    'csv': '''
+      medication_text,medication_atc_code,num_patients
+      Enzalutamid,L02BB04,1
+  
+    ''',
+    'dot': '''
+      digraph "embark-rwd-flowchart" {
+      	dpi=100 rankdir=TB
+      	A [label="All C61 patients
+      n = 1
+      Diagnosis dates: 2020-03-01 - 2020-03-01
+      Recorded dates: 2024-09-19 - 2024-09-19"]
+      	B [label="With TNM c/p M0 or N0
+      n = 1"]
+      	C [label="Treated with enzalutamide
+      n = 1"]
+      	D [label="Before 2024-04-01
+      n = 1"]
+      	E [label="After 2024-04-01
+      n = 0"]
+      	A -> B
+      	B -> C
+      	C -> D
+      	C -> E
+      }
+  
+    ''',
+  })
+# ---

@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.10.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.9.0...v2.10.0) (2026-01-15)
+
+
+### Features
+
+* new image for obds mii v3/pathling v9 ([#326](https://github.com/bzkf/onco-analytics-on-fhir/issues/326)) ([4f336a0](https://github.com/bzkf/onco-analytics-on-fhir/commit/4f336a0d942b51527569ba69737a7a5eb3de2c5b))
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency fonttools to v4.60.2 [security] ([#322](https://github.com/bzkf/onco-analytics-on-fhir/issues/322)) ([afdf22c](https://github.com/bzkf/onco-analytics-on-fhir/commit/afdf22c875371deb416c00946f2a8d57a7459007))
+* **deps:** update docker.io/trinodb/trino docker tag to v478 ([#318](https://github.com/bzkf/onco-analytics-on-fhir/issues/318)) ([34421d8](https://github.com/bzkf/onco-analytics-on-fhir/commit/34421d84c71ec47e299e5d8300770277e6fb48ed))
+* **deps:** update github-actions ([#314](https://github.com/bzkf/onco-analytics-on-fhir/issues/314)) ([0b38447](https://github.com/bzkf/onco-analytics-on-fhir/commit/0b3844766251719cd3afa55d8b22df83c08d9346))
+
 ## [2.9.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.8.1...v2.9.0) (2025-10-27)
 
 
