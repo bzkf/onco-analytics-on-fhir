@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.10.0...v2.11.0) (2026-01-20)
+
+
+### Features
+
+* studyprotocol D (Zweitkarzinom) ([#327](https://github.com/bzkf/onco-analytics-on-fhir/issues/327)) ([994b7bd](https://github.com/bzkf/onco-analytics-on-fhir/commit/994b7bd6dbf05ae7bc8562d3fe39ede0f8b456d4))
+
 ## [2.10.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.9.0...v2.10.0) (2026-01-15)
 
 
