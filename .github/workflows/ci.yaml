@@ -96,7 +96,7 @@ jobs:
         python-version: ["3.11"]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: Set up Python ${{ matrix.python-version }}
@@ -189,7 +189,7 @@ jobs:
 
       - name: Download image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: ${{ needs.build-decompose-xml-image.outputs.image-slug }}
           path: /tmp
@@ -202,7 +202,7 @@ jobs:
 
       - name: Download image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-slug }}
           path: /tmp
@@ -213,7 +213,7 @@ jobs:
           docker load --input /tmp/image.tar
           docker image ls
 
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -319,7 +319,7 @@ jobs:
           docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 
       - name: upload the CSV
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: opal-df
           path: |
@@ -339,7 +339,7 @@ jobs:
 
       - name: Upload compose dump
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: compose-logs
           path: |
