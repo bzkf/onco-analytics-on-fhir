@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.12.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.11.0...v2.12.0) (2026-01-27)
+
+
+### Features
+
+* D and A on MII profiles ([#331](https://github.com/bzkf/onco-analytics-on-fhir/issues/331)) ([747bbc7](https://github.com/bzkf/onco-analytics-on-fhir/commit/747bbc7fcebd367acc643a9078bebcff334c7610))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all digest updates ([#313](https://github.com/bzkf/onco-analytics-on-fhir/issues/313)) ([704d736](https://github.com/bzkf/onco-analytics-on-fhir/commit/704d736a467817bfc917851d03c2165e51776078))
+* **deps:** update github-actions ([#319](https://github.com/bzkf/onco-analytics-on-fhir/issues/319)) ([e1a5c97](https://github.com/bzkf/onco-analytics-on-fhir/commit/e1a5c97f6cbb93d26da5f0a9f663786f8ab5d31f))
+
 ## [2.11.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.10.0...v2.11.0) (2026-01-20)
 
 
