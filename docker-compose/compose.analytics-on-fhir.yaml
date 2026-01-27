@@ -19,5 +19,6 @@ services:
       RESULTS_DIRECTORY_PATH: "/home/nonroot/analytics-output/"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
+      LOCATION: "${LOCATION:-UKER}"
     volumes:
       - ./opal-output:/home/nonroot/analytics-output/:rw
