@@ -4,14 +4,7 @@ from graphviz import Digraph
 from loguru import logger
 from pathling import DataSource
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.functions import (
-    col,
-    count_distinct,
-    lit,
-    max,
-    min,
-    when,
-)
+from pyspark.sql.functions import col, count_distinct, lit, max, min, when
 
 from analytics_on_fhir.utils import find_closest_to_diagnosis
 
@@ -200,7 +193,7 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
     )
 
     tnm_closest_to_diagnosis = find_closest_to_diagnosis(
-        tnm_with_condition, "asserted_date", "effective_date_time"
+        tnm_with_condition, "condition_id", "asserted_date", "effective_date_time"
     )
 
     logger.info("Number of patients by TNM (Closest to diagnosis)")

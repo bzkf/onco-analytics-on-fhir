@@ -16,6 +16,14 @@ Collection of analytics scripts.
 uv sync
 ```
 
+### Run in VS Code interactive mode
+From the project root src/analytics_on_fhir, run:
+```sh
+uv pip install -e .
+```
+This installs the project in editable mode so all local packages
+(e.g. analytics_on_fhir) can be imported without modifying PYTHONPATH.
+
 ### Test
 
 ```sh
