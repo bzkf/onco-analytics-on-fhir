@@ -1,6 +1,6 @@
 services:
   analytics-on-fhir:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/analytics-on-fhir:${ANALYTICS_ON_FHIR_IMAGE_TAG:-v2.11.0} # x-release-please-version
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/analytics-on-fhir:${ANALYTICS_ON_FHIR_IMAGE_TAG:-v2.12.0} # x-release-please-version
     restart: no
     cap_drop:
       - ALL
