@@ -23,13 +23,21 @@ from pyspark.sql.window import Window
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
-FHIR_SYSTEM_JNU = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-tod"
+FHIR_SYSTEM_JNU = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
+    "CodeSystem/mii-cs-onko-tod"
+)
 FHIR_SYSTEM_LOINC = "http://loinc.org"
 FHIR_SYSTEM_SCT = "http://snomed.info/sct"
-FHIR_SYSTEM_METASTASIS = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-fernmetastasen"
+FHIR_SYSTEM_METASTASIS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
+    "CodeSystem/mii-cs-onko-fernmetastasen"
+)
+
 SCT_CODE_DEATH = "184305005"
 SCT_CODE_GLEASON = "1812491000004107"
 SCT_CODE_METASTASIS = "385421009"
+
 FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
     "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
 )
