@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.12.0...v2.12.1) (2026-01-30)
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency pytest to v9 ([#321](https://github.com/bzkf/onco-analytics-on-fhir/issues/321)) ([e6ffcb9](https://github.com/bzkf/onco-analytics-on-fhir/commit/e6ffcb948a9adf58e7472ed65a3e7aeecef66feb))
+
 ## [2.12.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.11.0...v2.12.0) (2026-01-27)
 
 
