@@ -59,6 +59,9 @@ def main():
         .config("fs.s3a.access.key", settings.aws_access_key_id)
         .config("fs.s3a.secret.key", settings.aws_secret_access_key)
         .config("spark.hadoop.fs.s3a.client.execution.timeout", "300000")
+        .config("spark.hadoop.fs.s3a.connection.timeout", "600000")
+        .config("spark.hadoop.fs.s3a.connection.establish.timeout", "600000")
+        .config("spark.hadoop.fs.s3a.attempts.maximum", "10")
     )
     existing_spark = SparkSession.getActiveSession()
     if existing_spark is not None:
