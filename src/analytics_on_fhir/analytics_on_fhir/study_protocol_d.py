@@ -65,6 +65,7 @@ class StudyProtocolD:
         self.year_min = df_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_clean.select(F.max(F.year("asserted_date"))).first()[0]
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
+        save_final_df(df_clean, self.settings, suffix="study_protocol_d")
 
         # 4) 2mals vs single (1mal)
         df_2_mals = create_2_mals_df(df_clean)
