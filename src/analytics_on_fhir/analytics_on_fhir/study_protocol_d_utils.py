@@ -52,34 +52,6 @@ def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_par
     return df
 
 
-def cast_study_dates(df: DataFrame) -> DataFrame:
-    for c in [
-        "asserted_date",
-        "deceased_datetime",
-        "date_death",
-        "gleason_date_first",
-    ]:
-        df = df.withColumn(c, F.to_date(c))
-    return df
-
-
-def compute_age(df: DataFrame) -> DataFrame:
-    # birthdate (YYYY-MM → YYYY-MM-15)
-    df = df.withColumn(
-        "birthdate",
-        F.when(
-            F.col("birthdate").rlike(r"^\d{4}-\d{2}$"),  # nur YYYY-MM
-            F.to_date(F.concat(F.col("birthdate"), F.lit("-15")), "yyyy-MM-dd"),
-        ).otherwise(F.to_date(F.col("birthdate"), "yyyy-MM-dd")),
-    )
-
-    df = df.withColumn(
-        "age_at_diagnosis",
-        F.round((F.datediff(df["asserted_date"], df["birthdate"]) / 365.25), 2),
-    ).drop("birthdate")
-    return df
-
-
 def create_2_mals_df(df: DataFrame) -> DataFrame:
     # Filter patients with multiple malignancies, compute months between diagnoses
     df_multi = df.filter(F.col("double_patid") == 1)

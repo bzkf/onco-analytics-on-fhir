@@ -3,16 +3,11 @@ from typing import Optional
 from loguru import logger
 from pathling import PathlingContext
 from pathling.datasource import DataSource
-
-# from pydantic import BaseSettings
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 
-# from ..analytics_on_fhir.settings import settings
 from analytics_on_fhir.study_protocol_d_utils import (
     aggregate_malignancy_pairs,
-    cast_study_dates,
-    compute_age,
     create_1_mal_df,
     create_2_mals_df,
     group_entity_or_parent,
@@ -20,7 +15,12 @@ from analytics_on_fhir.study_protocol_d_utils import (
     plot_pair_boxplot_horizontal_custom,
     plot_pair_bubble_gender,
 )
-from analytics_on_fhir.utils import extract_df_study_protocol_a_d_mii, save_final_df
+from analytics_on_fhir.utils import (
+    cast_study_dates,
+    compute_age,
+    extract_df_study_protocol_a_d_mii,
+    save_final_df,
+)
 
 
 class StudyProtocolD:
@@ -124,7 +124,15 @@ class StudyProtocolD:
             df, code_col="icd10_code", target_col="entity_or_parent"
         )
         df = df.withColumn("icd10_parent_code", F.split(df["icd10_code"], r"\.")[0])
-        df = cast_study_dates(df)
+        df = cast_study_dates(
+            df,
+            [
+                "asserted_date",
+                "deceased_datetime",
+                "date_death",
+                "gleason_date_first",
+            ],
+        )
         df = compute_age(df)
         df = df.checkpoint(eager=True)
         return df
