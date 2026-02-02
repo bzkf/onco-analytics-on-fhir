@@ -12,7 +12,7 @@ RUN <<EOF
 set -e
 apt-get update -y
 # openjdk for Pathling, graphviz for the "dot" executable
-apt-get install -y --no-install-recommends openjdk-17-jre-headless graphviz
+apt-get install -y --no-install-recommends openjdk-21-jre-headless graphviz
 rm -rf /var/lib/apt/lists/*
 apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
 
