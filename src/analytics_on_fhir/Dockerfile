@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:0.9.27-python3.11-bookworm-slim@sha256:6e289b41fb0de001f5fe78b05568516e1a1caf95f5f4ac6b64c01d781a5dacdf
+FROM ghcr.io/astral-sh/uv:0.9.28-python3.11-trixie-slim@sha256:26d8cb611e609f8ba88d9b875b844e457a4fd0492dbc47b2a298350c457e3034
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -12,7 +12,7 @@ RUN <<EOF
 set -e
 apt-get update -y
 # openjdk for Pathling, graphviz for the "dot" executable
-apt-get install -y --no-install-recommends openjdk-17-jre-headless graphviz
+apt-get install -y --no-install-recommends openjdk-21-jre-headless graphviz
 rm -rf /var/lib/apt/lists/*
 apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
 

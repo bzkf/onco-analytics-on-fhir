@@ -46,7 +46,7 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.8" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "pandas", specifier = ">=2.1" },
-    { name = "pathling", specifier = "==9.1.0" },
+    { name = "pathling", specifier = "==9.2.0" },
     { name = "plotly", specifier = ">=5.18" },
     { name = "polars", specifier = ">=0.20" },
     { name = "pyarrow", specifier = ">=14" },
@@ -440,15 +440,15 @@ wheels = [
 
 [[package]]
 name = "pathling"
-version = "9.1.0"
+version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecated" },
     { name = "pyspark" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/ac/50f6b0048ad6bbb6c8fc50c1c978f61ee5fbc751252174ad046948ebdfc1/pathling-9.1.0.tar.gz", hash = "sha256:e3a0e3ac071ccd06e5d02f197f6511d273c61b2f9713979109e69740df6f6f36", size = 51702, upload-time = "2025-11-24T20:02:40.672Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/b0/2251291c06975f40ba4001c2c071066c29d119adbf411b4e7e902c5942c2/pathling-9.2.0.tar.gz", hash = "sha256:26ff9f33ea9d8246ea69650f3c698d4e19351debd6218326a69262c35b4bd86c", size = 52274, upload-time = "2026-01-20T03:04:55.382Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/1f/2d786727b8df10ac91e9969cd4a2ce48e88ae7625ede8b89bd14657717e0/pathling-9.1.0-py3-none-any.whl", hash = "sha256:bdc18ea62c89b174d9934e3d8934e71ef4b88c681ce343377c69cd5f12f3518f", size = 70884, upload-time = "2025-11-24T20:02:39.413Z" },
+    { url = "https://files.pythonhosted.org/packages/74/10/637763096979111613f4f8d11d1a1a8e66d5224016e8049cf80c28c3165d/pathling-9.2.0-py3-none-any.whl", hash = "sha256:727ae7ebea63fd1090d44f16d3a8a26ce913b2ce7a8d5731a808db5c11bcbc10", size = 71293, upload-time = "2026-01-20T03:04:53.852Z" },
 ]
 
 [[package]]
