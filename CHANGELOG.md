@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.12.1...v2.12.2) (2026-02-02)
+
+
+### Bug Fixes
+
+* corrected java version in container image and updated deps ([#335](https://github.com/bzkf/onco-analytics-on-fhir/issues/335)) ([1fcb66f](https://github.com/bzkf/onco-analytics-on-fhir/commit/1fcb66f39355abbe7d9a29163315f9be41f17712))
+
 ## [2.12.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.12.0...v2.12.1) (2026-01-30)
 
 
