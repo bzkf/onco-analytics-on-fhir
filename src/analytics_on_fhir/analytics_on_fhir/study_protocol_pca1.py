@@ -6,7 +6,11 @@ from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 
-from analytics_on_fhir.study_protocol_pca_utils import extract_pca_ops
+from analytics_on_fhir.study_protocol_pca_utils import (
+    extract_radiotherapies,
+    extract_surgeries,
+    extract_systemtherapies,
+)
 from analytics_on_fhir.utils import (
     cast_study_dates,
     compute_age,
@@ -29,23 +33,33 @@ class StudyProtocolPCa1:
         self.settings = settings
         self.spark: SparkSession = spark
 
-        self.df_extract: Optional[DataFrame] = None
+        self.df_c61: Optional[DataFrame] = None
         self.df_all_pivot: Optional[DataFrame] = None
         self.year_min: Optional[int] = None
         self.year_max: Optional[int] = None
 
     def extract(self) -> DataFrame:
-        df = extract_df_study_protocol_a_d_mii(
+        # later, join therapy data to condition/gleason/metastasis data
+        # filtered by C61 from here
+        """df = extract_df_study_protocol_a_d_mii(
             self.pc, self.data, self.settings, self.spark
         )
         df_c61 = df.filter(F.col("icd10_code").startswith("C61"))
 
         logger.info("df_c61_count = {}", df_c61.count())
+        self.df_c61 = df_c61"""
 
         # TO DO: extract therapies here
-        df_ops = extract_pca_ops(self.pc, self.data, self.settings, self.spark)
-        # self.df_extract = df_c61
-        return df
+        df_radiotherapies = extract_radiotherapies(
+            self.pc, self.data, self.settings, self.spark
+        )
+
+        df_medication_statements = extract_systemtherapies(
+            self.pc, self.data, self.settings, self.spark
+        )
+        # df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        # self.df_c61 = df_c61
+        # return df_c61
 
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")
@@ -56,6 +70,7 @@ class StudyProtocolPCa1:
 
         return df_extract
 
+        # adapt this later
         # 2) Prepare
         df_prepare = self.prepare(df_extract)
 
