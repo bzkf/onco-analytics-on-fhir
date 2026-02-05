@@ -765,3 +765,10 @@ def extract_df_study_protocol_a_d_mii(
     conditions_patients_death_gleason_metastasis.show()
 
     return conditions_patients_death_gleason_metastasis
+
+
+def filter_aml(df):
+    return df.filter(
+        (col("icd10_code").isin("C83.3", "C83.1"))
+        | (col("icd10_code").rlike(r"^(C90|C91|C92|C93|C94|C95|D46|C82|C85)"))
+    )
