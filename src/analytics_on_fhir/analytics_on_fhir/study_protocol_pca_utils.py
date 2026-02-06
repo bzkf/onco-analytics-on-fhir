@@ -520,6 +520,4 @@ def extract_surgeries(
 
     # downstream unverändert - ggf aus altem übernehmen wenns noch passt
     # df_ops = preprocess_therapy_df(df_ops)
-    df_ops.write.options(header='True').csv("test.csv")
-
     return df_ops
