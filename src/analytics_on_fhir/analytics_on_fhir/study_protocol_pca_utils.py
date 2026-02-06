@@ -281,7 +281,7 @@ def extract_systemtherapies(
         "df_procedures_medication_statements_grouped count = {}",
         df_procedures_medication_statements_grouped.count(),
     )
-    return df_procedures_medication_statements_grouped
+
 
     # join back missing cols
     df_procedures_medication_statements_final = (
@@ -323,7 +323,7 @@ def extract_systemtherapies(
 
     # join on condition id later - we need reason reference in procedures for correct joining!
     # (mehrfachkarzinome machen join auf patid ungenau)
-
+    return df_procedures_medication_statements_final
 
 def extract_radiotherapies(
     pc: PathlingContext,
@@ -475,7 +475,7 @@ def extract_surgeries(
                     },
                     {
                         "description": "Surgery Date",
-                        "path": "performed.ofType(DateTime).start",
+                        "path": "performedDateTime",
                         "name": "procedure_surgery_date",
                     },
                     {
@@ -520,5 +520,6 @@ def extract_surgeries(
 
     # downstream unverändert - ggf aus altem übernehmen wenns noch passt
     # df_ops = preprocess_therapy_df(df_ops)
+    df_ops.write.options(header='True').csv("test.csv")
 
     return df_ops
