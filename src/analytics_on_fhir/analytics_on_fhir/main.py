@@ -137,9 +137,6 @@ def main():
             )
             study_protocol_pca1.run()
             # save_final_df(df, settings, suffix="study_protocol_pca1")
-        case "all_studies":
-            print("hi")
-            # add stuff here
 
 
 if __name__ == "__main__":

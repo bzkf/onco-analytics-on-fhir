@@ -49,6 +49,21 @@ FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
 )
+FHIR_SYSTEMS_SURGERY_INTENTION = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/mii-ex-onko-operation-intention"
+)
+FHIR_SYSTEMS_SURGERY_INTENTION_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-intention"
+)
+FHIR_SYSTEMS_SURGERY_OUTCOME_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-residualstatus"
+)
+FHIR_SYSTEMS_SURGERY_OPS_CS = (
+    "http://fhir.de/CodeSystem/bfarm/ops"
+)
 
 
 def extract_systemtherapies(
@@ -266,6 +281,7 @@ def extract_systemtherapies(
         "df_procedures_medication_statements_grouped count = {}",
         df_procedures_medication_statements_grouped.count(),
     )
+    return df_procedures_medication_statements_grouped
 
     # join back missing cols
     df_procedures_medication_statements_final = (
@@ -411,6 +427,7 @@ def extract_radiotherapies(
 
     # alle ohne part of sind die klammer procedures
     # alle mit part of kann ich dann über procedure id und partof reference ranjoinen
+    return df_radiotherapies
 
 
 def extract_surgeries(
@@ -432,7 +449,62 @@ def extract_surgeries(
                         "name": "therapy_resource_id",
                         "description": "Procedure ID",
                     },
+                    {
+                        "description": "FHIR Profile URL",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
+                    },
+                    {
+                        "description": "Condition ID",
+                        "path": "reasonReference.getReferenceKey()",
+                        "name": "procedure_condition_resource_id",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "procedure_patient_resource_id",
+                    },
+                    {
+                        "description": "Intention Surgery",
+                        "path": f"extension('{FHIR_SYSTEMS_SURGERY_INTENTION}')"
+                        ".value.ofType(CodeableConcept).coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_SURGERY_INTENTION_CS}')"
+                        ".code",
+                        "name": "intention",
+                    },
+                    {
+                        "description": "Surgery Date",
+                        "path": "performed.ofType(DateTime).start",
+                        "name": "procedure_surgery_date",
+                    },
+                    {
+                        "description": "Surgery Outcome",
+                        "path": "outcome.coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_SURGERY_OUTCOME_CS}')"
+                        ".code",
+                        "name": "procedure_surgery_outcome",
+                    },
+                    {
+                        "description": "OPS Code",
+                        "path": "code.coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_SURGERY_OPS_CS}')"
+                        ".code",
+                        "name": "ops",
+                    },
                 ]
+            }
+        ],
+        where=[
+            {
+                "description": "Only Surgical Procedures",
+                "path": (
+                    "meta.profile.exists($this = "
+                    "'https://www.medizininformatik-initiative.de/fhir/ext/"
+                    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.0')"  # very bad practice - ggf über codes machen
+                ),
             }
         ],
     )
@@ -449,5 +521,4 @@ def extract_surgeries(
     # downstream unverändert - ggf aus altem übernehmen wenns noch passt
     # df_ops = preprocess_therapy_df(df_ops)
 
-    return df_ops
     return df_ops
