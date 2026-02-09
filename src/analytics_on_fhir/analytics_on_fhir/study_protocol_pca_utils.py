@@ -158,10 +158,10 @@ def extract_systemtherapies(
             {
                 "description": "Only System Therapy Procedures",
                 "path": (
-                    "meta.profile.exists("
+                    "meta.profile.startsWith("
                     " $this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-                    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.0'"  # very bad practice - ggf über codes machen
+                    "StructureDefinition/mii-pr-onko-systemische-therapie'"
                     ")"
                 ),
             }
@@ -296,7 +296,8 @@ def extract_systemtherapies(
         df_procedures_medication_statements_final.count(),
     )
     logger.info(
-        "df_procedures_medication_statements_final distinct procedure_resource_id count = {}",
+        "df_procedures_medication_statements_final distinct procedure_resource_id"
+        "count = {}",
         df_procedures_medication_statements_final.select("procedure_resource_id")
         .distinct()
         .count(),
@@ -314,12 +315,13 @@ def extract_systemtherapies(
     ).show()
 
     # prüfen ob ich das noch so wie bei DKTK machen will
-    # cast dates, (group one therapy per cond id per start date) - das hier will ich definitiv nicht, add months diff,
+    # cast dates, (group one therapy per cond id per start date) -
+    # das hier will ich definitiv nicht, add months diff,
     # filter negative months diff
     # systemtherapies_final = preprocess_therapy_df(systemtherapies)
 
-    # join on condition id later - we need reason reference in procedures for correct joining!
-    # (mehrfachkarzinome machen join auf patid ungenau)
+    # join on condition id later - we need reason reference in procedures for correct
+    # joining! (mehrfachkarzinome machen join auf patid ungenau)
     return df_procedures_medication_statements_final
 
 
@@ -411,9 +413,9 @@ def extract_radiotherapies(
             {
                 "description": "Only Radiotherapy Procedures",
                 "path": (
-                    "meta.profile.exists($this = "
+                    "meta.profile.startsWith($this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/"
-                    "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie|2026.0.0')"  # very bad practice - ggf über codes machen
+                    "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie')"
                 ),
             }
         ],
@@ -499,9 +501,9 @@ def extract_surgeries(
             {
                 "description": "Only Surgical Procedures",
                 "path": (
-                    "meta.profile.exists($this = "
+                    "meta.profile.startsWith($this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/"
-                    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.0')"  # very bad practice - ggf über codes machen
+                    "modul-onko/StructureDefinition/mii-pr-onko-operation')"
                 ),
             }
         ],

@@ -10,6 +10,7 @@ from pyspark.sql import SparkSession
 from analytics_on_fhir.embark_rwd import run
 from analytics_on_fhir.settings import settings
 from analytics_on_fhir.study_protocol_d import StudyProtocolD
+from analytics_on_fhir.study_protocol_pca1 import StudyProtocolPCa1
 from analytics_on_fhir.utils import (
     extract_df_study_protocol_a_d_mii,
     filter_aml,

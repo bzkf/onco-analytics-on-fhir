@@ -57,11 +57,21 @@ class StudyProtocolPCa1:
         df_radiotherapies = extract_radiotherapies(
             self.pc, self.data, self.settings, self.spark
         )
+        logger.info("df_radiotherapies_count = {}", df_radiotherapies.count())
+        df_radiotherapies.show()
 
         df_medication_statements = extract_systemtherapies(
             self.pc, self.data, self.settings, self.spark
         )
-        # df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        logger.info(
+            "df_medication_statements_count = {}", df_medication_statements.count()
+        )
+        df_medication_statements.show()
+
+        df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        logger.info("df_ops_count = {}", df_ops.count())
+        df_ops.show()
+
         # self.df_c61 = df_c61
         # return df_c61
 
