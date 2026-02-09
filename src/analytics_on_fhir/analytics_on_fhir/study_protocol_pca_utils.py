@@ -161,7 +161,7 @@ def extract_systemtherapies(
                     "meta.profile.exists("
                     " $this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-                    "StructureDefinition/mii-pr-onko-systemische-therapie'"
+                    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.1'"
                     ")"
                 ),
             }
@@ -415,7 +415,7 @@ def extract_radiotherapies(
                 "path": (
                     "meta.profile.exists($this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/"
-                    "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie')"
+                    "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie|2026.0.1')"
                 ),
             }
         ],
@@ -503,7 +503,7 @@ def extract_surgeries(
                 "path": (
                     "meta.profile.exists($this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/"
-                    "modul-onko/StructureDefinition/mii-pr-onko-operation')"
+                    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.1')"
                 ),
             }
         ],
