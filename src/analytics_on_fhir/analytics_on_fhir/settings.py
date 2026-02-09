@@ -42,5 +42,8 @@ converter = ts.converters.get_default_cattrs_converter()
 converter.register_structure_hook(StudyNames, ts.converters.to_enum_by_value)
 
 settings = ts.load_settings(
-    Settings, appname="analytics_on_fhir", env_prefix="", converter=converter
+    Settings,
+    ts.default_loaders("analytics_on_fhir"),
+    env_prefix="",
+    converter=converter,
 )
