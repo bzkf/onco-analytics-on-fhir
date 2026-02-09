@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.13.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.13.0...v2.13.1) (2026-02-09)
+
+
+### Bug Fixes
+
+* correct profile version ([#342](https://github.com/bzkf/onco-analytics-on-fhir/issues/342)) ([93f2cdc](https://github.com/bzkf/onco-analytics-on-fhir/commit/93f2cdc4fb12c374bbbf9e048d08896b7c52fd23))
+* revert startsWith ([#340](https://github.com/bzkf/onco-analytics-on-fhir/issues/340)) ([19ea2e9](https://github.com/bzkf/onco-analytics-on-fhir/commit/19ea2e9256c9883bcda2b7c3c80b441c1b64ff59))
+
 ## [2.13.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.12.2...v2.13.0) (2026-02-09)
 
 
