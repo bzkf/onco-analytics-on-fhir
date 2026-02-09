@@ -10,6 +10,7 @@ from pyspark.sql import SparkSession
 from analytics_on_fhir.embark_rwd import run
 from analytics_on_fhir.settings import settings
 from analytics_on_fhir.study_protocol_d import StudyProtocolD
+from analytics_on_fhir.study_protocol_pca1 import StudyProtocolPCa1
 from analytics_on_fhir.utils import (
     extract_df_study_protocol_a_d_mii,
     filter_aml,
@@ -61,6 +62,8 @@ def main():
         .config("fs.s3a.committer.magic.enabled", "true")
         .config("fs.s3a.access.key", settings.aws_access_key_id)
         .config("fs.s3a.secret.key", settings.aws_secret_access_key)
+        .config("spark.hadoop.fs.s3a.access.key", settings.aws_access_key_id)
+        .config("spark.hadoop.fs.s3a.secret.key", settings.aws_secret_access_key)
         .config("spark.hadoop.fs.s3a.client.execution.timeout", "300000")
         .config("spark.hadoop.fs.s3a.connection.timeout", "600000")
         .config("spark.hadoop.fs.s3a.connection.establish.timeout", "600000")
@@ -130,6 +133,14 @@ def main():
                 spark=spark,
             )
             study_protocol_d.run()
+        case "study_protocol_pca1":
+            study_protocol_pca1 = StudyProtocolPCa1(
+                pc=pc,
+                data=data,
+                settings=settings,
+                spark=spark,
+            )
+            study_protocol_pca1.run()
         case "study_protocol_aml":
             df = extract_df_study_protocol_a_d_mii(
                 pc,

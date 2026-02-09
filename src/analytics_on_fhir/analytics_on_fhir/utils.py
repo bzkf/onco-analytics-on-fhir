@@ -1,11 +1,13 @@
 import glob
 import os
 import shutil
+from typing import Iterable
 
 from loguru import logger
 from matplotlib.figure import Figure
 from pathling import PathlingContext, datasource
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 from pyspark.sql.functions import (
     abs,
     col,
@@ -96,6 +98,29 @@ def find_closest_to_diagnosis(
         .drop("row_num")
         .withColumnRenamed(other_date_col, other_date_col + "_first")
     )
+
+
+def compute_age(df: DataFrame) -> DataFrame:
+    # birthdate (YYYY-MM → YYYY-MM-15)
+    df = df.withColumn(
+        "birthdate",
+        F.when(
+            F.col("birthdate").rlike(r"^\d{4}-\d{2}$"),  # nur YYYY-MM
+            F.to_date(F.concat(F.col("birthdate"), F.lit("-15")), "yyyy-MM-dd"),
+        ).otherwise(F.to_date(F.col("birthdate"), "yyyy-MM-dd")),
+    )
+
+    df = df.withColumn(
+        "age_at_diagnosis",
+        F.round((F.datediff(df["asserted_date"], df["birthdate"]) / 365.25), 2),
+    ).drop("birthdate")
+    return df
+
+
+def cast_study_dates(df: DataFrame, date_cols: Iterable[str]) -> DataFrame:
+    for c in date_cols:
+        df = df.withColumn(c, F.to_date(c))
+    return df
 
 
 def add_is_deceased(df):
@@ -398,7 +423,9 @@ def extract_df_study_protocol_a_d_mii(
         observation_death.filter(col("death_cause_icd10").isNotNull())
         .groupBy("observation_death_patient_resource_id")
         .agg(
-            concat_ws(",", collect_set("death_cause_icd10")).alias("death_cause_icd10")
+            concat_ws("|", F.sort_array(collect_set("death_cause_icd10"))).alias(
+                "death_cause_icd10"
+            )
         )
     )
 
@@ -692,7 +719,9 @@ def extract_df_study_protocol_a_d_mii(
         "observation_metastasis_condition_resource_id",
         "metastasis_date",
     ).agg(
-        concat_ws(",", collect_set("metastasis_loc")).alias("metastasis_loc"),
+        concat_ws("|", F.sort_array(collect_set("metastasis_loc"))).alias(
+            "metastasis_loc"
+        ),
         first("observation_metastasis_patient_resource_id", ignorenulls=True).alias(
             "observation_metastasis_patient_resource_id"
         ),
