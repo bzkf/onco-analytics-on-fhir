@@ -158,7 +158,7 @@ def extract_systemtherapies(
             {
                 "description": "Only System Therapy Procedures",
                 "path": (
-                    "meta.profile.startsWith("
+                    "meta.profile.exists("
                     " $this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
                     "StructureDefinition/mii-pr-onko-systemische-therapie'"
@@ -413,7 +413,7 @@ def extract_radiotherapies(
             {
                 "description": "Only Radiotherapy Procedures",
                 "path": (
-                    "meta.profile.startsWith($this = "
+                    "meta.profile.exists($this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/"
                     "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie')"
                 ),
@@ -501,7 +501,7 @@ def extract_surgeries(
             {
                 "description": "Only Surgical Procedures",
                 "path": (
-                    "meta.profile.startsWith($this = "
+                    "meta.profile.exists($this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/"
                     "modul-onko/StructureDefinition/mii-pr-onko-operation')"
                 ),
