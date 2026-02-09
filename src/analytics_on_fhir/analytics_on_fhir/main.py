@@ -138,7 +138,6 @@ def main():
                 spark=spark,
             )
             study_protocol_pca1.run()
-            # save_final_df(df, settings, suffix="study_protocol_pca1")
 
 
 if __name__ == "__main__":

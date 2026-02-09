@@ -61,9 +61,7 @@ FHIR_SYSTEMS_SURGERY_OUTCOME_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-residualstatus"
 )
-FHIR_SYSTEMS_SURGERY_OPS_CS = (
-    "http://fhir.de/CodeSystem/bfarm/ops"
-)
+FHIR_SYSTEMS_SURGERY_OPS_CS = "http://fhir.de/CodeSystem/bfarm/ops"
 
 
 def extract_systemtherapies(
@@ -282,7 +280,6 @@ def extract_systemtherapies(
         df_procedures_medication_statements_grouped.count(),
     )
 
-
     # join back missing cols
     df_procedures_medication_statements_final = (
         df_procedures.alias("p")
@@ -324,6 +321,7 @@ def extract_systemtherapies(
     # join on condition id later - we need reason reference in procedures for correct joining!
     # (mehrfachkarzinome machen join auf patid ungenau)
     return df_procedures_medication_statements_final
+
 
 def extract_radiotherapies(
     pc: PathlingContext,
@@ -521,3 +519,19 @@ def extract_surgeries(
     # downstream unverändert - ggf aus altem übernehmen wenns noch passt
     # df_ops = preprocess_therapy_df(df_ops)
     return df_ops
+
+
+def flag_young_highrisk_cohort(
+    df: DataFrame, age_col: str = "age_at_diagnosis", gleason_col: str = "gleason"
+) -> DataFrame:
+    cohort_condition = (F.col(age_col) < 65) & (F.col(gleason_col) >= 8)
+
+    df_flagged = df.withColumn(
+        "cohort_flag", F.when(cohort_condition, F.lit(1)).otherwise(F.lit(0))
+    )
+
+    cohort = df_flagged.filter(F.col("cohort_flag") == 1)
+    logger.info("df_flagged count = {}", df_flagged.count())
+    logger.info("Filtered cohort count = {}", cohort.count())
+
+    return df_flagged

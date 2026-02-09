@@ -10,6 +10,7 @@ from analytics_on_fhir.study_protocol_pca_utils import (
     extract_radiotherapies,
     extract_surgeries,
     extract_systemtherapies,
+    flag_young_highrisk_cohort,
 )
 from analytics_on_fhir.utils import (
     cast_study_dates,
@@ -41,14 +42,17 @@ class StudyProtocolPCa1:
     def extract(self) -> DataFrame:
         # later, join therapy data to condition/gleason/metastasis data
         # filtered by C61 from here
-        """df = extract_df_study_protocol_a_d_mii(
+        df = extract_df_study_protocol_a_d_mii(
             self.pc, self.data, self.settings, self.spark
         )
         df_c61 = df.filter(F.col("icd10_code").startswith("C61"))
 
         logger.info("df_c61_count = {}", df_c61.count())
-        self.df_c61 = df_c61"""
+        self.df_c61 = df_c61
 
+        return df_c61
+
+        # extend this later
         # TO DO: extract therapies here
         df_radiotherapies = extract_radiotherapies(
             self.pc, self.data, self.settings, self.spark
@@ -68,8 +72,6 @@ class StudyProtocolPCa1:
         # TO DO: Add therapies here
         df_extract = self.extract()
 
-        return df_extract
-
         # adapt this later
         # 2) Prepare
         df_prepare = self.prepare(df_extract)
@@ -79,7 +81,7 @@ class StudyProtocolPCa1:
         self.year_min = df_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_clean.select(F.max(F.year("asserted_date"))).first()[0]
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
-        save_final_df(df_clean, self.settings, suffix="study_protocol_d")
+        save_final_df(df_clean, self.settings, suffix="study_protocol_pca1")
 
         logger.info("StudyProtocolPCa1 pipeline finished")
 
@@ -92,10 +94,13 @@ class StudyProtocolPCa1:
                 "deceased_datetime",
                 "date_death",
                 "gleason_date_first",
-                # therapy dates
+                # therapy dates later
             ],
         )
         df = compute_age(df)
+        df = flag_young_highrisk_cohort(
+            df, age_col="age_at_diagnosis", gleason_col="gleason_score"
+        )
         df = df.checkpoint(eager=True)
         return df
 
@@ -105,3 +110,8 @@ class StudyProtocolPCa1:
         df = df.filter(F.col("age_at_diagnosis") > 0)
 
         return df
+
+    def plot(self, df: DataFrame) -> DataFrame:
+        logger.info("StudyProtocolPCa1 pipeline - start plotting")
+        # to do
+        # z.B. Kaplan Meier Plots Johannes hier einbinden
