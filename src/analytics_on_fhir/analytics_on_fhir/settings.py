@@ -1,8 +1,18 @@
+from enum import Enum
 import os
 
 import typed_settings as ts
 
 HERE = os.path.abspath(os.path.dirname(__file__))
+
+
+class StudyNames(Enum):
+    EMBARK_RWD = "embark_rwd"
+    STUDY_PROTOCOL_A = "study_protocol_a"
+    STUDY_PROTOCOL_D = "study_protocol_d"
+    STUDY_PROTOCOL_PCA1 = "study_protocol_pca1"
+    STUDY_PROTOCOL_AML = "study_protocol_aml"
+    ALL = "all"
 
 
 @ts.settings
@@ -23,7 +33,7 @@ class Settings:
     aws_secret_access_key: str = ts.secret(default="miniopass")
     delta_database_path: str = ""
     fhir_bundles_path: str = os.path.join(HERE, "../tests/fixtures/fhir/")
-    study_name: str = "study_protocol_a"  # "embark_rwd" # "study_protocol_d"
+    study_name: StudyNames = StudyNames.STUDY_PROTOCOL_A
     results_directory_path: str = os.path.join(HERE, "results/")
     location: str = "UKER"
 
