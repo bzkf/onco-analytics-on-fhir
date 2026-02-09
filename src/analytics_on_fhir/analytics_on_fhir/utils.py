@@ -48,7 +48,7 @@ FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
 def save_final_df(pyspark_df, settings, suffix=""):
     logger.info("start save pyspark_df with pyspark_df.coalesce(1).write...csv() ")
     output_dir = os.path.join(
-        HERE, settings.results_directory_path, settings.study_name
+        HERE, settings.results_directory_path, settings.study_name.value
     )
     os.makedirs(output_dir, exist_ok=True)
 
