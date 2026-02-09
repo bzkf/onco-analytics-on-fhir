@@ -10,8 +10,11 @@ from pyspark.sql import SparkSession
 from analytics_on_fhir.embark_rwd import run
 from analytics_on_fhir.settings import settings
 from analytics_on_fhir.study_protocol_d import StudyProtocolD
-from analytics_on_fhir.study_protocol_pca1 import StudyProtocolPCa1
-from analytics_on_fhir.utils import extract_df_study_protocol_a_d_mii, save_final_df
+from analytics_on_fhir.utils import (
+    extract_df_study_protocol_a_d_mii,
+    filter_aml,
+    save_final_df,
+)
 
 
 def main():
@@ -22,9 +25,8 @@ def main():
             "spark.jars.packages",
             ",".join(
                 [
-                    "au.csiro.pathling:library-runtime:9.1.0",
+                    "au.csiro.pathling:library-runtime:9.2.0",
                     "io.delta:delta-spark_2.13:4.0.0",
-                    "org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.1",
                     "org.apache.hadoop:hadoop-aws:3.4.1",
                 ]
             ),
@@ -138,6 +140,15 @@ def main():
                 spark=spark,
             )
             study_protocol_pca1.run()
+        case "study_protocol_aml":
+            df = extract_df_study_protocol_a_d_mii(
+                pc,
+                data,
+                spark,
+                settings,
+            )
+            df = filter_aml(df)
+            save_final_df(df, settings, suffix="study_protocol_aml")
 
 
 if __name__ == "__main__":
