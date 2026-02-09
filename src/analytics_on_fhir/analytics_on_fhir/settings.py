@@ -38,4 +38,9 @@ class Settings:
     location: str = "UKER"
 
 
-settings = ts.load(Settings, appname="analytics_on_fhir", env_prefix="")
+converter = ts.converters.get_default_cattrs_converter()
+converter.register_structure_hook(StudyNames, ts.converters.to_enum_by_value)
+
+settings = ts.load_settings(
+    Settings, appname="analytics_on_fhir", env_prefix="", converter=converter
+)

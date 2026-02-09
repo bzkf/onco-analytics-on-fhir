@@ -14,6 +14,7 @@ Collection of analytics scripts.
 
 ```sh
 uv sync
+source .venv/bin/activate
 ```
 
 ### Format and auto-fix using Ruff
