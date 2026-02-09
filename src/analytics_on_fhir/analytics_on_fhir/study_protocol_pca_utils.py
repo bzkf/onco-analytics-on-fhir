@@ -5,6 +5,21 @@ from pyspark.sql import functions as F
 
 from analytics_on_fhir.settings import settings
 
+FHIR_SYSTEMS_RADIOTHERAPY = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/"
+    "mii-pr-onko-strahlentherapie|2026.0.1"
+)
+FHIR_SYSTEMS_SURGERY = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.1)"
+)
+
+FHIR_SYSTEMS_SYSTEM_THERAPY = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
+    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.1)"
+)
+
 FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/StructureDefinition/"
@@ -158,11 +173,7 @@ def extract_systemtherapies(
             {
                 "description": "Only System Therapy Procedures",
                 "path": (
-                    "meta.profile.exists("
-                    " $this = "
-                    "'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-                    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.1'"
-                    ")"
+                    "meta.profile.exists($this = " f"'{FHIR_SYSTEMS_SYSTEM_THERAPY}')"
                 ),
             }
         ],
@@ -413,10 +424,7 @@ def extract_radiotherapies(
             {
                 "description": "Only Radiotherapy Procedures",
                 "path": (
-                    "meta.profile.exists($this = "
-                    "'https://www.medizininformatik-initiative.de/fhir/ext/"
-                    "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie|"
-                    "2026.0.1')"
+                    "meta.profile.exists($this = " f"'{FHIR_SYSTEMS_RADIOTHERAPY}')"
                 ),
             }
         ],
@@ -501,11 +509,7 @@ def extract_surgeries(
         where=[
             {
                 "description": "Only Surgical Procedures",
-                "path": (
-                    "meta.profile.exists($this = "
-                    "'https://www.medizininformatik-initiative.de/fhir/ext/"
-                    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.1')"
-                ),
+                "path": ("meta.profile.exists($this = " f"'{FHIR_SYSTEMS_SURGERY}')"),
             }
         ],
     )
