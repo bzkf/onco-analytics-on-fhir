@@ -14,12 +14,10 @@ FHIR_SYSTEMS_SURGERY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.0)"
 )
-
 FHIR_SYSTEMS_SYSTEM_THERAPY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
     "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.0)"
 )
-
 FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/StructureDefinition/"

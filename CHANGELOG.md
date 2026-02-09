@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.13.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.13.0...v2.13.1) (2026-02-09)
+
+
+### Bug Fixes
+
+* correct profile version ([#342](https://github.com/bzkf/onco-analytics-on-fhir/issues/342)) ([93f2cdc](https://github.com/bzkf/onco-analytics-on-fhir/commit/93f2cdc4fb12c374bbbf9e048d08896b7c52fd23))
+* revert startsWith ([#340](https://github.com/bzkf/onco-analytics-on-fhir/issues/340)) ([19ea2e9](https://github.com/bzkf/onco-analytics-on-fhir/commit/19ea2e9256c9883bcda2b7c3c80b441c1b64ff59))
+
+## [2.13.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.12.2...v2.13.0) (2026-02-09)
+
+
+### Features
+
+* add Use Case PCa extraction for therapies on MII profiles ([#334](https://github.com/bzkf/onco-analytics-on-fhir/issues/334)) ([3960084](https://github.com/bzkf/onco-analytics-on-fhir/commit/3960084657a1ada2a4a57234db5a33607f0d7477))
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency pillow to v12 ([#316](https://github.com/bzkf/onco-analytics-on-fhir/issues/316)) ([d8687b9](https://github.com/bzkf/onco-analytics-on-fhir/commit/d8687b9419d3042715cde9f735fc82f1fe31b55a))
+
 ## [2.12.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.12.1...v2.12.2) (2026-02-02)
 
 
