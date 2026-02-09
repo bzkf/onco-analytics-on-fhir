@@ -8,16 +8,16 @@ from analytics_on_fhir.settings import settings
 FHIR_SYSTEMS_RADIOTHERAPY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/StructureDefinition/"
-    "mii-pr-onko-strahlentherapie|2026.0.1"
+    "mii-pr-onko-strahlentherapie|2026.0.0"
 )
 FHIR_SYSTEMS_SURGERY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.1)"
+    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.0)"
 )
 
 FHIR_SYSTEMS_SYSTEM_THERAPY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.1)"
+    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.0)"
 )
 
 FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION = (
