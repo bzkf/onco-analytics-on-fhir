@@ -134,7 +134,7 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
             df = run(data, pathlib.Path(settings.results_directory_path) / "embark_rwd")
             save_final_df(
                 df,
-                os.path.join(settings.results_directory_path, study_name.value),
+                settings,
                 suffix="embark_rwd",
             )
         case StudyNames.STUDY_PROTOCOL_A:
@@ -146,7 +146,7 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
             )
             save_final_df(
                 df,
-                os.path.join(settings.results_directory_path, study_name.value),
+                settings,
                 suffix="study_protocol_a_d_mii",
             )
         case StudyNames.STUDY_PROTOCOL_D:
@@ -175,7 +175,7 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
             df = filter_aml(df)
             save_final_df(
                 df,
-                os.path.join(settings.results_directory_path, study_name.value),
+                settings,
                 suffix="study_protocol_aml",
             )
 
