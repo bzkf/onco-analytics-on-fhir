@@ -423,7 +423,9 @@ def extract_df_study_protocol_a_d_mii(
         observation_death.filter(col("death_cause_icd10").isNotNull())
         .groupBy("observation_death_patient_resource_id")
         .agg(
-            concat_ws(",", collect_set("death_cause_icd10")).alias("death_cause_icd10")
+            concat_ws("|", F.sort_array(collect_set("death_cause_icd10"))).alias(
+                "death_cause_icd10"
+            )
         )
     )
 
@@ -717,7 +719,9 @@ def extract_df_study_protocol_a_d_mii(
         "observation_metastasis_condition_resource_id",
         "metastasis_date",
     ).agg(
-        concat_ws(",", collect_set("metastasis_loc")).alias("metastasis_loc"),
+        concat_ws("|", F.sort_array(collect_set("metastasis_loc"))).alias(
+            "metastasis_loc"
+        ),
         first("observation_metastasis_patient_resource_id", ignorenulls=True).alias(
             "observation_metastasis_patient_resource_id"
         ),
