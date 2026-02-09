@@ -43,7 +43,6 @@ converter.register_structure_hook(StudyNames, ts.converters.to_enum_by_value)
 
 settings = ts.load_settings(
     Settings,
-    ts.default_loaders("analytics_on_fhir"),
-    env_prefix="",
+    ts.default_loaders(appname="analytics_on_fhir", env_prefix=""),
     converter=converter,
 )
