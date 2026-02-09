@@ -415,7 +415,8 @@ def extract_radiotherapies(
                 "path": (
                     "meta.profile.exists($this = "
                     "'https://www.medizininformatik-initiative.de/fhir/ext/"
-                    "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie|2026.0.1')"
+                    "modul-onko/StructureDefinition/mii-pr-onko-strahlentherapie|"
+                    "2026.0.1')"
                 ),
             }
         ],
