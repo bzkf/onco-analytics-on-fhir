@@ -1,3 +1,4 @@
+import os
 import pathlib
 import sys
 
@@ -118,7 +119,10 @@ def main():
     if settings.study_name == StudyNames.ALL:
         logger.info("Running all studies in sequence")
         for study_name in StudyNames:
-            logger.info(f"Running {study_name}")
+            # this is really hacky: currently the "settings" object
+            # is a bit too coupled with some helper functions
+            settings.study_name = study_name
+            logger.info(f"Running {study_name.value}")
             run_study(study_name, data, pc)
     else:
         run_study(study_name, data, pc)
@@ -127,8 +131,12 @@ def main():
 def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
     match study_name:
         case StudyNames.EMBARK_RWD:
-            df = run(data, pathlib.Path(settings.results_directory_path / "embark_rwd"))
-            save_final_df(df, settings, suffix="embark_rwd")
+            df = run(data, pathlib.Path(settings.results_directory_path) / "embark_rwd")
+            save_final_df(
+                df,
+                os.path.join(settings.results_directory_path, study_name.value),
+                suffix="embark_rwd",
+            )
         case StudyNames.STUDY_PROTOCOL_A:
             df = extract_df_study_protocol_a_d_mii(
                 pc,
@@ -136,7 +144,11 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
                 pc.spark,
                 settings,
             )
-            save_final_df(df, settings, suffix="study_protocol_a_d_mii")
+            save_final_df(
+                df,
+                os.path.join(settings.results_directory_path, study_name.value),
+                suffix="study_protocol_a_d_mii",
+            )
         case StudyNames.STUDY_PROTOCOL_D:
             study_protocol_d = StudyProtocolD(
                 pc=pc,
@@ -161,7 +173,11 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
                 settings,
             )
             df = filter_aml(df)
-            save_final_df(df, settings, suffix="study_protocol_aml")
+            save_final_df(
+                df,
+                os.path.join(settings.results_directory_path, study_name.value),
+                suffix="study_protocol_aml",
+            )
 
 
 if __name__ == "__main__":

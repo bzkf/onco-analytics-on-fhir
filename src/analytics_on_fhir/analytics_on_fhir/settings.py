@@ -33,7 +33,7 @@ class Settings:
     aws_secret_access_key: str = ts.secret(default="miniopass")
     delta_database_path: str = ""
     fhir_bundles_path: str = os.path.join(HERE, "../tests/fixtures/fhir/")
-    study_name: StudyNames = StudyNames.STUDY_PROTOCOL_A
+    study_name: StudyNames = StudyNames.ALL
     results_directory_path: str = os.path.join(HERE, "results/")
     location: str = "UKER"
 

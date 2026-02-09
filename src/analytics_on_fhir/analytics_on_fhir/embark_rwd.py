@@ -335,5 +335,5 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
     return cohort
 
 
-def run(data: DataSource, results_directory: pathlib.Path):
-    extract(data, results_directory)
+def run(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
+    return extract(data, results_directory)
