@@ -49,12 +49,19 @@ def data_source_fixture() -> DataSource:
 def test_extract_with_sample_data_should_write_csv_and_dotfile(
     data_source_fixture: DataSource, tmp_path: Path, snapshot: SnapshotAssertion
 ):
-    extract(data_source_fixture, tmp_path)
+    cohort = extract(data_source_fixture, tmp_path)
 
+    cohort_csv_path = tmp_path / "embark-rwd-cohort.csv"
+    cohort.coalesce(1).write.mode("overwrite").option("header", "true").csv(
+        cohort_csv_path.as_posix()
+    )
+
+    cohort_content = read_spark_csv_dir(tmp_path / "embark-rwd-cohort.csv")
     csv_content = read_spark_csv_dir(tmp_path / "medication-counts.csv")
     dot_content = (tmp_path / "embark-rwd-flowchart.gv").read_text()
 
     assert {
+        "cohort": cohort_content,
         "csv": csv_content,
         "dot": dot_content,
     } == snapshot

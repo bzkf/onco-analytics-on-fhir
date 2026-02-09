@@ -29,3 +29,9 @@ This installs the project in editable mode so all local packages
 ```sh
 uv run pytest -vv --log-cli-level=20 --cov=analytics_on_fhir --cov-report=html --capture=no
 ```
+
+#### Update snapshots
+
+```sh
+uv run pytest -vv --log-cli-level=20 --snapshot-update
+```

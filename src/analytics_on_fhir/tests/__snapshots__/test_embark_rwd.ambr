@@ -1,6 +1,11 @@
 # serializer version: 1
 # name: test_extract_with_sample_data_should_write_csv_and_dotfile
   dict({
+    'cohort': '''
+      condition_id,observation_id,patient_id,effective_date_time_first,code_coding_sct,tnm_value,code,display,condition_patient_id,asserted_date,recorded_date,id,medication_statement_patient_id,medication_start_date,medication_text,medication_atc_code
+      Condition/528cbfb627eff7b031c902f2a97d149f5640d57a28f705fadba22462aae7c408,Observation/c72fd60c22e939ebd659338abadcd8ef40f0f5149d7e229c56e206a8669c720f,Patient/a02e16474896f1d528cac71f2c9b4c45ac3c9028e3a53fb414a1f7882991ee07,2020-03-01,399387003,M0,399387003,cM category (observable entity),Patient/a02e16474896f1d528cac71f2c9b4c45ac3c9028e3a53fb414a1f7882991ee07,2020-03-01,2024-09-19,MedicationStatement/41659d329e36cce9d00a37cbe22aded15fd20293fe5712095db45e6c73708965,Patient/a02e16474896f1d528cac71f2c9b4c45ac3c9028e3a53fb414a1f7882991ee07,2020-05,Enzalutamid,L02BB04
+  
+    ''',
     'csv': '''
       medication_text,medication_atc_code,num_patients
       Enzalutamid,L02BB04,1
