@@ -16,6 +16,13 @@ Collection of analytics scripts.
 uv sync
 ```
 
+### Format and auto-fix using Ruff
+
+```sh
+ruff format .
+ruff check --fix .
+```
+
 ### Run in VS Code interactive mode
 From the project root src/analytics_on_fhir, run:
 ```sh

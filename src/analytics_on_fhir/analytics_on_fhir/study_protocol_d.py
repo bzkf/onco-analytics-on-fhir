@@ -1,5 +1,3 @@
-from typing import Optional
-
 from loguru import logger
 from pathling import PathlingContext
 from pathling.datasource import DataSource
@@ -36,10 +34,10 @@ class StudyProtocolD:
         self.settings = settings
         self.spark: SparkSession = spark
 
-        self.df_extract: Optional[DataFrame] = None
-        self.df_all_pivot: Optional[DataFrame] = None
-        self.year_min: Optional[int] = None
-        self.year_max: Optional[int] = None
+        self.df_extract: DataFrame | None = None
+        self.df_all_pivot: DataFrame | None = None
+        self.year_min: int | None = None
+        self.year_max: int | None = None
 
     def extract(self) -> DataFrame:
         df = extract_df_study_protocol_a_d_mii(

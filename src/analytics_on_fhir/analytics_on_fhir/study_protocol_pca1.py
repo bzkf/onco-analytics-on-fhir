@@ -1,5 +1,3 @@
-from typing import Optional
-
 from loguru import logger
 from pathling import PathlingContext
 from pathling.datasource import DataSource
@@ -33,10 +31,10 @@ class StudyProtocolPCa1:
         self.settings = settings
         self.spark: SparkSession = spark
 
-        self.df_c61: Optional[DataFrame] = None
-        self.df_all_pivot: Optional[DataFrame] = None
-        self.year_min: Optional[int] = None
-        self.year_max: Optional[int] = None
+        self.df_c61: DataFrame | None = None
+        self.df_all_pivot: DataFrame | None = None
+        self.year_min: int | None = None
+        self.year_max: int | None = None
 
     def extract(self) -> DataFrame:
         # later, join therapy data to condition/gleason/metastasis data

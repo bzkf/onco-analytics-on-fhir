@@ -1,7 +1,7 @@
 import glob
 import os
 import shutil
-from typing import Iterable
+from collections.abc import Iterable
 
 from loguru import logger
 from matplotlib.figure import Figure
