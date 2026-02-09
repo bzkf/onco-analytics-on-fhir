@@ -21,7 +21,6 @@ from analytics_on_fhir.utils import (
 
 
 class StudyProtocolPCa1:
-
     def __init__(
         self,
         pc: PathlingContext,
@@ -96,7 +95,6 @@ class StudyProtocolPCa1:
         logger.info("StudyProtocolPCa1 pipeline finished")
 
     def prepare(self, df: DataFrame) -> DataFrame:
-
         df = cast_study_dates(
             df,
             [
@@ -115,7 +113,6 @@ class StudyProtocolPCa1:
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
-
         df = df.filter(F.col("asserted_date") > F.lit("1950-01-01"))
         df = df.filter(F.col("age_at_diagnosis") > 0)
 

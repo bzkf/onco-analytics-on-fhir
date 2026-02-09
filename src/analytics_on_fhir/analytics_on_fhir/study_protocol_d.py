@@ -24,7 +24,6 @@ from analytics_on_fhir.utils import (
 
 
 class StudyProtocolD:
-
     def __init__(
         self,
         pc: PathlingContext,
@@ -119,7 +118,6 @@ class StudyProtocolD:
         logger.info("StudyProtocolD pipeline finished")
 
     def prepare(self, df: DataFrame) -> DataFrame:
-
         df = group_entity_or_parent(
             df, code_col="icd10_code", target_col="entity_or_parent"
         )
@@ -138,7 +136,6 @@ class StudyProtocolD:
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
-
         df = df.filter(F.col("asserted_date") > F.lit("1950-01-01"))
         df = df.filter(F.col("age_at_diagnosis") > 0)
 
