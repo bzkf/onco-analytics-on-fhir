@@ -35,6 +35,9 @@ class StudyProtocolPCa1:
         self.spark: SparkSession = spark
 
         self.df_c61: Optional[DataFrame] = None
+        self.df_radiotherapies: Optional[DataFrame] = None
+        self.df_medication_statements: Optional[DataFrame] = None
+        self.df_ops: Optional[DataFrame] = None
         self.df_all_pivot: Optional[DataFrame] = None
         self.year_min: Optional[int] = None
         self.year_max: Optional[int] = None
@@ -42,7 +45,7 @@ class StudyProtocolPCa1:
     def extract(self) -> DataFrame:
         # later, join therapy data to condition/gleason/metastasis data
         # filtered by C61 from here
-        df = extract_df_study_protocol_a_d_mii(
+        """df = extract_df_study_protocol_a_d_mii(
             self.pc, self.data, self.settings, self.spark
         )
         df_c61 = df.filter(F.col("icd10_code").startswith("C61"))
@@ -50,27 +53,36 @@ class StudyProtocolPCa1:
         logger.info("df_c61_count = {}", df_c61.count())
         self.df_c61 = df_c61
 
-        return df_c61
+        return df_c61"""
 
         # extend this later
         # TO DO: extract therapies here
-        df_radiotherapies = extract_radiotherapies(
-            self.pc, self.data, self.settings, self.spark
-        )
-        logger.info("df_radiotherapies_count = {}", df_radiotherapies.count())
-        df_radiotherapies.show()
 
-        df_medication_statements = extract_systemtherapies(
+        """         df_medication_statements = extract_systemtherapies(
             self.pc, self.data, self.settings, self.spark
         )
         logger.info(
             "df_medication_statements_count = {}", df_medication_statements.count()
         )
         df_medication_statements.show()
+        self.df_medication_statements = df_medication_statements
+        save_final_df(
+            df_medication_statements, self.settings, suffix="medication_statements"
+        ) """
 
-        df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        df_radiotherapies = extract_radiotherapies(
+            self.pc, self.data, self.settings, self.spark
+        )
+        logger.info("df_radiotherapies_count = {}", df_radiotherapies.count())
+        df_radiotherapies.show()
+        self.df_radiotherapies = df_radiotherapies
+        save_final_df(df_radiotherapies, self.settings, suffix="radiotherapies")
+
+        """df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
         logger.info("df_ops_count = {}", df_ops.count())
         df_ops.show()
+        self.df_ops = df_ops
+        save_final_df(df_ops, self.settings, suffix="ops") """
 
         # self.df_c61 = df_c61
         # return df_c61

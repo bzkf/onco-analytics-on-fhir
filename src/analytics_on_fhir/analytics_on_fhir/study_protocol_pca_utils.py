@@ -94,23 +94,22 @@ def extract_systemtherapies(
                     {
                         "description": "Procedure ID",
                         "path": "getResourceKey()",
-                        "name": "procedure_resource_id",
+                        "name": "therapy_id",
                     },
                     {
                         "description": "FHIR Profile URL",
                         "path": "meta.profile",
                         "name": "meta_profile",
                     },
-                    # ! empty, created issue in obds-to-fhir, we need this for joining
                     {
                         "description": "Condition ID",
                         "path": "reasonReference.getReferenceKey()",
-                        "name": "procedure_condition_resource_id",
+                        "name": "reason_reference",
                     },
                     {
                         "description": "Patient ID",
                         "path": "subject.getReferenceKey()",
-                        "name": "procedure_patient_resource_id",
+                        "name": "subject_reference",
                     },
                     {
                         "description": "Intention System Therapy",
@@ -119,7 +118,7 @@ def extract_systemtherapies(
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION_CS}')"
                         ".code",
-                        "name": "intention",
+                        "name": "therapy_intention",
                     },
                     {
                         "description": "Stellung zur Op System Therapy",
@@ -139,17 +138,17 @@ def extract_systemtherapies(
                             f".where(system = '{FHIR_SYSTEMS_SYSTEM_THERAPY_TYP_CS}')"
                             ".code"
                         ),
-                        "name": "procedure_therapie_art",
+                        "name": "therapy_type",
                     },
                     {
                         "description": "Systemische Therapie Beginn",
                         "path": "performed.ofType(Period).start",
-                        "name": "procedure_therapy_start_date",
+                        "name": "therapy_start_date",
                     },
                     {
                         "description": "Systemische Therapie Ende",
                         "path": "performed.ofType(Period).end",
-                        "name": "procedure_therapy_end_date",
+                        "name": "therapy_end_date",
                     },
                     {
                         "description": "Systemische Therapie Ende Grund",
@@ -157,19 +156,19 @@ def extract_systemtherapies(
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_THERAPY_END_REASON_CS}')"
                         ".code",
-                        "name": "procedure_therapy_end_reason",
+                        "name": "therapy_end_reason",
                     },
                     {
                         "description": "Protokoll der systemischen Therapie",
                         "path": "usedCode.text",
-                        "name": "procedure_therapy_protocol_text",
+                        "name": "therapy_protocol_text",
                     },
                 ],
             }
         ],
         where=[
             {
-                "description": "Only System Therapy Procedures",
+                "description": "Only SYSTEM THERAPY Procedures",
                 "path": (
                     "meta.profile.exists($this = " f"'{FHIR_SYSTEMS_SYSTEM_THERAPY}')"
                 ),
@@ -178,14 +177,14 @@ def extract_systemtherapies(
     )
     logger.info("df_procedures count = {}", df_procedures.count())
     logger.info(
-        "df_procedures distinct procedure_resource_id count = {}",
-        df_procedures.select("procedure_resource_id").distinct().count(),
+        "df_procedures distinct therapy_id count = {}",
+        df_procedures.select("therapy_id").distinct().count(),
     )
     logger.info(
-        "df_procedures distinct patient id count = {}",
-        df_procedures.select("procedure_patient_resource_id").distinct().count(),
+        "df_procedures distinct subject_reference patient id count = {}",
+        df_procedures.select("subject_reference").distinct().count(),
     )
-    df_procedures.orderBy(F.col("procedure_condition_resource_id")).show(truncate=False)
+    df_procedures.orderBy(F.col("reason_reference")).show(truncate=False)
 
     logger.info("extract medication statements / system therapies.")
 
@@ -202,17 +201,17 @@ def extract_systemtherapies(
                     {
                         "description": "Procedure Reference",
                         "path": "partOf.getReferenceKey()",
-                        "name": "medication_statement_procedure_resource_id",
+                        "name": "part_of_reference",
                     },
                     {
                         "description": "Patient ID",
                         "path": "subject.getReferenceKey()",
-                        "name": "medication_statement_patient_resource_id",
+                        "name": "subject_reference",
                     },
                     {
                         "description": "Condition ID",
                         "path": "reasonReference.getReferenceKey()",
-                        "name": "medication_statement_condition_resource_id",
+                        "name": "reason_reference",
                     },
                     {
                         "description": "Effective Start Date",
@@ -237,51 +236,72 @@ def extract_systemtherapies(
 
     logger.info("df_medication_statements_count = {}", df_medication_statements.count())
     logger.info(
-        "df_medication_statements_count distinct condition id count = {}",
-        df_medication_statements.select("medication_statement_condition_resource_id")
-        .distinct()
-        .count(),
+        "df_medication_statements_count distinct reason_reference / condition id count = {}",
+        df_medication_statements.select("reason_reference").distinct().count(),
     )
     logger.info(
-        "df_medication_statements_count distinct procedure id count = {}",
-        df_medication_statements.select("medication_statement_procedure_resource_id")
-        .distinct()
-        .count(),
+        "df_medication_statements_count distinct part_of_reference / procedure id count = {}",
+        df_medication_statements.select("part_of_reference").distinct().count(),
     )
     df_medication_statements = df_medication_statements.orderBy(
-        F.col("medication_statement_condition_resource_id")
+        F.col("reason_reference")
     )
     df_medication_statements.show()
 
-    # ACHTUNG - hier erst joinen procedure+medicationstatements und danach gruppieren
-    df_procedures_medication_statements = df_procedures.join(
-        df_medication_statements,
-        df_procedures["procedure_resource_id"]
-        == df_medication_statements["medication_statement_procedure_resource_id"],
-        how="left",
+    # erst joinen (procedure+medicationstatements) und danach gruppieren
+    # Substanzen pro condition und therapy start date |-separiert abspeichern
+    df_procedures_medication_statements = (
+        df_procedures.alias("p")
+        .join(
+            df_medication_statements.alias("m"),
+            F.col("p.therapy_id") == F.col("m.part_of_reference"),
+            how="left",
+        )
+        .select(
+            F.col("p.therapy_id"),
+            F.coalesce(
+                F.col("p.subject_reference"),
+                F.col("m.subject_reference"),
+            ).alias("subject_reference"),
+            F.coalesce(
+                F.col("p.reason_reference"),
+                F.col("m.reason_reference"),
+            ).alias("reason_reference"),
+            "p.meta_profile",
+            "p.therapy_intention",
+            "p.stellung_op",
+            "p.therapy_type",
+            "p.therapy_start_date",
+            "p.therapy_end_date",
+            "p.therapy_end_reason",
+            "p.therapy_protocol_text",
+            "m.medication_statement_start_date",
+            "m.medication_statement_text",
+            "m.medication_statement_atc_code",
+            "m.part_of_reference",
+        )
     )
+
     logger.info(
         "df_procedures_medication_statements count = {}",
         df_procedures_medication_statements.count(),
     )
-    df_procedures_medication_statements.orderBy(
-        F.col("medication_statement_condition_resource_id")
-    ).show()
+    df_procedures_medication_statements.orderBy(F.col("reason_reference")).show()
 
-    # pro condition und start date: komma separiert abspeichern
+    # pro condition und start date: | separiert abspeichern
     df_procedures_medication_statements_grouped = (
         df_procedures_medication_statements.groupBy(
-            "medication_statement_patient_resource_id",
-            "medication_statement_condition_resource_id",
-            "medication_statement_start_date",
-            "procedure_resource_id",
+            "subject_reference",
+            "reason_reference",
+            "therapy_start_date",
+            "part_of_reference",
         ).agg(
-            F.concat_ws(", ", F.collect_set("medication_statement_text")).alias(
-                "medication_statement_text"
-            ),
-            F.concat_ws(", ", F.collect_set("medication_statement_atc_code")).alias(
-                "medication_statement_atc_code"
-            ),
+            F.concat_ws(
+                "| ", F.sort_array(F.collect_set("medication_statement_text"))
+            ).alias("medication_statement_text"),
+            F.concat_ws(
+                "| ", F.sort_array(F.collect_set("medication_statement_atc_code"))
+            ).alias("medication_statement_atc_code"),
         )
     )
     logger.info(
@@ -294,10 +314,26 @@ def extract_systemtherapies(
         df_procedures.alias("p")
         .join(
             df_procedures_medication_statements_grouped.alias("pg"),
-            F.col("p.procedure_resource_id") == F.col("pg.procedure_resource_id"),
+            F.col("p.therapy_id") == F.col("pg.part_of_reference"),
             how="left",
         )
-        .drop(F.col("pg.procedure_resource_id"))
+        .select(
+            F.col("p.therapy_id").alias("therapy_id"),
+            F.col("p.subject_reference"),
+            F.col("p.reason_reference"),
+            F.col("p.meta_profile").alias("meta_profile"),
+            F.col("p.therapy_intention").alias("therapy_intention"),
+            F.col("p.stellung_op").alias("stellung_op"),
+            F.col("p.therapy_type").alias("therapy_type"),
+            F.col("p.therapy_start_date").alias("therapy_start_date"),
+            F.col("p.therapy_end_date").alias("therapy_end_date"),
+            F.col("p.therapy_end_reason").alias("therapy_end_reason"),
+            F.col("p.therapy_protocol_text").alias("therapy_protocol_text"),
+            F.col("pg.medication_statement_text").alias("medication_statement_text"),
+            F.col("pg.medication_statement_atc_code").alias(
+                "medication_statement_atc_code"
+            ),
+        )
     )
 
     logger.info(
@@ -305,23 +341,19 @@ def extract_systemtherapies(
         df_procedures_medication_statements_final.count(),
     )
     logger.info(
-        "df_procedures_medication_statements_final distinct procedure_resource_id"
+        "df_procedures_medication_statements_final distinct procedure_resource_id "
         "count = {}",
-        df_procedures_medication_statements_final.select("procedure_resource_id")
+        df_procedures_medication_statements_final.select("therapy_id")
         .distinct()
         .count(),
     )
     logger.info(
         "df_procedures_medication_statements_final distinct patient id count = {}",
-        df_procedures_medication_statements_final.select(
-            "procedure_patient_resource_id"
-        )
+        df_procedures_medication_statements_final.select("subject_reference")
         .distinct()
         .count(),
     )
-    df_procedures_medication_statements_final.orderBy(
-        F.col("medication_statement_condition_resource_id")
-    ).show()
+    df_procedures_medication_statements_final.orderBy(F.col("reason_reference")).show()
 
     # prüfen ob ich das noch so wie bei DKTK machen will
     # cast dates, (group one therapy per cond id per start date) -
@@ -329,8 +361,7 @@ def extract_systemtherapies(
     # filter negative months diff
     # systemtherapies_final = preprocess_therapy_df(systemtherapies)
 
-    # join on condition id later - we need reason reference in procedures for correct
-    # joining! (mehrfachkarzinome machen join auf patid ungenau)
+    # join to condition information on condition id / reason reference later
     return df_procedures_medication_statements_final
 
 
@@ -358,7 +389,6 @@ def extract_radiotherapies(
                         "path": "meta.profile",
                         "name": "meta_profile",
                     },
-                    # ! empty, created issue in obds-to-fhir, we need this for joining
                     {
                         "description": "Condition ID",
                         "path": "reasonReference.getReferenceKey()",
@@ -422,7 +452,8 @@ def extract_radiotherapies(
             {
                 "description": "Only Radiotherapy Procedures",
                 "path": (
-                    "meta.profile.exists($this = " f"'{FHIR_SYSTEMS_RADIOTHERAPY}')"
+                    "meta.profile.exists($this = "
+                    f"'{FHIR_SYSTEMS_RADIOTHERAPY}')"  # to do filter hier mit startsWith im pyspark df nach pathling extract
                 ),
             }
         ],
