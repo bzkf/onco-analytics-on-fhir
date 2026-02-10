@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.13.1...v2.14.0) (2026-02-10)
+
+
+### Features
+
+* **embark_rwd:** handle empty results and added option to run all studies at once ([#344](https://github.com/bzkf/onco-analytics-on-fhir/issues/344)) ([2a0a7d0](https://github.com/bzkf/onco-analytics-on-fhir/commit/2a0a7d0fbaaaae843bfa471d4abc31d975738996))
+
 ## [2.13.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.13.0...v2.13.1) (2026-02-09)
 
 
