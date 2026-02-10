@@ -1,5 +1,3 @@
-from typing import Optional
-
 from loguru import logger
 from pathling import PathlingContext
 from pathling.datasource import DataSource
@@ -24,7 +22,6 @@ from analytics_on_fhir.utils import (
 
 
 class StudyProtocolD:
-
     def __init__(
         self,
         pc: PathlingContext,
@@ -37,10 +34,10 @@ class StudyProtocolD:
         self.settings = settings
         self.spark: SparkSession = spark
 
-        self.df_extract: Optional[DataFrame] = None
-        self.df_all_pivot: Optional[DataFrame] = None
-        self.year_min: Optional[int] = None
-        self.year_max: Optional[int] = None
+        self.df_extract: DataFrame | None = None
+        self.df_all_pivot: DataFrame | None = None
+        self.year_min: int | None = None
+        self.year_max: int | None = None
 
     def extract(self) -> DataFrame:
         df = extract_df_study_protocol_a_d_mii(
@@ -119,7 +116,6 @@ class StudyProtocolD:
         logger.info("StudyProtocolD pipeline finished")
 
     def prepare(self, df: DataFrame) -> DataFrame:
-
         df = group_entity_or_parent(
             df, code_col="icd10_code", target_col="entity_or_parent"
         )
@@ -138,7 +134,6 @@ class StudyProtocolD:
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
-
         df = df.filter(F.col("asserted_date") > F.lit("1950-01-01"))
         df = df.filter(F.col("age_at_diagnosis") > 0)
 

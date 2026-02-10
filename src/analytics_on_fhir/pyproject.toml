@@ -7,7 +7,7 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
     "pathling==9.2.0",
     "delta-spark==4.0.0",
-    "typed-settings[attrs]==25.3.0",
+    "typed-settings[cattrs]==25.3.0",
     "loguru==0.7.3",
     "graphviz==0.21",
     "pandas>=2.1",

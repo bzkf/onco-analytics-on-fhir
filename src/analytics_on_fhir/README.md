@@ -6,21 +6,38 @@ Collection of analytics scripts.
 
 ### Prerequisites
 
-* uv: <https://docs.astral.sh/uv/getting-started/installation/>
-* Java JDK 21
-* graphviz
+- uv: <https://docs.astral.sh/uv/getting-started/installation/>
+- Java JDK 21
+- graphviz
 
 ### Install
 
 ```sh
 uv sync
+source .venv/bin/activate
+```
+
+### Format and auto-fix using Ruff
+
+```sh
+ruff format .
+ruff check --fix .
+```
+
+### Run on CLI
+
+```sh
+python3 -m analytics_on_fhir.main
 ```
 
 ### Run in VS Code interactive mode
+
 From the project root src/analytics_on_fhir, run:
+
 ```sh
 uv pip install -e .
 ```
+
 This installs the project in editable mode so all local packages
 (e.g. analytics_on_fhir) can be imported without modifying PYTHONPATH.
 
@@ -28,4 +45,10 @@ This installs the project in editable mode so all local packages
 
 ```sh
 uv run pytest -vv --log-cli-level=20 --cov=analytics_on_fhir --cov-report=html --capture=no
+```
+
+#### Update snapshots
+
+```sh
+uv run pytest -vv --log-cli-level=20 --snapshot-update
 ```
