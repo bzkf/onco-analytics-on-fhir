@@ -25,7 +25,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "seaborn" },
     { name = "statsmodels" },
-    { name = "typed-settings", extra = ["attrs"] },
+    { name = "typed-settings", extra = ["cattrs"] },
     { name = "xlsxwriter" },
 ]
 
@@ -52,7 +52,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=14" },
     { name = "seaborn", specifier = ">=0.13" },
     { name = "statsmodels", specifier = ">=0.14" },
-    { name = "typed-settings", extras = ["attrs"], specifier = "==25.3.0" },
+    { name = "typed-settings", extras = ["cattrs"], specifier = "==25.3.0" },
     { name = "xlsxwriter", specifier = ">=3.1" },
 ]
 
@@ -94,6 +94,19 @@ dependencies = [
     { name = "scipy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/85/ae/7f2031ea76140444b2453fa139041e5afd4a09fc5300cfefeb1103291f80/autograd-gamma-0.5.0.tar.gz", hash = "sha256:f27abb7b8bb9cffc8badcbf59f3fe44a9db39e124ecacf1992b6d952934ac9c4", size = 3952, upload-time = "2020-10-15T16:51:06.785Z" }
+
+[[package]]
+name = "cattrs"
+version = "25.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6e/00/2432bb2d445b39b5407f0a90e01b9a271475eea7caf913d7a86bcb956385/cattrs-25.3.0.tar.gz", hash = "sha256:1ac88d9e5eda10436c4517e390a4142d88638fe682c436c93db7ce4a277b884a", size = 509321, upload-time = "2025-10-07T12:26:08.737Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/2b/a40e1488fdfa02d3f9a653a61a5935ea08b3c2225ee818db6a76c7ba9695/cattrs-25.3.0-py3-none-any.whl", hash = "sha256:9896e84e0a5bf723bc7b4b68f4481785367ce07a8a02e7e9ee6eb2819bc306ff", size = 70738, upload-time = "2025-10-07T12:26:06.603Z" },
+]
 
 [[package]]
 name = "colorama"
@@ -763,8 +776,8 @@ wheels = [
 ]
 
 [package.optional-dependencies]
-attrs = [
-    { name = "attrs" },
+cattrs = [
+    { name = "cattrs" },
 ]
 
 [[package]]

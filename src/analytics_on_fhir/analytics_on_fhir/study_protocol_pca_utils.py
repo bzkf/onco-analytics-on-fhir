@@ -83,7 +83,6 @@ def extract_systemtherapies(
     settings: settings,
     spark: SparkSession,
 ) -> DataFrame:
-
     logger.info("extract procedures / system therapies.")
 
     df_procedures = data.view(
@@ -170,7 +169,7 @@ def extract_systemtherapies(
             {
                 "description": "Only SYSTEM THERAPY Procedures",
                 "path": (
-                    "meta.profile.exists($this = " f"'{FHIR_SYSTEMS_SYSTEM_THERAPY}')"
+                    f"meta.profile.exists($this = '{FHIR_SYSTEMS_SYSTEM_THERAPY}')"
                 ),
             }
         ],
@@ -371,7 +370,6 @@ def extract_radiotherapies(
     settings: settings,
     spark: SparkSession,
 ) -> DataFrame:
-
     logger.info("extract radiotherapies.")
 
     df_radiotherapies = data.view(
@@ -451,10 +449,7 @@ def extract_radiotherapies(
         where=[
             {
                 "description": "Only Radiotherapy Procedures",
-                "path": (
-                    "meta.profile.exists($this = "
-                    f"'{FHIR_SYSTEMS_RADIOTHERAPY}')"  # to do filter hier mit startsWith im pyspark df nach pathling extract
-                ),
+                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_RADIOTHERAPY}')"),
             }
         ],
     )
@@ -474,7 +469,6 @@ def extract_surgeries(
     settings: settings,
     spark: SparkSession,
 ) -> DataFrame:
-
     logger.info("extract pca ops.")
 
     df_ops = data.view(
@@ -538,7 +532,7 @@ def extract_surgeries(
         where=[
             {
                 "description": "Only Surgical Procedures",
-                "path": ("meta.profile.exists($this = " f"'{FHIR_SYSTEMS_SURGERY}')"),
+                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_SURGERY}')"),
             }
         ],
     )

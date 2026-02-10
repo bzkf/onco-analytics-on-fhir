@@ -1,7 +1,7 @@
 import glob
 import os
 import shutil
-from typing import Iterable
+from collections.abc import Iterable
 
 from loguru import logger
 from matplotlib.figure import Figure
@@ -48,7 +48,7 @@ FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
 def save_final_df(pyspark_df, settings, suffix=""):
     logger.info("start save pyspark_df with pyspark_df.coalesce(1).write...csv() ")
     output_dir = os.path.join(
-        HERE, settings.results_directory_path, settings.study_name
+        HERE, settings.results_directory_path, settings.study_name.value
     )
     os.makedirs(output_dir, exist_ok=True)
 
@@ -71,7 +71,7 @@ def save_final_df(pyspark_df, settings, suffix=""):
 def save_plot(plot: Figure, settings, plot_name: str = "") -> None:
     logger.info("start save plot")
     output_dir = os.path.join(
-        settings.results_directory_path, settings.study_name, "plots"
+        settings.results_directory_path, settings.study_name.value, "plots"
     )
     os.makedirs(output_dir, exist_ok=True)
 
@@ -140,7 +140,6 @@ def add_is_deceased(df):
 def map_gleason_sct_to_score(
     df, gleason_sct_col="gleason_sct", out_col="gleason_score"
 ):
-
     gleason_map_expr = create_map(
         lit("1279715000"),
         lit(6),  # 3+3
@@ -234,9 +233,7 @@ def extract_df_study_protocol_a_d_mii(
                     },
                     {
                         "path": (
-                            f"code.coding"
-                            f".where(system = '{FHIR_SYSTEM_ICD10}')"
-                            f".code"
+                            f"code.coding.where(system = '{FHIR_SYSTEM_ICD10}').code"
                         ),
                         "name": "icd10_code",
                     },

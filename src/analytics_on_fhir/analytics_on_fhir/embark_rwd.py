@@ -165,9 +165,10 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
     row = conditions.select(
         count_distinct(conditions.patient_id).alias("n_patients")
     ).first()
-    # TODO: for every row is not none, set count to 0 if it is None
     if row is not None:
         counts["num_c61_patients"] = row["n_patients"]
+    else:
+        counts["num_c61_patients"] = 0
 
     row = conditions.select(
         min("asserted_date").alias("min_asserted_date"),
@@ -211,6 +212,8 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
     ).first()
     if row is not None:
         counts["num_tnm_m0_or_n0"] = row["n_patients"]
+    else:
+        counts["num_tnm_m0_or_n0"] = 0
 
     logger.info(
         "Num TNM M0 or N0 patients: {num_tnm_m0_or_n0}",
@@ -243,6 +246,8 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
     row = cohort.select(count_distinct(cohort.patient_id).alias("n_patients")).first()
     if row is not None:
         counts["num_treated_with_enzalutamide"] = row["n_patients"]
+    else:
+        counts["num_treated_with_enzalutamid"] = 0
 
     logger.info(
         "Number of C61 patients with TNM of M0/N0 treated with Enzalutamide: "
@@ -282,6 +287,9 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
         counts["num_treated_with_enzalutamide_after_april_2024"] = row[
             "num_patients_after"
         ]
+    else:
+        counts["num_treated_with_enzalutamide_before_april_2024"] = 0
+        counts["num_treated_with_enzalutamide_after_april_2024"] = 0
 
     logger.info("Counts: {counts}", counts=counts)
 
@@ -324,8 +332,8 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
         format="png",
     )
 
-    return result
+    return cohort
 
 
-def run(data: DataSource, results_directory: pathlib.Path):
-    extract(data, results_directory)
+def run(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
+    return extract(data, results_directory)

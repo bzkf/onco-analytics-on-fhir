@@ -8,7 +8,7 @@ from pyspark import SparkContext
 from pyspark.sql import SparkSession
 
 from analytics_on_fhir.embark_rwd import run
-from analytics_on_fhir.settings import settings
+from analytics_on_fhir.settings import StudyNames, settings
 from analytics_on_fhir.study_protocol_d import StudyProtocolD
 from analytics_on_fhir.study_protocol_pca1 import StudyProtocolPCa1
 from analytics_on_fhir.utils import (
@@ -114,42 +114,69 @@ def main():
             ],
         )
 
-    match settings.study_name:
-        case "embark_rwd":
-            run(data, pathlib.Path(settings.results_directory_path))
-        case "study_protocol_a":
+    study_name = settings.study_name
+    if settings.study_name == StudyNames.ALL:
+        logger.info("Running all studies in sequence")
+        for study_name in StudyNames:
+            # this is really hacky: currently the "settings" object
+            # is a bit too coupled with some helper functions
+            settings.study_name = study_name
+            logger.info(f"Running {study_name.value}")
+            run_study(study_name, data, pc)
+    else:
+        run_study(study_name, data, pc)
+
+
+def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
+    match study_name:
+        case StudyNames.EMBARK_RWD:
+            df = run(data, pathlib.Path(settings.results_directory_path) / "embark_rwd")
+            save_final_df(
+                df,
+                settings,
+                suffix="embark_rwd",
+            )
+        case StudyNames.STUDY_PROTOCOL_A:
             df = extract_df_study_protocol_a_d_mii(
                 pc,
                 data,
-                spark,
+                pc.spark,
                 settings,
             )
-            save_final_df(df, settings, suffix="study_protocol_a_d_mii")
-        case "study_protocol_d":
+            save_final_df(
+                df,
+                settings,
+                suffix="study_protocol_a_d_mii",
+            )
+        case StudyNames.STUDY_PROTOCOL_D:
             study_protocol_d = StudyProtocolD(
                 pc=pc,
                 data=data,
                 settings=settings,
-                spark=spark,
+                spark=pc.spark,
             )
             study_protocol_d.run()
-        case "study_protocol_pca1":
+        case StudyNames.STUDY_PROTOCOL_PCA1:
             study_protocol_pca1 = StudyProtocolPCa1(
                 pc=pc,
                 data=data,
                 settings=settings,
-                spark=spark,
+                spark=pc.spark,
             )
             study_protocol_pca1.run()
-        case "study_protocol_aml":
+        case StudyNames.STUDY_PROTOCOL_AML:
             df = extract_df_study_protocol_a_d_mii(
                 pc,
                 data,
-                spark,
+                pc.spark,
                 settings,
             )
             df = filter_aml(df)
-            save_final_df(df, settings, suffix="study_protocol_aml")
+            save_final_df(
+                df,
+                settings,
+                suffix="study_protocol_aml",
+            )
 
 
 if __name__ == "__main__":
