@@ -71,7 +71,7 @@ def save_final_df(pyspark_df, settings, suffix=""):
 def save_plot(plot: Figure, settings, plot_name: str = "") -> None:
     logger.info("start save plot")
     output_dir = os.path.join(
-        settings.results_directory_path, settings.study_name, "plots"
+        settings.results_directory_path, settings.study_name.value, "plots"
     )
     os.makedirs(output_dir, exist_ok=True)
 
