@@ -9,6 +9,7 @@ from analytics_on_fhir.study_protocol_pca_utils import (
     extract_surgeries,
     extract_systemtherapies,
     flag_young_highrisk_cohort,
+    join_radiotherapies,
 )
 from analytics_on_fhir.utils import (
     cast_study_dates,
@@ -32,7 +33,8 @@ class StudyProtocolPCa1:
         self.spark: SparkSession = spark
 
         self.df_c61: DataFrame | None = None
-        self.df_radiotherapies: DataFrame | None = None
+        self.df_parents_radiotherapies: DataFrame | None = None
+        self.df_children_bestrahlung: DataFrame | None = None
         self.df_medication_statements: DataFrame | None = None
         self.df_ops: DataFrame | None = None
         self.df_all_pivot: DataFrame | None = None
@@ -67,19 +69,29 @@ class StudyProtocolPCa1:
             df_medication_statements, self.settings, suffix="medication_statements"
         ) """
 
-        df_radiotherapies = extract_radiotherapies(
+        """ df_parents_radiotherapies, df_children_bestrahlung = extract_radiotherapies(
             self.pc, self.data, self.settings, self.spark
         )
-        logger.info("df_radiotherapies_count = {}", df_radiotherapies.count())
-        df_radiotherapies.show()
-        self.df_radiotherapies = df_radiotherapies
-        save_final_df(df_radiotherapies, self.settings, suffix="radiotherapies")
 
-        """df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        self.df_parents_radiotherapies = df_parents_radiotherapies
+        self.df_children_bestrahlung = df_children_bestrahlung
+
+        save_final_df(
+            df_parents_radiotherapies, self.settings, suffix="parents_radiotherapies"
+        )
+        save_final_df(
+            df_children_bestrahlung, self.settings, suffix="children_bestrahlung"
+        )
+        df_radiotherapies = join_radiotherapies(
+            df_parents_radiotherapies, df_children_bestrahlung
+        ) """
+        # set therapy type ST and OP for radio and ops
+
+        df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
         logger.info("df_ops_count = {}", df_ops.count())
         df_ops.show()
         self.df_ops = df_ops
-        save_final_df(df_ops, self.settings, suffix="ops") """
+        save_final_df(df_ops, self.settings, suffix="ops")
 
         # self.df_c61 = df_c61
         # return df_c61

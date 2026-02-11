@@ -177,6 +177,8 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
                 settings,
                 suffix="study_protocol_aml",
             )
+        case _:
+            logger.warning(f"No study case matched for: {study_name}")
 
 
 if __name__ == "__main__":

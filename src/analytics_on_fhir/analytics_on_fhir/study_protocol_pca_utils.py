@@ -10,6 +10,11 @@ FHIR_SYSTEMS_RADIOTHERAPY = (
     "modul-onko/StructureDefinition/"
     "mii-pr-onko-strahlentherapie|2026.0.0"
 )
+FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/"
+    "mii-pr-onko-strahlentherapie-bestrahlung-strahlentherapie|2026.0.0"
+)
 FHIR_SYSTEMS_SURGERY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.0"
@@ -57,11 +62,6 @@ FHIR_SYSTEMS_THERAPY_END_REASON_CS = (
 FHIR_SYSTEMS_RADIO_THERAPY_INTENTION_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-intention"
-)
-FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/mii-ex-onko-strahlentherapie-"
-    "bestrahlung-seitenlokalisation"
 )
 
 FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS = (
@@ -384,7 +384,7 @@ def extract_radiotherapies(
 ) -> DataFrame:
     logger.info("extract radiotherapies.")
 
-    df_radiotherapies = data.view(
+    df_procedures = data.view(
         "Procedure",
         select=[
             {
@@ -392,7 +392,7 @@ def extract_radiotherapies(
                     {
                         "description": "Procedure ID",
                         "path": "getResourceKey()",
-                        "name": "procedure_id",
+                        "name": "therapy_id",
                     },
                     {
                         "description": "FHIR Profile URL",
@@ -400,14 +400,19 @@ def extract_radiotherapies(
                         "name": "meta_profile",
                     },
                     {
+                        "description": "Procedure Reference",
+                        "path": "partOf.getReferenceKey()",
+                        "name": "part_of_reference",
+                    },
+                    {
                         "description": "Condition ID",
                         "path": "reasonReference.getReferenceKey()",
-                        "name": "procedure_condition_resource_id",
+                        "name": "reason_reference",
                     },
                     {
                         "description": "Patient ID",
                         "path": "subject.getReferenceKey()",
-                        "name": "procedure_patient_resource_id",
+                        "name": "subject_reference",
                     },
                     {
                         "description": "Intention Radio Therapy",
@@ -427,17 +432,17 @@ def extract_radiotherapies(
                             f"'{FHIR_SYSTEMS_STELLUNG_OP_CS}')"
                             ".code"
                         ),
-                        "name": "stellung_op",
+                        "name": "stellung_op",  # sieht kaputt aus to do
                     },
                     {
                         "description": "Radio Therapy Start",
                         "path": "performed.ofType(Period).start",
-                        "name": "procedure_therapy_start_date",
+                        "name": "therapy_start_date",
                     },
                     {
                         "description": "Radio Therapy Ende",
                         "path": "performed.ofType(Period).end",
-                        "name": "procedure_therapy_end_date",
+                        "name": "therapy_end_date",
                     },
                     {
                         "description": "Radio Therapy Ende Grund",
@@ -445,36 +450,119 @@ def extract_radiotherapies(
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_THERAPY_END_REASON_CS}')"
                         ".code",
-                        "name": "procedure_therapy_end_reason",
+                        "name": "therapy_end_reason",
                     },
                     {
                         "description": "Radio Therapy Zielgebiet",
-                        "path": "bodySite.extension.where(url = "
-                        f"'{FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET}')"
-                        "value.ofType(CodeableConcept).coding"
-                        ".where(system = "
-                        f"'{FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS}')"
-                        ".code",
+                        "path": (
+                            "bodySite.coding.where("
+                            f"system='{FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS}'"
+                            ").code"
+                        ),
                         "name": "zielgebiet",
                     },
                 ],
             }
         ],
-        where=[
-            {
-                "description": "Only Radiotherapy Procedures",
-                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_RADIOTHERAPY}')"),
-            }
-        ],
+    )
+
+    df_parents_radiotherapies = df_procedures.filter(
+        F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY
+    )
+    logger.info(
+        "df_parents_radiotherapies count = {}", df_parents_radiotherapies.count()
+    )
+    df_parents_radiotherapies.show()
+
+    df_children_bestrahlung = df_procedures.filter(
+        F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG
+    )
+    logger.info("df_children_bestrahlung count = {}", df_children_bestrahlung.count())
+    df_children_bestrahlung.show()
+
+    return df_parents_radiotherapies, df_children_bestrahlung
+
+
+def join_radiotherapies(
+    df_parents_radiotherapies: DataFrame,
+    df_children_bestrahlung: DataFrame,
+) -> DataFrame:
+
+    df_radiotherapies = (
+        df_parents_radiotherapies.alias("p")
+        .join(
+            df_children_bestrahlung.alias("c"),
+            F.col("p.therapy_id") == F.col("c.part_of_reference"),
+            how="left",
+        )
+        .select(
+            F.col("p.therapy_id").alias("therapy_id"),
+            F.col("p.meta_profile"),
+            F.col("p.subject_reference"),
+            F.col("p.reason_reference"),
+            F.col("p.intention"),
+            F.col("p.stellung_op"),
+            F.col("p.therapy_start_date"),
+            F.col("p.therapy_end_date"),
+            F.col("p.therapy_end_reason"),
+            F.col("c.zielgebiet").alias("zielgebiet"),
+            F.col("c.therapy_id").alias("therapy_id_child"),
+        )
     )
 
     logger.info("df_radiotherapies count = {}", df_radiotherapies.count())
 
-    df_radiotherapies.orderBy(F.col("zielgebiet")).show()
-    # return raw radiotherapies here and do pivoting in extra method
-    # alle ohne part of sind die klammer procedures
-    # alle mit part of kann ich dann über procedure id und partof reference ranjoinen
-    return df_radiotherapies
+    df_radiotherapies.orderBy(F.col("therapy_id")).show()
+
+    # pro therapy id, condition id - Zielgebiete | separiert abspeichern
+    df_radiotherapies_grouped = df_radiotherapies.groupBy(
+        "therapy_id",
+        "subject_reference",
+        "reason_reference",
+    ).agg(
+        F.concat_ws("| ", F.sort_array(F.collect_set("zielgebiet"))).alias(
+            "zielgebiet"
+        ),
+        F.concat_ws("| ", F.sort_array(F.collect_set("therapy_id_child"))).alias(
+            "therapy_id_child"
+        ),
+    )
+    logger.info(
+        "df_radiotherapies_grouped count = {}",
+        df_radiotherapies_grouped.count(),
+    )
+    df_radiotherapies_grouped.show()
+
+    # join back missing cols
+    df_radiotherapies_final = (
+        df_parents_radiotherapies.alias("p")
+        .join(
+            df_radiotherapies_grouped.alias("rg"),
+            F.col("p.therapy_id") == F.col("rg.therapy_id"),
+            how="left",
+        )
+        .select(
+            F.col("p.therapy_id"),
+            F.col("p.meta_profile"),
+            F.col("p.subject_reference"),
+            F.col("p.reason_reference"),
+            F.col("p.intention"),
+            F.col("p.stellung_op"),
+            F.col("p.therapy_start_date"),
+            F.col("p.therapy_end_date"),
+            F.col("p.therapy_end_reason"),
+            # nur gewünschte Child-Spalten
+            F.col("rg.zielgebiet"),
+            F.col("rg.therapy_id_child"),
+        )
+    )
+    logger.info(
+        "df_radiotherapies_final count = {}",
+        df_radiotherapies_final.count(),
+    )
+    df_radiotherapies_final.show()
+    # clean
+    return df_radiotherapies_final
 
 
 def extract_surgeries(
