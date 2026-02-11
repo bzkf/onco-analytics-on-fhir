@@ -58,6 +58,12 @@ FHIR_SYSTEMS_RADIO_THERAPY_INTENTION_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-intention"
 )
+FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/mii-ex-onko-strahlentherapie-"
+    "bestrahlung-seitenlokalisation"
+)
+
 FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
@@ -235,17 +241,21 @@ def extract_systemtherapies(
 
     logger.info("df_medication_statements_count = {}", df_medication_statements.count())
     logger.info(
-        "df_medication_statements_count distinct reason_reference / condition id count = {}",
+        "df_medication_statements_count distinct condition id count = {}",
         df_medication_statements.select("reason_reference").distinct().count(),
     )
     logger.info(
-        "df_medication_statements_count distinct part_of_reference / procedure id count = {}",
+        "df_medication_statements_count distinct procedure id count = {}",
         df_medication_statements.select("part_of_reference").distinct().count(),
     )
     df_medication_statements = df_medication_statements.orderBy(
         F.col("reason_reference")
     )
     df_medication_statements.show()
+
+    return df_procedures, df_medication_statements
+
+    # ACHTUNG - mach den rest hier in extra funktion
 
     # erst joinen (procedure+medicationstatements) und danach gruppieren
     # Substanzen pro condition und therapy start date |-separiert abspeichern
@@ -353,6 +363,7 @@ def extract_systemtherapies(
         .count(),
     )
     df_procedures_medication_statements_final.orderBy(F.col("reason_reference")).show()
+    # --> clean!
 
     # prüfen ob ich das noch so wie bei DKTK machen will
     # cast dates, (group one therapy per cond id per start date) -
@@ -361,6 +372,7 @@ def extract_systemtherapies(
     # systemtherapies_final = preprocess_therapy_df(systemtherapies)
 
     # join to condition information on condition id / reason reference later
+    # sollte ich auch die raw procedures und raw medication statements abspeichern und den rest in eine andere funktion auslagern?
     return df_procedures_medication_statements_final
 
 
@@ -437,7 +449,9 @@ def extract_radiotherapies(
                     },
                     {
                         "description": "Radio Therapy Zielgebiet",
-                        "path": "bodySite.coding"
+                        "path": "bodySite.extension.where(url = "
+                        f"'{FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET}')"
+                        "value.ofType(CodeableConcept).coding"
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS}')"
                         ".code",
@@ -457,7 +471,7 @@ def extract_radiotherapies(
     logger.info("df_radiotherapies count = {}", df_radiotherapies.count())
 
     df_radiotherapies.orderBy(F.col("zielgebiet")).show()
-
+    # return raw radiotherapies here and do pivoting in extra method
     # alle ohne part of sind die klammer procedures
     # alle mit part of kann ich dann über procedure id und partof reference ranjoinen
     return df_radiotherapies
