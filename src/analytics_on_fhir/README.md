@@ -14,6 +14,8 @@ Collection of analytics scripts.
 
 ```sh
 uv sync
+
+# activate env - NOT IN CODER UNLESS YOU WANNA BE STUCK IN HELL
 source .venv/bin/activate
 ```
 

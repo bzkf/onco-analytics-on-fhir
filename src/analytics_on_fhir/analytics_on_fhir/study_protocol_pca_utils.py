@@ -1,7 +1,10 @@
+from functools import reduce
+
 from loguru import logger
 from pathling import PathlingContext, datasource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 from analytics_on_fhir.settings import settings
 
@@ -180,7 +183,7 @@ def extract_systemtherapies(
             }
         ],
     )
-    logger.info("df_procedures count = {}", df_procedures.count())
+    """     logger.info("df_procedures count = {}", df_procedures.count())
     logger.info(
         "df_procedures distinct therapy_id count = {}",
         df_procedures.select("therapy_id").distinct().count(),
@@ -189,7 +192,7 @@ def extract_systemtherapies(
         "df_procedures distinct subject_reference patient id count = {}",
         df_procedures.select("subject_reference").distinct().count(),
     )
-    df_procedures.orderBy(F.col("reason_reference")).show(truncate=False)
+    df_procedures.orderBy(F.col("reason_reference")).show(truncate=False) """
 
     logger.info("extract medication statements / system therapies.")
 
@@ -239,7 +242,7 @@ def extract_systemtherapies(
         ],
     )
 
-    logger.info("df_medication_statements_count = {}", df_medication_statements.count())
+    """ logger.info("df_medication_statements_count = {}", df_medication_statements.count())
     logger.info(
         "df_medication_statements_count distinct condition id count = {}",
         df_medication_statements.select("reason_reference").distinct().count(),
@@ -252,8 +255,9 @@ def extract_systemtherapies(
         F.col("reason_reference")
     )
     df_medication_statements.show()
-
-    return df_procedures, df_medication_statements
+ """
+    # TO DO: split this later
+    # return df_procedures, df_medication_statements
 
     # ACHTUNG - mach den rest hier in extra funktion
 
@@ -291,11 +295,11 @@ def extract_systemtherapies(
         )
     )
 
-    logger.info(
+    """ logger.info(
         "df_procedures_medication_statements count = {}",
         df_procedures_medication_statements.count(),
     )
-    df_procedures_medication_statements.orderBy(F.col("reason_reference")).show()
+    df_procedures_medication_statements.orderBy(F.col("reason_reference")).show() """
 
     # pro condition und start date: | separiert abspeichern
     df_procedures_medication_statements_grouped = (
@@ -345,7 +349,7 @@ def extract_systemtherapies(
         )
     )
 
-    logger.info(
+    """ logger.info(
         "df_procedures_medication_statements_final count = {}",
         df_procedures_medication_statements_final.count(),
     )
@@ -361,7 +365,7 @@ def extract_systemtherapies(
         df_procedures_medication_statements_final.select("subject_reference")
         .distinct()
         .count(),
-    )
+    ) """
     df_procedures_medication_statements_final.orderBy(F.col("reason_reference")).show()
     # --> clean!
 
@@ -371,8 +375,8 @@ def extract_systemtherapies(
     # filter negative months diff
     # systemtherapies_final = preprocess_therapy_df(systemtherapies)
 
-    # join to condition information on condition id / reason reference later
-    # sollte ich auch die raw procedures und raw medication statements abspeichern und den rest in eine andere funktion auslagern?
+    # sollte ich auch die raw procedures und raw medication statements abspeichern und
+    # den rest in eine andere funktion auslagern?
     return df_procedures_medication_statements_final
 
 
@@ -421,7 +425,7 @@ def extract_radiotherapies(
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_RADIO_THERAPY_INTENTION_CS}')"
                         ".code",
-                        "name": "intention",
+                        "name": "therapy_intention",
                     },
                     {
                         "description": "Stellung zur Op Radio Therapy",
@@ -469,16 +473,16 @@ def extract_radiotherapies(
     df_parents_radiotherapies = df_procedures.filter(
         F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY
     )
-    logger.info(
-        "df_parents_radiotherapies count = {}", df_parents_radiotherapies.count()
-    )
-    df_parents_radiotherapies.show()
+    # logger.info(
+    #    "df_parents_radiotherapies count = {}", df_parents_radiotherapies.count()
+    # )
+    # df_parents_radiotherapies.show()
 
     df_children_bestrahlung = df_procedures.filter(
         F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG
     )
-    logger.info("df_children_bestrahlung count = {}", df_children_bestrahlung.count())
-    df_children_bestrahlung.show()
+    # logger.info("df_children_bestrahlung count = {}", df_children_bestrahlung.count())
+    # df_children_bestrahlung.show()
 
     return df_parents_radiotherapies, df_children_bestrahlung
 
@@ -500,7 +504,7 @@ def join_radiotherapies(
             F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
-            F.col("p.intention"),
+            F.col("p.therapy_intention"),
             F.col("p.stellung_op"),
             F.col("p.therapy_start_date"),
             F.col("p.therapy_end_date"),
@@ -510,9 +514,9 @@ def join_radiotherapies(
         )
     )
 
-    logger.info("df_radiotherapies count = {}", df_radiotherapies.count())
+    """ logger.info("df_radiotherapies count = {}", df_radiotherapies.count())
 
-    df_radiotherapies.orderBy(F.col("therapy_id")).show()
+    df_radiotherapies.orderBy(F.col("therapy_id")).show() """
 
     # pro therapy id, condition id - Zielgebiete | separiert abspeichern
     df_radiotherapies_grouped = df_radiotherapies.groupBy(
@@ -527,11 +531,11 @@ def join_radiotherapies(
             "therapy_id_child"
         ),
     )
-    logger.info(
+    """ logger.info(
         "df_radiotherapies_grouped count = {}",
         df_radiotherapies_grouped.count(),
     )
-    df_radiotherapies_grouped.show()
+    df_radiotherapies_grouped.show() """
 
     # join back missing cols
     df_radiotherapies_final = (
@@ -546,7 +550,7 @@ def join_radiotherapies(
             F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
-            F.col("p.intention"),
+            F.col("p.therapy_intention"),
             F.col("p.stellung_op"),
             F.col("p.therapy_start_date"),
             F.col("p.therapy_end_date"),
@@ -556,11 +560,11 @@ def join_radiotherapies(
             F.col("rg.therapy_id_child"),
         )
     )
-    logger.info(
+    """ logger.info(
         "df_radiotherapies_final count = {}",
         df_radiotherapies_final.count(),
     )
-    df_radiotherapies_final.show()
+    df_radiotherapies_final.show() """
     # clean
     return df_radiotherapies_final
 
@@ -580,8 +584,8 @@ def extract_surgeries(
                 "column": [
                     {
                         "path": "getResourceKey()",
-                        "name": "therapy_resource_id",
                         "description": "Procedure ID",
+                        "name": "therapy_id",
                     },
                     {
                         "description": "FHIR Profile URL",
@@ -591,12 +595,17 @@ def extract_surgeries(
                     {
                         "description": "Condition ID",
                         "path": "reasonReference.getReferenceKey()",
-                        "name": "procedure_condition_resource_id",
+                        "name": "reason_reference",
+                    },
+                    {
+                        "description": "Procedure Reference",
+                        "path": "partOf.getReferenceKey()",
+                        "name": "part_of_reference",
                     },
                     {
                         "description": "Patient ID",
                         "path": "subject.getReferenceKey()",
-                        "name": "procedure_patient_resource_id",
+                        "name": "subject_reference",
                     },
                     {
                         "description": "Intention Surgery",
@@ -605,12 +614,12 @@ def extract_surgeries(
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_SURGERY_INTENTION_CS}')"
                         ".code",
-                        "name": "intention",
+                        "name": "therapy_intention",
                     },
                     {
                         "description": "Surgery Date",
                         "path": "performedDateTime",
-                        "name": "procedure_surgery_date",
+                        "name": "therapy_start_date",
                     },
                     {
                         "description": "Surgery Outcome",
@@ -618,7 +627,7 @@ def extract_surgeries(
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_SURGERY_OUTCOME_CS}')"
                         ".code",
-                        "name": "procedure_surgery_outcome",
+                        "name": "surgery_outcome",
                     },
                     {
                         "description": "OPS Code",
@@ -626,7 +635,7 @@ def extract_surgeries(
                         ".where(system = "
                         f"'{FHIR_SYSTEMS_SURGERY_OPS_CS}')"
                         ".code",
-                        "name": "ops",
+                        "name": "ops_code",
                     },
                 ]
             }
@@ -638,19 +647,87 @@ def extract_surgeries(
             }
         ],
     )
-
-    # OLD
-    # Spark-Teil wie vorher
-    """ df_ops = df_ops.filter(
-        (F.col("therapy_type") == "OP") & F.col("icd10_code").like("C61%")
-    ).orderBy(F.col("condition_id"))
-    """
-    logger.info("df_ops_count = {}", df_ops.count())
-    df_ops.show()
+    """ logger.info(
+        "df_ops count = {}",
+        df_ops.count(),
+    )
+    logger.info(
+        "df_ops count distinct combination of reason reference and therapy start date = {}",
+        df_ops.select("reason_reference", "therapy_start_date").distinct().count(),
+    )
+    df_ops.orderBy(F.col("reason_reference")).show() """
 
     # downstream unverändert - ggf aus altem übernehmen wenns noch passt
     # df_ops = preprocess_therapy_df(df_ops)
     return df_ops
+
+
+def group_ops(df_ops: DataFrame) -> DataFrame:
+    # ursprüngliche Reihenfolge beibehalten hier in den aggs
+    window_spec = Window.partitionBy(
+        "meta_profile",
+        "reason_reference",
+        "subject_reference",
+        "therapy_start_date",
+    ).orderBy("therapy_id")
+
+    df_ops_with_index = df_ops.withColumn("row_idx", F.row_number().over(window_spec))
+
+    df_ops_grouped = df_ops_with_index.groupBy(
+        "meta_profile",
+        "reason_reference",
+        "subject_reference",
+        "therapy_start_date",
+    ).agg(
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, ops_code))),
+                x -> x.ops_code
+            )
+        )
+    """
+        ).alias("ops_code"),
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, surgery_outcome))),
+                x -> x.surgery_outcome
+            )
+        )
+    """
+        ).alias("surgery_outcome"),
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, therapy_intention))),
+                x -> x.therapy_intention
+            )
+        )
+    """
+        ).alias("therapy_intention"),
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, therapy_id))),
+                x -> x.therapy_id
+            )
+        )
+    """
+        ).alias("therapy_id"),
+    )
+
+    """ logger.info(
+        "df_ops_grouped count = {}",
+        df_ops_grouped.count(),
+    )
+    df_ops_grouped.orderBy(F.col("reason_reference")).show(truncate=False) """
+
+    return df_ops_grouped
 
 
 def flag_young_highrisk_cohort(
@@ -663,7 +740,193 @@ def flag_young_highrisk_cohort(
     )
 
     cohort = df_flagged.filter(F.col("cohort_flag") == 1)
-    logger.info("df_flagged count = {}", df_flagged.count())
     logger.info("Filtered cohort count = {}", cohort.count())
 
     return df_flagged
+
+
+def union_sort_pivot_join(
+    df_c61_clean, df_ops_grouped, df_medication_statements, df_radiotherapies_joined
+):
+    # to date
+    df_ops_grouped = df_ops_grouped.withColumn(
+        "therapy_start_date", F.to_date(F.col("therapy_start_date"))
+    )
+    df_medication_statements = df_medication_statements.withColumn(
+        "therapy_start_date", F.to_date(F.col("therapy_start_date"))
+    )
+    df_radiotherapies_joined = df_radiotherapies_joined.withColumn(
+        "therapy_start_date", F.to_date(F.col("therapy_start_date"))
+    )
+
+    # union
+    # Master Schema
+    """ therapy_id
+        meta_profile
+        subject_reference
+        reason_reference
+        therapy_type
+        therapy_intention
+        stellung_op
+        therapy_start_date
+        therapy_end_date
+        therapy_end_reason
+        ops_code
+        surgery_outcome
+        zielgebiet
+        therapy_protocol_text
+        medication_statement_text
+        medication_statement_atc_code """
+    # OPS auffüllen
+    df_ops_final = (
+        df_ops_grouped.withColumn("therapy_type", F.lit("OP"))
+        .withColumn("therapy_end_date", F.lit(None))
+        .withColumn("therapy_end_reason", F.lit(None))
+        .withColumn("zielgebiet", F.lit(None))
+        .withColumn("therapy_protocol_text", F.lit(None))
+        .withColumn("medication_statement_text", F.lit(None))
+        .withColumn("medication_statement_atc_code", F.lit(None))
+        .withColumn("stellung_op", F.lit(None))
+    )
+
+    logger.info(
+        "df_ops_final count = {}",
+        df_ops_final.count(),
+    )
+    df_ops_final.show()
+    # Radiotherapie auffüllen
+    df_rt_final = (
+        df_radiotherapies_joined.withColumn("therapy_type", F.lit("ST"))
+        .withColumn("ops_code", F.lit(None))
+        .withColumn("surgery_outcome", F.lit(None))
+        .withColumn("therapy_protocol_text", F.lit(None))
+        .withColumn("medication_statement_text", F.lit(None))
+        .withColumn("medication_statement_atc_code", F.lit(None))
+    )
+    df_med_final = (
+        df_medication_statements.withColumn("ops_code", F.lit(None))
+        .withColumn("surgery_outcome", F.lit(None))
+        .withColumn("zielgebiet", F.lit(None))
+        .withColumn("zielgebiet", F.lit(None))
+    )
+    # Spaltenreihenfolge angleichen
+    common_columns = [
+        "therapy_id",
+        "meta_profile",
+        "subject_reference",
+        "reason_reference",
+        "therapy_type",
+        "therapy_intention",
+        "stellung_op",
+        "therapy_start_date",
+        "therapy_end_date",
+        "therapy_end_reason",
+        "ops_code",
+        "surgery_outcome",
+        "zielgebiet",
+        "therapy_protocol_text",
+        "medication_statement_text",
+        "medication_statement_atc_code",
+    ]
+    df_ops_final = df_ops_final.select(common_columns)
+    df_rt_final = df_rt_final.select(common_columns)
+    df_med_final = df_med_final.select(common_columns)
+    df_all_therapies = df_ops_final.unionByName(df_rt_final).unionByName(df_med_final)
+    logger.info(
+        "df_all_therapies count = {}",
+        df_all_therapies.count(),
+    )
+    df_all_therapies.show()
+
+    # join asserted date aus df_c61_clean an df_therapies
+    df_therapies_asserted = df_all_therapies.alias("t").join(
+        df_c61_clean.select(
+            F.col("condition_id").alias("reason_reference"), "asserted_date"
+        ),
+        "reason_reference",
+        "left",
+    )
+    logger.info(
+        "df_therapies_asserted count = {}",
+        df_therapies_asserted.count(),
+    )
+    df_therapies_asserted.show()
+    # Add months_diff
+    df_therapies_asserted = df_therapies_asserted.withColumn(
+        "months_diff",
+        F.round(
+            F.months_between(F.col("therapy_start_date"), F.col("asserted_date")), 2
+        ).cast("double"),
+    )
+    logger.info(
+        "df_therapies_asserted with months diff count = {}",
+        df_therapies_asserted.count(),
+    )
+    df_therapies_asserted.show()
+
+    # TO DO? check if i should remove negative months diff?
+    # TO DO Wenn zwei Therapien am gleichen Tag starten, muss OP vor ST vor SYST stehen?
+
+    # pivot
+    w = Window.partitionBy("reason_reference").orderBy("months_diff")
+    df_long = df_therapies_asserted.withColumn("therapy_index", F.row_number().over(w))
+
+    pivot_cols = [
+        "therapy_type",
+        "therapy_id",
+        "therapy_intention",
+        "therapy_start_date",
+        "therapy_end_date",
+        "therapy_end_reason",
+        "months_diff",
+        "stellung_op",
+        "ops_code",
+        "surgery_outcome",
+        "zielgebiet",
+        "therapy_protocol_text",
+        "medication_statement_text",
+        "medication_statement_atc_code",
+    ]
+    id_cols = ["reason_reference"]
+
+    max_index = df_long.agg(F.max("therapy_index")).collect()[0][0]
+    if max_index is None:
+        raise ValueError("Keine Therapiedaten vorhanden.")
+
+    pivoted_dfs = []
+
+    for col_name in pivot_cols:
+        df_pivot = (
+            df_long.select(id_cols + ["therapy_index", col_name])
+            .groupBy(id_cols)
+            .pivot("therapy_index")
+            .agg(F.first(col_name))
+        )
+
+        for i in range(1, max_index + 1):
+            old_col = str(i)
+            new_col = f"{col_name}_{i}"
+            if old_col in df_pivot.columns:
+                df_pivot = df_pivot.withColumnRenamed(old_col, new_col)
+
+        pivoted_dfs.append(df_pivot)
+
+    df_wide = reduce(lambda a, b: a.join(b, on=id_cols, how="left"), pivoted_dfs)
+
+    df_final = (
+        df_c61_clean.alias("c")
+        .join(
+            df_wide.alias("w"),
+            F.col("c.condition_id") == F.col("w.reason_reference"),
+            "left",
+        )
+        .drop("reason_reference")
+    )
+
+    logger.info("df_final count = {}", df_final.count())
+    df_final.show()
+    return df_final
+
+
+# join to df_c61 for asserted
+# months diff asserted therapy startdate
