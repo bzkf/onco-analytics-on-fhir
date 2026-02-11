@@ -3,7 +3,7 @@ name = "analytics_on_fhir"
 version = "0.1.0"
 description = "Analytics on FHIR"
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "pathling==9.2.0",
     "delta-spark==4.0.0",
