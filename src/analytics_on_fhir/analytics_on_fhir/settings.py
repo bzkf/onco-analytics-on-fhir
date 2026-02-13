@@ -35,7 +35,7 @@ class Settings:
     fhir_bundles_path: str = os.path.join(HERE, "../tests/fixtures/fhir/")
     study_name: StudyNames = StudyNames.ALL
     results_directory_path: str = os.path.join(HERE, "results/")
-    location: str = "UKER"
+    location: str = "BZKF"
 
 
 converter = ts.converters.get_default_cattrs_converter()
