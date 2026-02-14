@@ -20,15 +20,11 @@ dependencies = [
     "lifelines>=0.27",
     "openpyxl>=3.1",
     "xlsxwriter>=3.1",
+    "numpy<2.4.0",
 ]
 
 [dependency-groups]
-dev = [
-    "pytest>=9,<10",
-    "pytest-cov>=7,<8",
-    "ruff>=0.14,<0.16",
-    "syrupy>=5,<6",
-]
+dev = ["pytest>=9,<10", "pytest-cov>=7,<8", "ruff>=0.14,<0.16", "syrupy>=5,<6"]
 
 [tool.ruff.lint]
 select = [
