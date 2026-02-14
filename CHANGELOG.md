@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.14.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.14.0...v2.14.1) (2026-02-14)
+
+
+### Bug Fixes
+
+* default to ALL study and don't set a default for location ([#351](https://github.com/bzkf/onco-analytics-on-fhir/issues/351)) ([b36f0d8](https://github.com/bzkf/onco-analytics-on-fhir/commit/b36f0d8d7a4ab555adbda355bebb67872fb4d32b))
+* downgraded numpy to support older CPUs ([#352](https://github.com/bzkf/onco-analytics-on-fhir/issues/352)) ([fed6a9d](https://github.com/bzkf/onco-analytics-on-fhir/commit/fed6a9d23259f7a1a043e1667bad1e71de94a5fb))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump pillow from 12.1.0 to 12.1.1 in /src/analytics_on_fhir ([#348](https://github.com/bzkf/onco-analytics-on-fhir/issues/348)) ([c8c62c1](https://github.com/bzkf/onco-analytics-on-fhir/commit/c8c62c183dbde260b37597e4839aa68ca42c274c))
+* **deps:** bump pillow from 12.1.0 to 12.1.1 in /src/obds_fhir_to_opal ([#349](https://github.com/bzkf/onco-analytics-on-fhir/issues/349)) ([f709ba5](https://github.com/bzkf/onco-analytics-on-fhir/commit/f709ba5bc80fa97382d5ae755b032e58753e0695))
+* **deps:** upgraded to Python 3.12 ([#346](https://github.com/bzkf/onco-analytics-on-fhir/issues/346)) ([dfb0eae](https://github.com/bzkf/onco-analytics-on-fhir/commit/dfb0eaee8ae6cc416ad63736acaf88b39b83149d))
+
 ## [2.14.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.13.1...v2.14.0) (2026-02-10)
 
 
