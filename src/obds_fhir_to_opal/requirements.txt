@@ -551,9 +551,9 @@ pillow==12.1.1 \
     --hash=sha256:fc354a04072b765eccf2204f588a7a532c9511e8b9c7f900e1b64e3e33487090 \
     --hash=sha256:fc44ef1f3de4f45b50ccf9136999d71abb99dca7706bc75d222ed350b9fd2289
     # via matplotlib
-plotly==5.24.1 \
-    --hash=sha256:dbc8ac8339d248a4bcc36e08a5659bacfe1b079390b8953533f4eb22169b4bae \
-    --hash=sha256:f67073a1e637eb0dc3e46324d9d51e2fe76e9727c892dde64ddf1e1b51f29089
+plotly==6.5.2 \
+    --hash=sha256:7478555be0198562d1435dee4c308268187553cc15516a2f4dd034453699e393 \
+    --hash=sha256:91757653bd9c550eeea2fa2404dba6b85d1e366d54804c340b2c874e5a7eb4a4
     # via -r requirements.in
 pluggy==1.6.0 \
     --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
