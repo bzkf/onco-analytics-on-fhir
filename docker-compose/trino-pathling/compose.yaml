@@ -25,7 +25,7 @@ services:
       METASTORE_URL: "thrift://hive-metastore:9083"
 
   hive-metastore-db:
-    image: docker.io/library/postgres:18.0@sha256:41fc5342eefba6cc2ccda736aaf034bbbb7c3df0fdb81516eba1ba33f360162c
+    image: docker.io/library/postgres:18.2@sha256:b6b4d0b75c699a2c94dfc5a94fe09f38630f3b67ab0e1653ede1b7ac8e13c197
     ipc: private
     privileged: false
     restart: unless-stopped
@@ -37,7 +37,7 @@ services:
       - hive-metastore-db-data:/var/lib/postgresql:rw
 
   hive-metastore:
-    image: ghcr.io/miracum/util-images/hive-metastore:v1.3.0@sha256:4b83eb4b7efd3f3dcd70d255336605e6cc5e028115460016837009664753d021
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.3.2@sha256:070c65748b0101133344b71a03ef427283c2c20a08783f98bd530ede4053cadf
     ipc: none
     security_opt:
       - "no-new-privileges:true"
