@@ -1,6 +1,6 @@
 services:
   analytics-on-fhir:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/analytics-on-fhir:${ANALYTICS_ON_FHIR_IMAGE_TAG:-v2.13.1} # x-release-please-version
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/analytics-on-fhir:${ANALYTICS_ON_FHIR_IMAGE_TAG:-v2.14.1} # x-release-please-version
     restart: no
     cap_drop:
       - ALL
@@ -11,7 +11,7 @@ services:
     user: "65532:65532"
     environment:
       SPARK_CHECKPOINT_DIR: "/tmp/spark-checkpoints/analytics-on-fhir"
-      STUDY_NAME: "${STUDY_NAME:-embark_rwd}"
+      STUDY_NAME: "${STUDY_NAME:-all}"
       SPARK_S3_ENDPOINT: minio:9000
       DELTA_DATABASE_PATH: "${DELTA_DATABASE_PATH:-s3a://fhir/default/}"
       SPARK_DRIVER_MEMORY: "${SPARK_DRIVER_MEMORY:-8g}"
@@ -19,6 +19,6 @@ services:
       RESULTS_DIRECTORY_PATH: "/home/nonroot/analytics-output/"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
-      LOCATION: "${LOCATION:-UKER}"
+      LOCATION: "${LOCATION:?}"
     volumes:
       - ./opal-output:/home/nonroot/analytics-output/:rw

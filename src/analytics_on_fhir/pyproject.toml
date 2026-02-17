@@ -3,7 +3,7 @@ name = "analytics_on_fhir"
 version = "0.1.0"
 description = "Analytics on FHIR"
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "pathling==9.2.0",
     "delta-spark==4.0.0",
@@ -22,15 +22,11 @@ dependencies = [
     "xlsxwriter>=3.1",
     "jupyter>=1.0",
     "ipykernel>=6.0",
+    "numpy<2.4.0",
 ]
 
 [dependency-groups]
-dev = [
-    "pytest>=9,<10",
-    "pytest-cov>=7,<8",
-    "ruff>=0.14,<0.16",
-    "syrupy>=5,<6",
-]
+dev = ["pytest>=9,<10", "pytest-cov>=7,<8", "ruff>=0.14,<0.16", "syrupy>=5,<6"]
 
 [tool.ruff.lint]
 select = [
