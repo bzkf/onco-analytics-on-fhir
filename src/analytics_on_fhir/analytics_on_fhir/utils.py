@@ -58,9 +58,9 @@ def save_final_df(pyspark_df, settings, suffix=""):
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
 
-    pyspark_df.coalesce(1).write.option("header", "true").mode("overwrite").csv(
-        temp_dir
-    )
+    pyspark_df.coalesce(1).write.option("header", "true").option("sep", ";").mode(
+        "overwrite"
+    ).csv(temp_dir)
     part_file = glob.glob(os.path.join(temp_dir, "part-*.csv"))[0]
     shutil.move(part_file, final_csv_path)
     shutil.rmtree(temp_dir)
@@ -117,9 +117,58 @@ def compute_age(df: DataFrame) -> DataFrame:
     return df
 
 
+def detect_date_precision(col):
+    return (
+        # ISO-Formate
+        F.when(col.rlike(r"^\d{4}-\d{2}-\d{2}$"), F.lit("DAY"))
+        .when(col.rlike(r"^\d{4}-\d{2}$"), F.lit("MONTH"))
+        .when(col.rlike(r"^\d{4}$"), F.lit("YEAR"))
+        # Deutsche Formate dd.MM.yyyy oder MM.yyyy
+        .when(col.rlike(r"^\d{2}\.\d{2}\.\d{4}$"), F.lit("DAY"))
+        .when(col.rlike(r"^\d{2}\.\d{4}$"), F.lit("MONTH"))
+        .otherwise(F.lit(None))
+    )
+
+
+# Jahres-/Monatsmitte wird ergänzt wenn Wert fehlt
+def parse_date_with_precision(col, precision_col):
+    return (
+        # Exaktes Datum
+        F.when(precision_col == "DAY", F.to_date(col, "yyyy-MM-dd"))
+        # Monatsmitte (15.)
+        .when(
+            precision_col == "MONTH",
+            F.to_date(F.concat(col, F.lit("-15")), "yyyy-MM-dd"),
+        )
+        # Jahresmitte (1. Juli)
+        .when(
+            precision_col == "YEAR",
+            F.to_date(F.concat(col, F.lit("-07-01")), "yyyy-MM-dd"),
+        ).otherwise(F.lit(None).cast("date"))
+    )
+
+
+def months_diff(df, date_col, reference_date):
+    return df.withColumn(
+        date_col + "_diff",
+        F.round(F.months_between(F.col(date_col), F.col(reference_date)), 2).cast(
+            "double"
+        ),
+    )
+
+
 def cast_study_dates(df: DataFrame, date_cols: Iterable[str]) -> DataFrame:
     for c in date_cols:
-        df = df.withColumn(c, F.to_date(c))
+
+        raw_col = F.col(c)
+        precision_col_name = f"{c}_precision"
+
+        df = df.withColumn(precision_col_name, detect_date_precision(raw_col))
+
+        df = df.withColumn(
+            c, parse_date_with_precision(raw_col, F.col(precision_col_name))
+        )
+
     return df
 
 
@@ -219,6 +268,11 @@ def extract_df_study_protocol_a_d_mii(
                     {
                         "path": "getResourceKey()",
                         "name": "condition_id",
+                    },
+                    {
+                        "description": "FHIR Profile URL",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
                     },
                     {
                         "description": "Asserted Date",

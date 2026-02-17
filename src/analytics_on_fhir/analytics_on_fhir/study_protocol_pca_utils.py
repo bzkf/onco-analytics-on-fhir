@@ -1,3 +1,4 @@
+import re
 from functools import reduce
 
 from loguru import logger
@@ -242,24 +243,8 @@ def extract_systemtherapies(
         ],
     )
 
-    """ logger.info("df_medication_statements_count = {}", df_medication_statements.count())
-    logger.info(
-        "df_medication_statements_count distinct condition id count = {}",
-        df_medication_statements.select("reason_reference").distinct().count(),
-    )
-    logger.info(
-        "df_medication_statements_count distinct procedure id count = {}",
-        df_medication_statements.select("part_of_reference").distinct().count(),
-    )
-    df_medication_statements = df_medication_statements.orderBy(
-        F.col("reason_reference")
-    )
-    df_medication_statements.show()
- """
     # TO DO: split this later
     # return df_procedures, df_medication_statements
-
-    # ACHTUNG - mach den rest hier in extra funktion
 
     # erst joinen (procedure+medicationstatements) und danach gruppieren
     # Substanzen pro condition und therapy start date |-separiert abspeichern
@@ -294,12 +279,6 @@ def extract_systemtherapies(
             "m.part_of_reference",
         )
     )
-
-    """ logger.info(
-        "df_procedures_medication_statements count = {}",
-        df_procedures_medication_statements.count(),
-    )
-    df_procedures_medication_statements.orderBy(F.col("reason_reference")).show() """
 
     # pro condition und start date: | separiert abspeichern
     df_procedures_medication_statements_grouped = (
@@ -349,34 +328,8 @@ def extract_systemtherapies(
         )
     )
 
-    """ logger.info(
-        "df_procedures_medication_statements_final count = {}",
-        df_procedures_medication_statements_final.count(),
-    )
-    logger.info(
-        "df_procedures_medication_statements_final distinct procedure_resource_id "
-        "count = {}",
-        df_procedures_medication_statements_final.select("therapy_id")
-        .distinct()
-        .count(),
-    )
-    logger.info(
-        "df_procedures_medication_statements_final distinct patient id count = {}",
-        df_procedures_medication_statements_final.select("subject_reference")
-        .distinct()
-        .count(),
-    ) """
     df_procedures_medication_statements_final.orderBy(F.col("reason_reference")).show()
-    # --> clean!
 
-    # prüfen ob ich das noch so wie bei DKTK machen will
-    # cast dates, (group one therapy per cond id per start date) -
-    # das hier will ich definitiv nicht, add months diff,
-    # filter negative months diff
-    # systemtherapies_final = preprocess_therapy_df(systemtherapies)
-
-    # sollte ich auch die raw procedures und raw medication statements abspeichern und
-    # den rest in eine andere funktion auslagern?
     return df_procedures_medication_statements_final
 
 
@@ -473,16 +426,10 @@ def extract_radiotherapies(
     df_parents_radiotherapies = df_procedures.filter(
         F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY
     )
-    # logger.info(
-    #    "df_parents_radiotherapies count = {}", df_parents_radiotherapies.count()
-    # )
-    # df_parents_radiotherapies.show()
 
     df_children_bestrahlung = df_procedures.filter(
         F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG
     )
-    # logger.info("df_children_bestrahlung count = {}", df_children_bestrahlung.count())
-    # df_children_bestrahlung.show()
 
     return df_parents_radiotherapies, df_children_bestrahlung
 
@@ -647,18 +594,7 @@ def extract_surgeries(
             }
         ],
     )
-    """ logger.info(
-        "df_ops count = {}",
-        df_ops.count(),
-    )
-    logger.info(
-        "df_ops count distinct combination of reason reference and therapy start date = {}",
-        df_ops.select("reason_reference", "therapy_start_date").distinct().count(),
-    )
-    df_ops.orderBy(F.col("reason_reference")).show() """
 
-    # downstream unverändert - ggf aus altem übernehmen wenns noch passt
-    # df_ops = preprocess_therapy_df(df_ops)
     return df_ops
 
 
@@ -746,7 +682,11 @@ def flag_young_highrisk_cohort(
 
 
 def union_sort_pivot_join(
-    df_c61_clean, df_ops_grouped, df_medication_statements, df_radiotherapies_joined
+    df_c61_clean,
+    df_ops_grouped,
+    df_medication_statements,
+    df_radiotherapies_joined,
+    first_line_months_threshold=None,
 ):
     # to date
     df_ops_grouped = df_ops_grouped.withColumn(
@@ -851,6 +791,7 @@ def union_sort_pivot_join(
         df_therapies_asserted.count(),
     )
     df_therapies_asserted.show()
+
     # Add months_diff
     df_therapies_asserted = df_therapies_asserted.withColumn(
         "months_diff",
@@ -863,6 +804,18 @@ def union_sort_pivot_join(
         df_therapies_asserted.count(),
     )
     df_therapies_asserted.show()
+
+    # Optional first line filter
+    if first_line_months_threshold is not None:
+        df_therapies_asserted = df_therapies_asserted.filter(
+            F.col("months_diff").isNotNull()
+            & F.col("months_diff").between(0, first_line_months_threshold)
+        )
+        logger.info(
+            "df_therapies_asserted with months diff count after first line filter = {}",
+            df_therapies_asserted.count(),
+        )
+        df_therapies_asserted.show()
 
     # TO DO? check if i should remove negative months diff?
     # TO DO Wenn zwei Therapien am gleichen Tag starten, muss OP vor ST vor SYST stehen?
@@ -889,7 +842,9 @@ def union_sort_pivot_join(
     ]
     id_cols = ["reason_reference"]
 
-    max_index = df_long.agg(F.max("therapy_index")).collect()[0][0]
+    # für den moment zu unübersichtlich
+    # max_index = df_long.agg(F.max("therapy_index")).collect()[0][0]
+    max_index = 10
     if max_index is None:
         raise ValueError("Keine Therapiedaten vorhanden.")
 
@@ -923,10 +878,80 @@ def union_sort_pivot_join(
         .drop("reason_reference")
     )
 
+    # hier nach dem join nochmal filtern wenn first line
+    # TO DO oder right join? think about it
+    if first_line_months_threshold is not None:
+        df_final = df_final.filter(F.col("months_diff_1").isNotNull())
+        logger.info(
+            "df_final count after first line months_diff_1 filter = {}",
+            df_final.count(),
+        )
+
     logger.info("df_final count = {}", df_final.count())
     df_final.show()
     return df_final
 
 
-# join to df_c61 for asserted
-# months diff asserted therapy startdate
+def map_atc_column(df, atc_col, out_col, mapping_expr):
+    return df.withColumn(
+        out_col,
+        F.concat_ws(
+            "|",
+            F.transform(
+                F.split(F.col(atc_col), r"\|"),
+                lambda x: mapping_expr[F.trim(x)],
+            ),
+        ),
+    )
+
+
+def get_max_index_from_columns(df, prefix):
+    pattern = re.compile(rf"{prefix}_(\d+)$")
+    indices = []
+
+    for c in df.columns:
+        m = pattern.match(c)
+        if m:
+            indices.append(int(m.group(1)))
+
+    return max(indices) if indices else 0
+
+
+def with_mapped_atc_column(df, spark):
+    # group ATC codes wie Prof. Wullich sagte
+    mapping_df = (
+        spark.read.option("header", True)
+        .option("inferSchema", True)
+        .option("sep", ";")
+        .csv(
+            "/home/coder/git/onco-analytics-on-fhir/src/analytics_on_fhir/"
+            "analytics_on_fhir/"
+            "Umsetzungsleitfaden_Substanzen_2025-08_Gruppen_Prof.Wullich.csv"
+        )
+    )
+
+    mapping_df = (
+        mapping_df.withColumn("atc_code", F.trim(F.col("atc_code")))
+        .filter(F.col("atc_code").isNotNull())
+        .filter(F.col("atc_code") != "")
+    )
+
+    # mapping dict
+    mapping_dict = {r["atc_code"]: r["gruppe"] for r in mapping_df.collect()}
+
+    mapping_expr = F.create_map(
+        [F.lit(x) for kv in mapping_dict.items() if kv[0] is not None for x in kv]
+    )
+
+    result_df = df
+
+    max_index = get_max_index_from_columns(df, "medication_statement_atc_code")
+
+    for i in range(1, max_index + 1):
+        result_df = map_atc_column(
+            result_df,
+            f"medication_statement_atc_code_{i}",
+            f"gruppe_{i}",
+            mapping_expr,
+        )
+    return result_df
