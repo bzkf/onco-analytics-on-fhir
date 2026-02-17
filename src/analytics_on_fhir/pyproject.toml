@@ -20,6 +20,8 @@ dependencies = [
     "lifelines>=0.27",
     "openpyxl>=3.1",
     "xlsxwriter>=3.1",
+    "jupyter>=1.0",
+    "ipykernel>=6.0",
     "numpy<2.4.0",
 ]
 
