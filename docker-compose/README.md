@@ -77,13 +77,21 @@ docker compose --env-file=.demo.env -f compose.fhir-to-delta.yaml up
 
 To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.
 
-### 6. Convert the FHIR resources to a CSV dataset
+### 6a. Convert the FHIR resources to a CSV dataset (obds-fhir-to-opal)
+
 - Select the study name in the compose.obds-fhir-to-opal.yaml file. Find out more about the available studies [here](../src/obds_fhir_to_opal/README.md).
+
 ```sh
 sudo chown -R 1001:1001 ./opal-output/
 docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
 ```
 
+### 6b. Convert the FHIR resources to a CSV dataset (analytics-on-fhir)
+
+```sh
+sudo chown -R 65532:65532 ./opal-output/
+docker compose --env-file=.demo.env -f compose.analytics-on-fhir.yaml up
+```
 
 ### 7. Enable Kafka Connect and the connector
 
