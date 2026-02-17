@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: src/analytics_on_fhir
+        working-directory: .
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -58,12 +58,12 @@ jobs:
         with:
           enable-cache: true
           activate-environment: true
-          working-directory: src/analytics_on_fhir
+          working-directory: .
 
       - uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
         with:
           distribution: "temurin"
-          java-version-file: "src/analytics_on_fhir/.java-version"
+          java-version-file: ".java-version"
 
       - name: Install test dependencies
         run: |
