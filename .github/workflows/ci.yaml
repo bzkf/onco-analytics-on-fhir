@@ -138,10 +138,6 @@ jobs:
 
       - name: load the obds reports from disk, turn them into individual reports and send them to Kafka
         working-directory: docker-compose/
-        env:
-          DECOMPOSE_XMLS_IMAGE_TAG: ${{ needs.build-analytics-on-fhir-image.outputs.image-version }}
-          STUDY_NAME: all
-          LOCATION: ci
         run: |
           USER_ID=${UID} GROUP_ID=${GID} docker compose --env-file=.demo.env -f compose.decompose-xmls.yaml up
 
@@ -177,6 +173,7 @@ jobs:
       - name: Run all studies
         working-directory: docker-compose/
         env:
+          LOCATION: ci
           STUDY_NAME: "all"
           ANALYTICS_ON_FHIR_IMAGE_TAG: ${{ needs.build-analytics-on-fhir-image.outputs.image-version }}
         run: |
