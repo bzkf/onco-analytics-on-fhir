@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from pathlib import Path
 
 import typed_settings as ts
 
@@ -22,7 +23,7 @@ class SparkSettings:
     s3_endpoint: str = "localhost:9000"
     s3_connection_ssl_enabled: str = "false"
     warehouse_dir: str = os.path.join(HERE, "warehouse")
-    checkpoint_dir: str = ".spark/checkpoints/"
+    checkpoint_dir: str = os.path.join(HERE, "spark-checkpoints")
     driver_memory: str = "4g"
 
 
@@ -41,8 +42,16 @@ class Settings:
 converter = ts.converters.get_default_cattrs_converter()
 converter.register_structure_hook(StudyNames, ts.converters.to_enum_by_value)
 
+loaders = [
+    *ts.default_loaders("analytics_on_fhir", env_prefix=""),
+    ts.loaders.DotEnvLoader(
+        prefix="",
+        dotenv_path=Path(".env"),
+    ),
+]
+
 settings = ts.load_settings(
     Settings,
-    ts.default_loaders(appname="analytics_on_fhir", env_prefix=""),
+    loaders=loaders,
     converter=converter,
 )

@@ -21,40 +21,6 @@ env:
   ONCO_ANALYTICS_NAMESPACE_NAME: bzkf-onco-analytics
 
 jobs:
-  build-decompose-xml-image:
-    name: build decompose-xmls container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
-    permissions:
-      contents: write
-      id-token: write
-      packages: write
-      pull-requests: write
-      actions: read
-      security-events: write
-    with:
-      image: ghcr.io/${{ github.repository }}/decompose-xmls
-      build-context: src/decompose_xmls
-      enable-build-test-layer: false
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  build-obds-fhir-to-opal-image:
-    name: build obds-fhir-to-opal container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
-    permissions:
-      contents: write
-      id-token: write
-      packages: write
-      pull-requests: write
-      actions: read
-      security-events: write
-    with:
-      image: ghcr.io/${{ github.repository }}/obds-fhir-to-opal
-      build-context: src/obds_fhir_to_opal
-      enable-build-test-layer: false
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
-
   build-analytics-on-fhir-image:
     name: build analytics-on-fhir container image
     uses: miracum/.github/.github/workflows/standard-build.yaml@8d3203b6598feaa0c20f26351cc118bd4a158197 # v1.20.0
@@ -67,50 +33,10 @@ jobs:
       security-events: write
     with:
       image: ghcr.io/${{ github.repository }}/analytics-on-fhir
-      build-context: src/analytics_on_fhir
+      build-context: .
       enable-build-test-layer: false
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@4a5ed0cb8f87fe5197b33c2619b3431786e9b6a5 # v1.19.2
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-      security-events: write
-      actions: read
-    with:
-      enable-validate-gradle-wrapper: false
-      codeql-languages: '["python"]'
-      enable-codeql: false
-      enable-verify-base-image-signature: false
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  test-decompose-xml:
-    name: run decompose-xmls tests
-    strategy:
-      matrix:
-        # Python versions to run tests for
-        python-version: ["3.11"]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        working-directory: src/decompose_xmls
-        run: |
-          pip install --require-hashes -r requirements-test.txt
-      - name: Run decompose_xmls tests
-        working-directory: src/decompose_xmls
-        run: |
-          pytest
 
   test-analytics-on-fhir:
     name: run analytics-on-fhir tests
@@ -158,8 +84,7 @@ jobs:
     name: run compose e2e tests
     runs-on: ubuntu-24.04
     needs:
-      - build-decompose-xml-image
-      - build-obds-fhir-to-opal-image
+      - build-analytics-on-fhir-image
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
@@ -191,20 +116,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: ${{ needs.build-decompose-xml-image.outputs.image-slug }}
-          path: /tmp
-
-      - name: Load image
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          docker load --input /tmp/image.tar
-          docker image ls
-
-      - name: Download image
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-slug }}
+          name: ${{ needs.build-analytics-on-fhir-image.outputs.image-slug }}
           path: /tmp
 
       - name: Load image
@@ -227,7 +139,7 @@ jobs:
       - name: load the obds reports from disk, turn them into individual reports and send them to Kafka
         working-directory: docker-compose/
         env:
-          DECOMPOSE_XMLS_IMAGE_TAG: ${{ needs.build-decompose-xml-image.outputs.image-version }}
+          DECOMPOSE_XMLS_IMAGE_TAG: ${{ needs.build-analytics-on-fhir-image.outputs.image-version }}
         run: |
           USER_ID=${UID} GROUP_ID=${GID} docker compose --env-file=.demo.env -f compose.decompose-xmls.yaml up
 
@@ -260,65 +172,16 @@ jobs:
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Observation'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Condition'
 
-      # we could use a matrix strategy to run this in parallel
-      - name: convert the FHIR resources to the CSV dataset (PoC)
+      - name: Run all studies
         working-directory: docker-compose/
         env:
-          STUDY_NAME: "PoC"
-          OUTPUT_FILENAME: "df-poc.csv"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
+          STUDY_NAME: "all"
+          ANALYTICS_ON_FHIR_IMAGE_TAG: ${{ needs.build-analytics-on-fhir-image.outputs.image-version }}
         run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
+          sudo chown -R 65532:65532 ./opal-output/
+          docker compose --env-file=.demo.env -f compose.analytics-on-fhir.yaml up
 
-      - name: convert the FHIR resources to the CSV dataset (study_protocol_c)
-        working-directory: docker-compose/
-        env:
-          STUDY_NAME: "study_protocol_c"
-          OUTPUT_FILENAME: "df-study_protocol_c.csv"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
-        run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
-
-      - name: convert the FHIR resources to the CSV dataset (study_protocol_d)
-        working-directory: docker-compose/
-        env:
-          STUDY_NAME: "study_protocol_d"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
-        run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
-
-      - name: convert the FHIR resources to the CSV dataset (study_protocol_a0_1_3_7)
-        working-directory: docker-compose/
-        env:
-          STUDY_NAME: "study_protocol_a0_1_3_7"
-          OUTPUT_FILENAME: "df-study_protocol_a0_1_3_7.csv"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
-        run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
-
-      - name: convert the FHIR resources to the CSV dataset (pca_therapies1)
-        working-directory: docker-compose/
-        env:
-          STUDY_NAME: "pca_therapies1"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
-        run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
-
-      - name: convert the FHIR resources to the CSV dataset (tso500_classification)
-        working-directory: docker-compose/
-        env:
-          STUDY_NAME: "tso500_classification"
-          OBDS_FHIR_TO_OPAL_IMAGE_TAG: ${{ needs.build-obds-fhir-to-opal-image.outputs.image-version }}
-        run: |
-          sudo chown -R 1001:1001 ./opal-output/
-          docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
-
-      - name: upload the CSV
+      - name: upload output
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: opal-df
@@ -333,7 +196,7 @@ jobs:
             -f compose.kafka.yaml \
             -f compose.decompose-xmls.yaml \
             -f compose.obds-to-fhir.yaml \
-            -f compose.obds-fhir-to-opal.yaml \
+            -f compose.analytics-on-fhir.yaml \
             -f compose.fhir-to-delta.yaml \
             -f trino-pathling/compose.yaml logs | tee compose-logs.txt
 
@@ -345,28 +208,21 @@ jobs:
           path: |
             docker-compose/compose-logs.txt
 
-  # build-air-gapped-installer:
-  #   name: build air-gapped installer package
-  #   runs-on: ubuntu-24.04
-  #   if: ${{ github.event_name == 'pull_request' }}
-  #   steps:
-  #     - name: Free Disk Space (Ubuntu)
-  #       uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-  #       with:
-  #         tool-cache: false
-  #         android: true
-  #         dotnet: true
-  #         haskell: true
-  #         large-packages: true
-  #         docker-images: true
-  #         swap-storage: true
-
-  #     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-  #       with:
-  #         persist-credentials: false
-
-  #     - run: |
-  #         ./build-air-gapped-installer.sh
+  lint:
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@4a5ed0cb8f87fe5197b33c2619b3431786e9b6a5 # v1.19.2
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      security-events: write
+      actions: read
+    with:
+      enable-validate-gradle-wrapper: false
+      codeql-languages: '["python"]'
+      enable-codeql: false
+      enable-verify-base-image-signature: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -376,7 +232,5 @@ jobs:
       id-token: write
       packages: write
     needs:
-      - build-decompose-xml-image
-      - build-obds-fhir-to-opal-image
       - build-analytics-on-fhir-image
     uses: ./.github/workflows/release.yaml

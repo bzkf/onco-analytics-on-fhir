@@ -604,7 +604,7 @@ def plot_pair_boxplot_horizontal_custom(
         ax.text(
             pct_x,
             y_main[i],
-            f"{int(frac*100)}%",
+            f"{int(frac * 100)}%",
             va="center",
             ha="left",
             fontsize=10,

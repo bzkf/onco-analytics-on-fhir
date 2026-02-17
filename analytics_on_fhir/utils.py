@@ -144,7 +144,8 @@ def parse_date_with_precision(col, precision_col):
         .when(
             precision_col == "YEAR",
             F.to_date(F.concat(col, F.lit("-07-01")), "yyyy-MM-dd"),
-        ).otherwise(F.lit(None).cast("date"))
+        )
+        .otherwise(F.lit(None).cast("date"))
     )
 
 
@@ -159,7 +160,6 @@ def months_diff(df, date_col, reference_date):
 
 def cast_study_dates(df: DataFrame, date_cols: Iterable[str]) -> DataFrame:
     for c in date_cols:
-
         raw_col = F.col(c)
         precision_col_name = f"{c}_precision"
 
