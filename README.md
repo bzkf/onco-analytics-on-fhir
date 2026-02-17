@@ -9,13 +9,13 @@ This software is used to transform oncological basic data set (oBDS) XML files f
 ![Figure Modular Pipeline](img/fig1.png)
 
 ### Citation
+
 If you use this work, please cite:
 
 Ziegler J, Erpenbeck MP, Fuchs T, Saibold A, Volkmer PC, Schmidt G, Eicher J, Pallaoro P, De Souza Falguera R, Aubele F, Hagedorn M, Vansovich E, Raffler J, Ringshandl S, Kerscher A, Maurer JK, Kühnel B, Schenkirsch G, Kampf M, Kapsner LA, Ghanbarian H, Spengler H, Soto-Rey I, Albashiti F, Hellwig D, Ertl M, Fette G, Kraska D, Boeker M, Prokosch HU, Gulden C
 Bridging Data Silos in Oncology with Modular Software for Federated Analysis on Fast Healthcare Interoperability Resources: Multisite Implementation Study
 J Med Internet Res 2025;27:e65681
 [doi: 10.2196/65681](https://doi.org/10.2196/65681) PMID: 40233352 PMCID: 12041822
-
 
 ## Installation
 
@@ -50,83 +50,43 @@ kubectl create namespace ${ONCO_ANALYTICS_NAMESPACE_NAME} --dry-run=client -o ya
 kubectl config set-context --current --namespace=${ONCO_ANALYTICS_NAMESPACE_NAME}
 ```
 
-##### Air-gapped
+## Development
 
-Download the air-gapped installer and move it to the deployment machine:
-
-<!-- x-release-please-start-version -->
+### Required tooling
 
 ```sh
-curl -L -O https://github.com/bzkf/onco-analytics-on-fhir/releases/download/v2.15.0/air-gapped-installer.tgz
+curl -LsSf https://astral.sh/uv/install.sh | sh
+sudo apt install openjdk-21-jre graphviz
 ```
 
-<!-- x-release-please-end -->
-
-Run the following steps on the deployment machine.
-
-Extract the archive:
+### Install dependencies
 
 ```sh
-tar xvzf ./air-gapped-installer.tgz
+uv sync
+source .venv/bin/activate
 ```
 
-Prepare the images directory and k3s binary:
+### Format and auto-fix using Ruff
 
 ```sh
-mkdir -p /var/lib/rancher/k3s/agent/images/
-cp ./dist/air-gapped/k3s/k3s-airgap-images-amd64.tar /var/lib/rancher/k3s/agent/images/
-
-cp ./dist/air-gapped/bin/k3s /usr/local/bin/k3s
+ruff format .
+ruff check --fix .
 ```
 
-Run the install script:
+### Run on CLI
 
 ```sh
-chmod +x ./dist/air-gapped/bin/install.sh
-INSTALL_K3S_SKIP_DOWNLOAD=true ./dist/air-gapped/bin/install.sh
+python3 -m analytics_on_fhir.main
 ```
 
-Run the script to import all required images:
+### Test
 
 ```sh
-chmod +x ./dist/air-gapped/bin/import-images-into-k3s.sh
-IMAGE_FOLDER=./dist/air-gapped/images ./dist/air-gapped/bin/import-images-into-k3s.sh
+uv run pytest -vv --log-cli-level=20 --cov=analytics_on_fhir --cov-report=html --capture=no
 ```
 
-##### Install Strimzi Operator and Kafka
-
-<!-- x-release-please-start-version -->
+#### Update snapshots
 
 ```sh
-helm upgrade --install --wait --timeout=10m --version=2.15.0 prerequisites oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/prerequisites
-
-kubectl apply -f k8s/kafka-cluster.yaml
-kubectl wait kafka/bzkf-dizbox-cluster --for=condition=Ready --timeout=300s
-
-# Optionally install KafkaBridge
-kubectl apply -f k8s/kafka-bridge.yaml
-kubectl wait kafkabridge/bzkf-dizbox-bridge --for=condition=Ready --timeout=300s
-
-kubectl get all -A
+uv run pytest -vv --log-cli-level=20 --snapshot-update
 ```
-
-##### Install onco-analytics-on-fhir
-
-```sh
-helm upgrade --install --wait --timeout=10m --version=2.15.0 onco-analytics-on-fhir oci://ghcr.io/bzkf/onco-analytics-on-fhir/charts/onco-analytics-on-fhir
-
-# test the installation
-helm test onco-analytics-on-fhir
-
-kubectl wait deployment/onco-analytics-on-fhir-stream-processors-obds-to-fhir --for=condition=Available --timeout=300s
-kubectl wait deployment/onco-analytics-on-fhir-stream-processors-fhir-to-server --for=condition=Available --timeout=300s
-```
-
-<!-- x-release-please-end -->
-
-## TODOs
-
-- <https://docs.k3s.io/security/hardening-guide>
-- set ACL for KafkaUsers to relevant topics
-- hardening: change existing passwords; show how to add existing secrets via kubectl.
-  `kubectl create secret generic --from-literal='GPAS__AUTH__BASIC__PASSWORD=test' gpas-basic-auth`
