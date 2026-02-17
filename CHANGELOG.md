@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.14.1...v2.15.0) (2026-02-17)
+
+
+### Features
+
+* Pca therapy sequence ([#343](https://github.com/bzkf/onco-analytics-on-fhir/issues/343)) ([d43efa7](https://github.com/bzkf/onco-analytics-on-fhir/commit/d43efa70a47fa94762a601f25ce0d951966046bf))
+
 ## [2.14.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.14.0...v2.14.1) (2026-02-14)
 
 
