@@ -9,8 +9,7 @@ from loguru import logger
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-
-from analytics_on_fhir.utils import save_plot
+from utils import save_plot
 
 
 def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_parent"):

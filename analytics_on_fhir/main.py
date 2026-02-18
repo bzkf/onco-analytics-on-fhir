@@ -1,17 +1,16 @@
 import pathlib
 import sys
 
+from embark_rwd import run
 from loguru import logger
 from pathling.context import PathlingContext
 from pathling.datasource import DataSource
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-
-from analytics_on_fhir.embark_rwd import run
-from analytics_on_fhir.settings import StudyNames, settings
-from analytics_on_fhir.study_protocol_d import StudyProtocolD
-from analytics_on_fhir.study_protocol_pca1 import StudyProtocolPCa1
-from analytics_on_fhir.utils import (
+from settings import StudyNames, settings
+from study_protocol_d import StudyProtocolD
+from study_protocol_pca1 import StudyProtocolPCa1
+from utils import (
     extract_df_study_protocol_a_d_mii,
     filter_aml,
     save_final_df,

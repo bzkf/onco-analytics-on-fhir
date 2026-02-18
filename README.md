@@ -66,6 +66,17 @@ uv sync
 source .venv/bin/activate
 ```
 
+### Configure using .env
+
+You can create a .env file in the directory from which you invoke `uv run` to override
+settings. E.g. create a `.env` like so:
+
+```
+STUDY_NAME=study_protocol_a
+```
+
+to override the `Settings.study_name` setting. Make sure not to commit the file.
+
 ### Format and auto-fix using Ruff
 
 ```sh
@@ -76,7 +87,7 @@ ruff check --fix .
 ### Run on CLI
 
 ```sh
-python3 -m analytics_on_fhir.main
+uv run analytics_on_fhir/main.py
 ```
 
 ### Test

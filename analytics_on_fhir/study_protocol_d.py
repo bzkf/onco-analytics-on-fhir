@@ -3,8 +3,7 @@ from pathling import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-
-from analytics_on_fhir.study_protocol_d_utils import (
+from study_protocol_d_utils import (
     aggregate_malignancy_pairs,
     create_1_mal_df,
     create_2_mals_df,
@@ -13,7 +12,7 @@ from analytics_on_fhir.study_protocol_d_utils import (
     plot_pair_boxplot_horizontal_custom,
     plot_pair_bubble_gender,
 )
-from analytics_on_fhir.utils import (
+from utils import (
     cast_study_dates,
     compute_age,
     extract_df_study_protocol_a_d_mii,

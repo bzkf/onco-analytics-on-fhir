@@ -6,8 +6,7 @@ from pathling import PathlingContext, datasource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-
-from analytics_on_fhir.settings import settings
+from settings import settings
 
 FHIR_SYSTEMS_RADIOTHERAPY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"

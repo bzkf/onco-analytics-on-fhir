@@ -5,8 +5,7 @@ from pathling import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-
-from analytics_on_fhir.study_protocol_pca_utils import (
+from study_protocol_pca_utils import (
     extract_radiotherapies,
     extract_surgeries,
     extract_systemtherapies,
@@ -16,7 +15,7 @@ from analytics_on_fhir.study_protocol_pca_utils import (
     union_sort_pivot_join,
     with_mapped_atc_column,
 )
-from analytics_on_fhir.utils import (
+from utils import (
     cast_study_dates,
     compute_age,
     extract_df_study_protocol_a_d_mii,

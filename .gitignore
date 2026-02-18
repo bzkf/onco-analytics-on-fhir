@@ -23,3 +23,5 @@ __pycache__/
 
 analytics_on_fhir/results/
 analytics_on_fhir/spark-checkpoints/
+
+.env
