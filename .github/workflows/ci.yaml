@@ -133,27 +133,17 @@ jobs:
         working-directory: docker-compose/
         run: |
           docker compose -f compose.kafka.yaml up -d
-          # 😬
-          sleep 60
 
-      - name: load the obds reports from disk, turn them into individual reports and send them to Kafka
+      - name: load the fhir resources in Kafka
         working-directory: docker-compose/
         run: |
-          USER_ID=${UID} GROUP_ID=${GID} docker compose --env-file=.demo.env -f compose.decompose-xmls.yaml up
-
-      - name: convert reports to FHIR resources
-        working-directory: docker-compose/
-        run: |
-          docker compose -f compose.obds-to-fhir.yaml up -d
-          # not a great idea, probably better to create an init container
-          # exiting if the output topic contains the expected number of resources after some tries.
-          sleep 60
+          docker compose -f compose.kafka.yaml -f compose.load-demo-mii-bundles.yaml up data-loader --attach-dependencies --abort-on-container-failure
 
       - name: de-identify the resources
         working-directory: docker-compose/
         run: |
           docker compose --env-file=.demo.env -f compose.pseudonymization.yaml up -d
-          # again, not a great idea.
+          # not a great idea.
           sleep 60
 
       - name: load the resources into Delta Lake tables
@@ -165,7 +155,7 @@ jobs:
 
       - name: query them using trino
         run: |
-          curl -o trino-cli.jar https://repo1.maven.org/maven2/io/trino/trino-cli/472/trino-cli-472-executable.jar
+          curl -o trino-cli.jar https://repo1.maven.org/maven2/io/trino/trino-cli/479/trino-cli-479-executable.jar
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Observation'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Condition'
@@ -191,13 +181,7 @@ jobs:
         if: always()
         working-directory: docker-compose/
         run: |
-          docker compose --env-file=.demo.env \
-            -f compose.kafka.yaml \
-            -f compose.decompose-xmls.yaml \
-            -f compose.obds-to-fhir.yaml \
-            -f compose.analytics-on-fhir.yaml \
-            -f compose.fhir-to-delta.yaml \
-            -f trino-pathling/compose.yaml logs | tee compose-logs.txt
+          docker compose --project-name=docker-compose logs | tee compose-logs.txt
 
       - name: Upload compose dump
         if: always()

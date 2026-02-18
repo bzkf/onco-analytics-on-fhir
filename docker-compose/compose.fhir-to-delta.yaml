@@ -61,7 +61,7 @@ services:
         /usr/bin/mc mb --ignore-existing minio/results;
 
   kafka-fhir-to-delta:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/fhir-to-lakehouse:v1.13.7@sha256:5648643accfca2e3dc5a289b6120f9d74cfeff6016837f6b4af98d36a926eb76
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/fhir-to-lakehouse:v1.13.8@sha256:8364b70727fed8b2606efef6b240b1a6633269f8e918c915dd0b00441dcf457f
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -76,7 +76,7 @@ services:
       DELTA_DATABASE_DIR: "s3a://fhir/default"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
-      KAFKA_TOPICS: "fhir.obds.Patient,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.MedicationStatement"
+      KAFKA_TOPICS: "fhir.pseudonymized.obds.bundles"
     depends_on:
       wait-for-minio:
         condition: service_completed_successfully
