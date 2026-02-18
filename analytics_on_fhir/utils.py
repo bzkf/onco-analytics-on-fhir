@@ -24,10 +24,13 @@ from pyspark.sql.window import Window
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
+FHIR_SYSTEM_PRIMAERTUMOR = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
+    "StructureDefinition/mii-pr-onko-diagnose-primaertumor"
+)
 FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_SYSTEM_JNU = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-    "CodeSystem/mii-cs-onko-tod"
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-tod"
 )
 FHIR_SYSTEM_LOINC = "http://loinc.org"
 FHIR_SYSTEM_SCT = "http://snomed.info/sct"
@@ -44,12 +47,15 @@ FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
     "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
 )
 
+FHIR_SYSTEMS_WEITERE_KLASSIFIKATION = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
+    "StructureDefinition/mii-pr-onko-weitere-klassifikationen"
+)
+
 
 def save_final_df(pyspark_df, settings, suffix=""):
     logger.info("start save pyspark_df with pyspark_df.coalesce(1).write...csv() ")
-    output_dir = os.path.join(
-        HERE, settings.results_directory_path, settings.study_name.value
-    )
+    output_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
     os.makedirs(output_dir, exist_ok=True)
 
     final_csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
@@ -58,9 +64,9 @@ def save_final_df(pyspark_df, settings, suffix=""):
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
 
-    pyspark_df.coalesce(1).write.option("header", "true").option("sep", ";").mode(
-        "overwrite"
-    ).csv(temp_dir)
+    pyspark_df.coalesce(1).write.option("header", "true").option("sep", ";").mode("overwrite").csv(
+        temp_dir
+    )
     part_file = glob.glob(os.path.join(temp_dir, "part-*.csv"))[0]
     shutil.move(part_file, final_csv_path)
     shutil.rmtree(temp_dir)
@@ -70,9 +76,7 @@ def save_final_df(pyspark_df, settings, suffix=""):
 
 def save_plot(plot: Figure, settings, plot_name: str = "") -> None:
     logger.info("start save plot")
-    output_dir = os.path.join(
-        settings.results_directory_path, settings.study_name.value, "plots"
-    )
+    output_dir = os.path.join(settings.results_directory_path, settings.study_name.value, "plots")
     os.makedirs(output_dir, exist_ok=True)
 
     final_plot_path = os.path.join(output_dir, f"{plot_name}.png")
@@ -80,16 +84,11 @@ def save_plot(plot: Figure, settings, plot_name: str = "") -> None:
     logger.info(f"Plot saved to: {final_plot_path}")
 
 
-def find_closest_to_diagnosis(
-    df, condition_id_colname, date_diagnosis_col, other_date_col
-):
+def find_closest_to_diagnosis(df, condition_id_colname, date_diagnosis_col, other_date_col):
     df_filtered = df.filter(col(other_date_col).isNotNull())
 
     window = Window.partitionBy(condition_id_colname).orderBy(
-        abs(
-            col(other_date_col).cast("timestamp")
-            - col(date_diagnosis_col).cast("timestamp")
-        )
+        abs(col(other_date_col).cast("timestamp") - col(date_diagnosis_col).cast("timestamp"))
     )
 
     return (
@@ -152,9 +151,7 @@ def parse_date_with_precision(col, precision_col):
 def months_diff(df, date_col, reference_date):
     return df.withColumn(
         date_col + "_diff",
-        F.round(F.months_between(F.col(date_col), F.col(reference_date)), 2).cast(
-            "double"
-        ),
+        F.round(F.months_between(F.col(date_col), F.col(reference_date)), 2).cast("double"),
     )
 
 
@@ -165,9 +162,7 @@ def cast_study_dates(df: DataFrame, date_cols: Iterable[str]) -> DataFrame:
 
         df = df.withColumn(precision_col_name, detect_date_precision(raw_col))
 
-        df = df.withColumn(
-            c, parse_date_with_precision(raw_col, F.col(precision_col_name))
-        )
+        df = df.withColumn(c, parse_date_with_precision(raw_col, F.col(precision_col_name)))
 
     return df
 
@@ -186,9 +181,7 @@ def add_is_deceased(df):
     )
 
 
-def map_gleason_sct_to_score(
-    df, gleason_sct_col="gleason_sct", out_col="gleason_score"
-):
+def map_gleason_sct_to_score(df, gleason_sct_col="gleason_sct", out_col="gleason_score"):
     gleason_map_expr = create_map(
         lit("1279715000"),
         lit(6),  # 3+3
@@ -240,7 +233,11 @@ def extract_df_study_protocol_a_d_mii(
                         "name": "birthdate",
                         "description": "Birth Date",
                     },
-                    {"path": "gender", "name": "gender", "description": "Gender"},
+                    {
+                        "path": "gender",
+                        "name": "gender",
+                        "description": "Gender",
+                    },
                     {
                         "path": "deceased.ofType(dateTime)",
                         "name": "deceased_datetime",
@@ -286,9 +283,7 @@ def extract_df_study_protocol_a_d_mii(
                         "name": "recorded_date",
                     },
                     {
-                        "path": (
-                            f"code.coding.where(system = '{FHIR_SYSTEM_ICD10}').code"
-                        ),
+                        "path": (f"code.coding.where(system = '{FHIR_SYSTEM_ICD10}').code"),
                         "name": "icd10_code",
                     },
                     {
@@ -333,11 +328,7 @@ def extract_df_study_protocol_a_d_mii(
                         "name": "death_cause_icd10",
                     },
                     {
-                        "path": (
-                            f"interpretation"
-                            f".coding.where(system = '{FHIR_SYSTEM_JNU}')"
-                            f".code"
-                        ),
+                        "path": (f"interpretation.coding.where(system = '{FHIR_SYSTEM_JNU}').code"),
                         "name": "death_cause_tumor",
                     },
                     {
@@ -366,9 +357,7 @@ def extract_df_study_protocol_a_d_mii(
     observation_death_count = observation_death.count()
 
     logger.info("observation_death_count = {}", observation_death_count)
-    observation_death = observation_death.orderBy(
-        "observation_death_patient_resource_id"
-    )
+    observation_death = observation_death.orderBy("observation_death_patient_resource_id")
     observation_death.show()
 
     # show duplicates
@@ -389,9 +378,7 @@ def extract_df_study_protocol_a_d_mii(
 
     # count distinct patients with death observation
     observation_death_distinct_patients_count = (
-        observation_death.select("observation_death_patient_resource_id")
-        .distinct()
-        .count()
+        observation_death.select("observation_death_patient_resource_id").distinct().count()
     )
 
     logger.info(
@@ -409,15 +396,12 @@ def extract_df_study_protocol_a_d_mii(
         "death_cause_icd10",
         "date_death",
     ).agg(
-        first("observation_resource_id", ignorenulls=True).alias(
-            "observation_resource_id"
-        ),
+        first("observation_resource_id", ignorenulls=True).alias("observation_resource_id"),
         first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
     )
 
     tumor_flag_fix_count = observation_death.filter(
-        (col("death_cause_icd10").startswith("C"))
-        & (col("death_cause_tumor").isin("U", "N"))
+        (col("death_cause_icd10").startswith("C")) & (col("death_cause_tumor").isin("U", "N"))
     ).count()
 
     logger.info(
@@ -428,8 +412,7 @@ def extract_df_study_protocol_a_d_mii(
     observation_death = observation_death.withColumn(
         "death_cause_tumor",
         when(
-            (col("death_cause_icd10").startswith("C"))
-            & (col("death_cause_tumor").isin("U", "N")),
+            (col("death_cause_icd10").startswith("C")) & (col("death_cause_tumor").isin("U", "N")),
             "J",
         ).otherwise(col("death_cause_tumor")),
     )
@@ -439,9 +422,7 @@ def extract_df_study_protocol_a_d_mii(
     logger.info("observation_death_count after grouping = {}", observation_death_count)
     # count distinct patients with death observation
     observation_death_distinct_patients_count = (
-        observation_death.select("observation_death_patient_resource_id")
-        .distinct()
-        .count()
+        observation_death.select("observation_death_patient_resource_id").distinct().count()
     )
 
     logger.info(
@@ -485,9 +466,7 @@ def extract_df_study_protocol_a_d_mii(
         "observation_death_patient_resource_id"
     ).agg(
         first("date_death", ignorenulls=True).alias("date_death"),
-        first("observation_resource_id", ignorenulls=True).alias(
-            "observation_resource_id"
-        ),
+        first("observation_resource_id", ignorenulls=True).alias("observation_resource_id"),
         first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
     )
 
@@ -515,8 +494,7 @@ def extract_df_study_protocol_a_d_mii(
         conditions_patients.alias("cp")
         .join(
             observation_death_patient.alias("od"),
-            col("cp.patient_resource_id")
-            == col("od.observation_death_patient_resource_id"),
+            col("cp.patient_resource_id") == col("od.observation_death_patient_resource_id"),
             "left",
         )
         .select("cp.*", "od.*")
@@ -548,9 +526,7 @@ def extract_df_study_protocol_a_d_mii(
         conditions_patients_death_count = {}",
         conditions_patients_death_count,
     )
-    double_patid_count = conditions_patients_death.filter(
-        col("double_patid") == 1
-    ).count()
+    double_patid_count = conditions_patients_death.filter(col("double_patid") == 1).count()
 
     logger.info(
         "Anzahl double_patid = 1 (Patienten mit mehreren Conditions) = {}",
@@ -598,8 +574,7 @@ def extract_df_study_protocol_a_d_mii(
         ],
         where=[
             {
-                "description": "Histologic grade of primary malignant neoplasm "
-                "of prostate",
+                "description": "Histologic grade of primary malignant neoplasm of prostate",
                 "path": (
                     "code.coding.exists(system = "
                     f"'{FHIR_SYSTEM_SCT}' and code = '{SCT_CODE_GLEASON}')"
@@ -654,7 +629,9 @@ def extract_df_study_protocol_a_d_mii(
 
     # map sct to score
     conditions_gleason_first = map_gleason_sct_to_score(
-        conditions_gleason_first, gleason_sct_col="gleason_sct", out_col="gleason_score"
+        conditions_gleason_first,
+        gleason_sct_col="gleason_sct",
+        out_col="gleason_score",
     )
 
     conditions_gleason_first_count = conditions_gleason_first.count()
@@ -667,10 +644,7 @@ def extract_df_study_protocol_a_d_mii(
 
     logger.info(
         "sanity check double condition_ids count in conditions_gleason_first = {}",
-        conditions_gleason_first.groupBy("condition_id")
-        .count()
-        .filter(col("count") > 1)
-        .count(),
+        conditions_gleason_first.groupBy("condition_id").count().filter(col("count") > 1).count(),
     )
 
     conditions_patients_death_gleason = conditions_patients_death.join(
@@ -742,9 +716,7 @@ def extract_df_study_protocol_a_d_mii(
     )
     # count distinct conditions
     observation_death_distinct_patients_count = (
-        observation_death.select("observation_death_patient_resource_id")
-        .distinct()
-        .count()
+        observation_death.select("observation_death_patient_resource_id").distinct().count()
     )
 
     logger.info(
@@ -770,9 +742,7 @@ def extract_df_study_protocol_a_d_mii(
         "observation_metastasis_condition_resource_id",
         "metastasis_date",
     ).agg(
-        concat_ws("|", F.sort_array(collect_set("metastasis_loc"))).alias(
-            "metastasis_loc"
-        ),
+        concat_ws("|", F.sort_array(collect_set("metastasis_loc"))).alias("metastasis_loc"),
         first("observation_metastasis_patient_resource_id", ignorenulls=True).alias(
             "observation_metastasis_patient_resource_id"
         ),
@@ -789,8 +759,7 @@ def extract_df_study_protocol_a_d_mii(
         conditions.alias("c")
         .join(
             metastasis_grouped.alias("m"),
-            col("c.condition_id")
-            == col("m.observation_metastasis_condition_resource_id"),
+            col("c.condition_id") == col("m.observation_metastasis_condition_resource_id"),
             "left",
         )
         .select(
@@ -825,13 +794,12 @@ def extract_df_study_protocol_a_d_mii(
         metastasis_grouped_first.count(),
     )
 
-    conditions_patients_death_gleason_metastasis = (
-        conditions_patients_death_gleason.alias("c").join(
-            metastasis_grouped_first.alias("m"),
-            col("c.condition_id")
-            == col("m.observation_metastasis_condition_resource_id"),
-            "left",
-        )
+    conditions_patients_death_gleason_metastasis = conditions_patients_death_gleason.alias(
+        "c"
+    ).join(
+        metastasis_grouped_first.alias("m"),
+        col("c.condition_id") == col("m.observation_metastasis_condition_resource_id"),
+        "left",
     )
 
     conditions_patients_death_gleason_metastasis_count = (
@@ -852,3 +820,150 @@ def filter_aml(df):
         (col("icd10_code").isin("C83.3", "C83.1"))
         | (col("icd10_code").rlike(r"^(C90|C91|C92|C93|C94|C95|D46|C82|C85)"))
     )
+
+
+def extract_weitere_klassifikation(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    spark: SparkSession,
+    settings,
+):
+    observations_weitere_klassifikation = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "FHIR Profile URL",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.first().getReferenceKey()",
+                        "name": "focus_reference",
+                    },
+                    {
+                        "description": "Weitere Klassifikation Code Text",
+                        "path": "code.text",
+                        "name": "weitere_klassifikation_code_text",
+                    },
+                    {
+                        "description": "Weitere Klassifikation Code",
+                        "path": "value.ofType(CodeableConcept).coding.first().code",
+                        "name": "weitere_klassifikation_code",
+                    },
+                    {
+                        "description": "Weitere Klassifikation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "weitere_klassifikation_date",
+                    },
+                ]
+            }
+        ],
+    )
+    logger.info(
+        "observations_weitere_klassifikation count = {}",
+        observations_weitere_klassifikation.count(),
+    )
+    observations_weitere_klassifikation.show()
+
+    observations_weitere_klassifikation = observations_weitere_klassifikation.filter(
+        F.col("meta_profile").startswith(FHIR_SYSTEMS_WEITERE_KLASSIFIKATION)
+    )
+    logger.info(
+        "observations_weitere_klassifikation count after filter = {}",
+        observations_weitere_klassifikation.count(),
+    )
+    observations_weitere_klassifikation.show()
+
+    return observations_weitere_klassifikation
+
+
+def extract_and_join_weitere_klassifikation(
+    df: DataFrame,
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    spark: SparkSession,
+    settings,
+):
+    observations_weitere_klassifikation = extract_weitere_klassifikation(pc, data, spark, settings)
+    logger.info(
+        "observations_weitere_klassifikation count = {}",
+        observations_weitere_klassifikation.count(),
+    )
+    observations_weitere_klassifikation.show()
+
+    df_weitere_klassifikation = df.join(
+        observations_weitere_klassifikation,
+        df["condition_id"] == observations_weitere_klassifikation["focus_reference"],
+        how="left",
+    )
+    logger.info(
+        "df_weitere_klassifikation count = {}",
+        df_weitere_klassifikation.count(),
+    )
+    df_weitere_klassifikation.show()
+
+    return df_weitere_klassifikation
+
+
+def filter_reacto(df, settings):
+    df = cast_study_dates(
+        df,
+        [
+            "asserted_date",
+        ],
+    )
+    # filter ösophagus C15, colon C18, lungs C34,
+    # pancreas exokrin C25* ohne C25.4 and glioblastom C71 + WHO IV
+    df_filtered = df.filter(
+        F.col("icd10_code").startswith("C15")
+        | F.col("icd10_code").startswith("C18")
+        | F.col("icd10_code").startswith("C34")
+        | (F.col("icd10_code").startswith("C25") & (~F.col("icd10_code").startswith("C25.4")))
+        | F.col("icd10_code").startswith("C71")
+    )
+    # from 2018 - 2025
+    df_filtered = df_filtered.filter(
+        (F.year("asserted_date") >= 2018) & (F.year("asserted_date") <= 2025)
+    )
+    save_final_df(
+        df_filtered,
+        settings,
+        suffix="df_reacto",
+    )
+
+    df_counts = (
+        df_filtered.withColumn("icd10_parent", F.expr("substring(icd10_code, 1, 3)"))
+        .groupBy("icd10_parent")
+        .count()
+        .orderBy("icd10_parent")
+    )
+    # weitere Klassifikation WHO IV für Glioblastom
+    df_c71_iv_counts = (
+        df_filtered.filter(
+            F.col("icd10_code").startswith("C71")
+            & F.lower(F.col("weitere_klassifikation_code_text")).contains("who")
+            & (
+                (F.col("weitere_klassifikation_code") == "IV")
+                | (F.col("weitere_klassifikation_code") == "4")
+            )
+        )
+        .groupBy(F.lit("C71_IV").alias("icd10_parent"))
+        .count()
+    )
+    df_counts = df_counts.unionByName(df_c71_iv_counts).orderBy("icd10_parent")
+
+    logger.info("reacto df_counts ")
+    df_counts.show()
+    save_final_df(df_counts, settings, suffix=f"reacto_counts_{settings.location}")
+
+
+def filter_primaerdiagnose(df):
+    return df.filter(F.col("meta_profile").startswith(FHIR_SYSTEM_PRIMAERTUMOR))

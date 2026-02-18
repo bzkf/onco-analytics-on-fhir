@@ -16,16 +16,12 @@ from study_protocol_pca_utils import (
     with_mapped_atc_column,
 )
 from utils import (
+    FHIR_SYSTEM_PRIMAERTUMOR,
     cast_study_dates,
     compute_age,
     extract_df_study_protocol_a_d_mii,
     months_diff,
     save_final_df,
-)
-
-FHIR_SYSTEM_PRIMAERTUMOR = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-    "StructureDefinition/mii-pr-onko-diagnose-primaertumor"
 )
 
 
@@ -55,24 +51,18 @@ class StudyProtocolPCa1:
         self.year_max: int | None = None
 
     def extract(self) -> DataFrame:
-        df = extract_df_study_protocol_a_d_mii(
-            self.pc, self.data, self.settings, self.spark
-        )
+        df = extract_df_study_protocol_a_d_mii(self.pc, self.data, self.settings, self.spark)
         df_c61 = df.filter(F.col("icd10_code").startswith("C61"))
         logger.info("df_c61_count fruehere and primaertumor = {}", df_c61.count())
 
         # filter out fruehere tumorerkrankung - only primaerdiagnose
-        df_c61 = df_c61.filter(
-            F.col("meta_profile").startswith(FHIR_SYSTEM_PRIMAERTUMOR)
-        )
+        df_c61 = df_c61.filter(F.col("meta_profile").startswith(FHIR_SYSTEM_PRIMAERTUMOR))
         logger.info("df_c61_count only primaertumor = {}", df_c61.count())
 
         self.df_c61 = df_c61
 
         # TO DO: remove all the df transformation logic here, separate function
-        df_system_therapies = extract_systemtherapies(
-            self.pc, self.data, self.settings, self.spark
-        )
+        df_system_therapies = extract_systemtherapies(self.pc, self.data, self.settings, self.spark)
         df_system_therapies = cast_study_dates(
             df_system_therapies,
             [
@@ -101,9 +91,7 @@ class StudyProtocolPCa1:
             ],
         )
         self.df_radiotherapies_joined = df_radiotherapies_joined
-        save_final_df(
-            df_radiotherapies_joined, self.settings, suffix="radiotherapies_joined"
-        )
+        save_final_df(df_radiotherapies_joined, self.settings, suffix="radiotherapies_joined")
 
         df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
         df_radiotherapies_joined = cast_study_dates(
@@ -187,9 +175,7 @@ class StudyProtocolPCa1:
             ],
         )
         df = compute_age(df)
-        df = flag_young_highrisk_cohort(
-            df, age_col="age_at_diagnosis", gleason_col="gleason_score"
-        )
+        df = flag_young_highrisk_cohort(df, age_col="age_at_diagnosis", gleason_col="gleason_score")
         # calculate gleason and metastasis months diff
         df = months_diff(df, "gleason_date_first", "asserted_date")
         df = months_diff(df, "metastasis_date_first", "asserted_date")
@@ -200,9 +186,7 @@ class StudyProtocolPCa1:
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
-        df = df.filter(
-            F.col("asserted_date") > F.lit("1970-01-01")
-        )  # likely placeholder date
+        df = df.filter(F.col("asserted_date") > F.lit("1970-01-01"))  # likely placeholder date
         df = df.filter(F.col("age_at_diagnosis") > 0)
 
         return df
@@ -212,11 +196,7 @@ class StudyProtocolPCa1:
 
         # nur Erst-, Zweit- und Dritttherapie - ggf später/für andere Entitäten
         df = df.select(
-            [
-                c
-                for c in df.columns
-                if not re.search(r"_\d+$", c) or re.search(r"_[123]$", c)
-            ]
+            [c for c in df.columns if not re.search(r"_\d+$", c) or re.search(r"_[123]$", c)]
         )
 
         df.show()
