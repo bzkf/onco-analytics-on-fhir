@@ -13,6 +13,7 @@ from study_protocol_d_utils import (
     plot_pair_bubble_gender,
 )
 from utils import (
+    FHIR_SYSTEM_PRIMAERTUMOR,
     cast_study_dates,
     compute_age,
     extract_df_study_protocol_a_d_mii,
@@ -39,10 +40,13 @@ class StudyProtocolD:
         self.year_max: int | None = None
 
     def extract(self) -> DataFrame:
-        df = extract_df_study_protocol_a_d_mii(
-            self.pc, self.data, self.settings, self.spark
-        )
+        df = extract_df_study_protocol_a_d_mii(self.pc, self.data, self.settings, self.spark)
         df = df.checkpoint(eager=True)
+        logger.info("df count fruehere and primaertumor = {}", df.count())
+
+        # filter out fruehere tumorerkrankung - only primaerdiagnose
+        df = df.filter(F.col("meta_profile").startswith(FHIR_SYSTEM_PRIMAERTUMOR))
+        logger.info("df_count only primaertumor = {}", df.count())
 
         self.df_extract = df
         return df
@@ -65,7 +69,8 @@ class StudyProtocolD:
 
         # 4) 2mals vs single (1mal)
         df_2_mals = create_2_mals_df(df_clean)
-        df_1_mal = create_1_mal_df(df_clean)
+        save_final_df(df_2_mals, self.settings, suffix="2_malignancies")
+        df_1_mal = create_1_mal_df(df_clean)  # use later for comparisons maybe
 
         # 5) pivot malignancy 2, union with single
         # use this later for comparison between groups: 1 mal and 2 mal
@@ -74,13 +79,9 @@ class StudyProtocolD:
         save_final_df(df_all_pivot, self.settings, suffix="all_pivot")
 
         # 6) aggregate pairs from df_2_mals - two malignancies
-        df_pairs_agg = aggregate_malignancy_pairs(
-            df_2_mals, presuffix="entity_or_parent"
-        )
+        df_pairs_agg = aggregate_malignancy_pairs(df_2_mals, presuffix="entity_or_parent")
         save_final_df(
-            df_pairs_agg.drop(
-                "outliers_age_1", "outliers_age_2", "outliers_months_between"
-            ),
+            df_pairs_agg.drop("outliers_age_1", "outliers_age_2", "outliers_months_between"),
             self.settings,
             suffix="pairs_agg",
         )
@@ -91,12 +92,8 @@ class StudyProtocolD:
         df_pairs_agg_pd = df_pairs_agg.toPandas()
 
         # filter df: top30, top100, >5
-        top30_pairs_pd = df_pairs_agg_pd.sort_values(
-            "count_pair", ascending=False
-        ).head(30)
-        top100_pairs_pd = df_pairs_agg_pd.sort_values(
-            "count_pair", ascending=False
-        ).head(100)
+        top30_pairs_pd = df_pairs_agg_pd.sort_values("count_pair", ascending=False).head(30)
+        top100_pairs_pd = df_pairs_agg_pd.sort_values("count_pair", ascending=False).head(100)
         pairs_greater_than_5_pd = df_pairs_agg_pd[df_pairs_agg_pd["count_pair"] > 5]
 
         # diagnosis pairs + gender
@@ -115,17 +112,17 @@ class StudyProtocolD:
         logger.info("StudyProtocolD pipeline finished")
 
     def prepare(self, df: DataFrame) -> DataFrame:
-        df = group_entity_or_parent(
-            df, code_col="icd10_code", target_col="entity_or_parent"
-        )
+        df = group_entity_or_parent(df, code_col="icd10_code", target_col="entity_or_parent")
         df = df.withColumn("icd10_parent_code", F.split(df["icd10_code"], r"\.")[0])
         df = cast_study_dates(
             df,
             [
                 "asserted_date",
+                "birthdate",
                 "deceased_datetime",
                 "date_death",
                 "gleason_date_first",
+                "metastasis_date_first",
             ],
         )
         df = compute_age(df)
@@ -133,7 +130,7 @@ class StudyProtocolD:
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
-        df = df.filter(F.col("asserted_date") > F.lit("1950-01-01"))
+        df = df.filter(F.col("asserted_date") > F.lit("1970-01-01"))  # likely placeholder date
         df = df.filter(F.col("age_at_diagnosis") > 0)
 
         return df
