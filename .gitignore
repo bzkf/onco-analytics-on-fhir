@@ -20,3 +20,8 @@ __pycache__/
 *.jar
 
 *.tar.gz.*
+
+analytics_on_fhir/results/
+analytics_on_fhir/spark-checkpoints/
+
+.env
