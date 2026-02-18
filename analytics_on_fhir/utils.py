@@ -100,15 +100,6 @@ def find_closest_to_diagnosis(df, condition_id_colname, date_diagnosis_col, othe
 
 
 def compute_age(df: DataFrame) -> DataFrame:
-    # birthdate (YYYY-MM → YYYY-MM-15)
-    df = df.withColumn(
-        "birthdate",
-        F.when(
-            F.col("birthdate").rlike(r"^\d{4}-\d{2}$"),  # nur YYYY-MM
-            F.to_date(F.concat(F.col("birthdate"), F.lit("-15")), "yyyy-MM-dd"),
-        ).otherwise(F.to_date(F.col("birthdate"), "yyyy-MM-dd")),
-    )
-
     df = df.withColumn(
         "age_at_diagnosis",
         F.round((F.datediff(df["asserted_date"], df["birthdate"]) / 365.25), 2),
