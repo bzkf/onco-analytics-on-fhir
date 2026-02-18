@@ -39,8 +39,8 @@ USER 65532:65532
 
 RUN <<EOF
 set -e
-SPARK_INSTALL_PACKAGES_AND_EXIT=1 python3 -m analytics_on_fhir.main
+SPARK_INSTALL_PACKAGES_AND_EXIT=1 python3 analytics_on_fhir/main.py
 rm -rf /tmp/spark*
 EOF
 
-ENTRYPOINT [ "python3", "-m", "analytics_on_fhir.main" ]
+ENTRYPOINT [ "python3", "analytics_on_fhir/main.py" ]
