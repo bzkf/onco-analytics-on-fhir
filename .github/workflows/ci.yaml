@@ -155,7 +155,7 @@ jobs:
 
       - name: query them using trino
         run: |
-          curl -o trino-cli.jar https://repo1.maven.org/maven2/io/trino/trino-cli/479/trino-cli-479-executable.jar
+          curl -LSs -o trino-cli.jar https://github.com/trinodb/trino/releases/download/479/trino-cli-479
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Observation'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Condition'
