@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.1...v2.15.2) (2026-02-18)
+
+
+### Bug Fixes
+
+* remove fruehere tumorerkrankung… ([#359](https://github.com/bzkf/onco-analytics-on-fhir/issues/359)) ([f4aae60](https://github.com/bzkf/onco-analytics-on-fhir/commit/f4aae6018ae5ec8caf75b992f23087a85ebf547b))
+
 ## [2.15.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.0...v2.15.1) (2026-02-18)
 
 
