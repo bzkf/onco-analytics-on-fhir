@@ -168,7 +168,7 @@ jobs:
           ANALYTICS_ON_FHIR_IMAGE_TAG: ${{ needs.build-analytics-on-fhir-image.outputs.image-version }}
         run: |
           sudo chown -R 65532:65532 ./opal-output/
-          docker compose --env-file=.demo.env -f compose.analytics-on-fhir.yaml up
+          docker compose --env-file=.demo.env -f compose.analytics-on-fhir.yaml up --exit-code-from=analytics-on-fhir
 
       - name: upload output
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
