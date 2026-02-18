@@ -22,7 +22,7 @@ services:
       MANAGEMENT_ENDPOINT_HEALTH_PROBES_ADD_ADDITIONAL_PATHS: "true"
       MANAGEMENT_SERVER_PORT: "8081"
       SERVICES_KAFKA_ENABLED: "true"
-      INPUT_TOPIC: "fhir.obds.MedicationStatement,fhir.obds.Condition,fhir.obds.Observation,fhir.obds.Procedure,fhir.obds.Patient"
+      INPUT_TOPIC: "fhir.obds.bundles"
       OUTPUT_TOPIC: "fhir.post-gateway"
       BOOTSTRAP_SERVERS: "kafka:9092"
       SECURITY_PROTOCOL: "PLAINTEXT"
