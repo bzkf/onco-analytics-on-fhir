@@ -71,7 +71,7 @@ source .venv/bin/activate
 You can create a .env file in the directory from which you invoke `uv run` to override
 settings. E.g. create a `.env` like so:
 
-```
+```text
 STUDY_NAME=study_protocol_a
 ```
 
