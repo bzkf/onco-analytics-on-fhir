@@ -11,8 +11,11 @@ from settings import StudyNames, settings
 from study_protocol_d import StudyProtocolD
 from study_protocol_pca1 import StudyProtocolPCa1
 from utils import (
+    extract_and_join_weitere_klassifikation,
     extract_df_study_protocol_a_d_mii,
     filter_aml,
+    filter_primaerdiagnose,
+    filter_reacto,
     save_final_df,
 )
 
@@ -129,7 +132,10 @@ def main():
 def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
     match study_name:
         case StudyNames.EMBARK_RWD:
-            df = run(data, pathlib.Path(settings.results_directory_path) / "embark_rwd")
+            df = run(
+                data,
+                pathlib.Path(settings.results_directory_path) / "embark_rwd",
+            )
             save_final_df(
                 df,
                 settings,
@@ -176,6 +182,32 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
                 settings,
                 suffix="study_protocol_aml",
             )
+        case StudyNames.REACTO_COUNTS:
+            logger.info("REACTO_COUNTS")
+            df = extract_df_study_protocol_a_d_mii(
+                pc,
+                data,
+                pc.spark,
+                settings,
+            )
+            save_final_df(
+                df,
+                settings,
+                suffix="study_protocol_a_d_mii",
+            )
+
+            # filter out fruehere tumorerkrankung - only primaerdiagnose
+            df = filter_primaerdiagnose(df)
+
+            df_weitere_klassifikation = extract_and_join_weitere_klassifikation(
+                df,
+                pc,
+                data,
+                pc.spark,
+                settings,
+            )
+            filter_reacto(df_weitere_klassifikation, settings)
+
         case _:
             logger.warning(f"No study case matched for: {study_name}")
 

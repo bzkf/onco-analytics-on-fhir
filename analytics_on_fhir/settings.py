@@ -13,6 +13,7 @@ class StudyNames(Enum):
     STUDY_PROTOCOL_D = "study_protocol_d"
     STUDY_PROTOCOL_PCA1 = "study_protocol_pca1"
     STUDY_PROTOCOL_AML = "study_protocol_aml"
+    REACTO_COUNTS = "reacto_counts"
     ALL = "all"
 
 
