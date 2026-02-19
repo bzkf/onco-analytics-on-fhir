@@ -15,15 +15,19 @@ class SparkSettings:
     checkpoint_dir: str = ".spark/checkpoints/"
     driver_memory: str = "4g"
 
+@ts.settings
+class FHIRServerSettings:
+    base_url: str = None
 
 @ts.settings
 class Settings:
-    spark: SparkSettings
+    spark: SparkSettings = SparkSettings()
     aws_access_key_id: str = "admin"
     aws_secret_access_key: str = ts.secret(default="miniopass")
     delta_database_path: str = ""
+    fhir: FHIRServerSettings = FHIRServerSettings()
     fhir_bundles_path: str = os.path.join(HERE, "../tests/fixtures/fhir/")
-    study_name: str = "study_protocol_a"  # "embark_rwd" # "study_protocol_d"
+    study_name: str = "uc_aml" # "study_protocol_a"  # "embark_rwd" # "study_protocol_d"
     results_directory_path: str = os.path.join(HERE, "results/")
     location: str = "UKER"
 
