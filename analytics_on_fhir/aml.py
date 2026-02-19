@@ -37,7 +37,7 @@ class AMLStudy:
 
     def extract(self):
         # 1) using csv as input, finding all patients with C92
-        condition_df = pd.read_csv("icd_codes_aml.csv")
+        condition_df = pd.read_csv("./icd_codes_aml.csv")
 
         codes = ",".join(
             "http://fhir.de/CodeSystem/bfarm/icd-10-gm|" + c for c in condition_df["icd_10"]
