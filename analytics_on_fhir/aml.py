@@ -3,156 +3,166 @@ import os
 import pandas as pd
 from fhir_pyrate import Ahoy, Pirate
 from more_itertools import chunked
-from settings import settings
+from settings import Settings
 
 FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
 CHUNK_SIZE = 100
 NUM_PROCESSES = 6
 PAGE_COUNT = 10000
-OUTPUT_PATH = output_dir = os.path.join(
-    settings.results_directory_path, settings.study_name.value
-)
-os.makedirs(output_dir, exist_ok=True)
 
-# setting up connection to the FHIR server
 
-# not strictly needed since their names match the default env variable names expected
-os.environ["FHIR_USER"] = settings.fhir.user
-os.environ["FHIR_PASSWORD"] = settings.fhir.password
+class AMLStudy:
+    def __init__(self, settings: Settings):
+        self.settings = settings
 
-auth = Ahoy(
-    auth_type="BasicAuth",
-    auth_method="env",
-)
+        # not strictly needed since their names match the default env variable names expected
+        os.environ["FHIR_USER"] = settings.fhir.user
+        os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
-search = Pirate(
-    auth=auth,
-    base_url=settings.fhir.base_url,
-    print_request_url=True,
-    num_processes=NUM_PROCESSES,
-)
+        auth = Ahoy(
+            auth_type="BasicAuth",
+            auth_method="env",
+        )
 
-# 1) using csv as input, finding all patients with C92
+        self.search = Pirate(
+            auth=auth,
+            base_url=settings.fhir.base_url,
+            print_request_url=True,
+            num_processes=NUM_PROCESSES,
+        )
 
-condition_df = pd.read_csv("icd_codes_aml.csv")
+        self.output_dir = os.path.join(settings.results_directory_path, settings.study_name.value)
 
-codes = ",".join(
-    "http://fhir.de/CodeSystem/bfarm/icd-10-gm|" + c for c in condition_df["icd_10"]
-)
+        os.makedirs(self.output_dir, exist_ok=True)
 
-condition_patient_df = search.steal_bundles_to_dataframe(
-    resource_type="Condition",
-    request_params={
-        "code": codes,
-        "_elements": "subject, code, recordedDate",
-        "_include": "Condition:patient",
-        "_count": PAGE_COUNT,
-    },
-    fhir_paths=[
-        ("condition_id", "Condition.id"),
-        ("patient_ref", "Condition.subject.reference"),
-        (
-            "patient_id",
-            f"Patient.identifier.where(type.coding.where(system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' "
-            + "and code='MR').exists()).value",
-        ),
-        ("icd_code", "Condition.code.coding.code"),
-        ("diagnosis_recordedDate", "Condition.recordedDate[0]"),
-        ("diagnosis_onsetDate", "Condition.onsetDateTime[0]"),
-        ("deceased_boolean", "Patient.deceasedBoolean"),
-        ("deceased_dateTime", "Patient.deceasedDateTime[0]"),
-        ("patient_id2", "Patient.id"),
-    ],
-)
+    def extract(self):
+        # 1) using csv as input, finding all patients with C92
+        condition_df = pd.read_csv("icd_codes_aml.csv")
 
-# merging patient + condition dataframes, removing duplicates, cleaning and saving merged_df
+        codes = ",".join(
+            "http://fhir.de/CodeSystem/bfarm/icd-10-gm|" + c for c in condition_df["icd_10"]
+        )
 
-patient_df = condition_patient_df["Patient"]
-condition_df = condition_patient_df["Condition"]
+        condition_patient_df = self.search.steal_bundles_to_dataframe(
+            resource_type="Condition",
+            request_params={
+                "code": codes,
+                "_elements": "subject, code, recordedDate",
+                "_include": "Condition:patient",
+                "_count": PAGE_COUNT,
+            },
+            fhir_paths=[
+                ("condition_id", "Condition.id"),
+                ("patient_ref", "Condition.subject.reference"),
+                (
+                    "patient_id",
+                    "Patient.identifier.where(type.coding.where("
+                    + f"system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
+                ),
+                ("icd_code", "Condition.code.coding.code"),
+                ("diagnosis_recordedDate", "Condition.recordedDate[0]"),
+                ("diagnosis_onsetDate", "Condition.onsetDateTime[0]"),
+                ("deceased_boolean", "Patient.deceasedBoolean"),
+                ("deceased_dateTime", "Patient.deceasedDateTime[0]"),
+                ("patient_id2", "Patient.id"),
+            ],
+        )
 
-condition_df["patient_id_from_ref"] = condition_df["patient_ref"].str.replace(
-    "Patient/", "", regex=False
-)
-merged_df = condition_df.merge(
-    patient_df, left_on="patient_id_from_ref", right_on="patient_id2", how="left"
-)
-merged_df = merged_df.drop(columns=["patient_id2", "patient_id_from_ref"])
-merged_df = merged_df.drop_duplicates()
+        # merging patient + condition dataframes, removing duplicates, cleaning and saving merged_df
 
-# merging deceased columns into one column 'deceased' (true if deceased_dateTime
-# is set OR deceased_boolean is true)
+        patient_df = condition_patient_df["Patient"]
+        condition_df = condition_patient_df["Condition"]
 
-if "deceased_boolean" not in merged_df.columns:
-    merged_df["deceased_boolean"] = False
+        condition_df["patient_id_from_ref"] = condition_df["patient_ref"].str.replace(
+            "Patient/", "", regex=False
+        )
+        merged_df = condition_df.merge(
+            patient_df,
+            left_on="patient_id_from_ref",
+            right_on="patient_id2",
+            how="left",
+        )
+        merged_df = merged_df.drop(columns=["patient_id2", "patient_id_from_ref"])
+        merged_df = merged_df.drop_duplicates()
 
-if "deceased_dateTime" not in merged_df.columns:
-    merged_df["deceased_dateTime"] = pd.NaT
+        # merging deceased columns into one column 'deceased' (true if deceased_dateTime
+        # is set OR deceased_boolean is true)
 
-merged_df["deceased"] = (
-    merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
-)
+        if "deceased_boolean" not in merged_df.columns:
+            merged_df["deceased_boolean"] = False
 
-merged_df.to_csv(os.path.join(OUTPUT_PATH, "patients.csv"), index=False)
+        if "deceased_dateTime" not in merged_df.columns:
+            merged_df["deceased_dateTime"] = pd.NaT
 
-# 2) finding all lab values to the patients from step 1) while splitting the query into chunks
+        merged_df["deceased"] = (
+            merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
+        )
 
-print(merged_df)
+        merged_df.to_csv(os.path.join(self.output_dir, "patients.csv"), index=False)
 
-all_labs = []
+        # 2) finding all lab values to the patients from step 1)
+        # while splitting the query into chunks
 
-for chunk in chunked(merged_df["patient_ref"], CHUNK_SIZE):
-    chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
+        print(merged_df)
 
-    lab_df_chunk = search.trade_rows_for_dataframe(
-        df=chunk_df,
-        resource_type="Observation",
-        request_params={
-            "category": "http://terminology.hl7.org/CodeSystem/observation-category|laboratory",
-            "_count": PAGE_COUNT,
-            "_elements": "subject,effective,code,value",
-        },
-        df_constraints={
-            "subject": "subject_list",
-        },
-        with_ref=False,
-        fhir_paths=[
-            ("patient", "subject.reference"),
-            ("loinc_code", "code.coding.where(system='http://loinc.org').code"),
-            ("loinc_display", "code.coding.where(system='http://loinc.org').display"),
-            ("lab_dateTime", "effectiveDateTime[0]"),
-            ("lab_value", "valueQuantity.value"),
-            ("lab_unit", "valueQuantity.code"),
-        ],
-    )
+        all_labs = []
 
-    all_labs.append(lab_df_chunk)
+        for chunk in chunked(merged_df["patient_ref"], CHUNK_SIZE):
+            chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
-lab_df = pd.concat(all_labs, ignore_index=True)
-lab_df.to_csv(os.path.join(OUTPUT_PATH, "labs.csv"), index=False)
+            lab_df_chunk = self.search.trade_rows_for_dataframe(
+                df=chunk_df,
+                resource_type="Observation",
+                request_params={
+                    "category": "http://terminology.hl7.org/CodeSystem/observation-category|laboratory",
+                    "_count": PAGE_COUNT,
+                    "_elements": "subject,effective,code,value",
+                },
+                df_constraints={
+                    "subject": "subject_list",
+                },
+                with_ref=False,
+                fhir_paths=[
+                    ("patient", "subject.reference"),
+                    ("loinc_code", "code.coding.where(system='http://loinc.org').code"),
+                    (
+                        "loinc_display",
+                        "code.coding.where(system='http://loinc.org').display",
+                    ),
+                    ("lab_dateTime", "effectiveDateTime[0]"),
+                    ("lab_value", "valueQuantity.value"),
+                    ("lab_unit", "valueQuantity.code"),
+                ],
+            )
 
-# 3) concat the output values and save final_df
+            all_labs.append(lab_df_chunk)
 
-final_df = lab_df.merge(
-    merged_df,
-    left_on="patient",
-    right_on="patient_ref",
-    how="left",
-)
-final_df.drop(columns=["patient"], inplace=True)
-final_df = final_df[
-    [
-        "patient_ref",
-        "patient_id",
-        "icd_code",
-        "diagnosis_recordedDate",
-        "loinc_code",
-        "loinc_display",
-        "lab_value",
-        "lab_unit",
-        "lab_dateTime",
-        "deceased_dateTime",
-        "deceased_boolean",
-        "deceased",
-    ]
-]
-final_df.to_csv(os.path.join(OUTPUT_PATH, "uc_aml.csv"), index=False)
+        lab_df = pd.concat(all_labs, ignore_index=True)
+        lab_df.to_csv(os.path.join(self.output_dir, "labs.csv"), index=False)
+
+        # 3) concat the output values and save final_df
+
+        final_df = lab_df.merge(
+            merged_df,
+            left_on="patient",
+            right_on="patient_ref",
+            how="left",
+        )
+        final_df.drop(columns=["patient"], inplace=True)
+        final_df = final_df[
+            [
+                "patient_ref",
+                "patient_id",
+                "icd_code",
+                "diagnosis_recordedDate",
+                "loinc_code",
+                "loinc_display",
+                "lab_value",
+                "lab_unit",
+                "lab_dateTime",
+                "deceased_dateTime",
+                "deceased_boolean",
+                "deceased",
+            ]
+        ]
+        final_df.to_csv(os.path.join(self.output_dir, "uc_aml.csv"), index=False)

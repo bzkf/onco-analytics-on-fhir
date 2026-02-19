@@ -1,6 +1,7 @@
 import pathlib
 import sys
 
+from aml import AMLStudy
 from embark_rwd import run
 from loguru import logger
 from pathling.context import PathlingContext
@@ -207,6 +208,9 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
                 settings,
             )
             filter_reacto(df_weitere_klassifikation, settings)
+        case StudyNames.AML:
+            aml = AMLStudy(settings)
+            aml.extract()
 
         case _:
             logger.warning(f"No study case matched for: {study_name}")
