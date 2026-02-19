@@ -47,7 +47,7 @@ class AMLStudy:
             resource_type="Condition",
             request_params={
                 "code": codes,
-                "_elements": "subject, code, recordedDate",
+                "_elements": "subject,code,recordedDate",
                 "_include": "Condition:patient",
                 "_count": PAGE_COUNT,
             },
