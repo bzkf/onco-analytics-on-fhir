@@ -177,9 +177,7 @@ def extract_systemtherapies(
         where=[
             {
                 "description": "Only SYSTEM THERAPY Procedures",
-                "path": (
-                    f"meta.profile.exists($this = '{FHIR_SYSTEMS_SYSTEM_THERAPY}')"
-                ),
+                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_SYSTEM_THERAPY}')"),
             }
         ],
     )
@@ -280,20 +278,18 @@ def extract_systemtherapies(
     )
 
     # pro condition und start date: | separiert abspeichern
-    df_procedures_medication_statements_grouped = (
-        df_procedures_medication_statements.groupBy(
-            "subject_reference",
-            "reason_reference",
-            "therapy_start_date",
-            "part_of_reference",
-        ).agg(
-            F.concat_ws(
-                "| ", F.sort_array(F.collect_set("medication_statement_text"))
-            ).alias("medication_statement_text"),
-            F.concat_ws(
-                "| ", F.sort_array(F.collect_set("medication_statement_atc_code"))
-            ).alias("medication_statement_atc_code"),
-        )
+    df_procedures_medication_statements_grouped = df_procedures_medication_statements.groupBy(
+        "subject_reference",
+        "reason_reference",
+        "therapy_start_date",
+        "part_of_reference",
+    ).agg(
+        F.concat_ws("| ", F.sort_array(F.collect_set("medication_statement_text"))).alias(
+            "medication_statement_text"
+        ),
+        F.concat_ws("| ", F.sort_array(F.collect_set("medication_statement_atc_code"))).alias(
+            "medication_statement_atc_code"
+        ),
     )
     logger.info(
         "df_procedures_medication_statements_grouped count = {}",
@@ -321,9 +317,7 @@ def extract_systemtherapies(
             F.col("p.therapy_end_reason").alias("therapy_end_reason"),
             F.col("p.therapy_protocol_text").alias("therapy_protocol_text"),
             F.col("pg.medication_statement_text").alias("medication_statement_text"),
-            F.col("pg.medication_statement_atc_code").alias(
-                "medication_statement_atc_code"
-            ),
+            F.col("pg.medication_statement_atc_code").alias("medication_statement_atc_code"),
         )
     )
 
@@ -470,9 +464,7 @@ def join_radiotherapies(
         "subject_reference",
         "reason_reference",
     ).agg(
-        F.concat_ws("| ", F.sort_array(F.collect_set("zielgebiet"))).alias(
-            "zielgebiet"
-        ),
+        F.concat_ws("| ", F.sort_array(F.collect_set("zielgebiet"))).alias("zielgebiet"),
         F.concat_ws("| ", F.sort_array(F.collect_set("therapy_id_child"))).alias(
             "therapy_id_child"
         ),
@@ -577,10 +569,7 @@ def extract_surgeries(
                     },
                     {
                         "description": "OPS Code",
-                        "path": "code.coding"
-                        ".where(system = "
-                        f"'{FHIR_SYSTEMS_SURGERY_OPS_CS}')"
-                        ".code",
+                        "path": f"code.coding.where(system = '{FHIR_SYSTEMS_SURGERY_OPS_CS}').code",
                         "name": "ops_code",
                     },
                 ]
@@ -779,9 +768,7 @@ def union_sort_pivot_join(
 
     # join asserted date aus df_c61_clean an df_therapies
     df_therapies_asserted = df_all_therapies.alias("t").join(
-        df_c61_clean.select(
-            F.col("condition_id").alias("reason_reference"), "asserted_date"
-        ),
+        df_c61_clean.select(F.col("condition_id").alias("reason_reference"), "asserted_date"),
         "reason_reference",
         "left",
     )
@@ -794,9 +781,9 @@ def union_sort_pivot_join(
     # Add months_diff
     df_therapies_asserted = df_therapies_asserted.withColumn(
         "months_diff",
-        F.round(
-            F.months_between(F.col("therapy_start_date"), F.col("asserted_date")), 2
-        ).cast("double"),
+        F.round(F.months_between(F.col("therapy_start_date"), F.col("asserted_date")), 2).cast(
+            "double"
+        ),
     )
     logger.info(
         "df_therapies_asserted with months diff count = {}",

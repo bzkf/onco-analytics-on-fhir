@@ -13,6 +13,7 @@ class StudyNames(Enum):
     STUDY_PROTOCOL_D = "study_protocol_d"
     STUDY_PROTOCOL_PCA1 = "study_protocol_pca1"
     STUDY_PROTOCOL_AML = "study_protocol_aml"
+    AML = "aml"
     REACTO_COUNTS = "reacto_counts"
     ALL = "all"
 
@@ -29,7 +30,15 @@ class SparkSettings:
 
 
 @ts.settings
+class FHIRServerSettings:
+    base_url: str
+    user: str = ""
+    password: str = ts.secret(default="")
+
+
+@ts.settings
 class Settings:
+    fhir: FHIRServerSettings
     spark: SparkSettings
     aws_access_key_id: str = "admin"
     aws_secret_access_key: str = ts.secret(default="miniopass")

@@ -19,6 +19,8 @@ dependencies = [
     "lifelines==0.30.1",
     "openpyxl==3.1.5",
     "xlsxwriter==3.2.9",
+    "fhir-pyrate==0.2.3",
+    "more-itertools==10.8.0"
 ]
 
 [dependency-groups]
