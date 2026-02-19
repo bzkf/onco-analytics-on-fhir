@@ -2,4 +2,5 @@
 !uv.lock
 !pyproject.toml
 !analytics_on_fhir/
+!analytics_on_fhir/*.csv
 **/__pycache__
