@@ -40,7 +40,7 @@ class AMLStudy:
         condition_df = pd.read_csv("./icd_codes_aml.csv")
 
         codes = ",".join(
-            "http://fhir.de/CodeSystem/bfarm/icd-10-gm|" + c for c in condition_df["icd_10"]
+            "http://fhir.de/CodeSystem/bfarm/icd-10-gm|" + c for c in condition_df["icd_code"]
         )
 
         condition_patient_df = self.search.steal_bundles_to_dataframe(
