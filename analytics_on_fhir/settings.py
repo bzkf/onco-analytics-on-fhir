@@ -31,7 +31,7 @@ class SparkSettings:
 
 @ts.settings
 class FHIRServerSettings:
-    base_url: str
+    base_url: str | None = None
     user: str = ""
     password: str = ts.secret(default="")
 
