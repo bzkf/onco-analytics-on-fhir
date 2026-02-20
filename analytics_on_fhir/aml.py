@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 from fhir_pyrate import Ahoy, Pirate
+from loguru import logger
 from more_itertools import chunked
 from settings import Settings
 
@@ -113,7 +114,8 @@ class AMLStudy:
         # 2) finding all lab values to the patients from step 1)
         # while splitting the query into chunks
 
-        print(merged_df)
+        logger.info("merged_df size: {}", merged_df.count())
+        logger.info("patient_df size: {}", patient_df.count())
 
         all_labs = []
 
