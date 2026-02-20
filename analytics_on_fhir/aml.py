@@ -1,14 +1,18 @@
 import os
+from pathlib import Path
 
 import pandas as pd
 from fhir_pyrate import Ahoy, Pirate
 from more_itertools import chunked
 from settings import Settings
 
+FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
 CHUNK_SIZE = 100
 NUM_PROCESSES = 6
 PAGE_COUNT = 10000
+
+HERE = Path(os.path.abspath(os.path.dirname(__file__)))
 
 
 class AMLStudy:
@@ -24,6 +28,9 @@ class AMLStudy:
             auth_method="env",
         )
 
+        if settings.fhir.base_url is None:
+            raise ValueError("FHIR server URL is not set")
+
         self.search = Pirate(
             auth=auth,
             base_url=settings.fhir.base_url,
@@ -37,11 +44,9 @@ class AMLStudy:
 
     def extract(self):
         # 1) using csv as input, finding all patients with C92
-        condition_df = pd.read_csv("./icd_codes_aml.csv")
+        condition_df = pd.read_csv(HERE / "icd_codes_aml.csv")
 
-        codes = ",".join(
-            "http://fhir.de/CodeSystem/bfarm/icd-10-gm|" + c for c in condition_df["icd_code"]
-        )
+        codes = ",".join(f"{FHIR_CODE_SYSTEM_ICD10}|" + c for c in condition_df["icd_code"])
 
         condition_patient_df = self.search.steal_bundles_to_dataframe(
             resource_type="Condition",
@@ -59,7 +64,11 @@ class AMLStudy:
                     "Patient.identifier.where(type.coding.where("
                     + f"system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
                 ),
-                ("icd_code", "Condition.code.coding.code"),
+                (
+                    "icd_code",
+                    f"Condition.code.coding.where(system='{FHIR_CODE_SYSTEM_ICD10}')"
+                    + ".first().code",
+                ),
                 ("diagnosis_recordedDate", "Condition.recordedDate[0]"),
                 ("diagnosis_onsetDate", "Condition.onsetDateTime[0]"),
                 ("deceased_boolean", "Patient.deceasedBoolean"),
