@@ -55,40 +55,44 @@ class AMLStudy:
             },
             fhir_paths=[
                 ("condition_id", "Condition.id"),
-                ("patient_ref", "Condition.subject.reference"),
-                (
-                    "patient_id",
-                    "Patient.identifier.where(type.coding.where("
-                    + f"system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
-                ),
+                ("condition_patient_reference", "Condition.subject.reference"),
                 (
                     "icd_code",
                     f"Condition.code.coding.where(system='{FHIR_CODE_SYSTEM_ICD10}')"
                     + ".first().code",
                 ),
                 ("diagnosis_recordedDate", "Condition.recordedDate[0]"),
-                ("diagnosis_onsetDate", "Condition.onsetDateTime[0]"),
+                ("diagnosis_onsetDateTime", "Condition.onsetDateTime[0]"),
                 ("deceased_boolean", "Patient.deceasedBoolean"),
                 ("deceased_dateTime", "Patient.deceasedDateTime[0]"),
-                ("patient_id2", "Patient.id"),
+                ("patient_id", "Patient.id"),
+                (
+                    "patient_mrn",
+                    "Patient.identifier.where(type.coding.where("
+                    + f"system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
+                ),
+                ("birth_date", "Patient.birthDate"),
+                ("gender", "Patient.gender"),
             ],
         )
 
         # merging patient + condition dataframes, removing duplicates, cleaning and saving merged_df
 
-        patient_df = condition_patient_df["Patient"]
+        patient_df = condition_patient_df["Patient"].drop_duplicates(subset=["patient_id"])
         condition_df = condition_patient_df["Condition"]
 
-        condition_df["patient_id_from_ref"] = condition_df["patient_ref"].str.replace(
-            "Patient/", "", regex=False
-        )
+        condition_df["condition_patient_reference_without_type"] = condition_df[
+            "condition_patient_reference"
+        ].str.replace("Patient/", "", regex=False)
         merged_df = condition_df.merge(
             patient_df,
-            left_on="patient_id_from_ref",
-            right_on="patient_id2",
+            left_on="condition_patient_reference_without_type",
+            right_on="patient_id",
             how="left",
         )
-        merged_df = merged_df.drop(columns=["patient_id2", "patient_id_from_ref"])
+        merged_df = merged_df.drop(
+            columns=["patient_id", "condition_patient_reference_without_type"]
+        )
         merged_df = merged_df.drop_duplicates()
 
         # merging deceased columns into one column 'deceased' (true if deceased_dateTime
@@ -113,7 +117,7 @@ class AMLStudy:
 
         all_labs = []
 
-        for chunk in chunked(merged_df["patient_ref"], self.settings.fhir.chunk_size):
+        for chunk in chunked(patient_df["patient_id"], self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
             lab_df_chunk = self.search.trade_rows_for_dataframe(
@@ -129,7 +133,8 @@ class AMLStudy:
                 },
                 with_ref=False,
                 fhir_paths=[
-                    ("patient", "subject.reference"),
+                    ("observation_id", "Observation.id"),
+                    ("observation_patient_reference", "subject.reference"),
                     ("loinc_code", "code.coding.where(system='http://loinc.org').code"),
                     (
                         "loinc_display",
@@ -145,30 +150,3 @@ class AMLStudy:
 
         lab_df = pd.concat(all_labs, ignore_index=True)
         lab_df.to_csv(os.path.join(self.output_dir, "labs.csv"), index=False)
-
-        # 3) concat the output values and save final_df
-
-        final_df = lab_df.merge(
-            merged_df,
-            left_on="patient",
-            right_on="patient_ref",
-            how="left",
-        )
-        final_df.drop(columns=["patient"], inplace=True)
-        final_df = final_df[
-            [
-                "patient_ref",
-                "patient_id",
-                "icd_code",
-                "diagnosis_recordedDate",
-                "loinc_code",
-                "loinc_display",
-                "lab_value",
-                "lab_unit",
-                "lab_dateTime",
-                "deceased_dateTime",
-                "deceased_boolean",
-                "deceased",
-            ]
-        ]
-        final_df.to_csv(os.path.join(self.output_dir, "uc_aml.csv"), index=False)
