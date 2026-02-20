@@ -130,7 +130,7 @@ class StudyProtocolD:
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
-        df = df.filter(F.col("asserted_date") > F.lit("1970-01-01"))  # likely placeholder date
+        df = df.filter(F.col("asserted_date") > F.lit("1970-12-31"))  # 1970 likely placeholder date
         df = df.filter(F.col("age_at_diagnosis") > 0)
 
         return df
