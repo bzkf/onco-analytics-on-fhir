@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pathling==9.3.1",
-    "delta-spark==4.0.0",
+    "delta-spark==4.1.0",
     "typed-settings[cattrs,dotenv]==25.3.0",
     "loguru==0.7.3",
     "graphviz==0.21",
@@ -19,7 +19,7 @@ dependencies = [
     "lifelines==0.30.1",
     "openpyxl==3.1.5",
     "xlsxwriter==3.2.9",
-    "fhir-pyrate==0.2.3",
+    "fhir-pyrate==0.2.4.post1",
     "more-itertools==10.8.0"
 ]
 
@@ -27,7 +27,7 @@ dependencies = [
 dev = [
     "pytest==9.0.2",
     "pytest-cov==7.0.0",
-    "ruff==0.15.1",
+    "ruff==0.15.2",
     "syrupy==5.1.0",
     "jupyter==1.1.1",
     "ipykernel==7.2.0",
