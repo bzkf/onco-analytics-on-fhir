@@ -78,8 +78,7 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
                     },
                     {
                         "description": "Code",
-                        "path": "code.coding"
-                        + ".where(system = 'http://snomed.info/sct').code",
+                        "path": "code.coding" + ".where(system = 'http://snomed.info/sct').code",
                         "name": "code_coding_sct",
                     },
                     {
@@ -161,9 +160,7 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
 
     counts = {}
 
-    row = conditions.select(
-        count_distinct(conditions.patient_id).alias("n_patients")
-    ).first()
+    row = conditions.select(count_distinct(conditions.patient_id).alias("n_patients")).first()
     if row is not None:
         counts["num_c61_patients"] = row["n_patients"]
     else:
@@ -220,16 +217,12 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
     )
 
     cohort = n0_or_m0_staging.join(
-        medication_statements.withColumnRenamed(
-            "patient_id", "medication_statement_patient_id"
-        ),
+        medication_statements.withColumnRenamed("patient_id", "medication_statement_patient_id"),
         on="condition_id",
     )
     cohort.show()
 
-    logger.info(
-        "Number of C61 patients with TNM of M0/N0 by system therapy medications"
-    )
+    logger.info("Number of C61 patients with TNM of M0/N0 by system therapy medications")
 
     medication_counts = cohort.groupby("medication_text", "medication_atc_code").agg(
         count_distinct("patient_id").alias("num_patients")
@@ -280,12 +273,8 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
 
     row = result.first()
     if row is not None:
-        counts["num_treated_with_enzalutamide_before_april_2024"] = row[
-            "num_patients_before"
-        ]
-        counts["num_treated_with_enzalutamide_after_april_2024"] = row[
-            "num_patients_after"
-        ]
+        counts["num_treated_with_enzalutamide_before_april_2024"] = row["num_patients_before"]
+        counts["num_treated_with_enzalutamide_after_april_2024"] = row["num_patients_after"]
     else:
         counts["num_treated_with_enzalutamide_before_april_2024"] = 0
         counts["num_treated_with_enzalutamide_after_april_2024"] = 0
@@ -305,18 +294,14 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
         + f"{counts['max_recorded_date']}",
     )
     dot.node("B", "With TNM c/p M0 or N0\n" + f"n = {counts['num_tnm_m0_or_n0']}")
-    dot.node(
-        "C", f"Treated with enzalutamide\nn = {counts['num_treated_with_enzalutamide']}"
-    )
+    dot.node("C", f"Treated with enzalutamide\nn = {counts['num_treated_with_enzalutamide']}")
     dot.node(
         "D",
-        "Before 2024-04-01\nn = "
-        + f"{counts['num_treated_with_enzalutamide_before_april_2024']}",
+        "Before 2024-04-01\nn = " + f"{counts['num_treated_with_enzalutamide_before_april_2024']}",
     )
     dot.node(
         "E",
-        "After 2024-04-01\nn = "
-        + f"{counts['num_treated_with_enzalutamide_after_april_2024']}",
+        "After 2024-04-01\nn = " + f"{counts['num_treated_with_enzalutamide_after_april_2024']}",
     )
 
     dot.edge("A", "B")
