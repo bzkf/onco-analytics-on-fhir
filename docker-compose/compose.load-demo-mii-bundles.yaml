@@ -1,0 +1,40 @@
+services:
+  data-loader:
+    image: docker.io/confluentinc/cp-kcat:8.1.1@sha256:dc03d58fc3d7f9c1e9f310f67341f23ac4e79dad356020b0a512fcc09445be9b
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: on-failure
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        for f in /data/demo-mii-bundles/*.json; do
+          echo "$$f"
+          tr -d '\n' < "$$f" | kcat -b kafka:9092 -t fhir.obds.bundles -P -k "$$f" -c 1
+        done
+    volumes:
+      - ./demo-mii-bundles/:/data/demo-mii-bundles/:ro
+    depends_on:
+      wait-for-kafka:
+        condition: service_completed_successfully
+
+  wait-for-kafka:
+    image: ghcr.io/wait4x/wait4x:3.6.0@sha256:bec7ac18547781d854562c3729d3195c3880116d6758c49fdf4573ad58805f14
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    privileged: false
+    restart: "no"
+    command:
+      - kafka
+      - kafka://kafka:9092
+      - --timeout
+      - 30s
+    depends_on:
+      kafka:
+        condition: service_started
