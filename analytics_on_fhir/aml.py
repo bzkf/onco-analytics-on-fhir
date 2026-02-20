@@ -8,9 +8,6 @@ from settings import Settings
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
-CHUNK_SIZE = 100
-NUM_PROCESSES = 6
-PAGE_COUNT = 10000
 
 HERE = Path(os.path.abspath(os.path.dirname(__file__)))
 
@@ -34,8 +31,8 @@ class AMLStudy:
         self.search = Pirate(
             auth=auth,
             base_url=settings.fhir.base_url,
-            print_request_url=True,
-            num_processes=NUM_PROCESSES,
+            print_request_url=settings.fhir.print_request_urls,
+            num_processes=settings.fhir.num_processes,
         )
 
         self.output_dir = os.path.join(settings.results_directory_path, settings.study_name.value)
@@ -54,7 +51,7 @@ class AMLStudy:
                 "code": codes,
                 "_elements": "subject,code,recordedDate",
                 "_include": "Condition:patient",
-                "_count": PAGE_COUNT,
+                "_count": self.settings.fhir.page_count,
             },
             fhir_paths=[
                 ("condition_id", "Condition.id"),
@@ -116,7 +113,7 @@ class AMLStudy:
 
         all_labs = []
 
-        for chunk in chunked(merged_df["patient_ref"], CHUNK_SIZE):
+        for chunk in chunked(merged_df["patient_ref"], self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
             lab_df_chunk = self.search.trade_rows_for_dataframe(
@@ -124,7 +121,7 @@ class AMLStudy:
                 resource_type="Observation",
                 request_params={
                     "category": "http://terminology.hl7.org/CodeSystem/observation-category|laboratory",
-                    "_count": PAGE_COUNT,
+                    "_count": self.settings.fhir.page_count,
                     "_elements": "subject,effective,code,value",
                 },
                 df_constraints={
