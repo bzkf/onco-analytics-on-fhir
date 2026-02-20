@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.16.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.3...v2.16.0) (2026-02-20)
+
+
+### Features
+
+* added AML study script ([#363](https://github.com/bzkf/onco-analytics-on-fhir/issues/363)) ([6f66da0](https://github.com/bzkf/onco-analytics-on-fhir/commit/6f66da00ddfba6c240ac2079428f44fe9a1d6b65))
+
+## [2.15.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.2...v2.15.3) (2026-02-20)
+
+
+### Bug Fixes
+
+* pca path, date filter, reacto gender counts ([#364](https://github.com/bzkf/onco-analytics-on-fhir/issues/364)) ([d9244ca](https://github.com/bzkf/onco-analytics-on-fhir/commit/d9244ca5ffababfb2b8fc6ab3f7a1d8d1ad16c62))
+
 ## [2.15.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.1...v2.15.2) (2026-02-18)
 
 
