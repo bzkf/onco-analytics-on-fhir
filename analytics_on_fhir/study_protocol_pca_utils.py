@@ -7,6 +7,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from settings import settings
+from utils import HERE
 
 FHIR_SYSTEMS_RADIOTHERAPY = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
@@ -909,11 +910,7 @@ def with_mapped_atc_column(df, spark):
         spark.read.option("header", True)
         .option("inferSchema", True)
         .option("sep", ";")
-        .csv(
-            "/home/coder/git/onco-analytics-on-fhir/src/analytics_on_fhir/"
-            "analytics_on_fhir/"
-            "Umsetzungsleitfaden_Substanzen_2025-08_Gruppen_Prof.Wullich.csv"
-        )
+        .csv(HERE + "/Umsetzungsleitfaden_Substanzen_2025-08_Gruppen_Prof.Wullich.csv")
     )
 
     mapping_df = (

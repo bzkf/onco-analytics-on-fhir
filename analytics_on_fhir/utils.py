@@ -933,7 +933,11 @@ def filter_reacto(df, settings):
     df_counts = (
         df_filtered.withColumn("icd10_parent", F.expr("substring(icd10_code, 1, 3)"))
         .groupBy("icd10_parent")
-        .count()
+        .agg(
+            F.count("*").alias("total_count"),
+            F.sum(F.when(F.col("gender") == "male", 1).otherwise(0)).alias("male_count"),
+            F.sum(F.when(F.col("gender") == "female", 1).otherwise(0)).alias("female_count"),
+        )
         .orderBy("icd10_parent")
     )
     # weitere Klassifikation WHO IV für Glioblastom

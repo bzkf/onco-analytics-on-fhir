@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.2...v2.15.3) (2026-02-20)
+
+
+### Bug Fixes
+
+* pca path, date filter, reacto gender counts ([#364](https://github.com/bzkf/onco-analytics-on-fhir/issues/364)) ([d9244ca](https://github.com/bzkf/onco-analytics-on-fhir/commit/d9244ca5ffababfb2b8fc6ab3f7a1d8d1ad16c62))
+
 ## [2.15.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.1...v2.15.2) (2026-02-18)
 
 
