@@ -8,6 +8,7 @@
     ''',
     'csv': '''
       medication_text,medication_atc_code,num_patients
+      Rituximab,,1
       Enzalutamid,L02BB04,1
   
     ''',
