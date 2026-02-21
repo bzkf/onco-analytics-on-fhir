@@ -2,6 +2,7 @@ import pathlib
 import sys
 
 from aml import AMLStudy
+from dq import DQStudy
 from embark_rwd import run
 from loguru import logger
 from pathling.context import PathlingContext
@@ -211,7 +212,9 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
         case StudyNames.AML:
             aml = AMLStudy(settings)
             aml.extract()
-
+        case StudyNames.DQ:
+            dq = DQStudy(settings)
+            dq.run(data)
         case _:
             logger.warning(f"No study case matched for: {study_name}")
 
