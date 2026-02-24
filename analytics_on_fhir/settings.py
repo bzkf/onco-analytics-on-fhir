@@ -15,6 +15,7 @@ class StudyNames(Enum):
     STUDY_PROTOCOL_AML = "study_protocol_aml"
     AML = "aml"
     REACTO_COUNTS = "reacto_counts"
+    DQ = "dq"
     ALL = "all"
 
 
