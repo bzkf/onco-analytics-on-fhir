@@ -53,8 +53,17 @@ def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_par
 
 def create_2_mals_df(df: DataFrame) -> DataFrame:
     # Filter patients with multiple malignancies, compute months between diagnoses
-    df_multi = df.filter(F.col("double_patid") == 1)
-    logger.info(f"double_patid == 1 - df_multi.count() = : {df_multi.count()}")
+    df = df.filter(F.col("double_patid") == 1)
+    logger.info(f"filter double_patid == 1 - df.count() = : {df.count()}")
+    # remove pat ids which are only in there once (after cleaning)
+    df_multi = (
+        df.groupBy("patient_resource_id")
+        .count()
+        .filter(F.col("count") > 1)
+        .select("patient_resource_id")
+    )
+    df_multi = df.join(df_multi, on="patient_resource_id", how="inner")
+    logger.info(f"after removing non double pat ids: df_multi.count() = : {df_multi.count()}")
 
     # sortieren, Diagnosen nummerieren
     w = Window.partitionBy("patient_resource_id").orderBy("asserted_date")
@@ -100,9 +109,7 @@ def create_1_mal_df(df_all: DataFrame) -> DataFrame:
     return df_1_mal
 
 
-def pivot_multi_single(
-    df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: DataFrame
-) -> DataFrame:
+def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: DataFrame) -> DataFrame:
     # pivot multi-malignancy patients, union with single malignancy patients
 
     pivot_cols = [
@@ -156,9 +163,7 @@ def pivot_multi_single(
         F.col("metastasis_date_first").alias("metastasis_date_first_1"),
     )
 
-    df_all_pivot = df_2_mals_final.unionByName(
-        df_1_mal_selected, allowMissingColumns=True
-    )
+    df_all_pivot = df_2_mals_final.unionByName(df_1_mal_selected, allowMissingColumns=True)
 
     # join back missing cols from df_clean
     meta_cols = [
@@ -184,13 +189,13 @@ def pivot_multi_single(
 # presuffix="entity_or_parent" (combination) or entity (23 LGL entities) or
 # icd10parent (all parent codes); save outliers too
 def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_parent"):
-    df_m1 = df_multiple_malignancies.filter(
-        F.col("malignancy_number") == 1
-    ).withColumnRenamed(presuffix, presuffix + "_1")
+    df_m1 = df_multiple_malignancies.filter(F.col("malignancy_number") == 1).withColumnRenamed(
+        presuffix, presuffix + "_1"
+    )
 
-    df_m2 = df_multiple_malignancies.filter(
-        F.col("malignancy_number") == 2
-    ).withColumnRenamed(presuffix, presuffix + "_2")
+    df_m2 = df_multiple_malignancies.filter(F.col("malignancy_number") == 2).withColumnRenamed(
+        presuffix, presuffix + "_2"
+    )
 
     m1_patients = df_m1.select(
         "patient_resource_id",
@@ -206,9 +211,7 @@ def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_pa
     )
 
     m2_full = m2_patients.join(
-        m1_patients.select(
-            "patient_resource_id", presuffix + "_1", "age_1", "gender"
-        ).distinct(),
+        m1_patients.select("patient_resource_id", presuffix + "_1", "age_1", "gender").distinct(),
         on="patient_resource_id",
         how="inner",
     )
@@ -223,9 +226,7 @@ def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_pa
         F.expr("percentile_approx(months_between_2, 0.75)").alias("q3_m"),
     )
 
-    joined = m2_full.join(
-        stats_for_outliers, on=[presuffix + "_1", presuffix + "_2"], how="left"
-    )
+    joined = m2_full.join(stats_for_outliers, on=[presuffix + "_1", presuffix + "_2"], how="left")
 
     # IQR & Grenzen berechnen
     joined = (
@@ -244,13 +245,11 @@ def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_pa
     joined = (
         joined.withColumn(
             "out_age1",
-            (F.col("age_1") < F.col("low_age1"))
-            | (F.col("age_1") > F.col("high_age1")),
+            (F.col("age_1") < F.col("low_age1")) | (F.col("age_1") > F.col("high_age1")),
         )
         .withColumn(
             "out_age2",
-            (F.col("age_2") < F.col("low_age2"))
-            | (F.col("age_2") > F.col("high_age2")),
+            (F.col("age_2") < F.col("low_age2")) | (F.col("age_2") > F.col("high_age2")),
         )
         .withColumn(
             "out_m",
@@ -261,12 +260,8 @@ def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_pa
 
     agg_pairs = joined.groupBy(presuffix + "_1", presuffix + "_2").agg(
         F.count("*").alias("count_pair"),
-        F.sum(F.when(F.col("gender") == "male", 1).otherwise(0)).alias(
-            "count_male_pair"
-        ),
-        F.sum(F.when(F.col("gender") == "female", 1).otherwise(0)).alias(
-            "count_female_pair"
-        ),
+        F.sum(F.when(F.col("gender") == "male", 1).otherwise(0)).alias("count_male_pair"),
+        F.sum(F.when(F.col("gender") == "female", 1).otherwise(0)).alias("count_female_pair"),
         F.min("age_1").alias("age_min_1"),
         F.max("age_1").alias("age_max_1"),
         F.expr("percentile_approx(age_1, 0.25)").alias("age_q1_1"),
@@ -279,21 +274,11 @@ def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_pa
         F.expr("percentile_approx(age_2, 0.75)").alias("age_q3_2"),
         F.min("months_between_2").alias("months_between_min_2"),
         F.max("months_between_2").alias("months_between_max_2"),
-        F.expr("percentile_approx(months_between_2, 0.25)").alias(
-            "months_between_q1_2"
-        ),
-        F.expr("percentile_approx(months_between_2, 0.5)").alias(
-            "months_between_median_2"
-        ),
-        F.expr("percentile_approx(months_between_2, 0.75)").alias(
-            "months_between_q3_2"
-        ),
-        F.collect_list(F.when(F.col("out_age1"), F.col("age_1"))).alias(
-            "outliers_age_1"
-        ),
-        F.collect_list(F.when(F.col("out_age2"), F.col("age_2"))).alias(
-            "outliers_age_2"
-        ),
+        F.expr("percentile_approx(months_between_2, 0.25)").alias("months_between_q1_2"),
+        F.expr("percentile_approx(months_between_2, 0.5)").alias("months_between_median_2"),
+        F.expr("percentile_approx(months_between_2, 0.75)").alias("months_between_q3_2"),
+        F.collect_list(F.when(F.col("out_age1"), F.col("age_1"))).alias("outliers_age_1"),
+        F.collect_list(F.when(F.col("out_age2"), F.col("age_2"))).alias("outliers_age_2"),
         F.collect_list(F.when(F.col("out_m"), F.col("months_between_2"))).alias(
             "outliers_months_between"
         ),
@@ -605,9 +590,7 @@ def plot_pair_boxplot_horizontal_custom(
 
     sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = fig.colorbar(
-        sm, ax=ax, orientation="vertical", fraction=0.05, pad=0, aspect=70
-    )
+    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", fraction=0.05, pad=0, aspect=70)
     cbar.set_label("female ratio", fontsize=12)
 
     ax.set_yticks(y_main)

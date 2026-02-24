@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.16.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.16.0...v2.16.1) (2026-02-20)
+
+
+### Bug Fixes
+
+* add gender to c71_iv ([#367](https://github.com/bzkf/onco-analytics-on-fhir/issues/367)) ([38249fe](https://github.com/bzkf/onco-analytics-on-fhir/commit/38249fe40f4ef93d6f330cadcfe0057346d19208))
+
+## [2.16.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.3...v2.16.0) (2026-02-20)
+
+
+### Features
+
+* added AML study script ([#363](https://github.com/bzkf/onco-analytics-on-fhir/issues/363)) ([6f66da0](https://github.com/bzkf/onco-analytics-on-fhir/commit/6f66da00ddfba6c240ac2079428f44fe9a1d6b65))
+
+## [2.15.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.2...v2.15.3) (2026-02-20)
+
+
+### Bug Fixes
+
+* pca path, date filter, reacto gender counts ([#364](https://github.com/bzkf/onco-analytics-on-fhir/issues/364)) ([d9244ca](https://github.com/bzkf/onco-analytics-on-fhir/commit/d9244ca5ffababfb2b8fc6ab3f7a1d8d1ad16c62))
+
+## [2.15.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.1...v2.15.2) (2026-02-18)
+
+
+### Bug Fixes
+
+* remove fruehere tumorerkrankung… ([#359](https://github.com/bzkf/onco-analytics-on-fhir/issues/359)) ([f4aae60](https://github.com/bzkf/onco-analytics-on-fhir/commit/f4aae6018ae5ec8caf75b992f23087a85ebf547b))
+
+## [2.15.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.0...v2.15.1) (2026-02-18)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#353](https://github.com/bzkf/onco-analytics-on-fhir/issues/353)) ([551db33](https://github.com/bzkf/onco-analytics-on-fhir/commit/551db33f9493856b6a89eebbf3c04e5a5302b549))
+
 ## [2.15.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.14.1...v2.15.0) (2026-02-17)
 
 
