@@ -1,4 +1,3 @@
-import datetime as dt
 import os
 import re
 from functools import reduce
@@ -1094,9 +1093,7 @@ def aggregate_metastases_age(df, settings):
     df_metastasis_loc = df_metastasis_loc.join(df_metastasis_loc_cohort, how="outer").fillna(0)
 
     df_metastasis_loc_synchron = pd.DataFrame(
-        df.loc[df["metastasis_synchron"] == True]
-        .groupby(by="metastasis_kind", observed=False)
-        .size(),
+        df.loc[df["metastasis_synchron"]].groupby(by="metastasis_kind", observed=False).size(),
         columns=["synchron_count"],
     )
     df_metastasis_loc = df_metastasis_loc.join(df_metastasis_loc_synchron, how="outer").fillna(0)

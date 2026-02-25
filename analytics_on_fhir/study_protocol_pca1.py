@@ -6,7 +6,6 @@ from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from study_protocol_pca_utils import (
-    HERE,
     aggregate_age_gleason,
     aggregate_diagnosis_year_gleason,
     aggregate_metastases_age,
@@ -20,7 +19,6 @@ from study_protocol_pca_utils import (
     join_radiotherapies,
     plot_therapies_metastasis_split,
     plot_therapy_combinations,
-    plot_therapy_sequence,
     union_sort_pivot_join,
     with_mapped_atc_column,
 )
@@ -126,7 +124,7 @@ class StudyProtocolPCa1:
         logger.info("StudyProtocolPCa1 pipeline started")
 
         # 1) Extract
-        """ self.extract()
+        self.extract()
 
         # 2) Prepare dates, age, cohort
         df_c61 = self.prepare(self.df_c61)
@@ -167,15 +165,15 @@ class StudyProtocolPCa1:
             df_therapy_sequence_first_line_4_months,
             self.settings,
             suffix="therapy_sequence_first_line_4_months",
-        ) """
+        )
 
         # DEV hack faster read in
-        df_therapy_sequence_first_line_4_months = (
-            self.spark.read.option("header", True)
-            .option("inferSchema", True)
-            .option("sep", ";")
-            .csv(HERE + "/results/study_protocol_pca1/df_therapy_sequence_first_line_4_months.csv")
-        )
+        # df_therapy_sequence_first_line_4_months = (
+        #     self.spark.read.option("header", True)
+        #     .option("inferSchema", True)
+        #     .option("sep", ";")
+        #     .csv(HERE + "/results/study_protocol_pca1/df_therapy_sequence_first_line_4_months.csv")
+        # )
 
         # 6) aggregate csvs and save
         # diagnosis year gleason
