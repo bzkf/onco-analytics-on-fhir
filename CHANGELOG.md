@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.16.0...v2.16.1) (2026-02-20)
+
+
+### Bug Fixes
+
+* add gender to c71_iv ([#367](https://github.com/bzkf/onco-analytics-on-fhir/issues/367)) ([38249fe](https://github.com/bzkf/onco-analytics-on-fhir/commit/38249fe40f4ef93d6f330cadcfe0057346d19208))
+
 ## [2.16.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.3...v2.16.0) (2026-02-20)
 
 

@@ -950,8 +950,13 @@ def filter_reacto(df, settings):
                 | (F.col("weitere_klassifikation_code") == "4")
             )
         )
-        .groupBy(F.lit("C71_IV").alias("icd10_parent"))
-        .count()
+        .agg(
+            F.count("*").alias("total_count"),
+            F.sum(F.when(F.col("gender") == "male", 1).otherwise(0)).alias("male_count"),
+            F.sum(F.when(F.col("gender") == "female", 1).otherwise(0)).alias("female_count"),
+        )
+        .withColumn("icd10_parent", F.lit("C71_IV"))
+        .select("icd10_parent", "total_count", "male_count", "female_count")
     )
     df_counts = df_counts.unionByName(df_c71_iv_counts).orderBy("icd10_parent")
 

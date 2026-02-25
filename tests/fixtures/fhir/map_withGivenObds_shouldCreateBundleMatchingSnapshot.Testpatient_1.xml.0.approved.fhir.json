@@ -2917,6 +2917,49 @@
       }
     },
     {
+      "fullUrl": "MedicationStatement/d0057082d8f7323ca3223b09665e0246d1e951379f1d278f2d560553f0a7eb37",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "d0057082d8f7323ca3223b09665e0246d1e951379f1d278f2d560553f0a7eb37",
+        "meta": {
+          "profile": [
+            "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-pr-onko-systemische-therapie-medikation"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://bzkf.github.io/obds-to-fhir/identifiers/systemische-therapie-medication-statement-id",
+            "value": "c3a22e56e7713786dbec08325f6c9273d20f584f29e92ce20ff0983fc5cee9af-993_syst1-Rituximab"
+          }
+        ],
+        "partOf": [
+          {
+            "reference": "Procedure/8e5a61d808bb30074e894fc702086b24763c410267b91c86f75de0b3b6507ccf"
+          }
+        ],
+        "status": "completed",
+        "medicationCodeableConcept": {
+          "text": "Rituximab"
+        },
+        "subject": {
+          "reference": "Patient/a02e16474896f1d528cac71f2c9b4c45ac3c9028e3a53fb414a1f7882991ee07"
+        },
+        "effectivePeriod": {
+          "start": "2020-05",
+          "end": "2020-10-15"
+        },
+        "reasonReference": [
+          {
+            "reference": "Condition/528cbfb627eff7b031c902f2a97d149f5640d57a28f705fadba22462aae7c408"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/d0057082d8f7323ca3223b09665e0246d1e951379f1d278f2d560553f0a7eb37"
+      }
+    },
+    {
       "fullUrl": "AdverseEvent/9eefba6a73667c8e8eae98bf8bfc392d328655d334c739ed2fa74ab6b04ca957",
       "resource": {
         "resourceType": "AdverseEvent",
@@ -6433,6 +6476,48 @@
       "request": {
         "method": "PUT",
         "url": "List/2787b4369f4673eeaca5c83bd437fb4fac191101a2abd54fd04c061d575124ff"
+      }
+    },
+    {
+      "fullUrl": "Observation/3ad4c2254b6c6c999269ac1ded4437129dd36cd0238761da9827664610c49429",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "3ad4c2254b6c6c999269ac1ded4437129dd36cd0238761da9827664610c49429",
+        "meta": {
+          "profile": [
+            "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-pr-onko-weitere-klassifikationen"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://bzkf.github.io/obds-to-fhir/identifiers/weitere-klassifikation-observation-id",
+            "value": "2103B5C5-123123-12312-AJCC-2023-12-09"
+          }
+        ],
+        "status": "final",
+        "code": {
+          "text": "AJCC"
+        },
+        "subject": {
+          "reference": "Patient/a02e16474896f1d528cac71f2c9b4c45ac3c9028e3a53fb414a1f7882991ee07"
+        },
+        "focus": [
+          {
+            "reference": "Condition/778f6d2023c112c28f7c0aaa0bb7693aa3c5b16f87093a7d52f647c7388d4285"
+          }
+        ],
+        "effectiveDateTime": "2023-12-09",
+        "valueCodeableConcept": {
+          "coding": [
+            {
+              "code": "IV"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/3ad4c2254b6c6c999269ac1ded4437129dd36cd0238761da9827664610c49429"
       }
     }
   ]
