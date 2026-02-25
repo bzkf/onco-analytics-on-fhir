@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.3...v2.16.0) (2026-02-20)
+
+
+### Features
+
+* added AML study script ([#363](https://github.com/bzkf/onco-analytics-on-fhir/issues/363)) ([6f66da0](https://github.com/bzkf/onco-analytics-on-fhir/commit/6f66da00ddfba6c240ac2079428f44fe9a1d6b65))
+
 ## [2.15.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.15.2...v2.15.3) (2026-02-20)
 
 
