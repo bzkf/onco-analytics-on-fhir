@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.17.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.16.1...v2.17.0) (2026-02-25)
+
+
+### Features
+
+* added new dq study to create substanz -&gt; ATC and weitere klassifikation CSVs ([#369](https://github.com/bzkf/onco-analytics-on-fhir/issues/369)) ([2d6a223](https://github.com/bzkf/onco-analytics-on-fhir/commit/2d6a2235b38fdf296967a8fe87ce4f8ccc7fdf71))
+* Pca firstlinetherapy ([#372](https://github.com/bzkf/onco-analytics-on-fhir/issues/372)) ([cf03cf9](https://github.com/bzkf/onco-analytics-on-fhir/commit/cf03cf95f35b0e779d1ea3bfba3ae68dda643e79))
+
+
+### Documentation
+
+* updated required permissions ([#355](https://github.com/bzkf/onco-analytics-on-fhir/issues/355)) ([96df7bf](https://github.com/bzkf/onco-analytics-on-fhir/commit/96df7bf895b7fb9d7daadca105efb42fd39d87d4))
+
 ## [2.16.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.16.0...v2.16.1) (2026-02-20)
 
 
