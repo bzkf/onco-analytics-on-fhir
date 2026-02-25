@@ -1,6 +1,13 @@
+import datetime as dt
+import os
 import re
 from functools import reduce
 
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from loguru import logger
 from pathling import PathlingContext, datasource
 from pyspark.sql import DataFrame, SparkSession
@@ -938,3 +945,368 @@ def with_mapped_atc_column(df, spark):
             mapping_expr,
         )
     return result_df
+
+
+# get all therapy cols dynamically since max can be different at each site
+def get_therapy_cols(df, prefix="therapy_type_"):
+    cols = [c for c in df.columns if re.match(rf"{prefix}\d+$", c)]
+    return sorted(cols, key=lambda x: int(x.split("_")[-1]))
+
+
+# maybe plot this also later -
+def plot_therapy_sequence(df, df_description_for_title, settings):
+    # get year min / max for current df
+    year_min = df.select(F.min(F.year("asserted_date"))).first()[0]
+    year_max = df.select(F.max(F.year("asserted_date"))).first()[0]
+    therapy_cols = get_therapy_cols(df)
+    logger.info("therapy_cols = {}", therapy_cols)
+    cohort_counts = df.groupBy(therapy_cols).count().orderBy("count", ascending=False)
+    logger.info("cohort_counts counts = {}", cohort_counts.count())
+    cohort_counts.show(100)
+    # for plot label
+    cohort_counts_plot = cohort_counts.withColumn(
+        "pattern", F.concat_ws("+", *[F.col(c) for c in therapy_cols])
+    )
+    cohort_counts_plot = cohort_counts_plot.orderBy(F.desc("count"))
+    cohort_counts_plot_pd = cohort_counts_plot.toPandas()
+
+    plt.figure()
+    n_patterns = len(cohort_counts_plot_pd)
+    fig_height = max(4, n_patterns * 0.5)
+    plt.figure(figsize=(10, fig_height))
+    ax = sns.barplot(data=cohort_counts_plot_pd, y="pattern", x="count")
+    for i, v in enumerate(cohort_counts_plot_pd["count"]):
+        ax.text(v, i, f" {v}", va="center")
+    title = f"first line (4 months after diagnosis) therapy sequence: {df_description_for_title}, {year_min} - {year_max}, {settings.location}"
+    ax.set_title(title, fontsize=15, fontweight="bold", loc="center")
+    plt.show()
+
+
+def plot_therapy_combinations(pdf, df_description_for_title, settings, year_min, year_max):
+
+    combos = pdf["combo_label"]
+    counts = pdf["count"]
+
+    n = len(pdf)
+    fig_height = min(6, max(3, n * 0.3))
+
+    plt.figure(figsize=(10, fig_height))
+    x = np.arange(n)
+
+    bar_color = cm.viridis(0.9)
+
+    plt.bar(x, counts, color=bar_color)
+
+    # Labels
+    for i in range(n):
+        value = counts.iloc[i]
+
+        if value >= 5:
+            plt.text(
+                i,
+                value / 2,
+                int(value),
+                ha="center",
+                va="center",
+                color="white",
+                fontsize=8,
+            )
+        elif value > 0:
+            offset = max(value * 0.05, 1)
+            plt.text(
+                i,
+                value + offset,
+                int(value),
+                ha="center",
+                va="bottom",
+                color=bar_color,
+                fontsize=7,
+            )
+
+    plt.xticks(x, combos, rotation=45, ha="right")
+
+    title = (
+        f"First line (4 months after diagnosis) therapy combinations: "
+        f"{df_description_for_title}, {year_min}-{year_max}, {settings.location}"
+    )
+
+    plt.title(title, fontsize=15, fontweight="bold")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def aggregate_diagnosis_year_gleason(df, settings):
+    print("hzi")
+    df["asserted_date"] = pd.to_datetime(df["asserted_date"], errors="coerce")
+    df["diagnosis_year"] = df["asserted_date"].dt.year
+
+    df_diagnosis_year = pd.DataFrame(
+        df.groupby(by="diagnosis_year", observed=False).size(), columns=["count"]
+    )
+    df_diagnosis_year_cohort = pd.DataFrame(
+        df.loc[df["cohort_flag"] == 1].groupby(by="diagnosis_year", observed=False).size(),
+        columns=["cohort_count"],
+    )
+    df_diagnosis_year = df_diagnosis_year.join(df_diagnosis_year_cohort, how="outer").fillna(0)
+
+    for gleason in [6, 7, 8, 9, 10]:
+        df_diagnosis_year_gleason = pd.DataFrame(
+            df.loc[df["gleason_score"] == gleason]
+            .groupby(by="diagnosis_year", observed=False)
+            .size(),
+            columns=[f"gleason_{gleason}_count"],
+        )
+        df_diagnosis_year = df_diagnosis_year.join(df_diagnosis_year_gleason, how="outer").fillna(0)
+
+    output_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    df_diagnosis_year.to_csv(
+        f"{output_dir}/diagnosis_year_{settings.location}.csv", index=True, sep=";"
+    )
+
+    return df_diagnosis_year
+
+
+def aggregate_metastases_age(df, settings):
+    df["asserted_date"] = pd.to_datetime(df["asserted_date"], errors="coerce")
+    df["metastasis_date_first"] = pd.to_datetime(df["metastasis_date_first"], errors="coerce")
+    df["has_metastasis"] = df["metastasis_loc"].notna()
+
+    # df["metastasis_kind"] = df["metastasis_loc"].apply(lambda x: "MUL" if "|" in str(x) else x)
+    # das hier genauer - alle kombis behalten, loc alphabetisch sortiert
+    df["metastasis_kind"] = (
+        df["metastasis_loc"]
+        .fillna("")
+        .apply(lambda x: "|".join(sorted(set(p.strip() for p in str(x).split("|") if p.strip()))))
+        .replace("", pd.NA)
+    )
+    df["metastasis_kind"] = df["metastasis_kind"].apply(lambda x: "NON" if pd.isna(x) else x)
+    df["days_to_metastasis"] = (df["metastasis_date_first"] - df["asserted_date"]).dt.days
+    df["metastasis_synchron"] = df["days_to_metastasis"] < 121.75
+
+    df_metastasis_loc = pd.DataFrame(
+        df.groupby(by="metastasis_kind", observed=False).size(), columns=["overall_count"]
+    )
+    df_metastasis_loc_cohort = pd.DataFrame(
+        df.loc[df["cohort_flag"] == 1].groupby(by="metastasis_kind", observed=False).size(),
+        columns=["cohort_count"],
+    )
+    df_metastasis_loc = df_metastasis_loc.join(df_metastasis_loc_cohort, how="outer").fillna(0)
+
+    df_metastasis_loc_synchron = pd.DataFrame(
+        df.loc[df["metastasis_synchron"] == True]
+        .groupby(by="metastasis_kind", observed=False)
+        .size(),
+        columns=["synchron_count"],
+    )
+    df_metastasis_loc = df_metastasis_loc.join(df_metastasis_loc_synchron, how="outer").fillna(0)
+
+    for gleason in [6, 7, 8, 9, 10]:
+        df_metastasis_loc_gleason = pd.DataFrame(
+            df.loc[df["gleason_score"] == gleason]
+            .groupby(by="metastasis_kind", observed=False)
+            .size(),
+            columns=[f"gleason_{gleason}_count"],
+        )
+        df_metastasis_loc = df_metastasis_loc.join(df_metastasis_loc_gleason, how="outer").fillna(0)
+
+    output_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    df_metastasis_loc.to_csv(
+        f"{output_dir}/metastasis_loc_{settings.location}.csv", index=True, sep=";"
+    )
+    return df_metastasis_loc
+
+
+def aggregate_age_gleason(df, settings):
+    bins = np.append(np.arange(0, 101, 5), 150)  # 0,5,10,...,100,150
+    labels = bins[:-1]  # 0,5,10,...,100,
+
+    df["age_class"] = pd.cut(df["age_at_diagnosis"], bins=bins, labels=labels)
+
+    df_age_class = pd.DataFrame(
+        df.groupby(by="age_class", observed=False).size(), columns=["count"]
+    )
+    df_age_class_cohort = pd.DataFrame(
+        df.loc[df["cohort_flag"] == 1].groupby(by="age_class", observed=False).size(),
+        columns=["cohort_count"],
+    )
+    df_age_class = df_age_class.join(df_age_class_cohort, how="outer").fillna(0)
+
+    for gleason in [6, 7, 8, 9, 10]:
+        df_age_class_gleason = pd.DataFrame(
+            df.loc[df["gleason_score"] == gleason].groupby(by="age_class", observed=False).size(),
+            columns=[f"gleason_{gleason}_count"],
+        )
+        df_age_class = df_age_class.join(df_age_class_gleason, how="outer").fillna(0)
+
+    output_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    df_age_class.to_csv(f"{output_dir}/age_class_{settings.location}.csv", index=True, sep=";")
+    return df_age_class
+
+
+def aggregate_therapy_combinations(df, cohort_rest):
+
+    therapy_cols = get_therapy_cols(df)
+
+    therapy_values = (
+        df.select(F.explode(F.array(*[F.col(c) for c in therapy_cols])).alias("therapy"))
+        .filter(F.col("therapy").isNotNull())
+        .distinct()
+        .rdd.flatMap(lambda x: x)
+        .collect()
+    )
+
+    for t in therapy_values:
+        df = df.withColumn(
+            f"has_{t}",
+            F.greatest(*[F.when(F.col(c) == t, 1).otherwise(0) for c in therapy_cols]),
+        )
+
+    has_cols = [f"has_{t}" for t in therapy_values]
+    combo_counts = df.groupBy(has_cols).count()
+    expr = F.concat_ws("+", *[F.when(F.col(f"has_{t}") == 1, F.lit(t)) for t in therapy_values])
+    combo_counts = combo_counts.withColumn("combo_label", expr)
+    pdf = combo_counts.toPandas()
+    pdf = pdf.sort_values("count", ascending=False)
+
+    output_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    pdf.to_csv(
+        f"{output_dir}/therapy_combinations_{cohort_rest}_{settings.location}.csv",
+        index=True,
+        sep=";",
+    )
+    return pdf
+
+
+def aggregate_therapy_combinations_with_metastasis(df, cohort_rest):
+    df = df.withColumn(
+        "metastatic_flag",
+        F.when(
+            F.col("metastasis_loc").isNotNull() | F.col("metastasis_date_first").isNotNull(),
+            "metastatic",
+        ).otherwise("non_metastatic"),
+    )
+
+    therapy_cols = get_therapy_cols(df)
+
+    therapy_values = (
+        df.select(F.explode(F.array(*[F.col(c) for c in therapy_cols])).alias("therapy"))
+        .filter(F.col("therapy").isNotNull())
+        .distinct()
+        .rdd.flatMap(lambda x: x)
+        .collect()
+    )
+
+    for t in therapy_values:
+        df = df.withColumn(
+            f"has_{t}",
+            F.greatest(*[F.when(F.col(c) == t, 1).otherwise(0) for c in therapy_cols]),
+        )
+
+    has_cols = [f"has_{t}" for t in therapy_values]
+    combo_counts = df.groupBy(has_cols + ["metastatic_flag"]).count()
+    expr = F.concat_ws("+", *[F.when(F.col(f"has_{t}") == 1, F.lit(t)) for t in therapy_values])
+    combo_counts = combo_counts.withColumn("combo_label", expr)
+    pdf = combo_counts.toPandas()
+
+    pivot = pdf.pivot_table(
+        index="combo_label",
+        columns="metastatic_flag",
+        values="count",
+        fill_value=0,
+    )
+
+    if "metastatic" not in pivot.columns:
+        pivot["metastatic"] = 0
+    if "non_metastatic" not in pivot.columns:
+        pivot["non_metastatic"] = 0
+
+    pivot["total"] = pivot["metastatic"] + pivot["non_metastatic"]
+
+    pivot = pivot.sort_values("total", ascending=False)
+
+    output_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    pdf.to_csv(
+        f"{output_dir}/therapy_combinations_met_{cohort_rest}_{settings.location}.csv",
+        index=True,
+        sep=";",
+    )
+
+    return pivot.reset_index()
+
+
+def plot_therapies_metastasis_split(
+    pivot_df, df_description_for_title, settings, year_min, year_max
+):
+
+    combos = pivot_df["combo_label"]
+    met = pivot_df["metastatic"]
+    non_met = pivot_df["non_metastatic"]
+
+    n = len(pivot_df)
+    fig_height = min(6, max(3, n * 0.3))
+
+    plt.figure(figsize=(10, fig_height))
+    x = np.arange(n)
+
+    color_non = cm.viridis(0.3)
+    color_met = cm.viridis(0.8)
+
+    plt.bar(x, non_met, label="Non-metastatic", color=color_non)
+    plt.bar(x, met, bottom=non_met, label="Metastatic", color=color_met)
+
+    for i in range(n):
+        if non_met.iloc[i] >= 5:
+            plt.text(
+                i,
+                non_met.iloc[i] / 2,
+                int(non_met.iloc[i]),
+                ha="center",
+                va="center",
+                color="white",
+                fontsize=8,
+            )
+        elif non_met.iloc[i] > 0:
+            plt.text(
+                i,
+                non_met.iloc[i] + 1,
+                int(non_met.iloc[i]),
+                ha="center",
+                va="bottom",
+                color=color_non,
+                fontsize=6,
+            )
+
+        if met.iloc[i] >= 5:
+            plt.text(
+                i,
+                non_met.iloc[i] + met.iloc[i] / 2,
+                int(met.iloc[i]),
+                ha="center",
+                va="center",
+                color="white",
+                fontsize=8,
+            )
+        elif met.iloc[i] > 0:
+            plt.text(
+                i,
+                non_met.iloc[i] + met.iloc[i] + 1,
+                int(met.iloc[i]),
+                ha="center",
+                va="bottom",
+                color=color_met,
+                fontsize=6,
+            )
+
+    plt.xticks(x, combos, rotation=45, ha="right")
+
+    title = (
+        f"Therapy combinations metastasis split: "
+        f"{df_description_for_title}, {year_min}-{year_max}, {settings.location}"
+    )
+
+    plt.title(title, fontsize=15, fontweight="bold")
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.05), ncol=2)
+
+    plt.tight_layout()
+    plt.show()
