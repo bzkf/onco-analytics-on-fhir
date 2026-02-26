@@ -211,7 +211,9 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
             filter_reacto(df_weitere_klassifikation, settings)
         case StudyNames.AML:
             aml = AMLStudy(settings)
-            aml.extract()
+            aml.extract_patients()
+            aml.join_with_drug_data()
+            aml.join_patients_with_diagnoses()
         case StudyNames.DQ:
             dq = DQStudy(settings)
             dq.run(data)

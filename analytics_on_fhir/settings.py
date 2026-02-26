@@ -39,12 +39,17 @@ class FHIRServerSettings:
     num_processes: int = 6
     user: str = ""
     password: str = ts.secret(default="")
-
+    
+@ts.settings
+class AMLSettings:
+    csv_input_dir: str = "" # relative path to the input csv for cytostatic drug data
+    csv_patient_column: str = "" # column where the patient ids from the input csv match the column 'patient_mrn' in aml_all_patients.csv
 
 @ts.settings
 class Settings:
     fhir: FHIRServerSettings
     spark: SparkSettings
+    aml: AMLSettings
     aws_access_key_id: str = "admin"
     aws_secret_access_key: str = ts.secret(default="miniopass")
     delta_database_path: str = ""

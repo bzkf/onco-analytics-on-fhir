@@ -6,6 +6,7 @@ from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
 from settings import Settings
+from utils import clean_datetime_values, keep_only_first_diagnosis
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
@@ -40,8 +41,8 @@ class AMLStudy:
 
         os.makedirs(self.output_dir, exist_ok=True)
 
-    def extract(self):
-        # 1) using csv as input, finding all patients with C92
+    def extract_patients(self):
+        # using icd_codes_aml.csv as input, finding all patients with requested diagnosis
         condition_df = pd.read_csv(HERE / "icd_codes_aml.csv")
 
         codes = ",".join(f"{FHIR_CODE_SYSTEM_ICD10}|" + c for c in condition_df["icd_code"])
@@ -63,7 +64,6 @@ class AMLStudy:
                     + ".first().code",
                 ),
                 ("diagnosis_recordedDate", "Condition.recordedDate[0]"),
-                ("diagnosis_onsetDateTime", "Condition.onsetDateTime[0]"),
                 ("deceased_boolean", "Patient.deceasedBoolean"),
                 ("deceased_dateTime", "Patient.deceasedDateTime[0]"),
                 ("patient_id", "Patient.id"),
@@ -78,7 +78,6 @@ class AMLStudy:
         )
 
         # merging patient + condition dataframes, removing duplicates, cleaning and saving merged_df
-
         patient_df = condition_patient_df["Patient"].drop_duplicates(subset=["patient_id"])
         condition_df = condition_patient_df["Condition"]
 
@@ -108,18 +107,63 @@ class AMLStudy:
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
-
-        merged_df.to_csv(os.path.join(self.output_dir, "patients.csv"), index=False)
-
-        # 2) finding all lab values to the patients from step 1)
-        # while splitting the query into chunks
+        
+        # clean dateTime values and only keep first diagnosis for every patient
+        merged_df_cleaned = clean_datetime_values(df=merged_df, column='diagnosis_recordedDate')
+        merged_df_first_diagnosis = keep_only_first_diagnosis(merged_df_cleaned, ['patient_mrn', 'icd_code'])
+        merged_df_first_diagnosis.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
         logger.info("merged_df size: {}", merged_df.count())
         logger.info("patient_df size: {}", patient_df.count())
+        
+        # finding all other diagnoses to the patients from above
+        self.extract_diagnoses(patient_list=patient_df["patient_id"], prefix="aml_")
 
+
+    def extract_diagnoses(self, patient_list, prefix):
+        all_diagnoses = []
+
+        for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
+            chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
+
+            diag_df_chunk = self.search.trade_rows_for_dataframe(
+                df=chunk_df,
+                resource_type="Condition",
+                request_params={
+                    "code": FHIR_CODE_SYSTEM_ICD10+"|",
+                    "_count": self.settings.fhir.page_count,
+                    "_elements": "subject, code, recordedDate",
+                },
+                df_constraints={
+                    "subject": "subject_list",
+                },
+                with_ref=False,
+                fhir_paths=[
+                    ("condition_id", "id"),
+                    ("condition_patient_reference", "subject.reference"),
+                    (
+                        "icd_code",
+                        f"code.coding.where(system='{FHIR_CODE_SYSTEM_ICD10}')"
+                        + ".first().code",
+                    ),
+                    ("diagnosis_recordedDate", "recordedDate[0]"),
+                ],
+            )
+
+            all_diagnoses.append(diag_df_chunk)
+        
+        # clean dateTime values and only keep first diagnosis for every patient
+        diag_df = pd.concat(all_diagnoses, ignore_index=True)
+        diag_df_cleaned = clean_datetime_values(df=diag_df, column='diagnosis_recordedDate')
+        diag_df_filtered = diag_df_cleaned[diag_df_cleaned['icd_code'].str.startswith('C', na=False)]
+        diag_df_first_diagnosis = keep_only_first_diagnosis(diag_df_filtered, ['condition_patient_reference', 'icd_code'])
+        diag_df_first_diagnosis.to_csv(os.path.join(self.output_dir, prefix+"all_diagnoses.csv"), index=False)
+
+
+    def extract_labs(self, patient_list, prefix):
         all_labs = []
 
-        for chunk in chunked(patient_df["patient_id"], self.settings.fhir.chunk_size):
+        for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
             lab_df_chunk = self.search.trade_rows_for_dataframe(
@@ -151,4 +195,69 @@ class AMLStudy:
             all_labs.append(lab_df_chunk)
 
         lab_df = pd.concat(all_labs, ignore_index=True)
-        lab_df.to_csv(os.path.join(self.output_dir, "labs.csv"), index=False)
+        lab_df.to_csv(os.path.join(self.output_dir, prefix+"labs.csv"), index=False)
+        
+    def join_with_drug_data(self):
+        
+        cytostatics_patient_ids = (pd.read_csv(
+            os.path.join(HERE, self.settings.aml.csv_input_dir),
+            sep=";",
+            encoding="latin1",
+            engine="python",
+            quotechar='"',
+        )[self.settings.aml.csv_patient_column].dropna().drop_duplicates()
+        )
+        patient_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv")
+        )
+        patient_ids = (
+            patient_df["patient_mrn"]
+            .dropna()
+            .astype(str)
+            .str.strip()
+        )
+        filtered_ids = cytostatics_patient_ids[
+            cytostatics_patient_ids.isin(patient_ids)
+        ]
+        filtered_refs = (
+            patient_df[
+                patient_df["patient_mrn"].isin(filtered_ids)
+            ]["condition_patient_reference"]
+            .dropna()
+            .drop_duplicates()
+        )
+
+        logger.info("Cytostatics input data patient count: {}", len(cytostatics_patient_ids))
+        logger.info("Matched with AML cohort patient count: {}", len(filtered_ids))
+
+        self.extract_labs(patient_list=filtered_refs, prefix="aml_matched_cytostatics_")
+
+    def join_patients_with_diagnoses(self):
+        patient_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv")
+        )
+        condition_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_diagnoses.csv")
+        )
+        patient_part = patient_df[[
+            'condition_patient_reference',
+            'icd_code',
+            'diagnosis_recordedDate',
+            'patient_mrn',
+            'birth_date',
+            'gender',
+            'deceased_dateTime',
+            'deceased_boolean',
+            'deceased'
+        ]].copy()
+
+        condition_part = condition_df[['condition_patient_reference','icd_code','diagnosis_recordedDate']].copy()
+
+        condition_part = condition_part.merge(
+        patient_df[['condition_patient_reference','patient_mrn','birth_date','gender','deceased_dateTime','deceased_boolean','deceased']],
+        on='condition_patient_reference',
+        how='left'
+        )
+        df_all = pd.concat([patient_part, condition_part], ignore_index=True)
+        df_all_first_disgnosis = keep_only_first_diagnosis(df_all, ['condition_patient_reference','icd_code'])
+        df_all_first_diagnosis.to_csv(os.path.join(self.output_dir, "aml_patients_conditions_joined.csv"), index=False)
