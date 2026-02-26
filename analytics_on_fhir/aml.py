@@ -196,9 +196,9 @@ class AMLStudy:
 
         lab_df = pd.concat(all_labs, ignore_index=True)
         lab_df.to_csv(os.path.join(self.output_dir, prefix+"labs.csv"), index=False)
-   
+
     def join_with_drug_data(self):
- 
+
         cytostatics_patient_ids = (pd.read_csv(
             os.path.join(HERE, self.settings.aml.csv_input_dir),
             sep=";",
