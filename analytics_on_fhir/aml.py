@@ -107,7 +107,7 @@ class AMLStudy:
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
-        
+
         # clean dateTime values and only keep first diagnosis for every patient
         merged_df_cleaned = clean_datetime_values(df=merged_df, column='diagnosis_recordedDate')
         merged_df_first_diagnosis = keep_only_first_diagnosis(merged_df_cleaned, ['patient_mrn', 'icd_code'])
@@ -115,7 +115,7 @@ class AMLStudy:
 
         logger.info("merged_df size: {}", merged_df.count())
         logger.info("patient_df size: {}", patient_df.count())
-        
+
         # finding all other diagnoses to the patients from above
         self.extract_diagnoses(patient_list=patient_df["patient_id"], prefix="aml_")
 
@@ -151,7 +151,7 @@ class AMLStudy:
             )
 
             all_diagnoses.append(diag_df_chunk)
-        
+
         # clean dateTime values and only keep first diagnosis for every patient
         diag_df = pd.concat(all_diagnoses, ignore_index=True)
         diag_df_cleaned = clean_datetime_values(df=diag_df, column='diagnosis_recordedDate')
@@ -196,9 +196,9 @@ class AMLStudy:
 
         lab_df = pd.concat(all_labs, ignore_index=True)
         lab_df.to_csv(os.path.join(self.output_dir, prefix+"labs.csv"), index=False)
-        
+   
     def join_with_drug_data(self):
-        
+ 
         cytostatics_patient_ids = (pd.read_csv(
             os.path.join(HERE, self.settings.aml.csv_input_dir),
             sep=";",
@@ -259,5 +259,5 @@ class AMLStudy:
         how='left'
         )
         df_all = pd.concat([patient_part, condition_part], ignore_index=True)
-        df_all_first_disgnosis = keep_only_first_diagnosis(df_all, ['condition_patient_reference','icd_code'])
+        df_all_first_diagnosis = keep_only_first_diagnosis(df_all, ['condition_patient_reference','icd_code'])
         df_all_first_diagnosis.to_csv(os.path.join(self.output_dir, "aml_patients_conditions_joined.csv"), index=False)

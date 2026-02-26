@@ -39,7 +39,7 @@ class FHIRServerSettings:
     num_processes: int = 6
     user: str = ""
     password: str = ts.secret(default="")
-    
+
 @ts.settings
 class AMLSettings:
     csv_input_dir: str = "" # relative path to the input csv for cytostatic drug data
