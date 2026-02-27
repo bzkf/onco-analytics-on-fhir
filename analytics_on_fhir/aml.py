@@ -159,6 +159,7 @@ class AMLStudy:
         diag_df_first_diagnosis = keep_only_first_diagnosis(diag_df_filtered, ['condition_patient_reference', 'icd_code'])
         diag_df_first_diagnosis.to_csv(os.path.join(self.output_dir, prefix+"all_diagnoses.csv"), index=False)
 
+        self.join_patients_with_diagnoses()
 
     def extract_labs(self, patient_list, prefix):
         all_labs = []
