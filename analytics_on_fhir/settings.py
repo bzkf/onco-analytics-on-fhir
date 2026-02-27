@@ -40,10 +40,14 @@ class FHIRServerSettings:
     user: str = ""
     password: str = ts.secret(default="")
 
+
 @ts.settings
 class AMLSettings:
-    csv_input_dir: str = "" # relative path to the input csv for cytostatic drug data
-    csv_patient_column: str = "" # column where the patient ids from the input csv match the column 'patient_mrn' in aml_all_patients.csv
+    csv_input_dir: str = (
+        "results/aml/zenzy_data.csv"  # relative path to the input csv for cytostatic drug data
+    )
+    csv_patient_column: str = "KIS-Patienten-ID"  # column where the patient ids from the input csv match the column 'patient_mrn' in aml_all_patients.csv
+
 
 @ts.settings
 class Settings:
