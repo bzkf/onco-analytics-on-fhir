@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.18.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.17.0...v2.18.0) (2026-03-03)
+
+
+### Features
+
+* expanded aml pyrate script ([#373](https://github.com/bzkf/onco-analytics-on-fhir/issues/373)) ([20b1742](https://github.com/bzkf/onco-analytics-on-fhir/commit/20b1742ed4621a0f06a0446131f13383c971c122))
+
+
+### Miscellaneous Chores
+
+* **deps:** update github-actions ([#377](https://github.com/bzkf/onco-analytics-on-fhir/issues/377)) ([1b89b44](https://github.com/bzkf/onco-analytics-on-fhir/commit/1b89b44d7a10455f2a96a9aaa7a9ca6b039c0e92))
+
+
+### CI/CD
+
+* set default python style to ruff ([#374](https://github.com/bzkf/onco-analytics-on-fhir/issues/374)) ([bff0180](https://github.com/bzkf/onco-analytics-on-fhir/commit/bff0180aad280cc17395ba61bc03512219d5619f))
+* set default pythons tyle to ruff ([bff0180](https://github.com/bzkf/onco-analytics-on-fhir/commit/bff0180aad280cc17395ba61bc03512219d5619f))
+
 ## [2.17.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.16.1...v2.17.0) (2026-02-25)
 
 
