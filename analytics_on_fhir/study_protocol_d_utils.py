@@ -578,6 +578,10 @@ def plot_pair_boxplot_horizontal_custom(
             color="black",
         )
 
+    if y_main.size == 0:
+        logger.warning("No data to plot in plot_pair_boxplot_horizontal_custom.")
+        return
+
     # Überschrift für Female % Spalte
     ax.text(
         pct_x - 1,
