@@ -493,6 +493,13 @@ def plot_pair_boxplot_horizontal_custom(
     # Positionen für Boxplots
     positions = [y_main + y_offset, y_main - y_offset] if show_entity1 else [y_main]
 
+    # Prozentzahl rechts
+    if show_entity1:
+        max_val = df_plot[[var_name_max[0], var_name_max[1]]].max(axis=1).max()
+    else:
+        max_val = df_plot[var_name_max].max()
+    pct_x = max_val + 2
+
     # Boxplots zeichnen
     for i, frac in enumerate(df_plot["female_frac"]):
         color_val = cmap(norm(frac))
@@ -560,12 +567,6 @@ def plot_pair_boxplot_horizontal_custom(
             for patch in bp["boxes"]:
                 patch.set_facecolor(color_val)
 
-        # Prozentzahl rechts
-        if show_entity1:
-            max_val = df_plot[[var_name_max[0], var_name_max[1]]].max(axis=1).max()
-        else:
-            max_val = df_plot[var_name_max].max()
-        pct_x = max_val + 2
         ax.text(
             pct_x,
             y_main[i],
