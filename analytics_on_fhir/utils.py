@@ -3,6 +3,7 @@ import os
 import shutil
 from collections.abc import Iterable
 
+import pandas as pd
 from loguru import logger
 from matplotlib.figure import Figure
 from pathling import PathlingContext, datasource
@@ -967,3 +968,16 @@ def filter_reacto(df, settings):
 
 def filter_primaerdiagnose(df):
     return df.filter(F.col("meta_profile").startswith(FHIR_SYSTEM_PRIMAERTUMOR))
+
+
+def clean_datetime_values(df, column):
+    date = df[column].astype(str).str.strip()
+    mask = ~date.str.contains(r"[T ]", regex=True)
+    date.loc[mask] = date.loc[mask] + "T00:00:00+01:00"
+    df["diagnosis_recordedDate"] = pd.to_datetime(date, utc=True)
+    return df
+
+
+def keep_only_first_diagnosis(df, columns):
+    df_sorted = df.sort_values(by=columns + ["diagnosis_recordedDate"])
+    return df_sorted.drop_duplicates(subset=columns, keep="first")

@@ -1,6 +1,8 @@
 # Configuration file for MegaLinter
 IGNORE_GITIGNORED_FILES: true
 
+PYTHON_DEFAULT_STYLE: ruff
+
 # all, none, or list of linter keys
 APPLY_FIXES: none
 DISABLE_LINTERS:
@@ -19,6 +21,7 @@ DISABLE_LINTERS:
   - PYTHON_BLACK
   - PYTHON_ISORT
   - PYTHON_FLAKE8
+  - REPOSITORY_KINGFISHER
 
 SHOW_ELAPSED_TIME: true
 

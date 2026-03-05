@@ -1,6 +1,6 @@
 services:
   trino:
-    image: docker.io/trinodb/trino:478@sha256:177bda76e5e6caf235de4502e10020a029d06dd2625709fbf5adf264b6295a1d
+    image: docker.io/trinodb/trino:479@sha256:6af989b0846d5cc48d8b4aa4e46036cd0d766910b671e076bf756e19ff6fcd58
     ipc: none
     security_opt:
       - "no-new-privileges:true"
