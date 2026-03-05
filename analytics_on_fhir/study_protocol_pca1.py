@@ -139,6 +139,11 @@ class StudyProtocolPCa1:
         self.df_c61_clean = df_c61_clean
         save_final_df(df_c61_clean, self.settings, suffix="df_c61_clean")
 
+        # für Alexa
+        # Nebendiagnosen: extract mii conditions for c61 pats
+        df_pseudonyms_c61 = df_c61.select(F.col("patid_pseudonym"))
+        self.extract_mii_conditions(df_pseudonyms_c61)
+
         # 4) therapy sequence all therapies - for REACTO
         # df_therapy_sequence = union_sort_pivot_join(
         #     df_c61_clean,
@@ -221,14 +226,15 @@ class StudyProtocolPCa1:
         df.show()
         save_final_df(df, self.settings, suffix="therapy_sequence1")
 
+    def extract_mii_conditions(df_pseudonyms_c61):
+        # for Alexa
+        logger.info("This is for the Pyrate Code.")
+
     def merged_plots(self):
         # führe alle einzel csvs zu gesamtheitlichen BZKF csvs zusammen
         # process_csvs(self.spark)
         # read in all bzkf csvs
-        print("read df dict")
         df_dict = read_merged_csvs(self.spark)
-        print("Number of dataframes:", len(df_dict))
-        print("Keys:", list(df_dict.keys()))
 
         for key, df in df_dict.items():
             if "therapy_combinations_cohort" in key:
