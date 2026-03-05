@@ -976,7 +976,10 @@ def plot_therapy_sequence(df, df_description_for_title, settings):
     ax = sns.barplot(data=cohort_counts_plot_pd, y="pattern", x="count")
     for i, v in enumerate(cohort_counts_plot_pd["count"]):
         ax.text(v, i, f" {v}", va="center")
-    title = f"first line (4 months after diagnosis) therapy sequence: {df_description_for_title}, {year_min} - {year_max}, {settings.location}"
+    title = (
+        "first line (4 months after diagnosis) therapy sequence: "
+        + f"{df_description_for_title}, {year_min} - {year_max}, {settings.location}"
+    )
     ax.set_title(title, fontsize=15, fontweight="bold", loc="center")
     plt.show()
 
