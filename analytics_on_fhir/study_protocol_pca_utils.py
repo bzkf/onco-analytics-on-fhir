@@ -1,5 +1,7 @@
+import glob
 import os
 import re
+import shutil
 from functools import reduce
 
 import matplotlib.cm as cm
@@ -977,15 +979,17 @@ def plot_therapy_sequence(df, df_description_for_title, settings):
     for i, v in enumerate(cohort_counts_plot_pd["count"]):
         ax.text(v, i, f" {v}", va="center")
     title = (
-        "first line (4 months after diagnosis) therapy sequence: "
-        + f"{df_description_for_title}, {year_min} - {year_max}, {settings.location}"
+        f"first line (4 months after diagnosis) therapy sequence: "
+        f"{df_description_for_title}, {year_min} - {year_max}, "
+        f"{settings.location}"
     )
     ax.set_title(title, fontsize=15, fontweight="bold", loc="center")
     plt.show()
 
 
-def plot_therapy_combinations(pdf, df_description_for_title, settings, year_min, year_max):
+def plot_therapy_combinations(pdf, df_description_for_title, settings, year_min="", year_max=""):
 
+    pdf = pdf.sort_values("count", ascending=False).reset_index(drop=True)
     combos = pdf["combo_label"]
     counts = pdf["count"]
 
@@ -995,26 +999,15 @@ def plot_therapy_combinations(pdf, df_description_for_title, settings, year_min,
     plt.figure(figsize=(10, fig_height))
     x = np.arange(n)
 
-    bar_color = cm.viridis(0.9)
+    bar_color = cm.viridis(0.7)
 
     plt.bar(x, counts, color=bar_color)
 
-    # Labels
     for i in range(n):
         value = counts.iloc[i]
 
-        if value >= 5:
-            plt.text(
-                i,
-                value / 2,
-                int(value),
-                ha="center",
-                va="center",
-                color="white",
-                fontsize=8,
-            )
-        elif value > 0:
-            offset = max(value * 0.05, 1)
+        if value > 0:
+            offset = max(value * 0.02, 0.8)
             plt.text(
                 i,
                 value + offset,
@@ -1022,14 +1015,14 @@ def plot_therapy_combinations(pdf, df_description_for_title, settings, year_min,
                 ha="center",
                 va="bottom",
                 color=bar_color,
-                fontsize=7,
+                fontsize=9,
             )
 
     plt.xticks(x, combos, rotation=45, ha="right")
 
     title = (
         f"First line (4 months after diagnosis) therapy combinations: "
-        f"{df_description_for_title}, {year_min}-{year_max}, {settings.location}"
+        f"{df_description_for_title}, {settings.location}"
     )
 
     plt.title(title, fontsize=15, fontweight="bold")
@@ -1074,8 +1067,6 @@ def aggregate_metastases_age(df, settings):
     df["metastasis_date_first"] = pd.to_datetime(df["metastasis_date_first"], errors="coerce")
     df["has_metastasis"] = df["metastasis_loc"].notna()
 
-    # df["metastasis_kind"] = df["metastasis_loc"].apply(lambda x: "MUL" if "|" in str(x) else x)
-    # das hier genauer - alle kombis behalten, loc alphabetisch sortiert
     df["metastasis_kind"] = (
         df["metastasis_loc"]
         .fillna("")
@@ -1235,9 +1226,67 @@ def aggregate_therapy_combinations_with_metastasis(df, cohort_rest):
     return pivot.reset_index()
 
 
+def aggregate_local_csvs(pandas_df_therapy_sequence_first_line_4_months, settings):
+    # rest hier unten auslagern
+    # diagnosis year gleason
+    df_diagnosis_year = aggregate_diagnosis_year_gleason(
+        pandas_df_therapy_sequence_first_line_4_months, settings
+    )
+    print(df_diagnosis_year)
+    # metastasis age
+    df_metastases = aggregate_metastases_age(
+        pandas_df_therapy_sequence_first_line_4_months, settings
+    )
+    print(df_metastases)
+    # age classes cohort gleason
+    df_age_gleason = aggregate_age_gleason(pandas_df_therapy_sequence_first_line_4_months, settings)
+    print(df_age_gleason)
+
+    # aggregate therapies
+    df_therapy_sequence_first_line_4_months_cohort = pandas_df_therapy_sequence_first_line_4_months[
+        pandas_df_therapy_sequence_first_line_4_months["cohort_flag"] == 1
+    ]
+
+    df_therapy_sequence_first_line_4_months_rest = pandas_df_therapy_sequence_first_line_4_months[
+        pandas_df_therapy_sequence_first_line_4_months["cohort_flag"] == 0
+    ]
+    # to do - vereinheitlichen, keine Zeit gehabt, mitgewachsen
+    aggregate_therapy_combinations(df_therapy_sequence_first_line_4_months_cohort, "cohort")
+    aggregate_therapy_combinations(df_therapy_sequence_first_line_4_months_rest, "rest")
+    aggregate_therapy_combinations_with_metastasis(
+        df_therapy_sequence_first_line_4_months_cohort, "cohort"
+    )
+    aggregate_therapy_combinations_with_metastasis(
+        df_therapy_sequence_first_line_4_months_rest, "rest"
+    )
+
+    # plot diagnosis year before 1990, 1990-2000, 2000-2010, 2010-2020, 2020-2026 z.B.
+    # filter date diagnosis, cohort, metastasis
+    # Cohort-Flag
+    df_cohort = df_therapy_sequence_first_line_4_months_cohort
+    df_rest = df_therapy_sequence_first_line_4_months_rest
+
+    year_bins = [
+        # ("<1990", "0000-01-01", "1990-01-01"),
+        ("1990-2000", "1990-01-01", "2000-01-01"),
+        ("2000-2010", "2000-01-01", "2010-01-01"),
+        ("2010-2020", "2010-01-01", "2020-01-01"),
+        ("2020-2026", "2020-01-01", "2026-12-31"),
+    ]
+
+    for label_flag, df_group in [("cohort", df_cohort), ("rest", df_rest)]:
+        for year_label, start, end in year_bins:
+            df_interval = df_group.filter(
+                (F.col("asserted_date") >= F.lit(start)) & (F.col("asserted_date") < F.lit(end))
+            )
+            aggregate_therapy_combinations_with_metastasis(df_interval, f"{label_flag}{year_label}")
+
+
 def plot_therapies_metastasis_split(
-    pivot_df, df_description_for_title, settings, year_min, year_max
+    pivot_df, df_description_for_title, settings, year_min="", year_max=""
 ):
+    pivot_df["total"] = pivot_df["metastatic"] + pivot_df["non_metastatic"]
+    pivot_df = pivot_df.sort_values("total", ascending=False).reset_index(drop=True)
 
     combos = pivot_df["combo_label"]
     met = pivot_df["metastatic"]
@@ -1301,12 +1350,674 @@ def plot_therapies_metastasis_split(
     plt.xticks(x, combos, rotation=45, ha="right")
 
     title = (
-        f"Therapy combinations metastasis split: "
-        f"{df_description_for_title}, {year_min}-{year_max}, {settings.location}"
+        f"Therapy combinations metastasis split: {df_description_for_title}, {settings.location}"
     )
 
     plt.title(title, fontsize=15, fontweight="bold")
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.05), ncol=2)
 
     plt.tight_layout()
+    plt.show()
+
+
+def write_merged_csv(df, destination_dir, filename, sep=";"):
+
+    os.makedirs(destination_dir, exist_ok=True)
+
+    tmp_dir = os.path.join(destination_dir, "__tmp_write__")
+
+    (df.coalesce(1).write.mode("overwrite").option("header", True).option("sep", sep).csv(tmp_dir))
+
+    part_file = glob.glob(os.path.join(tmp_dir, "part-*.csv"))[0]
+
+    final_path = os.path.join(destination_dir, filename)
+
+    if os.path.exists(final_path):
+        os.remove(final_path)
+
+    shutil.move(part_file, final_path)
+    shutil.rmtree(tmp_dir)
+
+    print(f"Merged CSV written to: {final_path}")
+
+
+def process_csvs(spark):
+    csv_dir = os.path.join(HERE, "pca_csvs")
+    print(csv_dir)
+    merged_csvs_dir = os.path.join(HERE, "pca_csvs_merged")
+    print(merged_csvs_dir)
+
+    aggregate_merge_write(
+        spark=spark,
+        source_dir=csv_dir,
+        pattern="diagnosis_year_*.csv",
+        group_column="diagnosis_year",
+        destination_dir=merged_csvs_dir,
+        output_filename="diagnosis_year_bzkf.csv",
+    )
+
+    aggregate_merge_write(
+        spark=spark,
+        source_dir=csv_dir,
+        pattern="age_class_*.csv",
+        group_column="age_class",
+        destination_dir=merged_csvs_dir,
+        output_filename="age_class_bzkf.csv",
+    )
+
+    aggregate_merge_write(
+        spark=spark,
+        source_dir=csv_dir,
+        pattern="metastasis_loc_*.csv",
+        group_column="metastasis_kind",
+        destination_dir=merged_csvs_dir,
+        output_filename="metastasis_loc_bzkf.csv",
+    )
+
+    therapy_csvs = [
+        "therapy_combinations_cohort_",
+        "therapy_combinations_rest_",
+    ]
+    for therapy_csv in therapy_csvs:
+        aggregate_merge_write_therapy(
+            spark=spark,
+            source_dir=csv_dir,
+            pattern=f"{therapy_csv}*.csv",
+            group_column="combo_label",
+            destination_dir=merged_csvs_dir,
+            output_filename=f"{therapy_csv}bzkf.csv",
+        )
+    # list of all therapy csv files with metastatic_flag
+    # dont list "therapy_combinations_met_cohort_" and "therapy_combinations_met_rest_" here!
+    therapy_csvs = [
+        "therapy_combinations_met_cohort_1990-2000_",
+        "therapy_combinations_met_cohort_2000-2010_",
+        "therapy_combinations_met_cohort_2010-2020_",
+        "therapy_combinations_met_cohort_2020-2026_",
+        "therapy_combinations_met_rest_1990-2000_",
+        "therapy_combinations_met_rest_2000-2010_",
+        "therapy_combinations_met_rest_2010-2020_",
+        "therapy_combinations_met_rest_2020-2026_",
+    ]
+    for therapy_csv in therapy_csvs:
+        aggregate_merge_write_therapy(
+            spark=spark,
+            source_dir=csv_dir,
+            pattern=f"{therapy_csv}*.csv",
+            group_column=["combo_label", "metastatic_flag"],
+            destination_dir=merged_csvs_dir,
+            output_filename=f"{therapy_csv}bzkf.csv",
+        )
+    # list them specifically here! otherwise will be counted double because of year files
+    therapy_met_cohort_csvs = [
+        "therapy_combinations_met_cohort_TUM.csv",
+        "therapy_combinations_met_cohort_UKA.csv",
+        "therapy_combinations_met_cohort_uker.csv",
+        "therapy_combinations_met_cohort_UKW.csv",
+    ]
+    dfs = []
+    for file in therapy_met_cohort_csvs:
+        df = spark.read.option("header", True).option("sep", ";").csv(os.path.join(csv_dir, file))
+        df = df.toDF(*[c.strip() for c in df.columns])
+        if df.columns[0] == "" or df.columns[0].startswith("_c"):
+            df = df.drop(df.columns[0])
+        df = df.select("combo_label", "metastatic_flag", "count")
+        df = df.withColumn("combo_label", F.lower(F.trim(F.col("combo_label"))))
+        df = df.withColumn("metastatic_flag", F.lower(F.trim(F.col("metastatic_flag"))))
+        df = df.withColumn("count", F.col("count").cast("double"))
+        df = df.groupBy("combo_label", "metastatic_flag").agg(F.sum("count").alias("count"))
+        dfs.append(df)
+
+    df_all = dfs[0]
+    for df in dfs[1:]:
+        df_all = df_all.unionByName(df)
+
+    df_sum = (
+        df_all.groupBy("combo_label", "metastatic_flag")
+        .agg(F.sum("count").alias("count"))
+        .orderBy("combo_label", "metastatic_flag")
+    )
+
+    df_sum.show()
+
+    write_merged_csv(df_sum, merged_csvs_dir, filename="therapy_combinations_met_cohort_bzkf.csv")
+
+    therapy_met_rest_csvs = [
+        "therapy_combinations_met_rest_TUM.csv",
+        "therapy_combinations_met_rest_UKA.csv",
+        "therapy_combinations_met_rest_uker.csv",
+        "therapy_combinations_met_rest_UKW.csv",
+    ]
+    dfs = []
+
+    for file in therapy_met_rest_csvs:
+        df = spark.read.option("header", True).option("sep", ";").csv(os.path.join(csv_dir, file))
+        df = df.toDF(*[c.strip() for c in df.columns])
+        if df.columns[0] == "" or df.columns[0].startswith("_c"):
+            df = df.drop(df.columns[0])
+        df = df.select("combo_label", "metastatic_flag", "count")
+        df = df.withColumn("combo_label", F.lower(F.trim(F.col("combo_label"))))
+        df = df.withColumn("metastatic_flag", F.lower(F.trim(F.col("metastatic_flag"))))
+        df = df.withColumn("count", F.col("count").cast("double"))
+        df = df.groupBy("combo_label", "metastatic_flag").agg(F.sum("count").alias("count"))
+        dfs.append(df)
+
+    df_all = dfs[0]
+    for df in dfs[1:]:
+        df_all = df_all.unionByName(df)
+
+    df_sum = (
+        df_all.groupBy("combo_label", "metastatic_flag")
+        .agg(F.sum("count").alias("count"))
+        .orderBy("combo_label", "metastatic_flag")
+    )
+
+    df_sum.show()
+
+    write_merged_csv(df_sum, merged_csvs_dir, filename="therapy_combinations_met_rest_bzkf.csv")
+
+
+def aggregate_merge_write(
+    spark,
+    source_dir,
+    pattern,
+    group_column,
+    destination_dir,
+    output_filename,
+):
+    print(f"\nReading pattern: {pattern}")
+    print(f"Source dir: {source_dir}")
+    print(f"Destination dir: {destination_dir}")
+
+    files = glob.glob(os.path.join(source_dir, pattern))
+    files = [f for f in files if not os.path.basename(f).startswith("_")]
+
+    if not files:
+        raise ValueError(f"No matching files found for pattern: {pattern}")
+
+    print("Files being read:")
+    for f in files:
+        print(f)
+
+    df_all = (
+        spark.read.option("header", True).option("sep", ";").option("inferSchema", True).csv(files)
+    )
+
+    # drop index col if there is one
+    first_col = df_all.columns[0]
+
+    if first_col.strip() == "" or first_col.startswith("_c"):
+        df_all = df_all.drop(first_col)
+
+    if "combo_label" in df_all.columns:
+        df_all = df_all.select("combo_label", "count")
+
+    value_columns = [c for c in df_all.columns if c != group_column]
+
+    df_sum = (
+        df_all.groupBy(group_column)
+        .agg(*[F.sum(c).alias(c) for c in value_columns])
+        .orderBy(group_column)
+    )
+
+    df_sum.show()
+
+    write_merged_csv(
+        df_sum,
+        destination_dir,
+        filename=output_filename,
+    )
+
+
+def aggregate_merge_write_therapy(
+    spark,
+    source_dir,
+    pattern,
+    group_column: str | list[str],
+    destination_dir,
+    output_filename,
+):
+    print(f"\nReading pattern: {pattern}")
+    print(f"Source dir: {source_dir}")
+    print(f"Destination dir: {destination_dir}")
+
+    if isinstance(group_column, str):
+        group_column = [group_column]
+
+    files = glob.glob(os.path.join(source_dir, pattern))
+    files = [f for f in files if not os.path.basename(f).startswith("_")]
+
+    if not files:
+        raise ValueError(f"No matching files found for pattern: {pattern}")
+
+    print("Files being read:")
+    for f in files:
+        print(f)
+
+    dfs = []
+
+    for file in files:
+        df = spark.read.option("header", True).option("sep", ";").csv(file)
+
+        df = df.toDF(*[c.strip() for c in df.columns])
+
+        first_col = df.columns[0]
+        if first_col == "" or first_col.startswith("_c"):
+            df = df.drop(first_col)
+
+        required_cols = group_column + ["count"]
+
+        if all(col in df.columns for col in required_cols):
+            df = df.select(*required_cols)
+
+            df = df.withColumn("count", F.col("count").cast("double"))
+
+            df = df.groupBy(*group_column).agg(F.sum("count").alias("count"))
+
+            dfs.append(df)
+
+    if not dfs:
+        raise ValueError("No valid therapy files found.")
+
+    df_all = dfs[0]
+    for df in dfs[1:]:
+        df_all = df_all.unionByName(df)
+
+    df_all.show()
+    df_sum = df_all.groupBy(*group_column).agg(F.sum("count").alias("count")).orderBy(*group_column)
+
+    df_sum.show()
+
+    write_merged_csv(
+        df_sum,
+        destination_dir,
+        filename=output_filename,
+    )
+
+
+def aggregate_merge_write_therapy_met(
+    spark,
+    source_dir,
+    pattern,
+    destination_dir,
+    output_filename,
+):
+    import glob
+    import os
+
+    from pyspark.sql import functions as F
+
+    files = glob.glob(os.path.join(source_dir, pattern))
+    files = [f for f in files if not os.path.basename(f).startswith("_")]
+
+    if not files:
+        raise ValueError(f"No matching files found for pattern: {pattern}")
+
+    dfs = []
+
+    for file in files:
+        df = spark.read.option("header", True).option("sep", ";").csv(file)
+        df = df.toDF(*[c.strip() for c in df.columns])
+        if df.columns[0] == "" or df.columns[0].startswith("_c"):
+            df = df.drop(df.columns[0])
+
+        df = df.select("combo_label", "metastatic_flag", "count")
+        df = df.withColumn("combo_label", F.lower(F.trim(F.col("combo_label"))))
+        df = df.withColumn("metastatic_flag", F.lower(F.trim(F.col("metastatic_flag"))))
+        df = df.withColumn("count", F.col("count").cast("double"))
+
+        df = df.groupBy("combo_label", "metastatic_flag").agg(F.sum("count").alias("count"))
+        dfs.append(df)
+
+    df_all = dfs[0]
+    for df in dfs[1:]:
+        df_all = df_all.unionByName(df)
+
+    df_sum = (
+        df_all.groupBy("combo_label", "metastatic_flag")
+        .agg(F.sum("count").alias("count"))
+        .orderBy("combo_label", "metastatic_flag")
+    )
+    df_sum.show()
+
+    write_merged_csv(df_sum, destination_dir, filename=output_filename)
+
+
+def read_merged_csvs(spark):
+    merged_csvs_dir = os.path.join(HERE, "pca_csvs_merged")
+
+    print("Directory:", merged_csvs_dir)
+    print("Files in dir:", os.listdir(merged_csvs_dir))
+
+    dfs = {}
+
+    for file in os.listdir(merged_csvs_dir):
+        if file.endswith(".csv"):
+            df_name = os.path.splitext(file)[0]
+            file_path = os.path.join(merged_csvs_dir, file)
+
+            df = spark.read.option("header", True).option("sep", ";").csv(file_path)
+            if "count" in df.columns:
+                df = df.withColumn("count", F.col("count").cast("double").cast("int"))
+
+            dfs[df_name] = df
+
+    return dfs
+
+
+def plot_diagnosis_year(df, df_description_for_title, settings):
+
+    numeric_cols = [
+        "count",
+        "cohort_count",
+        "gleason_6_count",
+        "gleason_7_count",
+        "gleason_8_count",
+        "gleason_9_count",
+        "gleason_10_count",
+        "diagnosis_year",
+    ]
+
+    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
+    # df["rest_count"] = df["count"] - df["cohort_count"]
+
+    df = df.loc[df["diagnosis_year"] >= 1990]
+
+    df["no_gleason_count"] = (
+        df["count"]
+        - df["gleason_6_count"]
+        - df["gleason_7_count"]
+        - df["gleason_8_count"]
+        - df["gleason_9_count"]
+        - df["gleason_10_count"]
+    )
+    # Overall Patient numbers by year (cohort separat)
+    plt.bar(data=df, x="diagnosis_year", height="count", label="overall", color="#440154")
+
+    plt.bar(data=df, x="diagnosis_year", height="cohort_count", label="cohort", color="#fde725")
+
+    plt.ylabel("Number of patients")
+    plt.xlabel("Year of C61 diagnosis")
+    plt.legend()
+    title = (
+        f"Overall Patient numbers by year (cohort separate): "
+        f"{df_description_for_title}, {settings.location}"
+    )
+    plt.title(title)
+    plt.show()
+
+    # Create a stacked bar chart
+    plt.figure(figsize=(11, 6))
+    bottom = None
+    i = 0
+    for col in [
+        "no_gleason_count",
+        "gleason_6_count",
+        "gleason_7_count",
+        "gleason_8_count",
+        "gleason_9_count",
+        "gleason_10_count",
+    ]:
+        color = plt.cm.viridis(1 - i / (6 - 1))
+        # print(bottom)
+
+        plt.bar(df["diagnosis_year"], df[col], bottom=bottom, label=col, color=color)
+        if bottom is None:
+            bottom = df[col].copy()
+        else:
+            bottom += df[col].copy()
+        i = i + 1
+
+    plt.xlabel("Diagnosis Year")
+    plt.ylabel("Number of patients")
+    title = (
+        f"Stacked Bar Chart of Gleason Counts by Diagnosis Year after 1990: "
+        f"{df_description_for_title}, {settings.location}"
+    )
+    plt.title(title)
+    plt.legend()
+    plt.show()
+
+
+def plot_age_class(df, df_description_for_title, settings):
+    numeric_cols = [
+        "count",
+        "cohort_count",
+        "gleason_6_count",
+        "gleason_7_count",
+        "gleason_8_count",
+        "gleason_9_count",
+        "gleason_10_count",
+        "age_class",
+    ]
+
+    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
+    # df["rest_count"] = df["count"] - df["cohort_count"]
+
+    df["no_gleason_count"] = (
+        df["count"]
+        - df["gleason_6_count"]
+        - df["gleason_7_count"]
+        - df["gleason_8_count"]
+        - df["gleason_9_count"]
+        - df["gleason_10_count"]
+    )
+
+    ## Lower and Upper age limit
+    low_lim = 45
+    up_lim = 80
+
+    df_age = df.copy()
+    cols = [
+        "count",
+        "cohort_count",
+        "gleason_6_count",
+        "gleason_7_count",
+        "gleason_8_count",
+        "gleason_9_count",
+        "gleason_10_count",
+        "no_gleason_count",
+    ]
+    # sum for ages <40
+    sums_lt = df.loc[df["age_class"] < low_lim, cols].sum()
+    # sum for ages >85
+    sums_gt = df.loc[df["age_class"] > up_lim, cols].sum()
+    # keep rows between 40 and 85 inclusive
+    df_mid = (
+        df.loc[(df["age_class"] >= low_lim) & (df["age_class"] <= up_lim)]
+        .reset_index(drop=True)
+        .copy()
+    )
+    df_mid["age_class_label"] = (
+        df_mid["age_class"].astype(str) + " - " + (df_mid["age_class"] + 4).astype(str)
+    )
+
+    row_lt = sums_lt.to_dict()
+    row_lt["age_class_label"] = f"<{low_lim}"
+    row_lt["age_class"] = f"<{low_lim}"
+    row_gt = sums_gt.to_dict()
+    row_gt["age_class_label"] = f">={up_lim + 5}"
+    row_gt["age_class"] = f">{up_lim + 5}"
+    df_age = pd.concat([pd.DataFrame([row_lt]), df_mid, pd.DataFrame([row_gt])], ignore_index=True)
+    df_age["age_class"] = df_age["age_class"].astype(str)
+
+    plt.bar(data=df_age, x="age_class_label", height="count", label="overall", color="#440154")
+
+    plt.bar(
+        data=df_age, x="age_class_label", height="cohort_count", label="cohort", color="#fde725"
+    )
+
+    plt.xticks(rotation=90)
+    plt.ylabel("Number of patients")
+    plt.xlabel("Age Class")
+    plt.legend()
+    title = (
+        f"Overall Patient numbers by age classes: {df_description_for_title}, {settings.location}"
+    )
+    plt.title(title)
+    plt.show()
+
+    # Create a stacked bar chart
+    plt.figure(figsize=(10, 6))
+    bottom = None
+    i = 0
+    for col in [
+        "no_gleason_count",
+        "gleason_6_count",
+        "gleason_7_count",
+        "gleason_8_count",
+        "gleason_9_count",
+        "gleason_10_count",
+    ]:
+        color = plt.cm.viridis(1 - i / (6 - 1))
+        # print(bottom)
+
+        plt.bar(df_age["age_class_label"], df_age[col], bottom=bottom, label=col, color=color)
+        if bottom is None:
+            bottom = df_age[col].copy()
+        else:
+            bottom += df_age[col].copy()
+        i = i + 1
+
+    plt.xlabel("Age Class")
+    plt.ylabel("Number of patients")
+    title = (
+        f"Stacked Bar Chart of Gleason Counts by Age Class: "
+        f"{df_description_for_title}, {settings.location}"
+    )
+    plt.title(title)
+    plt.legend()
+    plt.show()
+
+
+def plot_metastasis_loc(df, df_description_for_title, settings):
+    df = df.loc[df["metastasis_kind"] != "NON"]
+
+    numeric_cols = [
+        "overall_count",
+        "cohort_count",
+        "synchron_count",
+        "gleason_6_count",
+        "gleason_7_count",
+        "gleason_8_count",
+        "gleason_9_count",
+        "gleason_10_count",
+    ]
+
+    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
+    df["no_gleason_count"] = (
+        df["overall_count"]
+        - df["gleason_6_count"]
+        - df["gleason_7_count"]
+        - df["gleason_8_count"]
+        - df["gleason_9_count"]
+        - df["gleason_10_count"]
+    )
+
+    # df["rest_count"] = df["overall_count"] - df["cohort_count"]
+
+    # Filter rows where both rest and cohort counts are > 3
+    df_filtered = df[(df["overall_count"] > 3) | (df["cohort_count"] > 3)]
+
+    # Sort by total height (overall_count)
+    df_filtered = df_filtered.sort_values(by="overall_count", ascending=False)
+
+    # --- Bar plot for cohort vs rest ---
+    plt.figure(figsize=(12, 6))
+    plt.bar(
+        data=df_filtered,
+        x="metastasis_kind",
+        height="overall_count",
+        label="overall",
+        color="#440154",
+    )
+    plt.bar(
+        data=df_filtered,
+        x="metastasis_kind",
+        height="cohort_count",
+        label="cohort",
+        color="#fde725",
+    )
+    plt.ylabel("Number of patients")
+    plt.xlabel("Metastasis Status")
+    plt.xticks(rotation=90)
+    plt.legend()
+    title = (
+        f"Overall Patient numbers by kind of metastasis: "
+        f"{df_description_for_title}, {settings.location}"
+    )
+    plt.title(title)
+    plt.show()
+
+    # synchron/metachron
+    plt.figure(figsize=(12, 6))
+    plt.bar(
+        data=df_filtered,
+        x="metastasis_kind",
+        height="overall_count",
+        label="overall",
+        color="#440154",
+    )
+    plt.bar(
+        data=df_filtered,
+        x="metastasis_kind",
+        height="synchron_count",
+        label="synchron metastasis",
+        color="#25fd8d",
+    )
+
+    plt.ylabel("Number of patients")
+    plt.xlabel("Metastasis Status")
+    plt.xticks(rotation=90)
+    plt.legend()
+    title = (
+        f"Synchron (4 months after diagnosis) vs overall metastasis: "
+        f"{df_description_for_title}, {settings.location}"
+    )
+    plt.title(title)
+    plt.show()
+
+    # --- Stacked bar chart for Gleason ---
+    plt.figure(figsize=(12, 6))
+    bottom = None
+    i = 0
+    gleason_cols = [
+        "no_gleason_count",
+        "gleason_6_count",
+        "gleason_7_count",
+        "gleason_8_count",
+        "gleason_9_count",
+        "gleason_10_count",
+    ]
+    df_gleason_filtered = df_filtered.copy()
+    # Optional: filter Gleason counts <= 3
+    # df_gleason_filtered[gleason_cols] = df_gleason_filtered[gleason_cols].applymap(
+    #    lambda x: x if x > 3 else 0
+    # )
+
+    for i, col in enumerate(gleason_cols):
+        color = plt.cm.viridis(1 - i / (len(gleason_cols) - 1))
+        plt.bar(
+            df_gleason_filtered["metastasis_kind"],
+            df_gleason_filtered[col],
+            bottom=bottom,
+            label=col,
+            color=color,
+        )
+        if bottom is None:
+            bottom = df_gleason_filtered[col].copy()
+        else:
+            bottom += df_gleason_filtered[col].copy()
+
+    plt.xlabel("Metastasis Status")
+    plt.ylabel("Number of patients")
+    plt.xticks(rotation=90)
+    title = (
+        f"Stacked Bar Chart of Gleason Counts by Metastasis Status: "
+        f"{df_description_for_title}, {settings.location}"
+    )
+    plt.title(title)
+    plt.legend()
+    plt.show()
+    plt.legend()
     plt.show()

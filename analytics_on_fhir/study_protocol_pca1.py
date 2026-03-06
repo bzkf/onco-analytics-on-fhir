@@ -6,19 +6,19 @@ from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from study_protocol_pca_utils import (
-    aggregate_age_gleason,
-    aggregate_diagnosis_year_gleason,
-    aggregate_metastases_age,
-    aggregate_therapy_combinations,
-    aggregate_therapy_combinations_with_metastasis,
+    aggregate_local_csvs,
     extract_radiotherapies,
     extract_surgeries,
     extract_systemtherapies,
     flag_young_highrisk_cohort,
     group_ops,
     join_radiotherapies,
+    plot_age_class,
+    plot_diagnosis_year,
+    plot_metastasis_loc,
     plot_therapies_metastasis_split,
     plot_therapy_combinations,
+    read_merged_csvs,
     union_sort_pivot_join,
     with_mapped_atc_column,
 )
@@ -139,6 +139,11 @@ class StudyProtocolPCa1:
         self.df_c61_clean = df_c61_clean
         save_final_df(df_c61_clean, self.settings, suffix="df_c61_clean")
 
+        # für Alexa
+        # Nebendiagnosen: extract mii conditions for c61 pats
+        df_pseudonyms_c61 = df_c61.select(F.col("patid_pseudonym"))
+        self.extract_mii_conditions(df_pseudonyms_c61)
+
         # 4) therapy sequence all therapies - for REACTO
         # df_therapy_sequence = union_sort_pivot_join(
         #     df_c61_clean,
@@ -147,7 +152,6 @@ class StudyProtocolPCa1:
         #     self.df_radiotherapies_joined,
         # )
         # save_final_df(df_therapy_sequence, self.settings, suffix="df_therapy_sequence")
-
         # self.generate_sequence_csv(df_therapy_sequence)
 
         # 5) first line therapy - within 4 months of diagnosis
@@ -167,114 +171,11 @@ class StudyProtocolPCa1:
             suffix="therapy_sequence_first_line_4_months",
         )
 
-        # DEV hack faster read in
-        # df_therapy_sequence_first_line_4_months = (
-        #     self.spark.read.option("header", True)
-        #     .option("inferSchema", True)
-        #     .option("sep", ";")
-        #     .csv(HERE + "/results/study_protocol_pca1/"
-        #       + "df_therapy_sequence_first_line_4_months.csv")
-        # )
-
-        # 6) aggregate csvs and save
-        # diagnosis year gleason
+        # 6) aggregate local csvs and save
         pandas_df_therapy_sequence_first_line_4_months = (
             df_therapy_sequence_first_line_4_months.toPandas()
         )
-        df_diagnosis_year = aggregate_diagnosis_year_gleason(
-            pandas_df_therapy_sequence_first_line_4_months, self.settings
-        )
-        print(df_diagnosis_year)
-        # metastasis age
-        df_metastases = aggregate_metastases_age(
-            pandas_df_therapy_sequence_first_line_4_months, self.settings
-        )
-        print(df_metastases)
-        # age classes cohort gleason
-        df_age_gleason = aggregate_age_gleason(
-            pandas_df_therapy_sequence_first_line_4_months, self.settings
-        )
-        print(df_age_gleason)
-
-        # aggregate therapies
-        df_therapy_sequence_first_line_4_months_cohort = (
-            df_therapy_sequence_first_line_4_months.filter(F.col("cohort_flag") == 1)
-        )
-        df_therapy_sequence_first_line_4_months_rest = (
-            df_therapy_sequence_first_line_4_months.filter(F.col("cohort_flag") == 0)
-        )
-        # to do - vereinheitlichen, keine Zeit gehabt, mitgewachsen
-        df_therapy_cohort = aggregate_therapy_combinations(
-            df_therapy_sequence_first_line_4_months_cohort, "cohort"
-        )
-        df_therapy_rest = aggregate_therapy_combinations(
-            df_therapy_sequence_first_line_4_months_rest, "rest"
-        )
-        df_therapy_cohort_met = aggregate_therapy_combinations_with_metastasis(
-            df_therapy_sequence_first_line_4_months_cohort, "cohort"
-        )
-        df_therapy_rest_met = aggregate_therapy_combinations_with_metastasis(
-            df_therapy_sequence_first_line_4_months_rest, "rest"
-        )
-
-        # 7) plot therapies
-        year_min_cohort = df_therapy_sequence_first_line_4_months_cohort.select(
-            F.min(F.year("asserted_date"))
-        ).first()[0]
-        year_max_cohort = df_therapy_sequence_first_line_4_months_cohort.select(
-            F.max(F.year("asserted_date"))
-        ).first()[0]
-        plot_therapy_combinations(
-            df_therapy_cohort, "cohort", self.settings, year_min_cohort, year_max_cohort
-        )
-        year_min_rest = df_therapy_sequence_first_line_4_months_rest.select(
-            F.min(F.year("asserted_date"))
-        ).first()[0]
-        year_max_rest = df_therapy_sequence_first_line_4_months_rest.select(
-            F.max(F.year("asserted_date"))
-        ).first()[0]
-        plot_therapy_combinations(
-            df_therapy_rest, "rest", self.settings, year_min_rest, year_max_rest
-        )
-
-        plot_therapies_metastasis_split(
-            df_therapy_cohort_met, "cohort", self.settings, year_min_cohort, year_max_cohort
-        )
-        plot_therapies_metastasis_split(
-            df_therapy_rest_met, "rest", self.settings, year_min_rest, year_max_rest
-        )
-
-        # plot diagnosis year before 1990, 1990-2000, 2000-2010, 2010-2020, 2020-2026 z.B.
-        # filter date diagnosis, cohort, metastasis
-        # Cohort-Flag
-        df_cohort = df_therapy_sequence_first_line_4_months_cohort
-        df_rest = df_therapy_sequence_first_line_4_months_rest
-
-        year_bins = [
-            # ("<1990", "0000-01-01", "1990-01-01"),
-            ("1990-2000", "1990-01-01", "2000-01-01"),
-            ("2000-2010", "2000-01-01", "2010-01-01"),
-            ("2010-2020", "2010-01-01", "2020-01-01"),
-            ("2020-2026", "2020-01-01", "2026-12-31"),
-        ]
-
-        for label_flag, df_group in [("cohort", df_cohort), ("rest", df_rest)]:
-            for year_label, start, end in year_bins:
-                df_interval = df_group.filter(
-                    (F.col("asserted_date") >= F.lit(start)) & (F.col("asserted_date") < F.lit(end))
-                )
-
-                df_therapy_met = aggregate_therapy_combinations_with_metastasis(
-                    df_interval, f"{label_flag} {year_label}"
-                )
-
-                # Berechne min/max Jahre für Plot
-                year_min = df_interval.select(F.min(F.year("asserted_date"))).first()[0]
-                year_max = df_interval.select(F.max(F.year("asserted_date"))).first()[0]
-
-                plot_therapies_metastasis_split(
-                    df_therapy_met, f"{label_flag}_{year_label}", self.settings, year_min, year_max
-                )
+        aggregate_local_csvs(pandas_df_therapy_sequence_first_line_4_months)
 
         logger.info("StudyProtocolPCa1 pipeline finished")
 
@@ -324,3 +225,69 @@ class StudyProtocolPCa1:
 
         df.show()
         save_final_df(df, self.settings, suffix="therapy_sequence1")
+
+    def extract_mii_conditions(df_pseudonyms_c61):
+        # for Alexa
+        logger.info("This is for the Pyrate Code.")
+
+    def merged_plots(self):
+        # führe alle einzel csvs zu gesamtheitlichen BZKF csvs zusammen
+        # process_csvs(self.spark)
+        # read in all bzkf csvs
+        df_dict = read_merged_csvs(self.spark)
+
+        for key, df in df_dict.items():
+            if "therapy_combinations_cohort" in key:
+                df_pd = df.toPandas()
+                plot_therapy_combinations(
+                    df_pd,
+                    "cohort",
+                    self.settings,
+                )
+            elif "therapy_combinations_rest" in key:
+                df_pd = df.toPandas()
+                plot_therapy_combinations(
+                    df_pd,
+                    "rest",
+                    self.settings,
+                )
+            elif "therapy_combinations_met" in key:
+                df_pivot = (
+                    df.groupBy("combo_label")
+                    .pivot("metastatic_flag", ["metastatic", "non_metastatic"])
+                    .sum("count")
+                    .fillna(0)
+                )
+                df_pivot = df_pivot.toPandas()
+                print(df_pivot)
+
+                label = "cohort" if "cohort" in key else "rest"
+
+                # extract year range automatically
+                match = re.search(r"\d{4}-\d{4}", key)
+                if match:
+                    years = match.group().replace("-", "_")
+                    label += f"_{years}"
+
+                plot_therapies_metastasis_split(df_pivot, label, self.settings)
+            elif "diagnosis_year" in key:
+                df_pd = df.toPandas()
+                plot_diagnosis_year(
+                    df_pd,
+                    "",
+                    self.settings,
+                )
+            elif "age_class" in key:
+                df_pd = df.toPandas()
+                plot_age_class(
+                    df_pd,
+                    "",
+                    self.settings,
+                )
+            elif "metastasis_loc" in key:
+                df_pd = df.toPandas()
+                plot_metastasis_loc(
+                    df_pd,
+                    "",
+                    self.settings,
+                )

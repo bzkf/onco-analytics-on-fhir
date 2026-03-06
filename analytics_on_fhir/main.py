@@ -171,6 +171,14 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
                 spark=pc.spark,
             )
             study_protocol_pca1.run()
+        case StudyNames.STUDY_PROTOCOL_PCA1_MERGED_PLOTS:
+            study_protocol_pca1 = StudyProtocolPCa1(
+                pc=pc,
+                data=data,
+                settings=settings,
+                spark=pc.spark,
+            )
+            study_protocol_pca1.merged_plots()
         case StudyNames.STUDY_PROTOCOL_AML:
             df = extract_df_study_protocol_a_d_mii(
                 pc,
