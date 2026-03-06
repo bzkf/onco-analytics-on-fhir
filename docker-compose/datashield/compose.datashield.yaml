@@ -45,7 +45,7 @@ services:
       - "opal_db_data:/var/lib/postgresql:rw"
 
   rock-0:
-    image: docker.io/datashield/rock-base:6.3.4@sha256:a827541597d9d4653c9f5590cf529c73adcbdd8f1a25c9bc9fb7b8811e03b2e9
+    image: docker.io/datashield/rock-base:6.3.4@sha256:efe05ac550a076229def024e563ca04f4b08ab7e514ccb8cf1569a10d36a4d36
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -62,7 +62,7 @@ services:
       ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
 
   rock-1:
-    image: docker.io/datashield/rock-base:6.3.4@sha256:a827541597d9d4653c9f5590cf529c73adcbdd8f1a25c9bc9fb7b8811e03b2e9
+    image: docker.io/datashield/rock-base:6.3.4@sha256:efe05ac550a076229def024e563ca04f4b08ab7e514ccb8cf1569a10d36a4d36
     restart: unless-stopped
     ipc: none
     security_opt:
@@ -79,7 +79,7 @@ services:
       ROCK_USER_PASSWORD: ${ROCK_USER_PASSWORD:?}
 
   rock-2:
-    image: docker.io/datashield/rock-base:6.3.4@sha256:a827541597d9d4653c9f5590cf529c73adcbdd8f1a25c9bc9fb7b8811e03b2e9
+    image: docker.io/datashield/rock-base:6.3.4@sha256:efe05ac550a076229def024e563ca04f4b08ab7e514ccb8cf1569a10d36a4d36
     restart: unless-stopped
     ipc: none
     security_opt:
