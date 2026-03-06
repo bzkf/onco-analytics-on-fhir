@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.19.1...v2.19.2) (2026-03-06)
+
+
+### Bug Fixes
+
+* return successfully if no AML patients were found ([#387](https://github.com/bzkf/onco-analytics-on-fhir/issues/387)) ([439eff1](https://github.com/bzkf/onco-analytics-on-fhir/commit/439eff18a835bf3ea3a189561da1063304e5d429))
+
 ## [2.19.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.19.0...v2.19.1) (2026-03-06)
 
 
