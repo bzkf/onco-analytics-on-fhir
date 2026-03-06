@@ -1,6 +1,7 @@
 import re
 
 from loguru import logger
+from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
@@ -139,10 +140,10 @@ class StudyProtocolPCa1:
         self.df_c61_clean = df_c61_clean
         save_final_df(df_c61_clean, self.settings, suffix="df_c61_clean")
 
-        # für Alexa
-        # Nebendiagnosen: extract mii conditions for c61 pats
-        df_pseudonyms_c61 = df_c61.select(F.col("patid_pseudonym"))
-        self.extract_mii_conditions(df_pseudonyms_c61)
+        # Nebendiagnosen: extract mii conditions + labs for c61 pats
+        pandas_df_pseudonyms_c61 = df_c61.toPandas()
+        df_list_c61 = pandas_df_pseudonyms_c61["patient_resource_id"].drop_duplicates().dropna()
+        self.extract_mii_conditions_labs(df_list_c61, suffix="")
 
         # 4) therapy sequence all therapies - for REACTO
         # df_therapy_sequence = union_sort_pivot_join(
@@ -226,9 +227,10 @@ class StudyProtocolPCa1:
         df.show()
         save_final_df(df, self.settings, suffix="therapy_sequence1")
 
-    def extract_mii_conditions(df_pseudonyms_c61):
-        # for Alexa
-        logger.info("This is for the Pyrate Code.")
+    def extract_mii_conditions_labs(self, df_list_c61, suffix):
+        logger.info("start PyRate query for conditions + labs.")
+        query = PyRateQuery(self.settings)
+        query.extract_conditions(df_list_c61, suffix)
 
     def merged_plots(self):
         # führe alle einzel csvs zu gesamtheitlichen BZKF csvs zusammen
