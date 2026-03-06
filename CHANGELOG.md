@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.19.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.19.0...v2.19.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* add FHIR server configuration to analytics-on-fhir compose file ([#386](https://github.com/bzkf/onco-analytics-on-fhir/issues/386)) ([5a72970](https://github.com/bzkf/onco-analytics-on-fhir/commit/5a72970682ac4ef74b0acffd5d3590e45060d502))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#370](https://github.com/bzkf/onco-analytics-on-fhir/issues/370)) ([d52d714](https://github.com/bzkf/onco-analytics-on-fhir/commit/d52d714add89a38107cd26f609e6839defa1fc8c))
+* **deps:** update docker.io/datashield/rock-base:6.3.4 docker digest to efe05ac ([#376](https://github.com/bzkf/onco-analytics-on-fhir/issues/376)) ([d7c61ee](https://github.com/bzkf/onco-analytics-on-fhir/commit/d7c61ee7243148c924dd2ba819b60e79a5ddcf36))
+* **deps:** update helm release fhir-gateway to v10 ([#380](https://github.com/bzkf/onco-analytics-on-fhir/issues/380)) ([0714982](https://github.com/bzkf/onco-analytics-on-fhir/commit/0714982220841fa5e2761e249e5836359ded6ba4))
+
 ## [2.19.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.18.0...v2.19.0) (2026-03-06)
 
 
