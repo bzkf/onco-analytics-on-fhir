@@ -6,7 +6,7 @@ from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
 from settings import Settings
-from utils import clean_datetime_values, keep_only_first_diagnosis
+from utils import clean_datetime_values
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
