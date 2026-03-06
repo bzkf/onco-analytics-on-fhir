@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.19.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.18.0...v2.19.0) (2026-03-06)
+
+
+### Features
+
+* pca merged plots ([#383](https://github.com/bzkf/onco-analytics-on-fhir/issues/383)) ([876f2d2](https://github.com/bzkf/onco-analytics-on-fhir/commit/876f2d204b8ec7813d501777493d85eeef1cb5ef))
+
+
+### Bug Fixes
+
+* adapted aml script ([#384](https://github.com/bzkf/onco-analytics-on-fhir/issues/384)) ([772c40f](https://github.com/bzkf/onco-analytics-on-fhir/commit/772c40f7592cffc1de8f32e7abdbcb08955d3245))
+
+
+### Miscellaneous Chores
+
+* **deps:** update docker.io/trinodb/trino docker tag to v479 ([#378](https://github.com/bzkf/onco-analytics-on-fhir/issues/378)) ([9b3329c](https://github.com/bzkf/onco-analytics-on-fhir/commit/9b3329c4d33c671cd8fa0f119bc0e87f3260566d))
+* **deps:** update github-actions ([84b4339](https://github.com/bzkf/onco-analytics-on-fhir/commit/84b4339c881c6ea998e76292ac3ca4231228af79))
+* **deps:** update github-actions (major) ([#379](https://github.com/bzkf/onco-analytics-on-fhir/issues/379)) ([84b4339](https://github.com/bzkf/onco-analytics-on-fhir/commit/84b4339c881c6ea998e76292ac3ca4231228af79))
+
+
+### CI/CD
+
+* run analytics-on-fhir in ci ([#361](https://github.com/bzkf/onco-analytics-on-fhir/issues/361)) ([9a45c2b](https://github.com/bzkf/onco-analytics-on-fhir/commit/9a45c2b83749b781ae0d6cb950ff436b2035828f))
+
 ## [2.18.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.17.0...v2.18.0) (2026-03-03)
 
 
