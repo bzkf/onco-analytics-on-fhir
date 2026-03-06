@@ -220,7 +220,8 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
         case StudyNames.AML:
             aml = AMLStudy(settings)
             aml.extract_patients()
-            aml.join_with_drug_data()
+            if settings.aml.use_cytostatics_data:
+                aml.join_with_drug_data()
         case StudyNames.DQ:
             dq = DQStudy(settings)
             dq.run(data)
