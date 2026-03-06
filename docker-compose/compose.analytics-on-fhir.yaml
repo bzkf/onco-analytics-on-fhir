@@ -20,5 +20,8 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
       LOCATION: "${LOCATION:?}"
+      FHIR_BASE_URL: ${FHIR_BASE_URL}
+      FHIR_USER: ${FHIR_USER}
+      FHIR_PASSWORD: ${FHIR_PASSWORD}
     volumes:
       - ./opal-output:/home/nonroot/analytics-output/:rw
