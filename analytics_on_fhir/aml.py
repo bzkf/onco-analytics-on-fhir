@@ -118,8 +118,12 @@ class AMLStudy:
         )
 
         # merging patient + condition dataframes, removing duplicates, cleaning and saving merged_df
-        patient_df = condition_patient_df["Patient"].drop_duplicates(subset=["patient_id"])
-        condition_df = condition_patient_df["Condition"]
+        if len(condition_patient_df) > 0:
+            patient_df = condition_patient_df["Patient"].drop_duplicates(subset=["patient_id"])
+            condition_df = condition_patient_df["Condition"]
+        else:
+            logger.info("Found no patients to given AML ICD codes.")
+            return
 
         condition_df["condition_patient_reference_without_type"] = condition_df[
             "condition_patient_reference"
