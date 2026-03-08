@@ -47,7 +47,7 @@ class AMLSettings:
     # absolute path to the input csv for cytostatic drug data
     csv_input_dir: str = "/home/onco-analytics-on-fhir/analytics-on-fhir/zenzy_data.csv"
     # column where the patient ids from input csv match column 'patient_mrn' in aml_all_patients.csv
-    csv_patient_column: str = "KIS-Patienten-ID"  
+    csv_patient_column: str = "KIS-Patienten-ID"
     use_cytostatics_data: bool = False
 
 

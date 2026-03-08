@@ -74,9 +74,9 @@ class PyRateQuery:
             )
 
     def extract_conditions(self, patient_list, suffix):
-        
+
         logger.info("input patient count: {}", len(patient_list))
-        
+
         all_conditions = []
 
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
@@ -106,22 +106,22 @@ class PyRateQuery:
                 ],
             )
 
-            all_conditions.append(condition_df_chunk)
+            if len(condition_df_chunk) > 0:
+                all_conditions.append(condition_df_chunk)
 
-        condition_df = pd.concat(all_conditions, ignore_index=True)
-        
-        condition_df.drop(columns=["subject_list"], inplace=True)
-        condition_df.to_csv(os.path.join(self.output_dir, "df_mii_conditions"+suffix+".csv"), 
-            index=False)
+        if all_conditions:
+            condition_df = pd.concat(all_conditions, ignore_index=True)
+            condition_df.drop(columns=["subject_list"], inplace=True)
+            condition_df.to_csv(
+                os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".csv"), index=False
+            )
 
-        logger.info("condition_df size: {}", condition_df.count())
-        self.post_process_values(condition_df,
-            name = "conditions", 
-            columns = ["icd_code"]
-        )
-        
+            logger.info("condition_df size: {}", condition_df.count())
+            self.post_process_values(condition_df, name="conditions", columns=["icd_code"])
+        else:
+            logger.info("Found no conditions to given patients.")
+
         self.extract_labs(patient_list, suffix)
-
 
     def extract_labs(self, patient_list, suffix):
         all_labs = []
@@ -155,20 +155,22 @@ class PyRateQuery:
                 ],
             )
 
-            all_labs.append(lab_df_chunk)
+            if len(lab_df_chunk) > 0:
+                all_labs.append(lab_df_chunk)
 
-        lab_df = pd.concat(all_labs, ignore_index=True)
-        lab_df.to_csv(
-            os.path.join(self.output_dir, "df_mii_labs"+suffix+".csv"), index=False
-        )
+        if all_labs:
+            lab_df = pd.concat(all_labs, ignore_index=True)
+            lab_df.to_csv(
+                os.path.join(self.output_dir, "df_mii_labs" + suffix + ".csv"), index=False
+            )
 
-        logger.info("lab_df size: {}", lab_df.count())
+            logger.info("lab_df size: {}", lab_df.count())
 
-        self.post_process_values(
-            lab_df, 
-            name = "labs", 
-            columns = ["loinc_code", "loinc_display", "lab_unit"]
-        )
+            self.post_process_values(
+                lab_df, name="labs", columns=["loinc_code", "loinc_display", "lab_unit"]
+            )
+        else:
+            logger.info("Found no lab values to given patients.")
 
     def post_process_values(self, df, name, columns):
 
@@ -176,10 +178,12 @@ class PyRateQuery:
             df.astype(str)
             .groupby(columns)
             .size()
-            .reset_index(name="num_"+name)
-            .sort_values(by="num_"+name, ascending=False)
+            .reset_index(name="num_" + name)
+            .sort_values(by="num_" + name, ascending=False)
         )
 
-        processed.to_csv(os.path.join(self.output_dir, "df_mii_"+name+"_counts.csv"), index=False)
+        processed.to_csv(
+            os.path.join(self.output_dir, "df_mii_" + name + "_counts.csv"), index=False
+        )
 
         return
