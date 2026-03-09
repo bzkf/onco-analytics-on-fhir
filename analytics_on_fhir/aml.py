@@ -201,7 +201,7 @@ class AMLStudy:
 
         cytostatics_patient_ids = (
             pd.read_csv(
-                os.path.join(self.settings.aml.csv_input_dir),
+                os.path.join(self.settings.aml.csv_input_file),
                 sep=";",
                 encoding="latin1",
                 engine="python",
