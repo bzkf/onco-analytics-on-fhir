@@ -159,6 +159,7 @@ jobs:
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Observation'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Condition'
+          java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.AdverseEvent'
 
       - name: Run dq study
         working-directory: docker-compose/
