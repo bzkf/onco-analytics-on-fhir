@@ -173,10 +173,7 @@ class StudyProtocolPCa1:
         )
 
         # 6) aggregate local csvs and save
-        pandas_df_therapy_sequence_first_line_4_months = (
-            df_therapy_sequence_first_line_4_months.toPandas()
-        )
-        aggregate_local_csvs(pandas_df_therapy_sequence_first_line_4_months)
+        aggregate_local_csvs(df_therapy_sequence_first_line_4_months)
 
         logger.info("StudyProtocolPCa1 pipeline finished")
 
