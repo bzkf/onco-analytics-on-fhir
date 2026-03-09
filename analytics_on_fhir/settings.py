@@ -44,8 +44,10 @@ class FHIRServerSettings:
 
 @ts.settings
 class AMLSettings:
-    csv_input_dir: str = "/home/onco-analytics-on-fhir/onco-analytics-on-fhir/analytics-on-fhir/zenzy_data.csv"  # absolute path to the input csv for cytostatic drug data
-    csv_patient_column: str = "KIS-Patienten-ID"  # column where the patient ids from the input csv match the column 'patient_mrn' in aml_all_patients.csv
+    # absolute path to the input csv for cytostatic drug data
+    csv_input_file: str = "/home/onco-analytics-on-fhir/analytics-on-fhir/zenzy_data.csv"
+    # column where the patient ids from input csv match column 'patient_mrn' in aml_all_patients.csv
+    csv_patient_column: str = "KIS-Patienten-ID"
     use_cytostatics_data: bool = False
 
 

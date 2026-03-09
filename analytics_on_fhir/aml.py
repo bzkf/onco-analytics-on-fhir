@@ -6,7 +6,6 @@ from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
 from settings import Settings
-from utils import clean_datetime_values
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
@@ -21,7 +20,7 @@ DATA_DICTIONARY = {
         "deceased_boolean": "Boolean flag indicating whether the patient is deceased",
         "deceased_dateTime": "Recorded date/time of patient death",
         "deceased": "Derived column: true if deceased_boolean or deceased_dateTime is set",
-        "patient_mrn": "Medical Record Number of the patient (MR identifier from Patient.identifier)",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from Patient.identifier)",
         "birth_date": "Patient birth date",
         "gender": "Administrative gender of the patient",
     },
@@ -152,9 +151,7 @@ class AMLStudy:
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
 
-        # clean dateTime values
-        merged_df_cleaned = clean_datetime_values(df=merged_df, column="diagnosis_recordedDate")
-        merged_df_cleaned.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
+        merged_df.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
         logger.info("merged_df size: {}", merged_df.count())
         logger.info("patient_df size: {}", patient_df.count())
@@ -204,7 +201,7 @@ class AMLStudy:
 
         cytostatics_patient_ids = (
             pd.read_csv(
-                os.path.join(self.settings.aml.csv_input_dir),
+                os.path.join(self.settings.aml.csv_input_file),
                 sep=";",
                 encoding="latin1",
                 engine="python",
