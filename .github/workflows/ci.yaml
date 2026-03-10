@@ -144,13 +144,15 @@ jobs:
         run: |
           docker compose --env-file=.demo.env -f compose.pseudonymization.yaml up -d
           # not a great idea.
-          sleep 60
+          sleep 120
 
       - name: load the resources into Delta Lake tables
         working-directory: docker-compose/
         run: |
           docker compose --project-name=docker-compose --env-file=.demo.env -f compose.fhir-to-delta.yaml -f trino-pathling/compose.yaml --project-directory trino-pathling/ up -d
           # once again, a bad idea
+          # TODO: instead we could wait for the trino cli
+          # to count the expected number of records in the tables before proceeding
           sleep 120
 
       - name: query them using trino
