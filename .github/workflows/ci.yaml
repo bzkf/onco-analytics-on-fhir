@@ -156,6 +156,8 @@ jobs:
           MAX_RETRIES=30
           SLEEP=10
 
+          curl -LSs -o trino-cli.jar https://github.com/trinodb/trino/releases/download/479/trino-cli-479
+
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Attempt $i/$MAX_RETRIES"
 
@@ -179,7 +181,6 @@ jobs:
 
       - name: query them using trino
         run: |
-          curl -LSs -o trino-cli.jar https://github.com/trinodb/trino/releases/download/479/trino-cli-479
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Observation'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Condition'
