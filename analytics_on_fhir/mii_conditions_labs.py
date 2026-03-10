@@ -121,8 +121,6 @@ class PyRateQuery:
         else:
             logger.info("Found no conditions to given patients.")
 
-        self.extract_labs(patient_list, suffix)
-
     def extract_labs(self, patient_list, suffix):
         all_labs = []
 

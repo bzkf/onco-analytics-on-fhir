@@ -1,4 +1,5 @@
 from loguru import logger
+from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
@@ -69,8 +70,17 @@ class StudyProtocolD:
 
         # 4) 2mals vs single (1mal)
         df_2_mals = create_2_mals_df(df_clean)
+        pandas_df_2_mals = df_2_mals.toPandas()
+        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
+        df_list_2_mals.drop_duplicates(inplace=True)
+        self.extract_mii_conditions(df_list_2_mals, suffix="_2_mals")
         save_final_df(df_2_mals, self.settings, suffix="2_malignancies")
+
         df_1_mal = create_1_mal_df(df_clean)  # use later for comparisons maybe
+        pandas_df_1_mal = df_1_mal.toPandas()
+        df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
+        df_list_1_mal.drop_duplicates(inplace=True)
+        self.extract_mii_conditions(df_list_1_mal, suffix="_1_mal")
 
         # 5) pivot malignancy 2, union with single
         # use this later for comparison between groups: 1 mal and 2 mal
@@ -134,6 +144,11 @@ class StudyProtocolD:
         df = df.filter(F.col("age_at_diagnosis") > 0)
 
         return df
+
+    def extract_mii_conditions(self, df_list, suffix):
+        logger.info("start PyRate query for conditions.")
+        query = PyRateQuery(self.settings)
+        query.extract_conditions(df_list, suffix)
 
     def plot_pairs(self, df: DataFrame, df_name: str) -> DataFrame:
         plot_pair_bubble_gender(
