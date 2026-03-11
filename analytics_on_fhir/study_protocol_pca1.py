@@ -228,6 +228,7 @@ class StudyProtocolPCa1:
         logger.info("start PyRate query for conditions + labs.")
         query = PyRateQuery(self.settings)
         query.extract_conditions(df_list_c61, suffix)
+        query.extract_labs(df_list_c61, suffix)
 
     def merged_plots(self):
         # führe alle einzel csvs zu gesamtheitlichen BZKF csvs zusammen
