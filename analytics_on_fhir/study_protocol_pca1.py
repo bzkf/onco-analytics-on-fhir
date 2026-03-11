@@ -140,12 +140,12 @@ class StudyProtocolPCa1:
         self.df_c61_clean = df_c61_clean
         save_final_df(df_c61_clean, self.settings, suffix="df_c61_clean")
 
-        # Nebendiagnosen: extract mii conditions + labs for c61 pats
+        # 4) Nebendiagnosen: extract mii conditions + labs for c61 pats
         pandas_df_pseudonyms_c61 = df_c61.toPandas()
         df_list_c61 = pandas_df_pseudonyms_c61["patient_resource_id"].drop_duplicates().dropna()
         self.extract_mii_conditions_labs(df_list_c61, suffix="")
 
-        # 4) therapy sequence all therapies - for REACTO
+        # 5) therapy sequence all therapies - for REACTO
         # df_therapy_sequence = union_sort_pivot_join(
         #     df_c61_clean,
         #     self.df_ops_grouped,
@@ -155,7 +155,7 @@ class StudyProtocolPCa1:
         # save_final_df(df_therapy_sequence, self.settings, suffix="df_therapy_sequence")
         # self.generate_sequence_csv(df_therapy_sequence)
 
-        # 5) first line therapy - within 4 months of diagnosis
+        # 6) first line therapy - within 4 months of diagnosis
         df_therapy_sequence_first_line_4_months = union_sort_pivot_join(
             df_c61_clean,
             self.df_ops_grouped,
@@ -172,8 +172,8 @@ class StudyProtocolPCa1:
             suffix="therapy_sequence_first_line_4_months",
         )
 
-        # 6) aggregate local csvs and save
-        aggregate_local_csvs(df_therapy_sequence_first_line_4_months)
+        # 7) aggregate local csvs and save
+        aggregate_local_csvs(df_therapy_sequence_first_line_4_months, self.settings)
 
         logger.info("StudyProtocolPCa1 pipeline finished")
 
