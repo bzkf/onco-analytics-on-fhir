@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.20.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.19.2...v2.20.0) (2026-03-11)
+
+
+### Features
+
+* include pyrate query for mii resources in study protocol d ([#392](https://github.com/bzkf/onco-analytics-on-fhir/issues/392)) ([5ae9356](https://github.com/bzkf/onco-analytics-on-fhir/commit/5ae9356c173cbe3197cd20c0f8d9ae42bfb64875))
+* pyrate script for pca study ([#389](https://github.com/bzkf/onco-analytics-on-fhir/issues/389)) ([a0c0cd6](https://github.com/bzkf/onco-analytics-on-fhir/commit/a0c0cd6833a3689de44a5ff7b6907038c1f7beec))
+
+
+### Bug Fixes
+
+* pca1 - pandas pyrate mix up  ([#393](https://github.com/bzkf/onco-analytics-on-fhir/issues/393)) ([f064b10](https://github.com/bzkf/onco-analytics-on-fhir/commit/f064b102f700ef9e97500a6cf7d41818ee058d08))
+
 ## [2.19.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.19.1...v2.19.2) (2026-03-06)
 
 
