@@ -144,21 +144,47 @@ jobs:
         run: |
           docker compose --env-file=.demo.env -f compose.pseudonymization.yaml up -d
           # not a great idea.
-          sleep 60
+          sleep 120
 
       - name: load the resources into Delta Lake tables
         working-directory: docker-compose/
         run: |
           docker compose --project-name=docker-compose --env-file=.demo.env -f compose.fhir-to-delta.yaml -f trino-pathling/compose.yaml --project-directory trino-pathling/ up -d
-          # once again, a bad idea
-          sleep 120
+
+      - name: Wait for Trino query to return results
+        run: |
+          MAX_RETRIES=30
+          SLEEP=10
+
+          curl -LSs -o trino-cli.jar https://github.com/trinodb/trino/releases/download/479/trino-cli-479
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i/$MAX_RETRIES"
+
+            OUTPUT=$(java -jar trino-cli.jar --execute "SELECT count(*) FROM fhir.default.AdverseEvent" 2>&1) && SUCCESS=true || SUCCESS=false
+
+            echo "$OUTPUT"
+
+            if [ "$SUCCESS" = true ] && [[ "$OUTPUT" =~ [0-9]+ ]]; then
+              echo "Query succeeded with result."
+              break
+            fi
+
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "Query failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+
+            echo "Retrying in $SLEEP seconds..."
+            sleep $SLEEP
+          done
 
       - name: query them using trino
         run: |
-          curl -LSs -o trino-cli.jar https://github.com/trinodb/trino/releases/download/479/trino-cli-479
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Patient'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Observation'
           java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.Condition'
+          java -jar trino-cli.jar --debug --execute 'SELECT * FROM fhir.default.AdverseEvent'
 
       - name: Run dq study
         working-directory: docker-compose/
