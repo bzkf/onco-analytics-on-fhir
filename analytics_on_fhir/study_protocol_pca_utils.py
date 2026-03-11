@@ -1032,7 +1032,6 @@ def plot_therapy_combinations(pdf, df_description_for_title, settings, year_min=
 
 
 def aggregate_diagnosis_year_gleason(df, settings):
-    print("hzi")
     df["asserted_date"] = pd.to_datetime(df["asserted_date"], errors="coerce")
     df["diagnosis_year"] = df["asserted_date"].dt.year
 
@@ -1226,8 +1225,10 @@ def aggregate_therapy_combinations_with_metastasis(df, cohort_rest):
     return pivot.reset_index()
 
 
-def aggregate_local_csvs(pandas_df_therapy_sequence_first_line_4_months, settings):
-    # rest hier unten auslagern
+def aggregate_local_csvs(df_therapy_sequence_first_line_4_months, settings):
+    pandas_df_therapy_sequence_first_line_4_months = (
+        df_therapy_sequence_first_line_4_months.toPandas()
+    )
     # diagnosis year gleason
     df_diagnosis_year = aggregate_diagnosis_year_gleason(
         pandas_df_therapy_sequence_first_line_4_months, settings
@@ -1243,13 +1244,13 @@ def aggregate_local_csvs(pandas_df_therapy_sequence_first_line_4_months, setting
     print(df_age_gleason)
 
     # aggregate therapies
-    df_therapy_sequence_first_line_4_months_cohort = pandas_df_therapy_sequence_first_line_4_months[
-        pandas_df_therapy_sequence_first_line_4_months["cohort_flag"] == 1
-    ]
+    df_therapy_sequence_first_line_4_months_cohort = df_therapy_sequence_first_line_4_months.filter(
+        F.col("cohort_flag") == 1
+    )
 
-    df_therapy_sequence_first_line_4_months_rest = pandas_df_therapy_sequence_first_line_4_months[
-        pandas_df_therapy_sequence_first_line_4_months["cohort_flag"] == 0
-    ]
+    df_therapy_sequence_first_line_4_months_rest = df_therapy_sequence_first_line_4_months.filter(
+        F.col("cohort_flag") == 0
+    )
     # to do - vereinheitlichen, keine Zeit gehabt, mitgewachsen
     aggregate_therapy_combinations(df_therapy_sequence_first_line_4_months_cohort, "cohort")
     aggregate_therapy_combinations(df_therapy_sequence_first_line_4_months_rest, "rest")
