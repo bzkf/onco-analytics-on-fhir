@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.21.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.20.0...v2.21.0) (2026-03-12)
+
+
+### Features
+
+* **dq:** added adverseevent text mappings ([#391](https://github.com/bzkf/onco-analytics-on-fhir/issues/391)) ([18bc665](https://github.com/bzkf/onco-analytics-on-fhir/commit/18bc6659f17e9ba7a83e6ca7d6de4a3d9d014aef))
+* read zenzy csv from s3 ([#396](https://github.com/bzkf/onco-analytics-on-fhir/issues/396)) ([814383b](https://github.com/bzkf/onco-analytics-on-fhir/commit/814383b30e12ab75b0af8917bf7696fbb1a28b42))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump tornado from 6.5.4 to 6.5.5 ([#395](https://github.com/bzkf/onco-analytics-on-fhir/issues/395)) ([064b318](https://github.com/bzkf/onco-analytics-on-fhir/commit/064b3182fd3a861141964224525247196f588ab5))
+
 ## [2.20.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.19.2...v2.20.0) (2026-03-11)
 
 
