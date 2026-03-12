@@ -156,6 +156,10 @@ class AMLStudy:
         logger.info("merged_df size: {}", merged_df.count())
         logger.info("patient_df size: {}", patient_df.count())
 
+        patient_list = merged_df["condition_patient_reference"]
+        patient_list.drop_duplicates(inplace=True)
+        self.extract_labs(patient_list=patient_list)
+
     def extract_labs(self, patient_list):
         all_labs = []
 
