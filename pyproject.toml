@@ -10,7 +10,7 @@ dependencies = [
     "typed-settings[cattrs,dotenv]==25.3.0",
     "loguru==0.7.3",
     "graphviz==0.21",
-    "pandas==2.3.3",
+    "pandas==3.0.1",
     "polars==1.38.1",
     "matplotlib==3.10.8",
     "seaborn==0.13.2",
