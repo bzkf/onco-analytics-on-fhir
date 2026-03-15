@@ -4,12 +4,12 @@ dependencies:
   version: 0.26.0
 - name: stream-processors
   repository: https://miracum.github.io/charts
-  version: 1.11.2
+  version: 1.11.4
 - name: hapi-fhir-jpaserver
   repository: https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-  version: 0.21.0
+  version: 0.22.0
 - name: fhir-gateway
   repository: https://miracum.github.io/charts
-  version: 10.0.10
-digest: sha256:38044f0300eacdb492c4eb931397f20eab03be039446445f1161f6e64ccb7c2c
-generated: "2026-03-06T08:59:00.065664355Z"
+  version: 10.0.17
+digest: sha256:d9aeeb967499c50800dadc795f8fed45f9613d2b861652c9e8b7a8ecea941eab
+generated: "2026-03-15T01:50:21.373408458Z"
