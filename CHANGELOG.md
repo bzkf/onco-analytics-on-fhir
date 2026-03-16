@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.21.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.0...v2.21.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* perform lab extraction for all aml patients ([#397](https://github.com/bzkf/onco-analytics-on-fhir/issues/397)) ([9bbf649](https://github.com/bzkf/onco-analytics-on-fhir/commit/9bbf64901824fe3189a66970e1b81e6cec3af469))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump pyjwt from 2.11.0 to 2.12.0 ([#398](https://github.com/bzkf/onco-analytics-on-fhir/issues/398)) ([f1a7af2](https://github.com/bzkf/onco-analytics-on-fhir/commit/f1a7af2297a2619d16b760d1a4f357b9cb714d12))
+
+
+### CI/CD
+
+* corrected tag for action ([#401](https://github.com/bzkf/onco-analytics-on-fhir/issues/401)) ([c9d3d9e](https://github.com/bzkf/onco-analytics-on-fhir/commit/c9d3d9e255de579734adeea64df09edfe37be69f))
+
 ## [2.21.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.20.0...v2.21.0) (2026-03-12)
 
 
