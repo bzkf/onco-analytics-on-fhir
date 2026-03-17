@@ -1,6 +1,9 @@
+import subprocess
 from functools import reduce
+from pathlib import Path
 
 import matplotlib as mpl
+import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
@@ -615,3 +618,37 @@ def plot_pair_boxplot_horizontal_custom(
         save_plot(fig, settings, full_plot_name)
 
     plt.show()
+
+
+def run_r_script(script_path: str):
+    logger.info("running run_r_script, starting subprocess")
+    result = subprocess.run(["Rscript", script_path], capture_output=True, text=True)
+
+    print(result.stdout)
+    print(result.stderr)
+
+    if result.returncode != 0:
+        raise RuntimeError("R script failed")
+
+
+def show_r_plots(directory: str) -> None:
+    plot_dir = Path(directory)
+
+    if not plot_dir.exists():
+        print(f"Directory not found: {plot_dir}")
+        return
+
+    png_files = sorted(plot_dir.glob("*.png"))
+
+    if not png_files:
+        print("No PNG plots found.")
+        return
+
+    for file in png_files:
+        img = mpimg.imread(file)
+
+        plt.figure(figsize=(8, 6))
+        plt.imshow(img)
+        plt.axis("off")
+        plt.title(file.name)
+        plt.show()

@@ -1,3 +1,5 @@
+import os
+
 from loguru import logger
 from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
@@ -12,9 +14,12 @@ from study_protocol_d_utils import (
     pivot_multi_single,
     plot_pair_boxplot_horizontal_custom,
     plot_pair_bubble_gender,
+    run_r_script,
+    show_r_plots,
 )
 from utils import (
     FHIR_SYSTEM_PRIMAERTUMOR,
+    HERE,
     cast_study_dates,
     compute_age,
     extract_df_study_protocol_a_d_mii,
@@ -119,6 +124,9 @@ class StudyProtocolD:
             self.plot_age(df_plot, df_name)
             self.plot_months_between(df_plot, df_name)
 
+        # run R metastasis script
+        # self.run_r_analysis()
+
         logger.info("StudyProtocolD pipeline finished")
 
     def prepare(self, df: DataFrame) -> DataFrame:
@@ -195,3 +203,10 @@ class StudyProtocolD:
             var_name_outliers=["outliers_months_between"],
             show_entity1=False,
         )
+
+    def run_r_analysis(self):
+        logger.info("running r analysis")
+        script = os.path.join(HERE, "metastasis_analysis.R")
+        logger.info("script = {}", script)
+        run_r_script(script)
+        show_r_plots(os.path.join(HERE, "results/study_protocol_d/plots_r"))
