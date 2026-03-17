@@ -75,6 +75,17 @@ def save_final_df(pyspark_df, settings, suffix=""):
     logger.info("end save pyspark_df")
 
 
+def save_final_df_parquet(pyspark_df, settings, suffix=""):
+    base_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    parquet_dir = os.path.join(base_dir, "parquet")
+
+    os.makedirs(parquet_dir, exist_ok=True)
+
+    final_path = os.path.join(parquet_dir, f"df_{suffix}.parquet")
+
+    pyspark_df.coalesce(1).write.mode("overwrite").parquet(final_path)
+
+
 def save_plot(plot: Figure, settings, plot_name: str = "") -> None:
     logger.info("start save plot")
     output_dir = os.path.join(settings.results_directory_path, settings.study_name.value, "plots")
@@ -105,6 +116,26 @@ def compute_age(df: DataFrame) -> DataFrame:
         "age_at_diagnosis",
         F.round((F.datediff(df["asserted_date"], df["birthdate"]) / 365.25), 2),
     ).drop("birthdate")
+    return df
+
+
+def compute_month_diffs_for_all_date_cols(df: DataFrame) -> DataFrame:
+    # Alle Spalten mit "date", außer asserted_date und Spalten mit "precision"
+    date_cols = [
+        c
+        for c in df.columns
+        if "date" in c.lower() and c != "asserted_date" and "precision" not in c.lower()
+    ]
+
+    for date_col in date_cols:
+        df = df.withColumn(
+            f"months_between_asserted_{date_col}",
+            F.round(F.months_between(F.col(date_col), F.col("asserted_date")), 2),
+        )
+
+    # TO DO nachdem das funktionier
+    # df = df.drop(*date_cols)
+
     return df
 
 
@@ -173,6 +204,11 @@ def add_is_deceased(df):
     )
 
 
+def drop_identifying_cols(df: DataFrame, identifying_cols: list[str]) -> DataFrame:
+    cols_to_drop = [c for c in identifying_cols if c in df.columns]
+    return df.drop(*cols_to_drop)
+
+
 def map_gleason_sct_to_score(df, gleason_sct_col="gleason_sct", out_col="gleason_score"):
     gleason_map_expr = create_map(
         lit("1279715000"),
@@ -196,6 +232,328 @@ def map_gleason_sct_to_score(df, gleason_sct_col="gleason_sct", out_col="gleason
     )
 
     return df.withColumn(out_col, gleason_map_expr[col(gleason_sct_col)])
+
+
+def extract_conditions_patients_death(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    spark: SparkSession,
+    settings,
+):
+    logger.info("logger start, extract_df_study_protocol_a_d_mii.")
+    patients = data.view(
+        "Patient",
+        select=[
+            {
+                "column": [
+                    {
+                        "path": "getResourceKey()",
+                        "name": "patient_resource_id",
+                        "description": "Patient Resource Key",
+                    },
+                    {
+                        "path": "identifier.value",
+                        "name": "patid_pseudonym",
+                        "description": "Patient pseudonym",
+                    },
+                    {
+                        "path": "birthDate",
+                        "name": "birthdate",
+                        "description": "Birth Date",
+                    },
+                    {
+                        "path": "gender",
+                        "name": "gender",
+                        "description": "Gender",
+                    },
+                    {
+                        "path": "deceased.ofType(dateTime)",
+                        "name": "deceased_datetime",
+                        "description": "Deceased DateTime",
+                    },
+                    {
+                        "path": "deceased.ofType(boolean)",
+                        "name": "deceased_boolean",
+                        "description": "Deceased Boolean",
+                    },
+                ]
+            }
+        ],
+    )
+
+    patients_count = patients.count()
+    logger.info("patients_count = {}", patients_count)
+    patients.show()
+
+    conditions = data.view(
+        "Condition",
+        select=[
+            {
+                "column": [
+                    {
+                        "path": "getResourceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "FHIR Profile URL",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
+                    },
+                    {
+                        "description": "Asserted Date",
+                        "path": f"extension('{FHIR_SYSTEMS_CONDITION_ASSERTED_DATE}')"
+                        + ".value.ofType(dateTime)",
+                        "name": "asserted_date",
+                    },
+                    {
+                        "description": "Recorded Date",
+                        "path": "recordedDate",
+                        "name": "recorded_date",
+                    },
+                    {
+                        "path": (f"code.coding.where(system = '{FHIR_SYSTEM_ICD10}').code"),
+                        "name": "icd10_code",
+                    },
+                    {
+                        "path": "subject.getReferenceKey()",
+                        "name": "condition_patient_resource_id",
+                    },
+                ]
+            }
+        ],
+    )
+
+    conditions_count = conditions.count()
+    logger.info("conditions_count = {}", conditions_count)
+    conditions.show()
+
+    conditions_patients = conditions.alias("c").join(
+        patients.alias("p"),
+        col("c.condition_patient_resource_id") == col("p.patient_resource_id"),
+        "left",
+    )
+
+    conditions_patients_count = conditions_patients.count()
+
+    logger.info("conditions_patients_count = {}", conditions_patients_count)
+    conditions_patients.show()
+
+    observation_death = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "path": "getResourceKey()",
+                        "name": "observation_resource_id",
+                    },
+                    {
+                        "path": (
+                            f"value.ofType(CodeableConcept)"
+                            f".coding.where(system = '{FHIR_SYSTEM_ICD10}')"
+                            f".code"
+                        ),
+                        "name": "death_cause_icd10",
+                    },
+                    {
+                        "path": (f"interpretation.coding.where(system = '{FHIR_SYSTEM_JNU}').code"),
+                        "name": "death_cause_tumor",
+                    },
+                    {
+                        "path": "effective.ofType(dateTime)",
+                        "name": "date_death",
+                    },
+                    {
+                        "path": "subject.getReferenceKey()",
+                        "name": "observation_death_patient_resource_id",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "path": (
+                    f"code.coding"
+                    f""".where(system = '{FHIR_SYSTEM_SCT}' and
+                    code = '{SCT_CODE_DEATH}')"""
+                    f".exists()"
+                )
+            }
+        ],
+    )
+
+    observation_death_count = observation_death.count()
+
+    logger.info("observation_death_count = {}", observation_death_count)
+    observation_death = observation_death.orderBy("observation_death_patient_resource_id")
+    observation_death.show()
+
+    # show duplicates
+    duplicates = (
+        observation_death.groupBy("observation_death_patient_resource_id")
+        .count()
+        .filter(col("count") > 1)
+    )
+
+    observation_death_dupes = observation_death.join(
+        duplicates.select("observation_death_patient_resource_id"),
+        on="observation_death_patient_resource_id",
+        how="inner",
+    )
+    observation_death_dupes_count = observation_death_dupes.count()
+    logger.info("observation_death_dupes_count = {}", observation_death_dupes_count)
+    observation_death_dupes.orderBy("observation_death_patient_resource_id").show(100)
+
+    # count distinct patients with death observation
+    observation_death_distinct_patients_count = (
+        observation_death.select("observation_death_patient_resource_id").distinct().count()
+    )
+
+    logger.info(
+        "observation_death_distinct_patients_count = {}",
+        observation_death_distinct_patients_count,
+    )
+
+    # ACHTUNG WORKAROUND weil doppelte Todesobservations - REMOVE
+    # Vorgehen:
+    # ich würd an der Stelle dann nach patient_resource_id, death_cause_icd10 und
+    # date_death gruppieren und death_cause_tumor dann die falschen "N" nochmal
+    # nachbearbeiten basierend auf death_cause_icd10
+    observation_death = observation_death.groupBy(
+        "observation_death_patient_resource_id",
+        "death_cause_icd10",
+        "date_death",
+    ).agg(
+        first("observation_resource_id", ignorenulls=True).alias("observation_resource_id"),
+        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
+    )
+
+    tumor_flag_fix_count = observation_death.filter(
+        (col("death_cause_icd10").startswith("C")) & (col("death_cause_tumor").isin("U", "N"))
+    ).count()
+
+    logger.info(
+        "death_cause_tumor auf 'J' gesetzt bei {} Datensätzen",
+        tumor_flag_fix_count,
+    )
+
+    observation_death.orderBy("observation_death_patient_resource_id").show(100)
+    observation_death_count = observation_death.count()
+    logger.info("observation_death_count after grouping = {}", observation_death_count)
+    # count distinct patients with death observation
+    observation_death_distinct_patients_count = (
+        observation_death.select("observation_death_patient_resource_id").distinct().count()
+    )
+
+    logger.info(
+        "observation_death_distinct_patients_count after grouping = {}",
+        observation_death_distinct_patients_count,
+    )
+
+    # dupes after grouping
+    # show duplicates
+    duplicates = (
+        observation_death.groupBy("observation_death_patient_resource_id")
+        .count()
+        .filter(col("count") > 1)
+    )
+
+    observation_death_dupes = observation_death.join(
+        duplicates.select("observation_death_patient_resource_id"),
+        on="observation_death_patient_resource_id",
+        how="inner",
+    )
+    observation_death_dupes_count = observation_death_dupes.count()
+    logger.info(
+        "observation_death_dupes_count after grouping = {}",
+        observation_death_dupes_count,
+    )
+    observation_death_dupes.orderBy("observation_death_patient_resource_id").show(100)
+
+    # concat multiple todesursachen icd10 into one col , seperated
+    death_cause_icd10_per_patient = (
+        observation_death.filter(col("death_cause_icd10").isNotNull())
+        .groupBy("observation_death_patient_resource_id")
+        .agg(
+            concat_ws("|", F.sort_array(collect_set("death_cause_icd10"))).alias(
+                "death_cause_icd10"
+            )
+        )
+    )
+
+    # group again by observation_death_patient_resource_id and keep first non null
+    observation_death_patient = observation_death.groupBy(
+        "observation_death_patient_resource_id"
+    ).agg(
+        first("date_death", ignorenulls=True).alias("date_death"),
+        first("observation_resource_id", ignorenulls=True).alias("observation_resource_id"),
+        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
+    )
+
+    # join back comma seperated death causes
+    observation_death_patient = observation_death_patient.join(
+        death_cause_icd10_per_patient,
+        on="observation_death_patient_resource_id",
+        how="left",
+    )
+
+    observation_death_patient_count = observation_death_patient.count()
+    logger.info(
+        "observation_death_patient_count after grouping 2 = {}",
+        observation_death_patient_count,
+    )
+
+    observation_death_patient.orderBy("observation_death_patient_resource_id").show(100)
+
+    observation_death_patient.filter(col("death_cause_icd10").contains("|")).show(
+        100, truncate=False
+    )
+
+    # join death observations to conditions_patients
+    conditions_patients_death = (
+        conditions_patients.alias("cp")
+        .join(
+            observation_death_patient.alias("od"),
+            col("cp.patient_resource_id") == col("od.observation_death_patient_resource_id"),
+            "left",
+        )
+        .select("cp.*", "od.*")
+    )
+
+    conditions_patients_death_count = conditions_patients_death.count()
+
+    logger.info(
+        "conditions_patients_death_count = {}",
+        conditions_patients_death_count,
+    )
+
+    # add consolidated is_deceased flag from death information patient/observation
+    conditions_patients_death = add_is_deceased(conditions_patients_death)
+    logger.info("Add is deceased flag.")
+    conditions_patients_death.show()
+
+    # add double_patid column for studyprotocol D
+    window_spec = Window.partitionBy("patid_pseudonym")
+
+    conditions_patients_death = conditions_patients_death.withColumn(
+        "double_patid",
+        when(count("patid_pseudonym").over(window_spec) > 1, 1).otherwise(0),
+    ).orderBy("patid_pseudonym")
+
+    conditions_patients_death_count = conditions_patients_death.count()
+    logger.info(
+        "added double_patid col for study protocol D, \
+        conditions_patients_death_count = {}",
+        conditions_patients_death_count,
+    )
+    double_patid_count = conditions_patients_death.filter(col("double_patid") == 1).count()
+
+    logger.info(
+        "Anzahl double_patid = 1 (Patienten mit mehreren Conditions) = {}",
+        double_patid_count,
+    )
+
+    return conditions_patients_death
 
 
 def extract_df_study_protocol_a_d_mii(
@@ -980,4 +1338,7 @@ def clean_datetime_values(df, column):
 
 def keep_only_first_diagnosis(df, columns):
     df_sorted = df.sort_values(by=columns + ["diagnosis_recordedDate"])
+    return df_sorted.drop_duplicates(subset=columns, keep="first")
+    return df_sorted.drop_duplicates(subset=columns, keep="first")
+    return df_sorted.drop_duplicates(subset=columns, keep="first")
     return df_sorted.drop_duplicates(subset=columns, keep="first")

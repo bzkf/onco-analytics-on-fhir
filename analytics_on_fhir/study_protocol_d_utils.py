@@ -1,6 +1,9 @@
+import subprocess
 from functools import reduce
+from pathlib import Path
 
 import matplotlib as mpl
+import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
@@ -10,6 +13,16 @@ from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from utils import save_plot
+
+IDENTIFYING_COLS = [
+    "meta_profile",
+    "condition_patient_resource_id",
+    "patient_resource_id",
+    "patid_pseudonym",
+    "deceased_boolean",
+    "observation_death_patient_resource_id",
+    "observation_resource_id",
+]
 
 
 def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_parent"):
@@ -120,11 +133,6 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
         "entity_or_parent",
         "age_at_diagnosis",
         "is_deceased",
-        "gleason_sct",
-        "gleason_date_first",
-        "gleason_score",
-        "metastasis_loc",
-        "metastasis_date_first",
     ]
     # sollte 2 sein
     max_index = df_2_mals.agg(F.max("malignancy_number")).collect()[0][0]
@@ -156,11 +164,6 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
         F.col("icd10_parent_code").alias("icd10_parent_code_1"),
         F.col("age_at_diagnosis").alias("age_at_diagnosis_1"),
         F.col("is_deceased").alias("is_deceased_1"),
-        F.col("gleason_sct").alias("gleason_sct_1"),
-        F.col("gleason_date_first").alias("gleason_date_first_1"),
-        F.col("gleason_score").alias("gleason_score_1"),
-        F.col("metastasis_loc").alias("metastasis_loc_1"),
-        F.col("metastasis_date_first").alias("metastasis_date_first_1"),
     )
 
     df_all_pivot = df_2_mals_final.unionByName(df_1_mal_selected, allowMissingColumns=True)
@@ -615,3 +618,37 @@ def plot_pair_boxplot_horizontal_custom(
         save_plot(fig, settings, full_plot_name)
 
     plt.show()
+
+
+def run_r_script(script_path: str):
+    logger.info("running run_r_script, starting subprocess")
+    result = subprocess.run(["Rscript", script_path], capture_output=True, text=True)
+
+    print(result.stdout)
+    print(result.stderr)
+
+    if result.returncode != 0:
+        raise RuntimeError("R script failed")
+
+
+def show_r_plots(directory: str) -> None:
+    plot_dir = Path(directory)
+
+    if not plot_dir.exists():
+        print(f"Directory not found: {plot_dir}")
+        return
+
+    png_files = sorted(plot_dir.glob("*.png"))
+
+    if not png_files:
+        print("No PNG plots found.")
+        return
+
+    for file in png_files:
+        img = mpimg.imread(file)
+
+        plt.figure(figsize=(8, 6))
+        plt.imshow(img)
+        plt.axis("off")
+        plt.title(file.name)
+        plt.show()
