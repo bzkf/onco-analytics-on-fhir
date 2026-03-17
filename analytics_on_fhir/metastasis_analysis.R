@@ -1,5 +1,5 @@
 ###############################################################
-# Author: Brigitte K�hnel
+# Author: Brigitte Kühnel
 # Date: 2026-02-12
 # Description: Zweittumor - pivot-based pipeline with extensive checks
 ###############################################################
@@ -111,30 +111,30 @@ get_entity_label <- function(icd) {
   fallback_3char <- paste0(letter, two_digits)
 
   if (letter == "C") {
-    if (!is.na(number) && number >= 0  && number <= 14) return("Lippe, Mundh�hle und Rachen")
-    if (!is.na(number) && number == 15) return("Speiser�hre")
+    if (!is.na(number) && number >= 0  && number <= 14) return("Lippe, Mundhöhle und Rachen")
+    if (!is.na(number) && number == 15) return("Speiseröhre")
     if (!is.na(number) && number == 16) return("Magen")
     if (!is.na(number) && number >= 18 && number <= 21) return("Dickdarm und Rektum")
     if (!is.na(number) && number == 22) return("Leber")
     if (!is.na(number) && number >= 23 && number <= 24) return("Gallenblase und Gallenwege")
-    if (!is.na(number) && number == 25) return("Bauchspeicheldr�se")
+    if (!is.na(number) && number == 25) return("Bauchspeicheldrüse")
     if (!is.na(number) && number == 32) return("Kehlkopf")
     if (!is.na(number) && number >= 33 && number <= 34) return("Trachea, Bronchien und Lunge")
     if (!is.na(number) && number == 43) return("Malignes Melanom der Haut")
     if (!is.na(number) && number == 50) return("Brust")
-    if (!is.na(number) && number == 53) return("Geb�rmutterhals")
-    if (!is.na(number) && number >= 54 && number <= 55) return("Geb�rmutterk�rper")
-    if (!is.na(number) && number == 56) return("Eierst�cke")
+    if (!is.na(number) && number == 53) return("Gebärmutterhals")
+    if (!is.na(number) && number >= 54 && number <= 55) return("Gebärmutterkörper")
+    if (!is.na(number) && number == 56) return("Eierstöcke")
     if (!is.na(number) && number == 61) return("Prostata")
     if (!is.na(number) && number == 62) return("Hoden")
     if (!is.na(number) && number == 64) return("Niere")
     if (!is.na(number) && number == 67) return("Harnblase")
     if (!is.na(number) && number >= 70 && number <= 72) return("Gehirn und zentrales Nervensystem")
-    if (!is.na(number) && number == 73) return("Schilddr�se")
+    if (!is.na(number) && number == 73) return("Schilddrüse")
     if (!is.na(number) && number == 81) return("Morbus Hodgkin")
     if (!is.na(number) && number >= 82 && number <= 88) return("Non-Hodgkin-Lymphome")
     if (!is.na(number) && number == 90) return("Plasmozytom")
-    if (!is.na(number) && number >= 91 && number <= 95) return("Leuk�mien")
+    if (!is.na(number) && number >= 91 && number <= 95) return("Leukämien")
     if (!is.na(number) && number == 96) return("Non-Hodgkin-Lymphome")
 
     # Not mapped -> return 3-character ICD (e.g., C49)
