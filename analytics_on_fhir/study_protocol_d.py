@@ -7,6 +7,7 @@ from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from study_protocol_d_utils import (
+    IDENTIFYING_COLS,
     aggregate_malignancy_pairs,
     create_1_mal_df,
     create_2_mals_df,
@@ -22,8 +23,11 @@ from utils import (
     HERE,
     cast_study_dates,
     compute_age,
-    extract_df_study_protocol_a_d_mii,
+    compute_month_diffs_for_all_date_cols,
+    drop_identifying_cols,
+    extract_conditions_patients_death,
     save_final_df,
+    save_final_df_parquet,
 )
 
 
@@ -46,7 +50,7 @@ class StudyProtocolD:
         self.year_max: int | None = None
 
     def extract(self) -> DataFrame:
-        df = extract_df_study_protocol_a_d_mii(self.pc, self.data, self.settings, self.spark)
+        df = extract_conditions_patients_death(self.pc, self.data, self.settings, self.spark)
         df = df.checkpoint(eager=True)
         logger.info("df count fruehere and primaertumor = {}", df.count())
 
@@ -71,27 +75,45 @@ class StudyProtocolD:
         self.year_min = df_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_clean.select(F.max(F.year("asserted_date"))).first()[0]
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
-        save_final_df(df_clean, self.settings, suffix="study_protocol_d")
+        df_clean_deidentified = drop_identifying_cols(df_clean, IDENTIFYING_COLS)
+        save_final_df(df_clean_deidentified, self.settings, suffix="study_protocol_d_deidentified")
+        save_final_df_parquet(
+            df_clean_deidentified, self.settings, suffix="study_protocol_d_deidentified"
+        )
 
         # 4) 2mals vs single (1mal)
         df_2_mals = create_2_mals_df(df_clean)
-        pandas_df_2_mals = df_2_mals.toPandas()
-        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
-        df_list_2_mals.drop_duplicates(inplace=True)
-        self.extract_mii_conditions(df_list_2_mals, suffix="_2_mals")
-        save_final_df(df_2_mals, self.settings, suffix="2_malignancies")
+        # pandas_df_2_mals = df_2_mals.toPandas()
+        # df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
+        # df_list_2_mals.drop_duplicates(inplace=True)
+        # self.extract_mii_conditions(df_list_2_mals, suffix="_2_mals")
+        df_2_mals_deidentified = drop_identifying_cols(df_2_mals, IDENTIFYING_COLS)
+        save_final_df(df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified")
+        save_final_df_parquet(
+            df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified"
+        )
 
         df_1_mal = create_1_mal_df(df_clean)  # use later for comparisons maybe
-        pandas_df_1_mal = df_1_mal.toPandas()
-        df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
-        df_list_1_mal.drop_duplicates(inplace=True)
-        self.extract_mii_conditions(df_list_1_mal, suffix="_1_mal")
+        # pandas_df_1_mal = df_1_mal.toPandas()
+        # df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
+        # df_list_1_mal.drop_duplicates(inplace=True)
+        # self.extract_mii_conditions(df_list_1_mal, suffix="_1_mal")
+        df_1_mal_deidentified = drop_identifying_cols(df_1_mal, IDENTIFYING_COLS)
+        save_final_df(df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified")
+        save_final_df_parquet(
+            df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified"
+        )
 
-        # 5) pivot malignancy 2, union with single
+        # TO DO crypto-hash condids
+        # 5) pivot malignancy 2, union with single malignancy patients
         # use this later for comparison between groups: 1 mal and 2 mal
         df_all_pivot = pivot_multi_single(df_clean, df_2_mals, df_1_mal)
         self.df_all_pivot = df_all_pivot
-        save_final_df(df_all_pivot, self.settings, suffix="all_pivot")
+        df_all_pivot_deidentified = drop_identifying_cols(df_all_pivot, IDENTIFYING_COLS)
+        save_final_df(df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified")
+        save_final_df_parquet(
+            df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified"
+        )
 
         # 6) aggregate pairs from df_2_mals - two malignancies
         df_pairs_agg = aggregate_malignancy_pairs(df_2_mals, presuffix="entity_or_parent")
@@ -101,7 +123,7 @@ class StudyProtocolD:
             suffix="pairs_agg",
         )
 
-        # 7) plot
+        """ # 7) plot
         # later: synchron/metachron and plot pair bubble gender (+age, +months between)
         # later: prepare kaplan meier data, safe csv, combine sites later and plot after
         df_pairs_agg_pd = df_pairs_agg.toPandas()
@@ -122,10 +144,19 @@ class StudyProtocolD:
         ]:
             self.plot_pairs(df_plot, df_name)
             self.plot_age(df_plot, df_name)
-            self.plot_months_between(df_plot, df_name)
+            self.plot_months_between(df_plot, df_name) """
+
+        # extract metastasis
+        # TO DO use df_list_2_mals and df_list_1_mal for filtering here, crypto-hash condids
+
+        # extract histo
+        # TO DO use df_list_2_mals and df_list_1_mal for filtering here, crypto-hash condids
 
         # run R metastasis script
         # self.run_r_analysis()
+
+        # extract therapies, save as parquet
+        self.extract_therapies()
 
         logger.info("StudyProtocolD pipeline finished")
 
@@ -139,17 +170,18 @@ class StudyProtocolD:
                 "birthdate",
                 "deceased_datetime",
                 "date_death",
-                "gleason_date_first",
-                "metastasis_date_first",
             ],
         )
+        df = compute_month_diffs_for_all_date_cols(df)
         df = compute_age(df)
-        df = df.checkpoint(eager=True)
+
+        # df = df.checkpoint(eager=True)
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
         df = df.filter(F.col("asserted_date") > F.lit("1970-12-31"))  # 1970 likely placeholder date
         df = df.filter(F.col("age_at_diagnosis") > 0)
+        df = df.filter(~F.col("icd10_code").startswith("C44"))
 
         return df
 
@@ -210,3 +242,6 @@ class StudyProtocolD:
         logger.info("script = {}", script)
         run_r_script(script)
         show_r_plots(os.path.join(HERE, "results/study_protocol_d/plots_r"))
+
+    def extract_therapies(self):
+        print("hi")
