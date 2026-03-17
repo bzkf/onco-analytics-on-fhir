@@ -143,11 +143,11 @@ get_entity_label <- function(icd) {
 
   if (letter == "D") {
     if (!is.na(number) && number == 5) return("Brust")
-    if (!is.na(number) && number == 6) return("Geb�rmutterhals")
+    if (!is.na(number) && number == 6) return("Gebärmutterhals")
 
     # Keep special D-codes if present, otherwise fall back to 3-char (e.g., D09)
     if (icd == "D09.0") return("Harnblase")
-    if (icd == "D39.1") return("Eierst�cke")
+    if (icd == "D39.1") return("Eierstöcke")
     if (icd == "D41.4") return("Harnblase")
 
     # Not mapped -> return 3-character ICD (e.g., D09)
