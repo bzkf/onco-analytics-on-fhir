@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.21.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.1...v2.21.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* use identifier system instead of type.system ([#406](https://github.com/bzkf/onco-analytics-on-fhir/issues/406)) ([8044394](https://github.com/bzkf/onco-analytics-on-fhir/commit/804439404f7cbc83b557c2c74da70bb183623283))
+
+
+### Miscellaneous Chores
+
+* **deps:** update github-actions ([#404](https://github.com/bzkf/onco-analytics-on-fhir/issues/404)) ([0ebbaba](https://github.com/bzkf/onco-analytics-on-fhir/commit/0ebbabaee47c35519f13b318d39e0c6f489119be))
+
 ## [2.21.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.0...v2.21.1) (2026-03-16)
 
 
