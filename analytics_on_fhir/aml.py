@@ -110,8 +110,8 @@ class AMLStudy:
                 ("patient_id", "Patient.id"),
                 (
                     "patient_mrn",
-                    "Patient.identifier.where(type.coding.where("
-                    + f"system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
+                    "Patient.identifier.where("
+                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
                 ),
                 ("birth_date", "Patient.birthDate"),
                 ("gender", "Patient.gender"),

@@ -40,6 +40,7 @@ class FHIRServerSettings:
     num_processes: int = 6
     user: str = ""
     password: str = ts.secret(default="")
+    patient_identifier_system: str = ""
 
 
 @ts.settings
