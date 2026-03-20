@@ -8,7 +8,6 @@ from more_itertools import chunked
 from settings import Settings
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
-FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
 
 DATA_DICTIONARY = {
