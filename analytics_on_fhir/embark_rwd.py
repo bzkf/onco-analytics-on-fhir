@@ -1,15 +1,12 @@
 import pathlib
 
+from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from graphviz import Digraph
 from loguru import logger
 from pathling import DataSource
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import col, count_distinct, lit, max, min, when
 from utils import find_closest_to_diagnosis
-
-FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
-    "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
-)
 
 
 def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:

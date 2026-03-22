@@ -16,7 +16,7 @@ services:
           tr -d '\n' < "$$f" | kcat -b kafka:9092 -t fhir.obds.bundles -P -k "$$f" -c 1
         done
     volumes:
-      - ./demo-mii-bundles/:/data/demo-mii-bundles/:ro
+      - ../tests/fixtures/fhir/:/data/demo-mii-bundles/:ro
     depends_on:
       wait-for-kafka:
         condition: service_completed_successfully
