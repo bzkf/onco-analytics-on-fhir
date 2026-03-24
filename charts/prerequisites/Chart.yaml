@@ -9,6 +9,6 @@ dependencies:
     repository: oci://quay.io/strimzi-helm
     version: 0.48.0
 # x-release-please-start-version
-version: 2.21.3
-appVersion: 2.21.3
+version: 2.21.4
+appVersion: 2.21.4
 # x-release-please-end-version

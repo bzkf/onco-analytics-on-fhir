@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.21.4](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.3...v2.21.4) (2026-03-24)
+
+
+### Bug Fixes
+
+* added fhir server retries ([#411](https://github.com/bzkf/onco-analytics-on-fhir/issues/411)) ([a68a58d](https://github.com/bzkf/onco-analytics-on-fhir/commit/a68a58d9c4a8ad0c2557729ff18d1163f70fc89b))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#409](https://github.com/bzkf/onco-analytics-on-fhir/issues/409)) ([886999c](https://github.com/bzkf/onco-analytics-on-fhir/commit/886999c8542c73474035a2556180fc467e9fd270))
+
 ## [2.21.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.2...v2.21.3) (2026-03-20)
 
 
