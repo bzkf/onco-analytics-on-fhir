@@ -322,8 +322,8 @@ class AMLStudy:
                             "name": "patient_id",
                         },
                         {
-                            "path": "identifier.where(type.coding.where(system = "
-                            + f"'{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
+                            "path": "identifier.where("
+                            + f"system='{self.settings.fhir.patient_identifier_system}').value",
                             "name": "patient_mrn",
                         },
                     ],
