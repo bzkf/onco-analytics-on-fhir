@@ -13,7 +13,6 @@ from utils import (
 )
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
-FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
 FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-tod"
@@ -120,6 +119,10 @@ class AMLStudy:
             )
 
     def extract_patients(self):
+        # make sure PATIENT_IDENTIFIER_SYSTEM is set
+        if self.settings.fhir.patient_identifier_system is None:
+            raise KeyError("Please set the variable FHIR_PATIENT_IDENTIFIER_SYSTEM")
+
         # using icd_codes_aml.csv as input, finding all patients with requested diagnosis
         condition_df = pd.read_csv(HERE / "icd_codes_aml.csv")
 
@@ -148,8 +151,8 @@ class AMLStudy:
                 ("patient_id", "Patient.id"),
                 (
                     "patient_mrn",
-                    "Patient.identifier.where(type.coding.where("
-                    + f"system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
+                    "Patient.identifier.where("
+                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
                 ),
                 ("birth_date", "Patient.birthDate"),
                 ("gender", "Patient.gender"),

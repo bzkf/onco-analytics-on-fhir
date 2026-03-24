@@ -33,6 +33,7 @@ class SparkSettings:
 
 @ts.settings
 class FHIRServerSettings:
+    patient_identifier_system: str | None = None
     base_url: str | None = None
     print_request_urls: bool = False
     chunk_size: int = 100
