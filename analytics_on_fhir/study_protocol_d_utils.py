@@ -22,6 +22,10 @@ IDENTIFYING_COLS = [
     "deceased_boolean",
     "observation_death_patient_resource_id",
     "observation_resource_id",
+    "reason_reference",
+    "subject_reference",
+    "therapy_id",
+    "therapy_id_child",
 ]
 
 
@@ -159,7 +163,7 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
     df_1_mal_selected = df_1_mal.select(
         "patient_resource_id",
         F.col("condition_id").alias("condition_id_1"),
-        F.col("asserted_date").alias("asserted_date_1"),
+        F.col("asserted_date").alias("asserted_date"),
         F.col("icd10_code").alias("icd10_code_1"),
         F.col("icd10_parent_code").alias("icd10_parent_code_1"),
         F.col("age_at_diagnosis").alias("age_at_diagnosis_1"),
@@ -182,6 +186,7 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
         F.max("deceased_datetime").alias("deceased_datetime"),
         F.first("death_cause_icd10", ignorenulls=True).alias("death_cause_icd10"),
         F.first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
+        F.first("date_death", ignorenulls=True).alias("date_death"),
     )
     df_all_pivot = df_all_pivot.join(df_death, on="patient_resource_id", how="left")
     df_all_pivot = df_all_pivot.checkpoint(eager=True)

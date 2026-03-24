@@ -48,10 +48,89 @@ FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
     "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
 )
 
+FHIR_SYSTEMS_CONDITION_MORPHOLOGY = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-ex-onko-histology-morphology-behavior-icdo3"
+
 FHIR_SYSTEMS_WEITERE_KLASSIFIKATION = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
     "StructureDefinition/mii-pr-onko-weitere-klassifikationen"
 )
+
+FHIR_SYSTEMS_RADIOTHERAPY = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/"
+    "mii-pr-onko-strahlentherapie|2026.0.0"
+)
+FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/"
+    "mii-pr-onko-strahlentherapie-bestrahlung-strahlentherapie|2026.0.0"
+)
+FHIR_SYSTEMS_SURGERY = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.0"
+)
+FHIR_SYSTEMS_SYSTEM_THERAPY = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
+    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.0"
+)
+FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/"
+    "mii-ex-onko-systemische-therapie-intention"
+)
+FHIR_SYSTEMS_SYSTEM_THERAPY_STELLUNG_OP = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/"
+    "mii-ex-onko-systemische-therapie-stellungzurop"
+)
+FHIR_SYSTEMS_RADIO_THERAPY_INTENTION = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/mii-ex-onko-"
+    "strahlentherapie-intention"
+)
+FHIR_SYSTEMS_RADIO_THERAPY_STELLUNG_OP = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/"
+    "mii-ex-onko-strahlentherapie-stellungzurop"
+)
+FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-intention"
+)
+FHIR_SYSTEMS_STELLUNG_OP_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-therapie-stellungzurop"
+)
+FHIR_SYSTEMS_SYSTEM_THERAPY_TYP_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-therapie-typ"
+)
+FHIR_SYSTEMS_THERAPY_END_REASON_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-therapie-ende-grund"
+)
+FHIR_SYSTEMS_RADIO_THERAPY_INTENTION_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-intention"
+)
+
+FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
+)
+FHIR_SYSTEMS_SURGERY_INTENTION = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/StructureDefinition/mii-ex-onko-operation-intention"
+)
+FHIR_SYSTEMS_SURGERY_INTENTION_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-intention"
+)
+FHIR_SYSTEMS_SURGERY_OUTCOME_CS = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/"
+    "modul-onko/CodeSystem/mii-cs-onko-residualstatus"
+)
+FHIR_SYSTEMS_SURGERY_OPS_CS = "http://fhir.de/CodeSystem/bfarm/ops"
 
 
 def save_final_df(pyspark_df, settings, suffix=""):
@@ -120,11 +199,14 @@ def compute_age(df: DataFrame) -> DataFrame:
 
 
 def compute_month_diffs_for_all_date_cols(df: DataFrame) -> DataFrame:
-    # Alle Spalten mit "date", außer asserted_date und Spalten mit "precision"
+    # Alle Spalten mit "date", außer asserted_date und Spalten mit "precision" oder "year"
     date_cols = [
         c
         for c in df.columns
-        if "date" in c.lower() and c != "asserted_date" and "precision" not in c.lower()
+        if "date" in c.lower()
+        and c != "asserted_date"
+        and "precision" not in c.lower()
+        and "year" not in c.lower()
     ]
 
     for date_col in date_cols:
@@ -133,8 +215,29 @@ def compute_month_diffs_for_all_date_cols(df: DataFrame) -> DataFrame:
             F.round(F.months_between(F.col(date_col), F.col("asserted_date")), 2),
         )
 
-    # TO DO nachdem das funktionier
-    # df = df.drop(*date_cols)
+    return df
+
+
+def drop_date_cols(df: DataFrame) -> DataFrame:
+    date_cols = [
+        c
+        for c in df.columns
+        if "date" in c.lower()
+        and "precision" not in c.lower()
+        and "between" not in c.lower()
+        and "year" not in c.lower()
+    ]
+
+    return df.drop(*date_cols)
+
+
+def create_year_col_asserted_death(df: DataFrame) -> DataFrame:
+    if "asserted_date" in df.columns:
+        df = df.withColumn("asserted_year", F.year("asserted_date"))
+    if "deceased_datetime" in df.columns:
+        df = df.withColumn("deceased_datetime_year", F.year("deceased_datetime"))
+    if "date_death" in df.columns:
+        df = df.withColumn("date_death_year", F.year("date_death"))
 
     return df
 
@@ -204,9 +307,26 @@ def add_is_deceased(df):
     )
 
 
-def drop_identifying_cols(df: DataFrame, identifying_cols: list[str]) -> DataFrame:
+def deidentify(df: DataFrame, identifying_cols: list[str], df_lookup: DataFrame) -> DataFrame:
     cols_to_drop = [c for c in identifying_cols if c in df.columns]
-    return df.drop(*cols_to_drop)
+    df = df.drop(*cols_to_drop)
+
+    df = create_year_col_asserted_death(df)
+    df = compute_month_diffs_for_all_date_cols(df)
+    df = drop_date_cols(df)
+
+    # all possible condition_id columns
+    condition_cols = ["condition_id", "condition_id_1", "condition_id_2"]
+
+    for c in condition_cols:
+        if c in df.columns:
+            # Lookup-DF für diese Spalte umbenennen
+            df_lookup_renamed = df_lookup.withColumnRenamed("condition_id", c)
+            df = df.join(df_lookup_renamed, on=c, how="left")
+            df = df.drop(c)
+            df = df.withColumnRenamed("condition_id_hash", f"{c}_hash")
+
+    return df
 
 
 def map_gleason_sct_to_score(df, gleason_sct_col="gleason_sct", out_col="gleason_score"):
@@ -317,6 +437,12 @@ def extract_conditions_patients_death(
                     {
                         "path": "subject.getReferenceKey()",
                         "name": "condition_patient_resource_id",
+                    },
+                    {
+                        "description": "ICD-O-3 M Morphology",
+                        "path": f"extension('{FHIR_SYSTEMS_CONDITION_MORPHOLOGY}')"
+                        + ".value.ofType(CodeableConcept).coding.first().code",
+                        "name": "icdo3_morphology",
                     },
                 ]
             }
@@ -1163,6 +1289,636 @@ def extract_df_study_protocol_a_d_mii(
     conditions_patients_death_gleason_metastasis.show()
 
     return conditions_patients_death_gleason_metastasis
+
+
+def extract_metastasis(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    spark: SparkSession,
+    settings,
+):
+    # Fernmetastase observations
+    observations_metastasis = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    # {
+                    #    "description": "Observation ID",
+                    #    "path": "getResourceKey()",
+                    #    "name": "observation_metastasis_resource_id",
+                    # },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    # {
+                    #    "description": "Patient ID",
+                    #    "path": "subject.getReferenceKey()",
+                    #    "name": "observation_metastasis_patient_resource_id",
+                    # },
+                    {
+                        "description": "Metastasis Localization",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            f".coding.where(system = '{FHIR_SYSTEM_METASTASIS}')"
+                            ".code"
+                        ),
+                        "name": "metastasis_loc",
+                    },
+                    {
+                        "description": "Metastasis Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "metastasis_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": "Anatomic location of metastatic spread of malignant "
+                "neoplasm (observable entity)",
+                "path": (
+                    "code.coding.exists(system = "
+                    f"'{FHIR_SYSTEM_SCT}' and code = '{SCT_CODE_METASTASIS}')"
+                ),
+            }
+        ],
+    )
+    logger.info(
+        "observations_metastasis count = {}",
+        observations_metastasis.count(),
+    )
+    return observations_metastasis
+
+
+def extract_systemtherapies(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+    logger.info("extract procedures / system therapies.")
+
+    df_procedures = data.view(
+        "Procedure",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Procedure ID",
+                        "path": "getResourceKey()",
+                        "name": "therapy_id",
+                    },
+                    {
+                        "description": "FHIR Profile URL",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
+                    },
+                    {
+                        "description": "Condition ID",
+                        "path": "reasonReference.getReferenceKey()",
+                        "name": "reason_reference",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "subject_reference",
+                    },
+                    {
+                        "description": "Intention System Therapy",
+                        "path": f"extension('{FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION}')"
+                        ".value.ofType(CodeableConcept).coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION_CS}')"
+                        ".code",
+                        "name": "therapy_intention",
+                    },
+                    {
+                        "description": "Stellung zur Op System Therapy",
+                        "path": (
+                            f"extension('{FHIR_SYSTEMS_SYSTEM_THERAPY_STELLUNG_OP}')"
+                            ".value.ofType(CodeableConcept).coding"
+                            ".where(system = "
+                            f"'{FHIR_SYSTEMS_STELLUNG_OP_CS}')"
+                            ".code"
+                        ),
+                        "name": "stellung_op",
+                    },
+                    {
+                        "description": "Art der systemischen oder abwartenden Therapie",
+                        "path": (
+                            "code.coding"
+                            f".where(system = '{FHIR_SYSTEMS_SYSTEM_THERAPY_TYP_CS}')"
+                            ".code"
+                        ),
+                        "name": "therapy_type",
+                    },
+                    {
+                        "description": "Systemische Therapie Beginn",
+                        "path": "performed.ofType(Period).start",
+                        "name": "therapy_start_date",
+                    },
+                    {
+                        "description": "Systemische Therapie Ende",
+                        "path": "performed.ofType(Period).end",
+                        "name": "therapy_end_date",
+                    },
+                    {
+                        "description": "Systemische Therapie Ende Grund",
+                        "path": "outcome.coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_THERAPY_END_REASON_CS}')"
+                        ".code",
+                        "name": "therapy_end_reason",
+                    },
+                    {
+                        "description": "Protokoll der systemischen Therapie",
+                        "path": "usedCode.text",
+                        "name": "therapy_protocol_text",
+                    },
+                ],
+            }
+        ],
+        where=[
+            {
+                "description": "Only SYSTEM THERAPY Procedures",
+                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_SYSTEM_THERAPY}')"),
+            }
+        ],
+    )
+    logger.info("df_procedures count = {}", df_procedures.count())
+    logger.info(
+        "df_procedures distinct therapy_id count = {}",
+        df_procedures.select("therapy_id").distinct().count(),
+    )
+    logger.info(
+        "df_procedures distinct subject_reference patient id count = {}",
+        df_procedures.select("subject_reference").distinct().count(),
+    )
+    df_procedures.orderBy(F.col("reason_reference")).show(truncate=False)
+
+    logger.info("extract medication statements / system therapies.")
+
+    df_medication_statements = data.view(
+        "MedicationStatement",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "MedicationStatement ID",
+                        "path": "getResourceKey()",
+                        "name": "medication_statement_id",
+                    },
+                    {
+                        "description": "Procedure Reference",
+                        "path": "partOf.getReferenceKey()",
+                        "name": "part_of_reference",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "subject_reference",
+                    },
+                    {
+                        "description": "Condition ID",
+                        "path": "reasonReference.getReferenceKey()",
+                        "name": "reason_reference",
+                    },
+                    {
+                        "description": "Effective Start Date",
+                        "path": "effective.ofType(Period).start",
+                        "name": "medication_statement_start_date",
+                    },
+                    {
+                        "description": "Medication Text",
+                        "path": "medication.ofType(CodeableConcept).text",
+                        "name": "medication_statement_text",
+                    },
+                    {
+                        "description": "Medication Code",
+                        "path": "medication.ofType(CodeableConcept).coding"
+                        + ".where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+                        "name": "medication_statement_atc_code",
+                    },
+                ],
+            }
+        ],
+    )
+
+    # TO DO: split this later
+    # return df_procedures, df_medication_statements
+
+    # erst joinen (procedure+medicationstatements) und danach gruppieren
+    # Substanzen pro condition und therapy start date |-separiert abspeichern
+    df_procedures_medication_statements = (
+        df_procedures.alias("p")
+        .join(
+            df_medication_statements.alias("m"),
+            F.col("p.therapy_id") == F.col("m.part_of_reference"),
+            how="left",
+        )
+        .select(
+            F.col("p.therapy_id"),
+            F.coalesce(
+                F.col("p.subject_reference"),
+                F.col("m.subject_reference"),
+            ).alias("subject_reference"),
+            F.coalesce(
+                F.col("p.reason_reference"),
+                F.col("m.reason_reference"),
+            ).alias("reason_reference"),
+            "p.meta_profile",
+            "p.therapy_intention",
+            "p.stellung_op",
+            "p.therapy_type",
+            "p.therapy_start_date",
+            "p.therapy_end_date",
+            "p.therapy_end_reason",
+            "p.therapy_protocol_text",
+            "m.medication_statement_start_date",
+            "m.medication_statement_text",
+            "m.medication_statement_atc_code",
+            "m.part_of_reference",
+        )
+    )
+
+    # pro condition und start date: | separiert abspeichern
+    df_procedures_medication_statements_grouped = df_procedures_medication_statements.groupBy(
+        "subject_reference",
+        "reason_reference",
+        "therapy_start_date",
+        "part_of_reference",
+    ).agg(
+        F.concat_ws("| ", F.sort_array(F.collect_set("medication_statement_text"))).alias(
+            "medication_statement_text"
+        ),
+        F.concat_ws("| ", F.sort_array(F.collect_set("medication_statement_atc_code"))).alias(
+            "medication_statement_atc_code"
+        ),
+    )
+    logger.info(
+        "df_procedures_medication_statements_grouped count = {}",
+        df_procedures_medication_statements_grouped.count(),
+    )
+
+    # join back missing cols
+    df_procedures_medication_statements_final = (
+        df_procedures.alias("p")
+        .join(
+            df_procedures_medication_statements_grouped.alias("pg"),
+            F.col("p.therapy_id") == F.col("pg.part_of_reference"),
+            how="left",
+        )
+        .select(
+            F.col("p.therapy_id").alias("therapy_id"),
+            F.col("p.subject_reference"),
+            F.col("p.reason_reference"),
+            F.col("p.meta_profile").alias("meta_profile"),
+            F.col("p.therapy_intention").alias("therapy_intention"),
+            F.col("p.stellung_op").alias("stellung_op"),
+            F.col("p.therapy_type").alias("therapy_type"),
+            F.col("p.therapy_start_date").alias("therapy_start_date"),
+            F.col("p.therapy_end_date").alias("therapy_end_date"),
+            F.col("p.therapy_end_reason").alias("therapy_end_reason"),
+            F.col("p.therapy_protocol_text").alias("therapy_protocol_text"),
+            F.col("pg.medication_statement_text").alias("medication_statement_text"),
+            F.col("pg.medication_statement_atc_code").alias("medication_statement_atc_code"),
+        )
+    )
+
+    df_procedures_medication_statements_final.orderBy(F.col("reason_reference")).show()
+
+    return df_procedures_medication_statements_final
+
+
+def extract_radiotherapies(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+    logger.info("extract radiotherapies.")
+
+    df_procedures = data.view(
+        "Procedure",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Procedure ID",
+                        "path": "getResourceKey()",
+                        "name": "therapy_id",
+                    },
+                    {
+                        "description": "FHIR Profile URL",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
+                    },
+                    {
+                        "description": "Procedure Reference",
+                        "path": "partOf.getReferenceKey()",
+                        "name": "part_of_reference",
+                    },
+                    {
+                        "description": "Condition ID",
+                        "path": "reasonReference.getReferenceKey()",
+                        "name": "reason_reference",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "subject_reference",
+                    },
+                    {
+                        "description": "Intention Radio Therapy",
+                        "path": f"extension('{FHIR_SYSTEMS_RADIO_THERAPY_INTENTION}')"
+                        ".value.ofType(CodeableConcept).coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_RADIO_THERAPY_INTENTION_CS}')"
+                        ".code",
+                        "name": "therapy_intention",
+                    },
+                    {
+                        "description": "Stellung zur Op Radio Therapy",
+                        "path": (
+                            f"extension('{FHIR_SYSTEMS_RADIO_THERAPY_STELLUNG_OP}')"
+                            ".value.ofType(CodeableConcept).coding"
+                            ".where(system = "
+                            f"'{FHIR_SYSTEMS_STELLUNG_OP_CS}')"
+                            ".code"
+                        ),
+                        "name": "stellung_op",  # sieht kaputt aus to do
+                    },
+                    {
+                        "description": "Radio Therapy Start",
+                        "path": "performed.ofType(Period).start",
+                        "name": "therapy_start_date",
+                    },
+                    {
+                        "description": "Radio Therapy Ende",
+                        "path": "performed.ofType(Period).end",
+                        "name": "therapy_end_date",
+                    },
+                    {
+                        "description": "Radio Therapy Ende Grund",
+                        "path": "outcome.coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_THERAPY_END_REASON_CS}')"
+                        ".code",
+                        "name": "therapy_end_reason",
+                    },
+                    {
+                        "description": "Radio Therapy Zielgebiet",
+                        "path": (
+                            "bodySite.coding.where("
+                            f"system='{FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS}'"
+                            ").code"
+                        ),
+                        "name": "zielgebiet",
+                    },
+                ],
+            }
+        ],
+    )
+
+    df_parents_radiotherapies = df_procedures.filter(
+        F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY
+    )
+
+    df_children_bestrahlung = df_procedures.filter(
+        F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG
+    )
+
+    return df_parents_radiotherapies, df_children_bestrahlung
+
+
+def join_radiotherapies(
+    df_parents_radiotherapies: DataFrame,
+    df_children_bestrahlung: DataFrame,
+) -> DataFrame:
+
+    df_radiotherapies = (
+        df_parents_radiotherapies.alias("p")
+        .join(
+            df_children_bestrahlung.alias("c"),
+            F.col("p.therapy_id") == F.col("c.part_of_reference"),
+            how="left",
+        )
+        .select(
+            F.col("p.therapy_id").alias("therapy_id"),
+            F.col("p.meta_profile"),
+            F.col("p.subject_reference"),
+            F.col("p.reason_reference"),
+            F.col("p.therapy_intention"),
+            F.col("p.stellung_op"),
+            F.col("p.therapy_start_date"),
+            F.col("p.therapy_end_date"),
+            F.col("p.therapy_end_reason"),
+            F.col("c.zielgebiet").alias("zielgebiet"),
+            F.col("c.therapy_id").alias("therapy_id_child"),
+        )
+    )
+
+    """ logger.info("df_radiotherapies count = {}", df_radiotherapies.count())
+
+    df_radiotherapies.orderBy(F.col("therapy_id")).show() """
+
+    # pro therapy id, condition id - Zielgebiete | separiert abspeichern
+    df_radiotherapies_grouped = df_radiotherapies.groupBy(
+        "therapy_id",
+        "subject_reference",
+        "reason_reference",
+    ).agg(
+        F.concat_ws("| ", F.sort_array(F.collect_set("zielgebiet"))).alias("zielgebiet"),
+        F.concat_ws("| ", F.sort_array(F.collect_set("therapy_id_child"))).alias(
+            "therapy_id_child"
+        ),
+    )
+    """ logger.info(
+        "df_radiotherapies_grouped count = {}",
+        df_radiotherapies_grouped.count(),
+    )
+    df_radiotherapies_grouped.show() """
+
+    # join back missing cols
+    df_radiotherapies_final = (
+        df_parents_radiotherapies.alias("p")
+        .join(
+            df_radiotherapies_grouped.alias("rg"),
+            F.col("p.therapy_id") == F.col("rg.therapy_id"),
+            how="left",
+        )
+        .select(
+            F.col("p.therapy_id"),
+            F.col("p.meta_profile"),
+            F.col("p.subject_reference"),
+            F.col("p.reason_reference"),
+            F.col("p.therapy_intention"),
+            F.col("p.stellung_op"),
+            F.col("p.therapy_start_date"),
+            F.col("p.therapy_end_date"),
+            F.col("p.therapy_end_reason"),
+            # nur gewünschte Child-Spalten
+            F.col("rg.zielgebiet"),
+            F.col("rg.therapy_id_child"),
+        )
+    )
+    """ logger.info(
+        "df_radiotherapies_final count = {}",
+        df_radiotherapies_final.count(),
+    )
+    df_radiotherapies_final.show() """
+    # clean
+    return df_radiotherapies_final
+
+
+def extract_surgeries(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+    logger.info("extract pca ops.")
+
+    df_ops = data.view(
+        "Procedure",
+        select=[
+            {
+                "column": [
+                    {
+                        "path": "getResourceKey()",
+                        "description": "Procedure ID",
+                        "name": "therapy_id",
+                    },
+                    {
+                        "description": "FHIR Profile URL",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
+                    },
+                    {
+                        "description": "Condition ID",
+                        "path": "reasonReference.getReferenceKey()",
+                        "name": "reason_reference",
+                    },
+                    {
+                        "description": "Procedure Reference",
+                        "path": "partOf.getReferenceKey()",
+                        "name": "part_of_reference",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "subject_reference",
+                    },
+                    {
+                        "description": "Intention Surgery",
+                        "path": f"extension('{FHIR_SYSTEMS_SURGERY_INTENTION}')"
+                        ".value.ofType(CodeableConcept).coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_SURGERY_INTENTION_CS}')"
+                        ".code",
+                        "name": "therapy_intention",
+                    },
+                    {
+                        "description": "Surgery Date",
+                        "path": "performedDateTime",
+                        "name": "therapy_start_date",
+                    },
+                    {
+                        "description": "Surgery Outcome",
+                        "path": "outcome.coding"
+                        ".where(system = "
+                        f"'{FHIR_SYSTEMS_SURGERY_OUTCOME_CS}')"
+                        ".code",
+                        "name": "surgery_outcome",
+                    },
+                    {
+                        "description": "OPS Code",
+                        "path": f"code.coding.where(system = '{FHIR_SYSTEMS_SURGERY_OPS_CS}').code",
+                        "name": "ops_code",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": "Only Surgical Procedures",
+                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_SURGERY}')"),
+            }
+        ],
+    )
+
+    return df_ops
+
+
+def group_ops(df_ops: DataFrame) -> DataFrame:
+    # ursprüngliche Reihenfolge beibehalten hier in den aggs
+    window_spec = Window.partitionBy(
+        "meta_profile",
+        "reason_reference",
+        "subject_reference",
+        "therapy_start_date",
+    ).orderBy("therapy_id")
+
+    df_ops_with_index = df_ops.withColumn("row_idx", F.row_number().over(window_spec))
+
+    df_ops_grouped = df_ops_with_index.groupBy(
+        "meta_profile",
+        "reason_reference",
+        "subject_reference",
+        "therapy_start_date",
+    ).agg(
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, ops_code))),
+                x -> x.ops_code
+            )
+        )
+    """
+        ).alias("ops_code"),
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, surgery_outcome))),
+                x -> x.surgery_outcome
+            )
+        )
+    """
+        ).alias("surgery_outcome"),
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, therapy_intention))),
+                x -> x.therapy_intention
+            )
+        )
+    """
+        ).alias("therapy_intention"),
+        F.expr(
+            """
+        concat_ws('| ',
+            transform(
+                array_sort(collect_list(struct(row_idx, therapy_id))),
+                x -> x.therapy_id
+            )
+        )
+    """
+        ).alias("therapy_id"),
+    )
+
+    """ logger.info(
+        "df_ops_grouped count = {}",
+        df_ops_grouped.count(),
+    )
+    df_ops_grouped.orderBy(F.col("reason_reference")).show(truncate=False) """
+
+    return df_ops_grouped
 
 
 def filter_aml(df):
