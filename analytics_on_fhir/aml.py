@@ -5,8 +5,8 @@ import pandas as pd
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
-from urllib3 import Retry
 from settings import Settings
+from urllib3 import Retry
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
@@ -49,8 +49,10 @@ class AMLStudy:
         os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
         auth = Ahoy(
-            auth_type="BasicAuth",
+            auth_type=settings.fhir.auth_type,
             auth_method="env",
+            auth_url=settings.fhir.token_auth_url,
+            refresh_url=settings.fhir.token_refresh_url,
         )
 
         if settings.fhir.base_url is None:
