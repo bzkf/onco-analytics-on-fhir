@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.22.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.4...v2.22.0) (2026-03-25)
+
+
+### Features
+
+* Zweittumor - metastasis, therapies, histo ([#402](https://github.com/bzkf/onco-analytics-on-fhir/issues/402)) ([c3cec01](https://github.com/bzkf/onco-analytics-on-fhir/commit/c3cec01dc3087d91a1d02c981129ad8e50d8ba3f))
+
 ## [2.21.4](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.3...v2.21.4) (2026-03-24)
 
 
