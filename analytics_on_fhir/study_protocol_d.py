@@ -89,6 +89,7 @@ class StudyProtocolD:
         df_1_mal = create_1_mal_df(df_clean)
         df_1_mal_cond_id_asserted = df_1_mal.select(F.col("condition_id"), F.col("asserted_date"))
         df_1_mal_cond_id_asserted.show()
+
         # collect all condition ids and asserted dates
         df_all_conditions = df_1_mal_cond_id_asserted.union(df_2_mals_cond_id_asserted)
         # generate crypto hashed dict
@@ -100,19 +101,19 @@ class StudyProtocolD:
             cid: hmac.digest(key, str(cid).encode("utf-8"), hashlib.sha256).hex()
             for cid in condition_ids
         }
-        # remove this later
         df_lookup = self.spark.createDataFrame(
             [(k, v) for k, v in condition_hash_lookup.items()],
             ["condition_id", "condition_id_hash"],
         )
-        # save_final_df(df_lookup, self.settings, suffix="condition_hash_lookup")
 
         # save all conditions
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
         df_clean_deidentified = deidentify(df_clean, IDENTIFYING_COLS, df_lookup)
-        save_final_df(df_clean_deidentified, self.settings, suffix="study_protocol_d_deidentified")
+        save_final_df(
+            df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
+        )
         save_final_df_parquet(
-            df_clean_deidentified, self.settings, suffix="study_protocol_d_deidentified"
+            df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
         )
 
         # extract MII conditions

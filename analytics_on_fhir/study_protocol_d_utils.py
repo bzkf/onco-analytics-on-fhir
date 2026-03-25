@@ -1,4 +1,3 @@
-import subprocess
 from functools import reduce
 from pathlib import Path
 
@@ -627,13 +626,13 @@ def plot_pair_boxplot_horizontal_custom(
 
 def run_r_script(script_path: str):
     logger.info("running run_r_script, starting subprocess")
-    result = subprocess.run(["Rscript", script_path], capture_output=True, text=True)
+    # result = subprocess.run(["Rscript", script_path], capture_output=True, text=True)
 
-    print(result.stdout)
-    print(result.stderr)
+    # print(result.stdout)
+    # print(result.stderr)
 
-    if result.returncode != 0:
-        raise RuntimeError("R script failed")
+    # if result.returncode != 0:
+    #     raise RuntimeError("R script failed")
 
 
 def show_r_plots(directory: str) -> None:
