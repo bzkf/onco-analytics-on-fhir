@@ -10,8 +10,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from loguru import logger
-from pathling import PathlingContext, datasource
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from settings import settings
