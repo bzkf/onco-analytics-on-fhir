@@ -41,6 +41,7 @@ class FHIRServerSettings:
     num_processes: int = 6
     user: str = ""
     password: str = ts.secret(default="")
+    retries: int = 10
 
 
 @ts.settings

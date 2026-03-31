@@ -1,3 +1,7 @@
+import hashlib
+import hmac
+import os
+
 from loguru import logger
 from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
@@ -5,6 +9,7 @@ from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from study_protocol_d_utils import (
+    IDENTIFYING_COLS,
     aggregate_malignancy_pairs,
     create_1_mal_df,
     create_2_mals_df,
@@ -12,13 +17,24 @@ from study_protocol_d_utils import (
     pivot_multi_single,
     plot_pair_boxplot_horizontal_custom,
     plot_pair_bubble_gender,
+    run_r_script,
+    show_r_plots,
 )
 from utils import (
     FHIR_SYSTEM_PRIMAERTUMOR,
+    HERE,
     cast_study_dates,
     compute_age,
-    extract_df_study_protocol_a_d_mii,
+    deidentify,
+    extract_conditions_patients_death,
+    extract_metastasis,
+    extract_radiotherapies,
+    extract_surgeries,
+    extract_systemtherapies,
+    group_ops,
+    join_radiotherapies,
     save_final_df,
+    save_final_df_parquet,
 )
 
 
@@ -41,7 +57,7 @@ class StudyProtocolD:
         self.year_max: int | None = None
 
     def extract(self) -> DataFrame:
-        df = extract_df_study_protocol_a_d_mii(self.pc, self.data, self.settings, self.spark)
+        df = extract_conditions_patients_death(self.pc, self.data, self.settings, self.spark)
         df = df.checkpoint(eager=True)
         logger.info("df count fruehere and primaertumor = {}", df.count())
 
@@ -65,28 +81,71 @@ class StudyProtocolD:
         df_clean = self.clean(df_prepare)
         self.year_min = df_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_clean.select(F.max(F.year("asserted_date"))).first()[0]
-        logger.info(f"year range detected: {self.year_min} → {self.year_max}")
-        save_final_df(df_clean, self.settings, suffix="study_protocol_d")
 
         # 4) 2mals vs single (1mal)
         df_2_mals = create_2_mals_df(df_clean)
+        df_2_mals_cond_id_asserted = df_2_mals.select(F.col("condition_id"), F.col("asserted_date"))
+        df_2_mals_cond_id_asserted.show()
+        df_1_mal = create_1_mal_df(df_clean)
+        df_1_mal_cond_id_asserted = df_1_mal.select(F.col("condition_id"), F.col("asserted_date"))
+        df_1_mal_cond_id_asserted.show()
+
+        # collect all condition ids and asserted dates
+        df_all_conditions = df_1_mal_cond_id_asserted.union(df_2_mals_cond_id_asserted)
+        # generate crypto hashed dict
+        key = os.urandom(32)
+        condition_ids = (
+            df_all_conditions.select("condition_id").distinct().rdd.flatMap(lambda x: x).collect()
+        )
+        condition_hash_lookup = {
+            cid: hmac.digest(key, str(cid).encode("utf-8"), hashlib.sha256).hex()
+            for cid in condition_ids
+        }
+        df_lookup = self.spark.createDataFrame(
+            [(k, v) for k, v in condition_hash_lookup.items()],
+            ["condition_id", "condition_id_hash"],
+        )
+
+        # save all conditions
+        logger.info(f"year range detected: {self.year_min} → {self.year_max}")
+        df_clean_deidentified = deidentify(df_clean, IDENTIFYING_COLS, df_lookup)
+        save_final_df(
+            df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
+        )
+        save_final_df_parquet(
+            df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
+        )
+
+        # extract MII conditions
         pandas_df_2_mals = df_2_mals.toPandas()
         df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
         df_list_2_mals.drop_duplicates(inplace=True)
         self.extract_mii_conditions(df_list_2_mals, suffix="_2_mals")
-        save_final_df(df_2_mals, self.settings, suffix="2_malignancies")
-
-        df_1_mal = create_1_mal_df(df_clean)  # use later for comparisons maybe
         pandas_df_1_mal = df_1_mal.toPandas()
         df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
         df_list_1_mal.drop_duplicates(inplace=True)
         self.extract_mii_conditions(df_list_1_mal, suffix="_1_mal")
 
-        # 5) pivot malignancy 2, union with single
-        # use this later for comparison between groups: 1 mal and 2 mal
+        # save 1 and 2 tumors
+        df_2_mals_deidentified = deidentify(df_2_mals, IDENTIFYING_COLS, df_lookup)
+        save_final_df(df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified")
+        save_final_df_parquet(
+            df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified"
+        )
+        df_1_mal_deidentified = deidentify(df_1_mal, IDENTIFYING_COLS, df_lookup)
+        save_final_df(df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified")
+        save_final_df_parquet(
+            df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified"
+        )
+
+        # 5) pivot malignancy 2, union with single malignancy patients
         df_all_pivot = pivot_multi_single(df_clean, df_2_mals, df_1_mal)
         self.df_all_pivot = df_all_pivot
-        save_final_df(df_all_pivot, self.settings, suffix="all_pivot")
+        df_all_pivot_deidentified = deidentify(df_all_pivot, IDENTIFYING_COLS, df_lookup)
+        save_final_df(df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified")
+        save_final_df_parquet(
+            df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified"
+        )
 
         # 6) aggregate pairs from df_2_mals - two malignancies
         df_pairs_agg = aggregate_malignancy_pairs(df_2_mals, presuffix="entity_or_parent")
@@ -119,6 +178,10 @@ class StudyProtocolD:
             self.plot_age(df_plot, df_name)
             self.plot_months_between(df_plot, df_name)
 
+        self.extract_save_metastasis(df_all_conditions, df_lookup)
+
+        self.extract_save_therapies(df_all_conditions, df_lookup)
+
         logger.info("StudyProtocolD pipeline finished")
 
     def prepare(self, df: DataFrame) -> DataFrame:
@@ -131,17 +194,16 @@ class StudyProtocolD:
                 "birthdate",
                 "deceased_datetime",
                 "date_death",
-                "gleason_date_first",
-                "metastasis_date_first",
             ],
         )
         df = compute_age(df)
-        df = df.checkpoint(eager=True)
         return df
 
     def clean(self, df: DataFrame) -> DataFrame:
         df = df.filter(F.col("asserted_date") > F.lit("1970-12-31"))  # 1970 likely placeholder date
         df = df.filter(F.col("age_at_diagnosis") > 0)
+        df = df.filter(~F.col("icd10_code").startswith("C44"))
+        df = df.filter(~F.col("icd10_code").startswith("D04"))
 
         return df
 
@@ -194,4 +256,116 @@ class StudyProtocolD:
             var_name_max="months_between_max_2",
             var_name_outliers=["outliers_months_between"],
             show_entity1=False,
+        )
+
+    def run_r_analysis(self):
+        logger.info("running r analysis")
+        script = os.path.join(HERE, "metastasis_analysis.R")
+        logger.info("script = {}", script)
+        run_r_script(script)
+        show_r_plots(os.path.join(HERE, "results/study_protocol_d/plots_r"))
+
+    def extract_save_metastasis(self, df_all_conditions, df_lookup):
+        df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
+        df_metastasis.show()
+        logger.info(f"df_1_2_cond_id_asserted.count() = : {df_all_conditions.count()}")
+        df_metastasis = df_all_conditions.join(df_metastasis, "condition_id", "left")
+        logger.info(f"df_1_2_mals_metastasis.count() = : {df_metastasis.count()}")
+
+        df_metastasis_deidentified = deidentify(df_metastasis, IDENTIFYING_COLS, df_lookup)
+        df_metastasis_deidentified.show()
+
+        save_final_df(df_metastasis_deidentified, self.settings, suffix="metastasis_deidentified")
+        save_final_df_parquet(
+            df_metastasis_deidentified, self.settings, suffix="metastasis_deidentified"
+        )
+
+    def extract_save_therapies(self, df_all_conditions, df_lookup):
+        # system therapy
+        df_system_therapies = extract_systemtherapies(self.pc, self.data, self.settings, self.spark)
+        logger.info(f"df_system_therapies.count() = : {df_system_therapies.count()}")
+        df_system_therapies = cast_study_dates(
+            df_system_therapies,
+            [
+                "therapy_start_date",
+                "therapy_end_date",
+            ],
+        )
+        df_system_therapies = df_system_therapies.join(
+            df_all_conditions,
+            df_all_conditions.condition_id == df_system_therapies.reason_reference,
+            "left",
+        )
+        df_system_therapies_deidentified = deidentify(
+            df_system_therapies, IDENTIFYING_COLS, df_lookup
+        )
+        df_system_therapies_deidentified.show()
+        save_final_df(
+            df_system_therapies_deidentified,
+            self.settings,
+            suffix="system_therapies_deidentified",
+        )
+        save_final_df_parquet(
+            df_system_therapies_deidentified,
+            self.settings,
+            suffix="system_therapies_deidentified",
+        )
+
+        # radio therapy
+        df_parents_radiotherapies, df_children_bestrahlung = extract_radiotherapies(
+            self.pc, self.data, self.settings, self.spark
+        )
+
+        df_radiotherapies_joined = join_radiotherapies(
+            df_parents_radiotherapies, df_children_bestrahlung
+        )
+        logger.info(f"df_radiotherapies_joined.count() = : {df_radiotherapies_joined.count()}")
+        df_radiotherapies_joined = cast_study_dates(
+            df_radiotherapies_joined,
+            [
+                "therapy_start_date",
+                "therapy_end_date",
+            ],
+        )
+        df_radiotherapies_joined = df_radiotherapies_joined.join(
+            df_all_conditions,
+            df_all_conditions.condition_id == df_radiotherapies_joined.reason_reference,
+            "left",
+        )
+        df_radiotherapies_joined_deidentified = deidentify(
+            df_radiotherapies_joined, IDENTIFYING_COLS, df_lookup
+        )
+        df_radiotherapies_joined_deidentified.show()
+        save_final_df(
+            df_radiotherapies_joined_deidentified,
+            self.settings,
+            suffix="radiotherapies_joined_deidentified",
+        )
+        save_final_df_parquet(
+            df_radiotherapies_joined_deidentified,
+            self.settings,
+            suffix="radiotherapies_joined_deidentified",
+        )
+
+        # surgery
+        df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        df_ops = cast_study_dates(
+            df_ops,
+            [
+                "therapy_start_date",
+            ],
+        )
+
+        df_ops_grouped = group_ops(df_ops)
+        logger.info(f"df_ops_grouped.count() = : {df_ops_grouped.count()}")
+        df_ops_grouped = df_ops_grouped.join(
+            df_all_conditions,
+            df_all_conditions.condition_id == df_ops_grouped.reason_reference,
+            "left",
+        )
+        df_ops_grouped_deidentified = deidentify(df_ops_grouped, IDENTIFYING_COLS, df_lookup)
+        df_ops_grouped_deidentified.show()
+        save_final_df(df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified")
+        save_final_df_parquet(
+            df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified"
         )

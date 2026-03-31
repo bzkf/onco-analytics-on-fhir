@@ -7,6 +7,7 @@ from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
 from pathling.datasource import DataSource
+from urllib3 import Retry
 from settings import Settings
 from utils import (
     save_final_df,
@@ -93,11 +94,17 @@ class AMLStudy:
         if settings.fhir.base_url is None:
             raise ValueError("FHIR server URL is not set")
 
+        retries = Retry(
+            total=settings.fhir.retries,
+            backoff_factor=0.1,
+        )
+
         self.search = Pirate(
             auth=auth,
             base_url=settings.fhir.base_url,
             print_request_url=settings.fhir.print_request_urls,
             num_processes=settings.fhir.num_processes,
+            retry_requests=retries,
         )
 
         self.output_dir = os.path.join(settings.results_directory_path, settings.study_name.value)
@@ -293,7 +300,12 @@ class AMLStudy:
         processed = (
             lab_df.astype(str)
             .groupby(
-                ["loinc_code", "loinc_display", "lab_quantity_unit", "lab_codeableconcept_code"]
+                [
+                    "loinc_code",
+                    "loinc_display",
+                    "lab_quantity_unit",
+                    "lab_codeableconcept_code",
+                ]
             )
             .size()
             .reset_index(name="num_labs")

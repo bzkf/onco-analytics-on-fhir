@@ -8,12 +8,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from study_protocol_pca_utils import (
     aggregate_local_csvs,
-    extract_radiotherapies,
-    extract_surgeries,
-    extract_systemtherapies,
     flag_young_highrisk_cohort,
-    group_ops,
-    join_radiotherapies,
     plot_age_class,
     plot_diagnosis_year,
     plot_metastasis_loc,
@@ -28,6 +23,11 @@ from utils import (
     cast_study_dates,
     compute_age,
     extract_df_study_protocol_a_d_mii,
+    extract_radiotherapies,
+    extract_surgeries,
+    extract_systemtherapies,
+    group_ops,
+    join_radiotherapies,
     months_diff,
     save_final_df,
 )
@@ -102,8 +102,8 @@ class StudyProtocolPCa1:
         save_final_df(df_radiotherapies_joined, self.settings, suffix="radiotherapies_joined")
 
         df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
-        df_radiotherapies_joined = cast_study_dates(
-            df_radiotherapies_joined,
+        df_ops = cast_study_dates(
+            df_ops,
             [
                 "therapy_start_date",
             ],
