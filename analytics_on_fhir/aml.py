@@ -7,8 +7,8 @@ from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
 from pathling.datasource import DataSource
-from urllib3 import Retry
 from settings import Settings
+from urllib3 import Retry
 from utils import (
     save_final_df,
 )
@@ -20,6 +20,7 @@ FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
 )
 FHIR_CODE_SYSTEM_ECOG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-allgemeiner-leistungszustand-ecog"
 FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
+FHIR_CODE_SYSTEM_OPS = "http://fhir.de/CodeSystem/bfarm/ops"
 
 DATA_DICTIONARY = {
     "aml_all_patients": {
@@ -71,6 +72,16 @@ DATA_DICTIONARY = {
         + "Patient.identifier)",
         "effective_dateTime": "Date of the tumor progression assessment",
         "overall_assessment_of_tumor_regression": "Tumor progression status value",
+    },
+    "df_obds_procedures": {
+        "procedure_id": "Unique identifier of the performed procedure",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced from the Procedure",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
+        "performed_period_start": "Start of the procedure period",
+        "performed_period_end": "End of the procedure period",
+        "procedure_ops_code": "OPS code of the Procedure",
+        "procedure_ops_display": "Display value of the OPS code",
     },
 }
 
@@ -560,4 +571,68 @@ class AMLStudy:
             progressions,
             self.settings,
             suffix="obds_progressions",
+        )
+
+        procedures = self.data.view(
+            "Procedure",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "procedure_id",
+                        },
+                        {
+                            "path": "subject.getReferenceKey()",
+                            "name": "procedure_patient_reference",
+                        },
+                        {
+                            "path": "performed.ofType(Period).start",
+                            "name": "performed_period_start",
+                        },
+                        {
+                            "path": "performed.ofType(Period).end",
+                            "name": "performed_period_end",
+                        },
+                        {
+                            "path": "code.ofType(CodeableConcept).coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')"
+                            + ".code",
+                            "name": "procedure_ops_code",
+                        },
+                        {
+                            "path": "code.ofType(CodeableConcept).coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')"
+                            + ".display",
+                            "name": "procedure_ops_display",
+                        },
+                    ],
+                }
+            ],
+            where=[
+                {
+                    "code": "Only Procedures with OPS code",
+                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_OPS}')" + ".exists()",
+                }
+            ],
+        )
+
+        procedures.show()
+
+        procedures = procedures.join(
+            aml_patient_references,
+            procedures.procedure_patient_reference == conditions.condition_patient_reference,
+            "inner",
+        ).select(procedures["*"])
+
+        procedures = procedures.join(
+            patients.select("patient_id", "patient_mrn"),
+            procedures.procedure_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        save_final_df(
+            procedures,
+            self.settings,
+            suffix="obds_procedures",
         )
