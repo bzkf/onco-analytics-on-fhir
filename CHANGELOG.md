@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.22.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.22.0...v2.22.1) (2026-03-31)
+
+
+### Bug Fixes
+
+* updated query and added larger poll interval to onkostar-db-connector config ([#415](https://github.com/bzkf/onco-analytics-on-fhir/issues/415)) ([37427cc](https://github.com/bzkf/onco-analytics-on-fhir/commit/37427cc645170b5a118f2fe8a68bf9df9ded6b2f))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump requests from 2.32.5 to 2.33.0 ([#414](https://github.com/bzkf/onco-analytics-on-fhir/issues/414)) ([17ce593](https://github.com/bzkf/onco-analytics-on-fhir/commit/17ce5936cb7cc03d4d2e201bbca58fb53e1b0591))
+
 ## [2.22.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.21.4...v2.22.0) (2026-03-25)
 
 
