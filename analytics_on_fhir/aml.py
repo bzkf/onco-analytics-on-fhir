@@ -21,6 +21,7 @@ FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
 FHIR_CODE_SYSTEM_ECOG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-allgemeiner-leistungszustand-ecog"
 FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
 FHIR_CODE_SYSTEM_OPS = "http://fhir.de/CodeSystem/bfarm/ops"
+FHIR_CODE_SYSTEM_BODYSITE = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
 
 DATA_DICTIONARY = {
     "aml_all_patients": {
@@ -82,6 +83,7 @@ DATA_DICTIONARY = {
         "performed_period_end": "End of the procedure period",
         "procedure_ops_code": "OPS code of the Procedure",
         "procedure_ops_display": "Display value of the OPS code",
+        "procedure_target_bodyregion": "Target body region of the procedure",
     },
 }
 
@@ -605,6 +607,12 @@ class AMLStudy:
                             + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')"
                             + ".display",
                             "name": "procedure_ops_display",
+                        },
+                        {
+                            "path": "bodySite.coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_BODYSITE}')"
+                            + ".code",
+                            "name": "procedure_target_bodyregion",
                         },
                     ],
                 }
