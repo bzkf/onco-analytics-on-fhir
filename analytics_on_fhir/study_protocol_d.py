@@ -141,6 +141,7 @@ class StudyProtocolD:
         # 5) pivot malignancy 2, union with single malignancy patients
         df_all_pivot = pivot_multi_single(df_clean, df_2_mals, df_1_mal)
         self.df_all_pivot = df_all_pivot
+        save_final_df(df_all_pivot, self.settings, suffix="all_pivot")
         df_all_pivot_deidentified = deidentify(df_all_pivot, IDENTIFYING_COLS, df_lookup)
         save_final_df(df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified")
         save_final_df_parquet(

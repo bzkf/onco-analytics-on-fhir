@@ -16,7 +16,7 @@ from utils import save_plot
 IDENTIFYING_COLS = [
     "meta_profile",
     "condition_patient_resource_id",
-    "patient_resource_id",
+    # "patient_resource_id",  # hash patids later
     "patid_pseudonym",
     "deceased_boolean",
     "observation_death_patient_resource_id",
@@ -135,7 +135,6 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
         "icd10_parent_code",
         "entity_or_parent",
         "age_at_diagnosis",
-        "is_deceased",
     ]
     # sollte 2 sein
     max_index = df_2_mals.agg(F.max("malignancy_number")).collect()[0][0]
@@ -166,7 +165,6 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
         F.col("icd10_code").alias("icd10_code_1"),
         F.col("icd10_parent_code").alias("icd10_parent_code_1"),
         F.col("age_at_diagnosis").alias("age_at_diagnosis_1"),
-        F.col("is_deceased").alias("is_deceased_1"),
     )
 
     df_all_pivot = df_2_mals_final.unionByName(df_1_mal_selected, allowMissingColumns=True)
@@ -186,6 +184,7 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
         F.first("death_cause_icd10", ignorenulls=True).alias("death_cause_icd10"),
         F.first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
         F.first("date_death", ignorenulls=True).alias("date_death"),
+        F.first("is_deceased", ignorenulls=True).alias("is_deceased"),
     )
     df_all_pivot = df_all_pivot.join(df_death, on="patient_resource_id", how="left")
     df_all_pivot = df_all_pivot.checkpoint(eager=True)

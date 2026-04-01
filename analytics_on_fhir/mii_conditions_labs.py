@@ -114,7 +114,9 @@ class PyRateQuery:
             condition_df = pd.concat(all_conditions, ignore_index=True)
             condition_df.drop(columns=["subject_list"], inplace=True)
             condition_df.to_csv(
-                os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".csv"), index=False
+                os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".csv"),
+                index=False,
+                sep=";",
             )
 
             logger.info("condition_df size: {}", condition_df.count())
