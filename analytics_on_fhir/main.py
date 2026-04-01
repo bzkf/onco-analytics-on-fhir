@@ -219,7 +219,8 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
             )
             filter_reacto(df_weitere_klassifikation, settings)
         case StudyNames.AML:
-            aml = AMLStudy(settings)
+            aml = AMLStudy(settings, data)
+            aml.extract_from_obds()
             aml.extract_patients()
             if settings.aml.use_cytostatics_data:
                 aml.join_with_drug_data()
