@@ -41,6 +41,9 @@ class FHIRServerSettings:
     num_processes: int = 6
     user: str = ""
     password: str = ts.secret(default="")
+    auth_type: str = "basicauth"
+    token_auth_url: str | None = None
+    token_refresh_url: str | None = None
     retries: int = 10
 
 
