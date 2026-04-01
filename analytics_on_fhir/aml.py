@@ -2,14 +2,26 @@ import os
 from pathlib import Path
 
 import pandas as pd
+from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
+from pathling.datasource import DataSource
 from settings import Settings
 from urllib3 import Retry
+from utils import (
+    save_final_df,
+)
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
+FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-tod"
+)
+FHIR_CODE_SYSTEM_ECOG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-allgemeiner-leistungszustand-ecog"
+FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
+FHIR_CODE_SYSTEM_OPS = "http://fhir.de/CodeSystem/bfarm/ops"
+FHIR_CODE_SYSTEM_BODYSITE = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
 
 DATA_DICTIONARY = {
     "aml_all_patients": {
@@ -35,14 +47,53 @@ DATA_DICTIONARY = {
         "lab_quantity_unit": "Unit of the laboratory measurement",
         "lab_codeableconcept_code": "Code of the lab value result (if applicable)",
     },
+    "df_obds_deaths": {
+        "observation_id": "Unique identifier of the death Observation resource",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced in the death observation",
+        "death_dateTime": "Date of death for the patient (note there may be multiple deaths per "
+        + "patients if multiple causes of death are recorded. Even multiple deaths per patient "
+        + "with different dates are possible due to documentation errors.)",
+        "cause_of_death": "Cause of death encoded as an ICD-10 code",
+        "death_caused_by_tumor": "yes/no/unknown - whether the death was caused by the tumor.",
+    },
+    "df_obds_ecog_statuses": {
+        "observation_id": "Unique identifier of the ECOG Observation resource",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced from the observation",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
+        "effective_dateTime": "Date of the ECOG performance status assessment",
+        "ecog_performance_status": "ECOG performance status value",
+    },
+    "df_obds_progressions": {
+        "observation_id": "Unique identifier of the tumor progression Observation resource",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced from the observation",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
+        "effective_dateTime": "Date of the tumor progression assessment",
+        "overall_assessment_of_tumor_regression": "Tumor progression status value",
+    },
+    "df_obds_procedures": {
+        "procedure_id": "Unique identifier of the performed procedure",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced from the Procedure",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
+        "performed_period_start": "Start of the procedure period",
+        "performed_period_end": "End of the procedure period",
+        "procedure_ops_code": "OPS code of the Procedure",
+        "procedure_ops_display": "Display value of the OPS code",
+        "procedure_target_bodyregion": "Target body region of the procedure",
+    },
 }
 
 HERE = Path(os.path.abspath(os.path.dirname(__file__)))
 
 
 class AMLStudy:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, data: DataSource):
         self.settings = settings
+        self.data = data
 
         # not strictly needed since their names match the default env variable names expected
         os.environ["FHIR_USER"] = settings.fhir.user
@@ -279,3 +330,319 @@ class AMLStudy:
         processed.to_csv(os.path.join(self.output_dir, "aml_labs_counts.csv"), index=False)
 
         return
+
+    def extract_from_obds(self):
+        # 1. get all conditions with the AML icd codes
+        # 2. get the death observations for these patients with cause of death and date of death
+        # 3. get the referenced patients for these conditions with their identifier
+        # 4. get the ecog score
+        # 5. get the verlauf data
+        # 6. maybe get weitere klassifikationen
+
+        patients = self.data.view(
+            "Patient",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "patient_id",
+                        },
+                        {
+                            "path": "identifier.where("
+                            + f"system='{self.settings.fhir.patient_identifier_system}').value",
+                            "name": "patient_mrn",
+                        },
+                    ],
+                }
+            ],
+        )
+
+        conditions = self.data.view(
+            "Condition",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "condition_id",
+                        },
+                        {
+                            "path": "subject.getReferenceKey()",
+                            "name": "condition_patient_reference",
+                        },
+                        {
+                            "path": f"extension('{FHIR_SYSTEMS_CONDITION_ASSERTED_DATE}')"
+                            + ".value.ofType(dateTime)",
+                            "name": "diagnosis_assertedDateTime",
+                        },
+                        {
+                            "path": "recordedDate",
+                            "name": "diagnosis_recordedDate",
+                        },
+                        {
+                            "path": "onset.ofType(dateTime)",
+                            "name": "diagnosis_onsetDateTime",
+                        },
+                        {
+                            "path": f"code.coding.where(system = '{FHIR_CODE_SYSTEM_ICD10}').code",
+                            "name": "icd_code",
+                        },
+                    ],
+                }
+            ],
+        )
+
+        icd_codes_aml = self.data.spark.read.csv(
+            (HERE / "icd_codes_aml.csv").as_posix(), header=True
+        )
+
+        conditions = conditions.join(
+            icd_codes_aml, conditions.icd_code == icd_codes_aml.icd_code, "inner"
+        )
+
+        logger.info(f"Found {conditions.count()} Conditions with AML ICD code")
+        conditions.show()
+
+        aml_patient_references = conditions.select("condition_patient_reference").distinct()
+
+        deaths = self.data.view(
+            "Observation",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "observation_id",
+                        },
+                        {
+                            "path": "subject.getReferenceKey()",
+                            "name": "observation_patient_reference",
+                        },
+                        {
+                            "path": "effective.ofType(dateTime)",
+                            "name": "death_dateTime",
+                        },
+                        {
+                            "path": "interpretation.coding.where(system = "
+                            + f"'{FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT}').code",
+                            "name": "death_caused_by_tumor",
+                        },
+                        {
+                            "path": "value.ofType(CodeableConcept).coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_ICD10}').code",
+                            "name": "cause_of_death",
+                        },
+                    ],
+                }
+            ],
+            where=[
+                {
+                    "description": "Only death observations",
+                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_SNOMED}' "
+                    + "and code='184305005').exists()",
+                }
+            ],
+        )
+
+        deaths.show()
+
+        deaths = deaths.join(
+            aml_patient_references,
+            deaths.observation_patient_reference == conditions.condition_patient_reference,
+            "inner",
+        )
+
+        deaths = deaths.join(
+            patients.select("patient_id", "patient_mrn"),
+            deaths.observation_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        logger.info(f"Found {deaths.count()} deaths with AML patient matches")
+        deaths.show()
+
+        save_final_df(
+            deaths,
+            self.settings,
+            suffix="obds_deaths",
+        )
+
+        ecogs = self.data.view(
+            "Observation",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "observation_id",
+                        },
+                        {
+                            "path": "subject.getReferenceKey()",
+                            "name": "observation_patient_reference",
+                        },
+                        {
+                            "path": "effective.ofType(dateTime)",
+                            "name": "effective_dateTime",
+                        },
+                        {
+                            "path": "value.ofType(CodeableConcept).coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_ECOG}').code",
+                            "name": "ecog_performance_status",
+                        },
+                    ],
+                }
+            ],
+            where=[
+                {
+                    "description": "Only ecog observations",
+                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_SNOMED}' "
+                    + "and code='423740007').exists()",
+                }
+            ],
+        )
+
+        ecogs.show()
+
+        ecogs = ecogs.join(
+            aml_patient_references,
+            ecogs.observation_patient_reference == conditions.condition_patient_reference,
+            "inner",
+        ).select(ecogs["*"])
+
+        ecogs = ecogs.join(
+            patients.select("patient_id", "patient_mrn"),
+            ecogs.observation_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        save_final_df(
+            ecogs,
+            self.settings,
+            suffix="obds_ecog_statuses",
+        )
+
+        progressions = self.data.view(
+            "Observation",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "observation_id",
+                        },
+                        {
+                            "path": "subject.getReferenceKey()",
+                            "name": "observation_patient_reference",
+                        },
+                        {
+                            "path": "effective.ofType(dateTime)",
+                            "name": "effective_dateTime",
+                        },
+                        {
+                            "path": "value.ofType(CodeableConcept).coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG}')"
+                            + ".code",
+                            "name": "overall_assessment_of_tumor_regression",
+                        },
+                    ],
+                }
+            ],
+            where=[
+                {
+                    "description": "Only 'Status of regression of tumor' observations",
+                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_SNOMED}' "
+                    + "and code='396432002').exists()",
+                }
+            ],
+        )
+
+        progressions.show()
+
+        progressions = progressions.join(
+            aml_patient_references,
+            progressions.observation_patient_reference == conditions.condition_patient_reference,
+            "inner",
+        ).select(progressions["*"])
+
+        progressions = progressions.join(
+            patients.select("patient_id", "patient_mrn"),
+            progressions.observation_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        save_final_df(
+            progressions,
+            self.settings,
+            suffix="obds_progressions",
+        )
+
+        procedures = self.data.view(
+            "Procedure",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "procedure_id",
+                        },
+                        {
+                            "path": "subject.getReferenceKey()",
+                            "name": "procedure_patient_reference",
+                        },
+                        {
+                            "path": "performed.ofType(Period).start",
+                            "name": "performed_period_start",
+                        },
+                        {
+                            "path": "performed.ofType(Period).end",
+                            "name": "performed_period_end",
+                        },
+                        {
+                            "path": "code.ofType(CodeableConcept).coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')"
+                            + ".code",
+                            "name": "procedure_ops_code",
+                        },
+                        {
+                            "path": "code.ofType(CodeableConcept).coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')"
+                            + ".display",
+                            "name": "procedure_ops_display",
+                        },
+                        {
+                            "path": "bodySite.coding"
+                            + f".where(system = '{FHIR_CODE_SYSTEM_BODYSITE}')"
+                            + ".code",
+                            "name": "procedure_target_bodyregion",
+                        },
+                    ],
+                }
+            ],
+            where=[
+                {
+                    "code": "Only Procedures with OPS code",
+                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_OPS}')" + ".exists()",
+                }
+            ],
+        )
+
+        procedures.show()
+
+        procedures = procedures.join(
+            aml_patient_references,
+            procedures.procedure_patient_reference == conditions.condition_patient_reference,
+            "inner",
+        ).select(procedures["*"])
+
+        procedures = procedures.join(
+            patients.select("patient_id", "patient_mrn"),
+            procedures.procedure_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        save_final_df(
+            procedures,
+            self.settings,
+            suffix="obds_procedures",
+        )
