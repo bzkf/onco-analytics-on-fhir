@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.23.0...v2.23.1) (2026-04-01)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#416](https://github.com/bzkf/onco-analytics-on-fhir/issues/416)) ([c7a7f6e](https://github.com/bzkf/onco-analytics-on-fhir/commit/c7a7f6e28236dd7c0cd8e35a920d860ff703e599))
+
 ## [2.23.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.22.1...v2.23.0) (2026-04-01)
 
 
