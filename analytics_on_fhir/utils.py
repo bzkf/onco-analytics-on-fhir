@@ -194,7 +194,7 @@ def compute_age(df: DataFrame) -> DataFrame:
     df = df.withColumn(
         "age_at_diagnosis",
         F.round((F.datediff(df["asserted_date"], df["birthdate"]) / 365.25), 2),
-    ).drop("birthdate")
+    )
     return df
 
 
@@ -204,7 +204,7 @@ def compute_month_diffs_for_all_date_cols(df: DataFrame) -> DataFrame:
         c
         for c in df.columns
         if "date" in c.lower()
-        and c != "asserted_date"
+        and "asserted_date" not in c.lower()
         and "precision" not in c.lower()
         and "year" not in c.lower()
     ]
@@ -311,8 +311,8 @@ def deidentify(df: DataFrame, identifying_cols: list[str], df_lookup: DataFrame)
     cols_to_drop = [c for c in identifying_cols if c in df.columns]
     df = df.drop(*cols_to_drop)
 
-    df = create_year_col_asserted_death(df)
     df = compute_month_diffs_for_all_date_cols(df)
+    df = create_year_col_asserted_death(df)
     df = drop_date_cols(df)
 
     # all possible condition_id columns
