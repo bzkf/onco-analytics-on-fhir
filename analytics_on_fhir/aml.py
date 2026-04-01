@@ -5,10 +5,11 @@ import pandas as pd
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
+from urllib3 import Retry
 from settings import Settings
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
-FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
+FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
 
 DATA_DICTIONARY = {
     "aml_all_patients": {
@@ -24,14 +25,15 @@ DATA_DICTIONARY = {
         "birth_date": "Patient birth date",
         "gender": "Administrative gender of the patient",
     },
-    "aml_matched_cytostatics_labs": {
+    "aml_labs": {
         "observation_id": "Unique identifier of the Observation resource",
         "observation_patient_reference": "FHIR reference to the patient (Patient/{id})",
         "loinc_code": "LOINC code of the laboratory observation",
         "loinc_display": "Human-readable LOINC description",
         "lab_dateTime": "Date/time when the laboratory measurement was taken",
-        "lab_value": "Numeric value of the laboratory measurement",
-        "lab_unit": "Unit of the laboratory measurement",
+        "lab_quantity_value": "Numeric value of the laboratory measurement",
+        "lab_quantity_unit": "Unit of the laboratory measurement",
+        "lab_codeableconcept_code": "Code of the lab value result (if applicable)",
     },
 }
 
@@ -54,11 +56,17 @@ class AMLStudy:
         if settings.fhir.base_url is None:
             raise ValueError("FHIR server URL is not set")
 
+        retries = Retry(
+            total=settings.fhir.retries,
+            backoff_factor=0.1,
+        )
+
         self.search = Pirate(
             auth=auth,
             base_url=settings.fhir.base_url,
             print_request_url=settings.fhir.print_request_urls,
             num_processes=settings.fhir.num_processes,
+            retry_requests=retries,
         )
 
         self.output_dir = os.path.join(settings.results_directory_path, settings.study_name.value)
@@ -80,6 +88,10 @@ class AMLStudy:
             )
 
     def extract_patients(self):
+        # make sure PATIENT_IDENTIFIER_SYSTEM is set
+        if self.settings.fhir.patient_identifier_system is None:
+            raise KeyError("Please set the variable FHIR_PATIENT_IDENTIFIER_SYSTEM")
+
         # using icd_codes_aml.csv as input, finding all patients with requested diagnosis
         condition_df = pd.read_csv(HERE / "icd_codes_aml.csv")
 
@@ -108,8 +120,8 @@ class AMLStudy:
                 ("patient_id", "Patient.id"),
                 (
                     "patient_mrn",
-                    "Patient.identifier.where(type.coding.where("
-                    + f"system='{FHIR_IDENTIFIER_TYPE_SYSTEM}' and code='MR').exists()).value",
+                    "Patient.identifier.where("
+                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
                 ),
                 ("birth_date", "Patient.birthDate"),
                 ("gender", "Patient.gender"),
@@ -156,6 +168,10 @@ class AMLStudy:
         logger.info("merged_df size: {}", merged_df.count())
         logger.info("patient_df size: {}", patient_df.count())
 
+        patient_list = merged_df["condition_patient_reference"]
+        patient_list.drop_duplicates(inplace=True)
+        self.extract_labs(patient_list=patient_list)
+
     def extract_labs(self, patient_list):
         all_labs = []
 
@@ -183,23 +199,28 @@ class AMLStudy:
                         "code.coding.where(system='http://loinc.org').display",
                     ),
                     ("lab_dateTime", "effectiveDateTime[0]"),
-                    ("lab_value", "valueQuantity.value"),
-                    ("lab_unit", "valueQuantity.code"),
+                    ("lab_quantity_value", "valueQuantity.value"),
+                    ("lab_quantity_unit", "valueQuantity.code"),
+                    (
+                        "lab_codeableconcept_code",
+                        f"Observation.valueCodeableConcept.coding.where(system='{FHIR_CODE_SYSTEM_SNOMED}')"
+                        + ".first().code",
+                    ),
                 ],
             )
 
             all_labs.append(lab_df_chunk)
 
         lab_df = pd.concat(all_labs, ignore_index=True)
-        lab_df.to_csv(
-            os.path.join(self.output_dir, "aml_matched_cytostatics_labs.csv"), index=False
-        )
+        lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
+
+        logger.info("all_labs_df size: {}", lab_df.count())
 
         self.post_process_lab_values(lab_df)
 
     def join_with_drug_data(self):
 
-        cytostatics_patient_ids = (
+        zenzy_patient_ids = (
             pd.read_csv(
                 os.path.join(self.settings.aml.csv_input_file),
                 sep=";",
@@ -212,26 +233,42 @@ class AMLStudy:
         )
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
         patient_ids = patient_df["patient_mrn"].dropna().astype(str).str.strip()
-        filtered_ids = cytostatics_patient_ids[cytostatics_patient_ids.isin(patient_ids)]
+        filtered_ids = zenzy_patient_ids[zenzy_patient_ids.isin(patient_ids)]
         filtered_refs = (
             patient_df[patient_df["patient_mrn"].isin(filtered_ids)]["condition_patient_reference"]
             .dropna()
             .drop_duplicates()
         )
 
-        logger.info("Cytostatics input data patient count: {}", len(cytostatics_patient_ids))
+        logger.info("Zenzy input data patient count: {}", len(zenzy_patient_ids))
         logger.info("Matched with AML cohort patient count: {}", len(filtered_ids))
 
         if len(filtered_ids) > 0:
-            self.extract_labs(patient_list=filtered_refs)
+            lab_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_labs.csv"))
+            matched_lab_df = lab_df[lab_df["observation_patient_reference"].isin(filtered_refs)]
+            matched_lab_df.to_csv(
+                os.path.join(self.output_dir, "aml_matched_zenzy_labs.csv"), index=False
+            )
+            logger.info("matched_zenzy_labs_df size: {}", matched_lab_df.count())
+            logger.info(
+                "Found labs for {} patients",
+                len(pd.unique(matched_lab_df["observation_patient_reference"])),
+            )
         else:
-            logger.info("Found no match between Cytostatics input data and AML patients.")
+            logger.info("Found no match between Zenzy input data and AML patients.")
 
     def post_process_lab_values(self, lab_df):
 
         processed = (
             lab_df.astype(str)
-            .groupby(["loinc_code", "loinc_display", "lab_unit"])
+            .groupby(
+                [
+                    "loinc_code",
+                    "loinc_display",
+                    "lab_quantity_unit",
+                    "lab_codeableconcept_code",
+                ]
+            )
             .size()
             .reset_index(name="num_labs")
             .sort_values(by="num_labs", ascending=False)

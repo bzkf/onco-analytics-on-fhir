@@ -112,3 +112,49 @@ class DQStudy:
         )
 
         weitere_klassifikation_mapping_table.show()
+
+        adverse_event_without_coding = data.view(
+            "AdverseEvent",
+            select=[
+                {
+                    "column": [
+                        {
+                            "description": "AdverseEvent event text",
+                            "path": "event.text",
+                            "name": "nebenwirkung_bezeichnung",
+                        },
+                    ],
+                }
+            ],
+            where=[
+                {
+                    "description": "Only AdverseEvents without a coding",
+                    "path": "event.coding.code.empty()",
+                },
+            ],
+        )
+
+        logger.info(f"Found {adverse_event_without_coding.count()} AdverseEvents without coding")
+
+        adverse_event_without_coding_mapping_table = (
+            adverse_event_without_coding.groupBy("nebenwirkung_bezeichnung")
+            .count()
+            .orderBy(["nebenwirkung_bezeichnung"], ascending=False)
+            .withColumn("snomed_code", lit(""))
+            .withColumn("snomed_display", lit(""))
+            # select to get "count" as last column
+            .select(
+                "nebenwirkung_bezeichnung",
+                "snomed_code",
+                "snomed_display",
+                "count",
+            )
+        )
+
+        save_final_df(
+            adverse_event_without_coding_mapping_table,
+            self.settings,
+            suffix="adverse-event-mappings",
+        )
+
+        adverse_event_without_coding_mapping_table.show()

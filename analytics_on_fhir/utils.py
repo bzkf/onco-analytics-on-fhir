@@ -242,6 +242,50 @@ def create_year_col_asserted_death(df: DataFrame) -> DataFrame:
     return df
 
 
+def compute_month_diffs_for_all_date_cols(df: DataFrame) -> DataFrame:
+    # Alle Spalten mit "date", außer asserted_date und Spalten mit "precision" oder "year"
+    date_cols = [
+        c
+        for c in df.columns
+        if "date" in c.lower()
+        and c != "asserted_date"
+        and "precision" not in c.lower()
+        and "year" not in c.lower()
+    ]
+
+    for date_col in date_cols:
+        df = df.withColumn(
+            f"months_between_asserted_{date_col}",
+            F.round(F.months_between(F.col(date_col), F.col("asserted_date")), 2),
+        )
+
+    return df
+
+
+def drop_date_cols(df: DataFrame) -> DataFrame:
+    date_cols = [
+        c
+        for c in df.columns
+        if "date" in c.lower()
+        and "precision" not in c.lower()
+        and "between" not in c.lower()
+        and "year" not in c.lower()
+    ]
+
+    return df.drop(*date_cols)
+
+
+def create_year_col_asserted_death(df: DataFrame) -> DataFrame:
+    if "asserted_date" in df.columns:
+        df = df.withColumn("asserted_year", F.year("asserted_date"))
+    if "deceased_datetime" in df.columns:
+        df = df.withColumn("deceased_datetime_year", F.year("deceased_datetime"))
+    if "date_death" in df.columns:
+        df = df.withColumn("date_death_year", F.year("date_death"))
+
+    return df
+
+
 def detect_date_precision(col):
     return (
         # ISO-Formate

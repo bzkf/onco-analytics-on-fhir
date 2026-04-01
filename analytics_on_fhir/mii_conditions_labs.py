@@ -8,7 +8,7 @@ from more_itertools import chunked
 from settings import Settings
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
-FHIR_IDENTIFIER_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
+FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
 
 DATA_DICTIONARY = {
     "df_mii_conditions": {
@@ -24,8 +24,9 @@ DATA_DICTIONARY = {
         "loinc_code": "LOINC code of the laboratory observation",
         "loinc_display": "Human-readable LOINC description",
         "lab_dateTime": "Date/time when the laboratory measurement was taken",
-        "lab_value": "Numeric value of the laboratory measurement",
-        "lab_unit": "Unit of the laboratory measurement",
+        "lab_quantity_value": "Numeric value of the laboratory measurement",
+        "lab_quantity_unit": "Unit of the laboratory measurement",
+        "lab_codeableconcept_code": "Code of the lab value result (if applicable)",
     },
 }
 
@@ -150,8 +151,13 @@ class PyRateQuery:
                         "code.coding.where(system='http://loinc.org').display",
                     ),
                     ("lab_dateTime", "effectiveDateTime[0]"),
-                    ("lab_value", "valueQuantity.value"),
-                    ("lab_unit", "valueQuantity.code"),
+                    ("lab_quantity_value", "valueQuantity.value"),
+                    ("lab_quantity_unit", "valueQuantity.code"),
+                    (
+                        "lab_codeableconcept_code",
+                        f"Observation.valueCodeableConcept.coding.where(system='{FHIR_CODE_SYSTEM_SNOMED}')"
+                        + ".first().code",
+                    ),
                 ],
             )
 
@@ -167,7 +173,14 @@ class PyRateQuery:
             logger.info("lab_df size: {}", lab_df.count())
 
             self.post_process_values(
-                lab_df, name="labs", columns=["loinc_code", "loinc_display", "lab_unit"]
+                lab_df,
+                name="labs",
+                columns=[
+                    "loinc_code",
+                    "loinc_display",
+                    "lab_quantity_unit",
+                    "lab_codeableconcept_code",
+                ],
             )
         else:
             logger.info("Found no lab values to given patients.")
