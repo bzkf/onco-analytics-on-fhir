@@ -5,8 +5,8 @@ import pandas as pd
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
-from urllib3 import Retry
 from settings import Settings
+from urllib3 import Retry
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
