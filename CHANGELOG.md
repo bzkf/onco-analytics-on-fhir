@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.23.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.22.1...v2.23.0) (2026-04-01)
+
+
+### Features
+
+* added oBDS export to aml study ([#403](https://github.com/bzkf/onco-analytics-on-fhir/issues/403)) ([a103566](https://github.com/bzkf/onco-analytics-on-fhir/commit/a10356682429c42d7351cfa4b56836a424269a0a))
+* added support for token auth against the FHIR server ([#413](https://github.com/bzkf/onco-analytics-on-fhir/issues/413)) ([8f416fd](https://github.com/bzkf/onco-analytics-on-fhir/commit/8f416fd966642d08444da937aa3ac111746ca2b1))
+
+
+### Bug Fixes
+
+* deidentify metastasis dfs ([#419](https://github.com/bzkf/onco-analytics-on-fhir/issues/419)) ([f011605](https://github.com/bzkf/onco-analytics-on-fhir/commit/f011605b9fd0c53b6720ab6ae9bedc803bc9400d))
+
 ## [2.22.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.22.0...v2.22.1) (2026-03-31)
 
 
