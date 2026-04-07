@@ -23,6 +23,8 @@ from utils import (
     cast_study_dates,
     compute_age,
     extract_df_study_protocol_a_d_mii,
+    extract_m_tnm,
+    extract_n_tnm,
     extract_radiotherapies,
     extract_surgeries,
     extract_systemtherapies,
@@ -120,6 +122,33 @@ class StudyProtocolPCa1:
         self.df_ops_grouped = df_ops_grouped
 
         save_final_df(df_ops_grouped, self.settings, suffix="ops_grouped")
+
+        df_n_tnm = extract_n_tnm(self.pc, self.data, self.settings, self.spark)
+        df_n_tnm = cast_study_dates(
+            df_n_tnm,
+            [
+                "tnm_date",
+            ],
+        )
+        from pyspark.sql import Window
+
+        w = Window.partitionBy("condition_id").orderBy(F.col("tnm_date").asc())
+
+        df_n_tnm_first = (
+            df_n_tnm.withColumn("rn", F.row_number().over(w))
+            .filter(F.col("rn") == 1)  # nur die „erste“ Zeile behalten
+            .drop("rn")  # Hilfsspalte wieder entfernen
+            .orderBy("tnm_date")  # optional: Gesamtergebnis sortieren
+        )
+
+        logger.info("df_n_tnm_first count = {}", df_n_tnm_first.count())
+        df_n_tnm_first.show(truncate=False)
+
+        save_final_df(df_n_tnm, self.settings, suffix="n_tnm")
+
+        df_m_tnm = extract_m_tnm(self.pc, self.data, self.settings, self.spark)
+        df_m_tnm.show()
+        save_final_df(df_m_tnm, self.settings, suffix="m_tnm")
 
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")

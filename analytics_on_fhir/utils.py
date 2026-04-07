@@ -1353,6 +1353,147 @@ def extract_metastasis(
     return observations_metastasis
 
 
+def extract_n_tnm(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+
+    logger.info("extract N from tnm observations")
+
+    observations_n_tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "TNM N category",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            ".code"
+                        ),
+                        "name": "n_tnm",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "tnm_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code "
+                    "einer der erlaubten SNOMED‑N‑Codes ist."
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_SCT}' and "
+                    "(code = '277206009' or code = '399534004' or code = '371494008')"
+                    ")"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+    observations_n_tnm.orderBy(F.col("condition_id")).show()
+
+    logger.info(
+        "observations_n_tnm count = {}",
+        observations_n_tnm.count(),
+    )
+    logger.info(
+        "observations_n_tnm distinct condition_id count = {}",
+        observations_n_tnm.select("condition_id").distinct().count(),
+    )
+
+    return observations_n_tnm
+
+
+def extract_m_tnm(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+    logger.info("extract M from tnm observations")
+
+    observations_m_tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "TNM M category",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            ".code"
+                        ),
+                        "name": "m_tnm",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "tnm_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code "
+                    "einer der erlaubten SNOMED‑M‑Codes ist."
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_SCT}' and "
+                    "(code = '277208005' or code = '399387003' or code = '371497001')"
+                    ")"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+    observations_m_tnm.orderBy(F.col("condition_id")).show()
+
+    logger.info(
+        "observations_m_tnm count = {}",
+        observations_m_tnm.count(),
+    )
+    logger.info(
+        "observations_m_tnm distinct condition_id count = {}",
+        observations_m_tnm.select("condition_id").distinct().count(),
+    )
+
+    return observations_m_tnm
+
+
 def extract_systemtherapies(
     pc: PathlingContext,
     data: datasource.DataSource,
