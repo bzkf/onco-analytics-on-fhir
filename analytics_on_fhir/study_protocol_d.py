@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 import os
 
 from loguru import logger
@@ -71,44 +69,31 @@ class StudyProtocolD:
     def run(self):
         logger.info("StudyProtocolD pipeline started")
 
-        # 1) Extract
+        crypto_key = os.urandom(32)
+
+        # Extract
         df_extract = self.extract()
 
-        # 2) Prepare
+        # Prepare
         df_prepare = self.prepare(df_extract)
 
-        # 3) Clean + Jahr-Range
+        # Clean + Jahr-Range
         df_clean = self.clean(df_prepare)
         self.year_min = df_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_clean.select(F.max(F.year("asserted_date"))).first()[0]
 
-        # 4) 2mals vs single (1mal)
+        # 2mals vs single (1mal)
         df_2_mals = create_2_mals_df(df_clean)
         df_2_mals_cond_id_asserted = df_2_mals.select(F.col("condition_id"), F.col("asserted_date"))
-        df_2_mals_cond_id_asserted.show()
         df_1_mal = create_1_mal_df(df_clean)
         df_1_mal_cond_id_asserted = df_1_mal.select(F.col("condition_id"), F.col("asserted_date"))
-        df_1_mal_cond_id_asserted.show()
 
         # collect all condition ids and asserted dates
         df_all_conditions = df_1_mal_cond_id_asserted.union(df_2_mals_cond_id_asserted)
-        # generate crypto hashed dict
-        key = os.urandom(32)
-        condition_ids = (
-            df_all_conditions.select("condition_id").distinct().rdd.flatMap(lambda x: x).collect()
-        )
-        condition_hash_lookup = {
-            cid: hmac.digest(key, str(cid).encode("utf-8"), hashlib.sha256).hex()
-            for cid in condition_ids
-        }
-        df_lookup = self.spark.createDataFrame(
-            [(k, v) for k, v in condition_hash_lookup.items()],
-            ["condition_id", "condition_id_hash"],
-        )
 
         # save all conditions
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
-        df_clean_deidentified = deidentify(df_clean, IDENTIFYING_COLS, df_lookup)
+        df_clean_deidentified = deidentify(df_clean, IDENTIFYING_COLS, crypto_key)
         save_final_df(
             df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
         )
@@ -116,39 +101,39 @@ class StudyProtocolD:
             df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
         )
 
-        # extract MII conditions
-        pandas_df_2_mals = df_2_mals.toPandas()
-        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
-        df_list_2_mals.drop_duplicates(inplace=True)
-        self.extract_mii_conditions(df_list_2_mals, suffix="_2_mals")
-        pandas_df_1_mal = df_1_mal.toPandas()
-        df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
-        df_list_1_mal.drop_duplicates(inplace=True)
-        self.extract_mii_conditions(df_list_1_mal, suffix="_1_mal")
-
         # save 1 and 2 tumors
-        df_2_mals_deidentified = deidentify(df_2_mals, IDENTIFYING_COLS, df_lookup)
+        df_2_mals_deidentified = deidentify(df_2_mals, IDENTIFYING_COLS, crypto_key)
         save_final_df(df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified")
         save_final_df_parquet(
             df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified"
         )
-        df_1_mal_deidentified = deidentify(df_1_mal, IDENTIFYING_COLS, df_lookup)
+        df_1_mal_deidentified = deidentify(df_1_mal, IDENTIFYING_COLS, crypto_key)
         save_final_df(df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified")
         save_final_df_parquet(
             df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified"
         )
 
-        # 5) pivot malignancy 2, union with single malignancy patients
+        # extract MII conditions
+        pandas_df_2_mals = df_2_mals.toPandas()
+        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
+        df_list_2_mals.drop_duplicates(inplace=True)
+        self.extract_mii_conditions(df_list_2_mals, suffix="_2_mals", crypto_key=crypto_key)
+        pandas_df_1_mal = df_1_mal.toPandas()
+        df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
+        df_list_1_mal.drop_duplicates(inplace=True)
+        self.extract_mii_conditions(df_list_1_mal, suffix="_1_mal", crypto_key=crypto_key)
+
+        # pivot malignancy 2, union with single malignancy patients
         df_all_pivot = pivot_multi_single(df_clean, df_2_mals, df_1_mal)
         self.df_all_pivot = df_all_pivot
         save_final_df(df_all_pivot, self.settings, suffix="all_pivot")
-        df_all_pivot_deidentified = deidentify(df_all_pivot, IDENTIFYING_COLS, df_lookup)
+        df_all_pivot_deidentified = deidentify(df_all_pivot, IDENTIFYING_COLS, crypto_key)
         save_final_df(df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified")
         save_final_df_parquet(
             df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified"
         )
 
-        # 6) aggregate pairs from df_2_mals - two malignancies
+        # aggregate pairs from df_2_mals - two malignancies
         df_pairs_agg = aggregate_malignancy_pairs(df_2_mals, presuffix="entity_or_parent")
         save_final_df(
             df_pairs_agg.drop("outliers_age_1", "outliers_age_2", "outliers_months_between"),
@@ -158,7 +143,7 @@ class StudyProtocolD:
 
         # 7) plot
         # later: synchron/metachron and plot pair bubble gender (+age, +months between)
-        # later: prepare kaplan meier data, safe csv, combine sites later and plot after
+        # later: prepare kaplan meier data, combine sites later and plot after
         df_pairs_agg_pd = df_pairs_agg.toPandas()
 
         # filter df: top30, top100, >5
@@ -179,9 +164,9 @@ class StudyProtocolD:
             self.plot_age(df_plot, df_name)
             self.plot_months_between(df_plot, df_name)
 
-        self.extract_save_metastasis(df_all_conditions, df_lookup)
+        self.extract_save_metastasis(df_all_conditions, crypto_key)
 
-        self.extract_save_therapies(df_all_conditions, df_lookup)
+        self.extract_save_therapies(df_all_conditions, crypto_key)
 
         logger.info("StudyProtocolD pipeline finished")
 
@@ -208,10 +193,10 @@ class StudyProtocolD:
 
         return df
 
-    def extract_mii_conditions(self, df_list, suffix):
+    def extract_mii_conditions(self, df_list, suffix, crypto_key):
         logger.info("start PyRate query for conditions.")
         query = PyRateQuery(self.settings)
-        query.extract_conditions(df_list, suffix)
+        query.extract_conditions(df_list, suffix, crypto_key)
 
     def plot_pairs(self, df: DataFrame, df_name: str) -> DataFrame:
         plot_pair_bubble_gender(
@@ -266,22 +251,20 @@ class StudyProtocolD:
         run_r_script(script)
         show_r_plots(os.path.join(HERE, "results/study_protocol_d/plots_r"))
 
-    def extract_save_metastasis(self, df_all_conditions, df_lookup):
+    def extract_save_metastasis(self, df_all_conditions, crypto_key):
         df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
-        df_metastasis.show()
         logger.info(f"df_1_2_cond_id_asserted.count() = : {df_all_conditions.count()}")
         df_metastasis = df_all_conditions.join(df_metastasis, "condition_id", "left")
         logger.info(f"df_1_2_mals_metastasis.count() = : {df_metastasis.count()}")
 
-        df_metastasis_deidentified = deidentify(df_metastasis, IDENTIFYING_COLS, df_lookup)
-        df_metastasis_deidentified.show()
+        df_metastasis_deidentified = deidentify(df_metastasis, IDENTIFYING_COLS, crypto_key)
 
         save_final_df(df_metastasis_deidentified, self.settings, suffix="metastasis_deidentified")
         save_final_df_parquet(
             df_metastasis_deidentified, self.settings, suffix="metastasis_deidentified"
         )
 
-    def extract_save_therapies(self, df_all_conditions, df_lookup):
+    def extract_save_therapies(self, df_all_conditions, crypto_key):
         # system therapy
         df_system_therapies = extract_systemtherapies(self.pc, self.data, self.settings, self.spark)
         logger.info(f"df_system_therapies.count() = : {df_system_therapies.count()}")
@@ -292,15 +275,20 @@ class StudyProtocolD:
                 "therapy_end_date",
             ],
         )
+        # right join to only keep system therapies for 1 or 2 malignancy conditions
         df_system_therapies = df_system_therapies.join(
             df_all_conditions,
             df_all_conditions.condition_id == df_system_therapies.reason_reference,
-            "left",
+            "right",
+        )
+        save_final_df(
+            df_system_therapies,
+            self.settings,
+            suffix="system_therapies",
         )
         df_system_therapies_deidentified = deidentify(
-            df_system_therapies, IDENTIFYING_COLS, df_lookup
+            df_system_therapies, IDENTIFYING_COLS, crypto_key
         )
-        df_system_therapies_deidentified.show()
         save_final_df(
             df_system_therapies_deidentified,
             self.settings,
@@ -331,12 +319,16 @@ class StudyProtocolD:
         df_radiotherapies_joined = df_radiotherapies_joined.join(
             df_all_conditions,
             df_all_conditions.condition_id == df_radiotherapies_joined.reason_reference,
-            "left",
+            "right",
+        )
+        save_final_df(
+            df_radiotherapies_joined,
+            self.settings,
+            suffix="radiotherapies_joined",
         )
         df_radiotherapies_joined_deidentified = deidentify(
-            df_radiotherapies_joined, IDENTIFYING_COLS, df_lookup
+            df_radiotherapies_joined, IDENTIFYING_COLS, crypto_key
         )
-        df_radiotherapies_joined_deidentified.show()
         save_final_df(
             df_radiotherapies_joined_deidentified,
             self.settings,
@@ -362,10 +354,14 @@ class StudyProtocolD:
         df_ops_grouped = df_ops_grouped.join(
             df_all_conditions,
             df_all_conditions.condition_id == df_ops_grouped.reason_reference,
-            "left",
+            "right",
         )
-        df_ops_grouped_deidentified = deidentify(df_ops_grouped, IDENTIFYING_COLS, df_lookup)
-        df_ops_grouped_deidentified.show()
+        save_final_df(
+            df_ops_grouped,
+            self.settings,
+            suffix="ops_grouped",
+        )
+        df_ops_grouped_deidentified = deidentify(df_ops_grouped, IDENTIFYING_COLS, crypto_key)
         save_final_df(df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified")
         save_final_df_parquet(
             df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified"
