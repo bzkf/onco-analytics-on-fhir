@@ -237,13 +237,11 @@ def add_is_deceased(df):
 def _make_hash_udf(crypto_key):
 
     def _hash(val):
-        # ``val`` kann None sein – wir geben dann None zurück
         if val is None:
             return None
-        # Alles in UTF‑8 konvertieren und mit dem Key signieren
         return hmac.new(
             crypto_key,
-            str(val).encode("utf-8"),  # zu hashender Wert
+            str(val).encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
 
@@ -256,6 +254,8 @@ def deidentify(
     crypto_key,
     drop_original: bool = True,
 ) -> DataFrame:
+
+    crypto_key = bytes.fromhex(crypto_key)
 
     hash_target_cols = [
         "condition_id",
@@ -284,6 +284,7 @@ def deidentify(
 
 
 def deidentify_pandas(df, crypto_key, drop_original=True):
+    crypto_key = bytes.fromhex(crypto_key)
 
     hash_target_cols = [
         "condition_id",

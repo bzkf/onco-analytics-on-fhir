@@ -255,7 +255,7 @@ class StudyProtocolD:
     def extract_save_metastasis(self, df_all_conditions, crypto_key):
         df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
         logger.info(f"df_1_2_cond_id_asserted.count() = : {df_all_conditions.count()}")
-        df_metastasis = df_all_conditions.join(df_metastasis, "condition_id", "left")
+        df_metastasis = df_metastasis.join(df_all_conditions, "condition_id", "left")
         logger.info(f"df_1_2_mals_metastasis.count() = : {df_metastasis.count()}")
 
         df_metastasis_deidentified = deidentify(df_metastasis, IDENTIFYING_COLS, crypto_key)
