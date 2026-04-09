@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.24.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.23.1...v2.24.0) (2026-04-09)
+
+
+### Features
+
+* deidentify condids and patient resource ids ([#424](https://github.com/bzkf/onco-analytics-on-fhir/issues/424)) ([b6a2049](https://github.com/bzkf/onco-analytics-on-fhir/commit/b6a2049c51735772236babb1af87b58c670544ec))
+* extract weitere klassifikation values ([#425](https://github.com/bzkf/onco-analytics-on-fhir/issues/425)) ([7f69482](https://github.com/bzkf/onco-analytics-on-fhir/commit/7f69482d2682902e2bb577a3cdc3062f9a18ea25))
+
 ## [2.23.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.23.0...v2.23.1) (2026-04-08)
 
 
