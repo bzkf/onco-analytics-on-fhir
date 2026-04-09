@@ -10,9 +10,7 @@ from pathling.datasource import DataSource
 from pyspark.sql import functions as F
 from settings import Settings
 from urllib3 import Retry
-from utils import (
-    save_final_df,
-)
+from utils import save_final_df
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
@@ -636,8 +634,8 @@ class AMLStudy:
             ],
             where=[
                 {
-                    "code": "Only Procedures with OPS code",
-                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_OPS}')" + ".exists()",
+                    "description": "Only Procedures with OPS code",
+                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_OPS}').exists()",
                 }
             ],
         )
