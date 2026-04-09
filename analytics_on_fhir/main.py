@@ -116,6 +116,7 @@ def main():
                 "Observation",
                 "MedicationStatement",
                 "AdverseEvent",
+                "Procedure",
             ],
         )
 
