@@ -1827,7 +1827,7 @@ def extract_surgeries(
         ],
         where=[
             {
-                "code": "Only Procedures with OPS code",
+                "description": "Only Procedures with OPS code",
                 "path": f"code.coding.where(system='{FHIR_SYSTEMS_SURGERY_OPS_CS}').exists()",
             }
         ],
