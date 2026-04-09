@@ -119,11 +119,23 @@ class PyRateQuery:
                 index=False,
                 sep=";",
             )
+            # Parquet speichern
+            condition_df.to_parquet(
+                os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".parquet"),
+                index=False,
+            )
             condition_df_deidentified = deidentify_pandas(condition_df, crypto_key)
             condition_df_deidentified.to_csv(
                 os.path.join(self.output_dir, "df_mii_conditions_deidentified" + suffix + ".csv"),
                 index=False,
                 sep=";",
+            )
+            # Parquet speichern (deidentified)
+            condition_df_deidentified.to_parquet(
+                os.path.join(
+                    self.output_dir, "df_mii_conditions_deidentified" + suffix + ".parquet"
+                ),
+                index=False,
             )
 
             logger.info("condition_df size: {}", condition_df.count())

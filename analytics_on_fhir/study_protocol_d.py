@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from loguru import logger
 from mii_conditions_labs import PyRateQuery
@@ -69,7 +70,7 @@ class StudyProtocolD:
     def run(self):
         logger.info("StudyProtocolD pipeline started")
 
-        crypto_key = os.urandom(32)
+        crypto_key = secrets.token_hex(32)
 
         # Extract
         df_extract = self.extract()
