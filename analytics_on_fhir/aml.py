@@ -7,11 +7,10 @@ from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
 from pathling.datasource import DataSource
+from pyspark.sql import functions as F
 from settings import Settings
 from urllib3 import Retry
-from utils import (
-    save_final_df,
-)
+from utils import save_final_df
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
@@ -22,6 +21,8 @@ FHIR_CODE_SYSTEM_ECOG = "https://www.medizininformatik-initiative.de/fhir/ext/mo
 FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
 FHIR_CODE_SYSTEM_OPS = "http://fhir.de/CodeSystem/bfarm/ops"
 FHIR_CODE_SYSTEM_BODYSITE = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
+
+FHIR_PROFILE_WEITERE_KLASSIFIKATIONEN = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-pr-onko-weitere-klassifikationen"
 
 DATA_DICTIONARY = {
     "aml_all_patients": {
@@ -84,6 +85,17 @@ DATA_DICTIONARY = {
         "procedure_ops_code": "OPS code of the Procedure",
         "procedure_ops_display": "Display value of the OPS code",
         "procedure_target_bodyregion": "Target body region of the procedure",
+    },
+    "df_obds_weitere_klassifikationen": {
+        "observation_id": "Unique identifier of the additional classification Observation resource",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced from the observation",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
+        "effective_dateTime": "Date of the classification assessment",
+        "code_text": "Name of the classification as text (e.g. Binet, FAB-Klassifikation)",
+        "value_text": "The classification value as text",
+        "value_system": "Technical system of the value, if present.",
+        "value_code": "Technical code of the value, if present.",
     },
 }
 
@@ -329,15 +341,16 @@ class AMLStudy:
 
         processed.to_csv(os.path.join(self.output_dir, "aml_labs_counts.csv"), index=False)
 
-        return
-
     def extract_from_obds(self):
         # 1. get all conditions with the AML icd codes
         # 2. get the death observations for these patients with cause of death and date of death
         # 3. get the referenced patients for these conditions with their identifier
         # 4. get the ecog score
         # 5. get the verlauf data
-        # 6. maybe get weitere klassifikationen
+        # 6. get weitere klassifikationen
+
+        if not self.settings.fhir.patient_identifier_system:
+            raise ValueError("Please set the variable FHIR_PATIENT_IDENTIFIER_SYSTEM")
 
         patients = self.data.view(
             "Patient",
@@ -621,8 +634,8 @@ class AMLStudy:
             ],
             where=[
                 {
-                    "code": "Only Procedures with OPS code",
-                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_OPS}')" + ".exists()",
+                    "description": "Only Procedures with OPS code",
+                    "path": f"code.coding.where(system='{FHIR_CODE_SYSTEM_OPS}').exists()",
                 }
             ],
         )
@@ -645,4 +658,75 @@ class AMLStudy:
             procedures,
             self.settings,
             suffix="obds_procedures",
+        )
+
+        weitere_klassifikationen = self.data.view(
+            "Observation",
+            select=[
+                {
+                    "column": [
+                        {
+                            "path": "getResourceKey()",
+                            "name": "observation_id",
+                        },
+                        {
+                            "path": "subject.getReferenceKey()",
+                            "name": "observation_patient_reference",
+                        },
+                        {
+                            "path": "focus.first().getReferenceKey()",
+                            "name": "observation_condition_reference",
+                        },
+                        {
+                            "path": "meta.profile",
+                            "name": "meta_profile",
+                        },
+                        {
+                            "path": "effective.ofType(DateTime)",
+                            "name": "effective_date_time",
+                        },
+                        {
+                            "path": "code.text",
+                            "name": "code_text",
+                        },
+                        {
+                            "path": "value.ofType(CodeableConcept).text",
+                            "name": "value_text",
+                        },
+                    ],
+                },
+                {
+                    "forEach": "value.ofType(CodeableConcept).coding",
+                    "column": [
+                        {"name": "value_system", "path": "system"},
+                        {"name": "value_code", "path": "code"},
+                    ],
+                },
+            ],
+        )
+
+        weitere_klassifikationen = weitere_klassifikationen.filter(
+            F.col("meta_profile").isNotNull()
+            & F.col("meta_profile").startswith(FHIR_PROFILE_WEITERE_KLASSIFIKATIONEN)
+        ).drop("meta_profile")  # we don't need the profile after filtering
+
+        weitere_klassifikationen = weitere_klassifikationen.join(
+            aml_patient_references,
+            weitere_klassifikationen.observation_patient_reference
+            == conditions.condition_patient_reference,
+            "inner",
+        ).select(weitere_klassifikationen["*"])
+
+        weitere_klassifikationen = weitere_klassifikationen.join(
+            patients.select("patient_id", "patient_mrn"),
+            weitere_klassifikationen.observation_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        weitere_klassifikationen.show()
+
+        save_final_df(
+            weitere_klassifikationen,
+            self.settings,
+            suffix="obds_weitere_klassifikationen",
         )

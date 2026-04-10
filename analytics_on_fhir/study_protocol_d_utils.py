@@ -16,7 +16,6 @@ from utils import save_plot
 IDENTIFYING_COLS = [
     "meta_profile",
     "condition_patient_resource_id",
-    # "patient_resource_id",  # hash patids later
     "patid_pseudonym",
     "deceased_boolean",
     "observation_death_patient_resource_id",
@@ -95,17 +94,20 @@ def create_2_mals_df(df: DataFrame) -> DataFrame:
             F.round(F.months_between("asserted_date", "date_prev"), 1),
         )
     )
-    # Nur Patienten mit >= 2 malignancies
+    # Nur Patienten mit 2+ malignancies - aber nur die condition 1+2 (ohne 3, 4...)
     df_multi = (
         df_multi.groupBy("patient_resource_id")
         .count()
         .filter("count >= 2")
         .join(df_multi, on="patient_resource_id", how="inner")
-        .drop("count")
+        .withColumnRenamed("count", "malignancy_count")
     )
-    # Nur erste zwei Malignome, Pats mit mehr Malignomen raus
+    logger.info(f"df_multi.count() = : {df_multi.count()}")
+    df_multi.show()
+    # Nur Conditions für die ersten zwei Malignome, Conditions für Dritttumor und weitere raus
     df_2_mals = df_multi.filter(F.col("malignancy_number") <= 2)
     df_2_mals = df_2_mals.checkpoint(eager=True)
+    df_2_mals.show()
     logger.info(f"only 2 malignancies: df_2_mals.count() = : {df_2_mals.count()}")
 
     return df_2_mals
@@ -178,15 +180,6 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
     df_meta = df_clean.select(*meta_cols).dropDuplicates(["patient_resource_id"])
     df_all_pivot = df_all_pivot.join(df_meta, on="patient_resource_id", how="left")
 
-    # Todesdaten
-    df_death = df_clean.groupBy("patient_resource_id").agg(
-        F.max("deceased_datetime").alias("deceased_datetime"),
-        F.first("death_cause_icd10", ignorenulls=True).alias("death_cause_icd10"),
-        F.first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
-        F.first("date_death", ignorenulls=True).alias("date_death"),
-        F.first("is_deceased", ignorenulls=True).alias("is_deceased"),
-    )
-    df_all_pivot = df_all_pivot.join(df_death, on="patient_resource_id", how="left")
     df_all_pivot = df_all_pivot.checkpoint(eager=True)
 
     return df_all_pivot

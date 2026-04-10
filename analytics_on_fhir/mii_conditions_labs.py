@@ -6,6 +6,7 @@ from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
 from settings import Settings
+from utils import deidentify_pandas
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
@@ -74,7 +75,7 @@ class PyRateQuery:
                 index=False,
             )
 
-    def extract_conditions(self, patient_list, suffix):
+    def extract_conditions(self, patient_list, suffix, crypto_key):
 
         logger.info("input patient count: {}", len(patient_list))
 
@@ -117,6 +118,24 @@ class PyRateQuery:
                 os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".csv"),
                 index=False,
                 sep=";",
+            )
+            # Parquet speichern
+            condition_df.to_parquet(
+                os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".parquet"),
+                index=False,
+            )
+            condition_df_deidentified = deidentify_pandas(condition_df, crypto_key)
+            condition_df_deidentified.to_csv(
+                os.path.join(self.output_dir, "df_mii_conditions_deidentified" + suffix + ".csv"),
+                index=False,
+                sep=";",
+            )
+            # Parquet speichern (deidentified)
+            condition_df_deidentified.to_parquet(
+                os.path.join(
+                    self.output_dir, "df_mii_conditions_deidentified" + suffix + ".parquet"
+                ),
+                index=False,
             )
 
             logger.info("condition_df size: {}", condition_df.count())

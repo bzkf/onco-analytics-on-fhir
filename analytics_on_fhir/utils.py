@@ -1,9 +1,42 @@
 import glob
+import hashlib
+import hmac
 import os
 import shutil
 from collections.abc import Iterable
 
 import pandas as pd
+from fhir_constants import (
+    FHIR_SYSTEM_ICD10,
+    FHIR_SYSTEM_JNU,
+    FHIR_SYSTEM_METASTASIS,
+    FHIR_SYSTEM_PRIMAERTUMOR,
+    FHIR_SYSTEM_SCT,
+    FHIR_SYSTEMS_CONDITION_ASSERTED_DATE,
+    FHIR_SYSTEMS_CONDITION_MORPHOLOGY,
+    FHIR_SYSTEMS_RADIO_THERAPY_INTENTION,
+    FHIR_SYSTEMS_RADIO_THERAPY_INTENTION_CS,
+    FHIR_SYSTEMS_RADIO_THERAPY_STELLUNG_OP,
+    FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS,
+    FHIR_SYSTEMS_RADIOTHERAPY,
+    FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG,
+    FHIR_SYSTEMS_STELLUNG_OP_CS,
+    FHIR_SYSTEMS_SURGERY,
+    FHIR_SYSTEMS_SURGERY_INTENTION,
+    FHIR_SYSTEMS_SURGERY_INTENTION_CS,
+    FHIR_SYSTEMS_SURGERY_OPS_CS,
+    FHIR_SYSTEMS_SURGERY_OUTCOME_CS,
+    FHIR_SYSTEMS_SYSTEM_THERAPY,
+    FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION,
+    FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION_CS,
+    FHIR_SYSTEMS_SYSTEM_THERAPY_STELLUNG_OP,
+    FHIR_SYSTEMS_SYSTEM_THERAPY_TYP_CS,
+    FHIR_SYSTEMS_THERAPY_END_REASON_CS,
+    FHIR_SYSTEMS_WEITERE_KLASSIFIKATION,
+    SCT_CODE_DEATH,
+    SCT_CODE_GLEASON,
+    SCT_CODE_METASTASIS,
+)
 from loguru import logger
 from matplotlib.figure import Figure
 from pathling import PathlingContext, datasource
@@ -21,116 +54,10 @@ from pyspark.sql.functions import (
     row_number,
     when,
 )
+from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-
-FHIR_SYSTEM_PRIMAERTUMOR = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-    "StructureDefinition/mii-pr-onko-diagnose-primaertumor"
-)
-FHIR_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
-FHIR_SYSTEM_JNU = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-tod"
-)
-FHIR_SYSTEM_LOINC = "http://loinc.org"
-FHIR_SYSTEM_SCT = "http://snomed.info/sct"
-FHIR_SYSTEM_METASTASIS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-    "CodeSystem/mii-cs-onko-fernmetastasen"
-)
-
-SCT_CODE_DEATH = "184305005"
-SCT_CODE_GLEASON = "1812491000004107"
-SCT_CODE_METASTASIS = "385421009"
-
-FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
-    "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
-)
-
-FHIR_SYSTEMS_CONDITION_MORPHOLOGY = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-ex-onko-histology-morphology-behavior-icdo3"
-
-FHIR_SYSTEMS_WEITERE_KLASSIFIKATION = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-    "StructureDefinition/mii-pr-onko-weitere-klassifikationen"
-)
-
-FHIR_SYSTEMS_RADIOTHERAPY = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/"
-    "mii-pr-onko-strahlentherapie|2026.0.0"
-)
-FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/"
-    "mii-pr-onko-strahlentherapie-bestrahlung-strahlentherapie|2026.0.0"
-)
-FHIR_SYSTEMS_SURGERY = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/mii-pr-onko-operation|2026.0.0"
-)
-FHIR_SYSTEMS_SYSTEM_THERAPY = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
-    "StructureDefinition/mii-pr-onko-systemische-therapie|2026.0.0"
-)
-FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/"
-    "mii-ex-onko-systemische-therapie-intention"
-)
-FHIR_SYSTEMS_SYSTEM_THERAPY_STELLUNG_OP = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/"
-    "mii-ex-onko-systemische-therapie-stellungzurop"
-)
-FHIR_SYSTEMS_RADIO_THERAPY_INTENTION = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/mii-ex-onko-"
-    "strahlentherapie-intention"
-)
-FHIR_SYSTEMS_RADIO_THERAPY_STELLUNG_OP = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/"
-    "mii-ex-onko-strahlentherapie-stellungzurop"
-)
-FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-onko-intention"
-)
-FHIR_SYSTEMS_STELLUNG_OP_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-therapie-stellungzurop"
-)
-FHIR_SYSTEMS_SYSTEM_THERAPY_TYP_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-onko-therapie-typ"
-)
-FHIR_SYSTEMS_THERAPY_END_REASON_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-onko-therapie-ende-grund"
-)
-FHIR_SYSTEMS_RADIO_THERAPY_INTENTION_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-onko-intention"
-)
-
-FHIR_SYSTEMS_RADIO_THERAPY_ZIELGEBIET_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
-)
-FHIR_SYSTEMS_SURGERY_INTENTION = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/StructureDefinition/mii-ex-onko-operation-intention"
-)
-FHIR_SYSTEMS_SURGERY_INTENTION_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-onko-intention"
-)
-FHIR_SYSTEMS_SURGERY_OUTCOME_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-onko-residualstatus"
-)
-FHIR_SYSTEMS_SURGERY_OPS_CS = "http://fhir.de/CodeSystem/bfarm/ops"
 
 
 def save_final_df(pyspark_df, settings, suffix=""):
@@ -307,7 +234,45 @@ def add_is_deceased(df):
     )
 
 
-def deidentify(df: DataFrame, identifying_cols: list[str], df_lookup: DataFrame) -> DataFrame:
+def _make_hash_udf(crypto_key):
+
+    def _hash(val):
+        if val is None:
+            return None
+        return hmac.new(
+            crypto_key,
+            str(val).encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+    return F.udf(_hash, StringType())
+
+
+def deidentify(
+    df: DataFrame,
+    identifying_cols: list[str],
+    crypto_key,
+    drop_original: bool = True,
+) -> DataFrame:
+
+    crypto_key = bytes.fromhex(crypto_key)
+
+    hash_target_cols = [
+        "condition_id",
+        "condition_id_1",
+        "condition_id_2",
+        "patient_resource_id",
+        # "condition_patient_reference",  # für Nebendiagnosen - geht so nicht weil pandas df
+    ]
+    hash_udf = _make_hash_udf(crypto_key)
+
+    for col_name in hash_target_cols:
+        if col_name in df.columns:
+            df = df.withColumn(f"{col_name}_hash", hash_udf(F.col(col_name).cast("string")))
+
+    if drop_original:
+        df = df.drop(*hash_target_cols)
+
     cols_to_drop = [c for c in identifying_cols if c in df.columns]
     df = df.drop(*cols_to_drop)
 
@@ -315,16 +280,33 @@ def deidentify(df: DataFrame, identifying_cols: list[str], df_lookup: DataFrame)
     df = create_year_col_asserted_death(df)
     df = drop_date_cols(df)
 
-    # all possible condition_id columns
-    condition_cols = ["condition_id", "condition_id_1", "condition_id_2"]
+    return df
 
-    for c in condition_cols:
-        if c in df.columns:
-            # Lookup-DF für diese Spalte umbenennen
-            df_lookup_renamed = df_lookup.withColumnRenamed("condition_id", c)
-            df = df.join(df_lookup_renamed, on=c, how="left")
-            df = df.drop(c)
-            df = df.withColumnRenamed("condition_id_hash", f"{c}_hash")
+
+def deidentify_pandas(df, crypto_key, drop_original=True):
+    crypto_key = bytes.fromhex(crypto_key)
+
+    hash_target_cols = [
+        "condition_id",
+        "condition_patient_reference",
+    ]
+
+    for col_name in hash_target_cols:
+        if col_name in df.columns:
+            df[f"{col_name}_hash"] = df[col_name].apply(
+                lambda val: (
+                    None
+                    if val is None
+                    else hmac.new(
+                        crypto_key,
+                        str(val).encode("utf-8"),
+                        hashlib.sha256,
+                    ).hexdigest()
+                )
+            )
+
+    if drop_original:
+        df = df.drop(columns=[c for c in hash_target_cols if c in df.columns])
 
     return df
 
@@ -1582,23 +1564,22 @@ def extract_systemtherapies(
                 ],
             }
         ],
-        where=[
-            {
-                "description": "Only SYSTEM THERAPY Procedures",
-                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_SYSTEM_THERAPY}')"),
-            }
-        ],
     )
-    logger.info("df_procedures count = {}", df_procedures.count())
+
+    # hacky: filter where col meta_profile starts with {FHIR_SYSTEMS_SYSTEM_THERAPY}
+    df_sys_procedures = df_procedures.filter(
+        col("meta_profile").startswith(FHIR_SYSTEMS_SYSTEM_THERAPY)
+    )
+    logger.info("df_sys_procedures count = {}", df_sys_procedures.count())
     logger.info(
-        "df_procedures distinct therapy_id count = {}",
-        df_procedures.select("therapy_id").distinct().count(),
+        "df_sys_procedures distinct therapy_id count = {}",
+        df_sys_procedures.select("therapy_id").distinct().count(),
     )
     logger.info(
-        "df_procedures distinct subject_reference patient id count = {}",
-        df_procedures.select("subject_reference").distinct().count(),
+        "df_sys_procedures distinct subject_reference patient id count = {}",
+        df_sys_procedures.select("subject_reference").distinct().count(),
     )
-    df_procedures.orderBy(F.col("reason_reference")).show(truncate=False)
+    df_sys_procedures.orderBy(F.col("reason_reference")).show(truncate=False)
 
     logger.info("extract medication statements / system therapies.")
 
@@ -1647,14 +1628,15 @@ def extract_systemtherapies(
             }
         ],
     )
+    df_medication_statements.show()
 
     # TO DO: split this later
-    # return df_procedures, df_medication_statements
+    # return df_sys_procedures, df_medication_statements
 
     # erst joinen (procedure+medicationstatements) und danach gruppieren
     # Substanzen pro condition und therapy start date |-separiert abspeichern
-    df_procedures_medication_statements = (
-        df_procedures.alias("p")
+    df_sys_procedures_medication_statements = (
+        df_sys_procedures.alias("p")
         .join(
             df_medication_statements.alias("m"),
             F.col("p.therapy_id") == F.col("m.part_of_reference"),
@@ -1684,9 +1666,10 @@ def extract_systemtherapies(
             "m.part_of_reference",
         )
     )
+    df_sys_procedures_medication_statements.show()
 
     # pro condition und start date: | separiert abspeichern
-    df_procedures_medication_statements_grouped = df_procedures_medication_statements.groupBy(
+    df_procedures_medication_statements_grouped = df_sys_procedures_medication_statements.groupBy(
         "subject_reference",
         "reason_reference",
         "therapy_start_date",
@@ -1706,7 +1689,7 @@ def extract_systemtherapies(
 
     # join back missing cols
     df_procedures_medication_statements_final = (
-        df_procedures.alias("p")
+        df_sys_procedures.alias("p")
         .join(
             df_procedures_medication_statements_grouped.alias("pg"),
             F.col("p.therapy_id") == F.col("pg.part_of_reference"),
@@ -1824,12 +1807,13 @@ def extract_radiotherapies(
         ],
     )
 
+    # hacky - to do
     df_parents_radiotherapies = df_procedures.filter(
-        F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY
+        F.col("meta_profile").startswith(FHIR_SYSTEMS_RADIOTHERAPY)
     )
 
     df_children_bestrahlung = df_procedures.filter(
-        F.col("meta_profile") == FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG
+        F.col("meta_profile").startswith(FHIR_SYSTEMS_RADIOTHERAPY_BESTRAHLUNG)
     )
 
     return df_parents_radiotherapies, df_children_bestrahlung
@@ -1985,11 +1969,15 @@ def extract_surgeries(
         ],
         where=[
             {
-                "description": "Only Surgical Procedures",
-                "path": (f"meta.profile.exists($this = '{FHIR_SYSTEMS_SURGERY}')"),
+                "description": "Only Procedures with OPS code",
+                "path": f"code.coding.where(system='{FHIR_SYSTEMS_SURGERY_OPS_CS}').exists()",
             }
         ],
     )
+    logger.info("df_ops count before filter = {}", df_ops.count())
+    # hacky - to do
+    df_ops = df_ops.filter(F.col("meta_profile").startswith(FHIR_SYSTEMS_SURGERY))
+    logger.info("df_ops count after filter = {}", df_ops.count())
 
     return df_ops
 
