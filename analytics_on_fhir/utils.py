@@ -1483,10 +1483,61 @@ def extract_systemtherapies(
                         + ".where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
                         "name": "medication_statement_atc_code",
                     },
+                    {
+                        "description": "Medication Reference",
+                        "path": "medication.ofType(Reference).getReferenceKey()",
+                        "name": "medication_reference",
+                    },
                 ],
             }
         ],
     )
+
+    medications = data.view(
+        "Medication",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Medication ID",
+                        "path": "getResourceKey()",
+                        "name": "medication_id",
+                    },
+                    {
+                        "description": "Medication ATC Code",
+                        "path": "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').first().code",
+                        "name": "medication_medication_atc_code",
+                    },
+                    {
+                        "description": "Medication Text",
+                        "path": "code.text",
+                        "name": "medication_medication_text",
+                    },
+                ],
+            }
+        ],
+    )
+
+    medications.show()
+
+    df_medication_statements = (
+        df_medication_statements.join(
+            medications,
+            df_medication_statements.medication_reference == medications.medication_id,
+            how="left",
+        )
+        .withColumn(
+            "medication_statement_text",
+            F.coalesce(F.col("medication_statement_text"), F.col("medication_medication_text")),
+        )
+        .withColumn(
+            "medication_statement_atc_code",
+            F.coalesce(
+                F.col("medication_statement_atc_code"), F.col("medication_medication_atc_code")
+            ),
+        )
+    )
+
     df_medication_statements.show()
 
     # TO DO: split this later
@@ -2082,7 +2133,4 @@ def clean_datetime_values(df, column):
 
 def keep_only_first_diagnosis(df, columns):
     df_sorted = df.sort_values(by=columns + ["diagnosis_recordedDate"])
-    return df_sorted.drop_duplicates(subset=columns, keep="first")
-    return df_sorted.drop_duplicates(subset=columns, keep="first")
-    return df_sorted.drop_duplicates(subset=columns, keep="first")
     return df_sorted.drop_duplicates(subset=columns, keep="first")
