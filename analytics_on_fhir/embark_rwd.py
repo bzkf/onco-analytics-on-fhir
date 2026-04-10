@@ -4,9 +4,9 @@ from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from graphviz import Digraph
 from loguru import logger
 from pathling import DataSource
+from pyspark.sql import functions as F
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import col, count_distinct, lit, max, min, when
-from pyspark.sql import functions as F
 from utils import find_closest_to_diagnosis
 
 
