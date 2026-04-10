@@ -6,6 +6,7 @@ from loguru import logger
 from pathling import DataSource
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import col, count_distinct, lit, max, min, when
+from pyspark.sql import functions as F
 from utils import find_closest_to_diagnosis
 
 
@@ -122,7 +123,7 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
                     {
                         "description": "MedicationStatement ID",
                         "path": "getResourceKey()",
-                        "name": "id",
+                        "name": "medication_statement_id",
                     },
                     {
                         "description": "Patient ID",
@@ -142,18 +143,80 @@ def extract(data: DataSource, results_directory: pathlib.Path) -> DataFrame:
                     {
                         "description": "Medication Text",
                         "path": "medication.ofType(CodeableConcept).text",
-                        "name": "medication_text",
+                        "name": "statement_medication_text",
                     },
                     {
                         "description": "Medication Code",
                         "path": "medication.ofType(CodeableConcept).coding"
                         + ".where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
-                        "name": "medication_atc_code",
+                        "name": "statement_medication_atc_code",
+                    },
+                    {
+                        "description": "Medication Reference",
+                        "path": "medication.ofType(Reference).getReferenceKey()",
+                        "name": "medication_reference",
                     },
                 ],
             }
         ],
     )
+
+    medication_statements.show()
+
+    medications = data.view(
+        "Medication",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Medication ID",
+                        "path": "getResourceKey()",
+                        "name": "medication_id",
+                    },
+                    {
+                        "description": "Medication ATC Code",
+                        "path": "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').first().code",
+                        "name": "medication_medication_atc_code",
+                    },
+                    {
+                        "description": "Medication Text",
+                        "path": "code.text",
+                        "name": "medication_medication_text",
+                    },
+                ],
+            }
+        ],
+    )
+
+    medications.show()
+
+    medication_statements = (
+        medication_statements.join(
+            medications,
+            medication_statements.medication_reference == medications.medication_id,
+            how="left",
+        )
+        .withColumn(
+            "medication_text",
+            F.coalesce(F.col("statement_medication_text"), F.col("medication_medication_text")),
+        )
+        .withColumn(
+            "medication_atc_code",
+            F.coalesce(
+                F.col("statement_medication_atc_code"), F.col("medication_medication_atc_code")
+            ),
+        )
+        .select(
+            "medication_statement_id",
+            "patient_id",
+            "condition_id",
+            "medication_start_date",
+            "medication_text",
+            "medication_atc_code",
+        )
+    )
+
+    medication_statements.show()
 
     counts = {}
 
