@@ -97,6 +97,14 @@ DATA_DICTIONARY = {
         "value_system": "Technical system of the value, if present.",
         "value_code": "Technical code of the value, if present.",
     },
+    "df_obds_systemtherapien": {
+        "medication_statement_id": "Unique identifier of the systemic therapy medication resource",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced from the observation",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced",
+        "medication_start_date": "When the medication was given (the therapy started)",
+        "medication_text": "the name of medication/substance given",
+        "medication_atc_code": "if present, the ATC code of the substance",
+    },
 }
 
 HERE = Path(os.path.abspath(os.path.dirname(__file__)))
@@ -588,6 +596,127 @@ class AMLStudy:
             progressions,
             self.settings,
             suffix="obds_progressions",
+        )
+
+        medication_statements = self.data.view(
+            "MedicationStatement",
+            select=[
+                {
+                    "column": [
+                        {
+                            "description": "MedicationStatement ID",
+                            "path": "getResourceKey()",
+                            "name": "medication_statement_id",
+                        },
+                        {
+                            "description": "Patient ID",
+                            "path": "subject.getReferenceKey()",
+                            "name": "patient_reference",
+                        },
+                        {
+                            "description": "Condition ID",
+                            "path": "reasonReference.getReferenceKey()",
+                            "name": "condition_id",
+                        },
+                        {
+                            "description": "Effective Start Date",
+                            "path": "effective.ofType(Period).start",
+                            "name": "medication_start_date",
+                        },
+                        {
+                            "description": "Medication Text",
+                            "path": "medication.ofType(CodeableConcept).text",
+                            "name": "statement_medication_text",
+                        },
+                        {
+                            "description": "Medication Code",
+                            "path": "medication.ofType(CodeableConcept).coding"
+                            + ".where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+                            "name": "statement_medication_atc_code",
+                        },
+                        {
+                            "description": "Medication Reference",
+                            "path": "medication.ofType(Reference).getReferenceKey()",
+                            "name": "medication_reference",
+                        },
+                    ],
+                }
+            ],
+        )
+
+        medication_statements.show()
+
+        medications = self.data.view(
+            "Medication",
+            select=[
+                {
+                    "column": [
+                        {
+                            "description": "Medication ID",
+                            "path": "getResourceKey()",
+                            "name": "medication_id",
+                        },
+                        {
+                            "description": "Medication ATC Code",
+                            "path": "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').first().code",
+                            "name": "medication_medication_atc_code",
+                        },
+                        {
+                            "description": "Medication Text",
+                            "path": "code.text",
+                            "name": "medication_medication_text",
+                        },
+                    ],
+                }
+            ],
+        )
+
+        medications.show()
+
+        medication_statements = (
+            medication_statements.join(
+                medications,
+                medication_statements.medication_reference == medications.medication_id,
+                how="left",
+            )
+            .withColumn(
+                "medication_text",
+                F.coalesce(F.col("statement_medication_text"), F.col("medication_medication_text")),
+            )
+            .withColumn(
+                "medication_atc_code",
+                F.coalesce(
+                    F.col("statement_medication_atc_code"), F.col("medication_medication_atc_code")
+                ),
+            )
+            .select(
+                "medication_statement_id",
+                "patient_reference",
+                "condition_id",
+                "medication_start_date",
+                "medication_text",
+                "medication_atc_code",
+            )
+        )
+
+        medication_statements.show()
+
+        medication_statements = medication_statements.join(
+            aml_patient_references,
+            medication_statements.patient_reference == conditions.condition_patient_reference,
+            "inner",
+        ).select(medication_statements["*"])
+
+        medication_statements = medication_statements.join(
+            patients.select("patient_id", "patient_mrn"),
+            medication_statements.patient_reference == patients.patient_id,
+            "left",
+        )
+
+        save_final_df(
+            medication_statements,
+            self.settings,
+            suffix="obds_systemtherapien",
         )
 
         procedures = self.data.view(
