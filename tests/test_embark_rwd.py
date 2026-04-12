@@ -41,7 +41,14 @@ def data_source_fixture() -> DataSource:
     )
     ds = pc.read.bundles(
         (HERE / "fixtures" / "fhir").as_posix(),
-        resource_types=["Patient", "Condition", "Observation", "MedicationStatement"],
+        resource_types=[
+            "Patient",
+            "Condition",
+            "Observation",
+            "MedicationStatement",
+            "Medication",
+            "Procedure",
+        ],
     )
     return ds
 
