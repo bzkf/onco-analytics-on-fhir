@@ -59,6 +59,25 @@ from pyspark.sql.window import Window
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
+# ggf ändern, alle spalten, die id enthalten
+IDENTIFYING_COLS = [
+    "meta_profile",
+    "condition_patient_resource_id",
+    "patid_pseudonym",
+    "deceased_boolean",
+    "observation_death_patient_resource_id",
+    "observation_resource_id",
+    "reason_reference",
+    "subject_reference",
+    "therapy_id",
+    "therapy_id_child",
+    "observation_id",
+    "observation_gleason_resource_id",
+    "observation_gleason_condition_resource_id",
+    "observation_gleason_patient_resource_id",
+    "observation_metastasis_resource_id",
+]
+
 
 def save_final_df(pyspark_df, settings, suffix=""):
     logger.info("start save pyspark_df with pyspark_df.coalesce(1).write...csv() ")
@@ -132,6 +151,7 @@ def compute_month_diffs_for_all_date_cols(df: DataFrame) -> DataFrame:
         for c in df.columns
         if "date" in c.lower()
         and "asserted_date" not in c.lower()
+        and "diff" not in c.lower()
         and "precision" not in c.lower()
         and "year" not in c.lower()
     ]
@@ -262,7 +282,6 @@ def deidentify(
         "condition_id_1",
         "condition_id_2",
         "patient_resource_id",
-        # "condition_patient_reference",  # für Nebendiagnosen - geht so nicht weil pandas df
     ]
     hash_udf = _make_hash_udf(crypto_key)
 
@@ -309,6 +328,19 @@ def deidentify_pandas(df, crypto_key, drop_original=True):
         df = df.drop(columns=[c for c in hash_target_cols if c in df.columns])
 
     return df
+
+
+def export_data_dictionary(output_dir, DATA_DICTIONARY):
+
+    for table_name, columns in DATA_DICTIONARY.items():
+        df = pd.DataFrame(
+            [{"column_name": col, "description": desc} for col, desc in columns.items()]
+        )
+
+        df.to_csv(
+            os.path.join(output_dir, f"{table_name}_data_dictionary.csv"),
+            index=False,
+        )
 
 
 def map_gleason_sct_to_score(df, gleason_sct_col="gleason_sct", out_col="gleason_score"):
@@ -662,6 +694,214 @@ def extract_conditions_patients_death(
     )
 
     return conditions_patients_death
+
+
+def extract_gleason(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    spark: SparkSession,
+    settings,
+):
+    observations_gleason = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_gleason_resource_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "observation_gleason_condition_resource_id",
+                    },
+                    {
+                        "description": "Patient ID",
+                        "path": "subject.getReferenceKey()",
+                        "name": "observation_gleason_patient_resource_id",
+                    },
+                    {
+                        "description": "Gleason Grade Group (ordinalValue)",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            ".coding"
+                            f".where(system = '{FHIR_SYSTEM_SCT}')"
+                            ".code"
+                        ),
+                        "name": "gleason_sct",
+                    },
+                    {
+                        "description": "Gleason Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "gleason_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": "Histologic grade of primary malignant neoplasm of prostate",
+                "path": (
+                    "code.coding.exists(system = "
+                    f"'{FHIR_SYSTEM_SCT}' and code = '{SCT_CODE_GLEASON}')"
+                ),
+            }
+        ],
+    )
+
+    observations_gleason_count = observations_gleason.count()
+    logger.info("observations_gleason_count = {}", observations_gleason_count)
+    observations_gleason.show()
+
+    logger.info(
+        "Number of Gleason observations not null = {}",
+        observations_gleason.filter(col("gleason_sct").isNotNull()).count(),
+    )
+
+    return observations_gleason
+
+
+def extract_n_tnm(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+
+    logger.info("extract N from tnm observations")
+
+    observations_n_tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "TNM N category",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            ".code"
+                        ),
+                        "name": "n_tnm",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "n_tnm_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code "
+                    "einer der erlaubten SCT codes ist."
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_SCT}' and "
+                    "(code = '277206009' or code = '399534004' or code = '371494008')"
+                    ")"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+    observations_n_tnm.orderBy(F.col("condition_id")).show()
+
+    logger.info(
+        "observations_n_tnm count = {}",
+        observations_n_tnm.count(),
+    )
+    logger.info(
+        "observations_n_tnm distinct condition_id count = {}",
+        observations_n_tnm.select("condition_id").distinct().count(),
+    )
+
+    return observations_n_tnm
+
+
+def extract_m_tnm(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+    logger.info("extract M from tnm observations")
+
+    observations_m_tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "TNM M category",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            ".code"
+                        ),
+                        "name": "m_tnm",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "m_tnm_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code "
+                    "einer der erlaubten SCT codes ist."
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_SCT}' and "
+                    "(code = '277208005' or code = '399387003' or code = '371497001')"
+                    ")"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+    observations_m_tnm.orderBy(F.col("condition_id")).show()
+
+    logger.info(
+        "observations_m_tnm count = {}",
+        observations_m_tnm.count(),
+    )
+    logger.info(
+        "observations_m_tnm distinct condition_id count = {}",
+        observations_m_tnm.select("condition_id").distinct().count(),
+    )
+
+    return observations_m_tnm
 
 
 def extract_df_study_protocol_a_d_mii(
@@ -1285,11 +1525,11 @@ def extract_metastasis(
         select=[
             {
                 "column": [
-                    # {
-                    #    "description": "Observation ID",
-                    #    "path": "getResourceKey()",
-                    #    "name": "observation_metastasis_resource_id",
-                    # },
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_metastasis_resource_id",
+                    },
                     {
                         "description": "Focus Condition (Primary Diagnosis)",
                         "path": "focus.getReferenceKey()",

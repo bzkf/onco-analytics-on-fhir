@@ -1,6 +1,7 @@
 import os
 import secrets
 
+from fhir_constants import FHIR_SYSTEM_PRIMAERTUMOR
 from loguru import logger
 from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
@@ -8,7 +9,6 @@ from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from study_protocol_d_utils import (
-    IDENTIFYING_COLS,
     aggregate_malignancy_pairs,
     create_1_mal_df,
     create_2_mals_df,
@@ -20,8 +20,8 @@ from study_protocol_d_utils import (
     show_r_plots,
 )
 from utils import (
-    FHIR_SYSTEM_PRIMAERTUMOR,
     HERE,
+    IDENTIFYING_COLS,
     cast_study_dates,
     compute_age,
     deidentify,

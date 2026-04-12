@@ -143,7 +143,7 @@ class PyRateQuery:
         else:
             logger.info("Found no conditions to given patients.")
 
-    def extract_labs(self, patient_list, suffix):
+    def extract_labs(self, patient_list, suffix, crypto_key):
         all_labs = []
 
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
@@ -187,6 +187,18 @@ class PyRateQuery:
             lab_df = pd.concat(all_labs, ignore_index=True)
             lab_df.to_csv(
                 os.path.join(self.output_dir, "df_mii_labs" + suffix + ".csv"), index=False
+            )
+
+            lab_df_deidentified = deidentify_pandas(lab_df, crypto_key)
+            lab_df_deidentified.to_csv(
+                os.path.join(self.output_dir, "df_mii_labs_deidentified" + suffix + ".csv"),
+                index=False,
+                sep=";",
+            )
+            # Parquet speichern (deidentified)
+            lab_df_deidentified.to_parquet(
+                os.path.join(self.output_dir, "df_mii_labs_deidentified" + suffix + ".parquet"),
+                index=False,
             )
 
             logger.info("lab_df size: {}", lab_df.count())

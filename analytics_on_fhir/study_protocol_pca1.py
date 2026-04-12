@@ -1,10 +1,12 @@
 import re
+import secrets
 
+from fhir_constants import FHIR_SYSTEM_PRIMAERTUMOR
 from loguru import logger
 from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
 from pathling.datasource import DataSource
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 from study_protocol_pca_utils import (
     aggregate_local_csvs,
@@ -19,17 +21,24 @@ from study_protocol_pca_utils import (
     with_mapped_atc_column,
 )
 from utils import (
-    FHIR_SYSTEM_PRIMAERTUMOR,
+    IDENTIFYING_COLS,
     cast_study_dates,
     compute_age,
-    extract_df_study_protocol_a_d_mii,
+    deidentify,
+    extract_conditions_patients_death,
+    extract_gleason,
+    extract_m_tnm,
+    extract_metastasis,
+    extract_n_tnm,
     extract_radiotherapies,
     extract_surgeries,
     extract_systemtherapies,
     group_ops,
     join_radiotherapies,
+    map_gleason_sct_to_score,
     months_diff,
     save_final_df,
+    save_final_df_parquet,
 )
 
 
@@ -46,8 +55,8 @@ class StudyProtocolPCa1:
         self.settings = settings
         self.spark: SparkSession = spark
 
-        self.df_c61: DataFrame | None = None
-        self.df_c61_clean: DataFrame | None = None
+        self.df_c61_conditions_patients_death_gleason_met: DataFrame | None = None
+        self.df_c61_conditions_patients_death_gleason_met_clean: DataFrame | None = None
         # nachnutzbar für andere jobs bauen
         self.df_parents_radiotherapies: DataFrame | None = None
         self.df_children_bestrahlung: DataFrame | None = None
@@ -58,96 +67,202 @@ class StudyProtocolPCa1:
         self.year_min: int | None = None
         self.year_max: int | None = None
 
-    def extract(self) -> DataFrame:
-        df = extract_df_study_protocol_a_d_mii(self.pc, self.data, self.settings, self.spark)
-        df_c61 = df.filter(F.col("icd10_code").startswith("C61"))
-        logger.info("df_c61_count fruehere and primaertumor = {}", df_c61.count())
+    def extract_from_obds(self, crypto_key) -> DataFrame:
+        df = extract_conditions_patients_death(self.pc, self.data, self.settings, self.spark)
+        df_c61_condition_patients_death = df.filter(F.col("icd10_code").startswith("C61"))
+        logger.info(
+            "df_c61_condition_patients_death count fruehere and primaertumor = {}",
+            df_c61_condition_patients_death.count(),
+        )
 
         # filter out fruehere tumorerkrankung - only primaerdiagnose
-        df_c61 = df_c61.filter(F.col("meta_profile").startswith(FHIR_SYSTEM_PRIMAERTUMOR))
-        logger.info("df_c61_count only primaertumor = {}", df_c61.count())
+        df_c61_condition_patients_death = df_c61_condition_patients_death.filter(
+            F.col("meta_profile").startswith(FHIR_SYSTEM_PRIMAERTUMOR)
+        )
+        logger.info(
+            "df_c61_condition_patients_death count only primaertumor = {}",
+            df_c61_condition_patients_death.count(),
+        )
 
-        self.df_c61 = df_c61
+        df_gleason = extract_gleason(self.pc, self.data, self.settings, self.spark)
+        logger.info("df_gleason count = {}", df_gleason.count())
+        df_gleason.show(truncate=False)
+
+        w = Window.partitionBy("observation_gleason_condition_resource_id").orderBy(
+            F.col("gleason_date").asc()
+        )
+
+        df_gleason_first = (
+            df_gleason.withColumn("rn", F.row_number().over(w))
+            .filter(F.col("rn") == 1)
+            .drop("rn")
+            .orderBy("gleason_date")
+        )
+
+        logger.info("df_gleason_first count = {}", df_gleason_first.count())
+        df_gleason_first.show(truncate=False)
+
+        # join conditions patients death + gleason
+        df_c61_conditions_patients_death_gleason = (
+            df_c61_condition_patients_death.alias("c")
+            .join(
+                df_gleason_first.alias("o"),
+                F.col("c.condition_id") == F.col("o.observation_gleason_condition_resource_id"),
+                "left",
+            )
+            .select("c.*", "o.*")
+        )
+
+        # map sct to score
+        df_c61_conditions_patients_death_gleason = map_gleason_sct_to_score(
+            df_c61_conditions_patients_death_gleason,
+            gleason_sct_col="gleason_sct",
+            out_col="gleason_score",
+        )
+
+        logger.info(
+            "df_conditions_patients_death_gleason count = {}",
+            df_c61_conditions_patients_death_gleason.count(),
+        )
+        df_c61_conditions_patients_death_gleason.show(truncate=False)
+
+        df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
+
+        logger.info("df_metastasis count = {}", df_metastasis.count())
+        df_metastasis.show(truncate=False)
+
+        df_c61_conditions_patients_death_gleason_met = (
+            df_c61_conditions_patients_death_gleason.alias("c").join(
+                df_metastasis.alias("m"),
+                on="condition_id",
+                how="left",
+            )
+        )
+
+        self.df_c61_conditions_patients_death_gleason_met = (
+            df_c61_conditions_patients_death_gleason_met
+        )
+        save_final_df(
+            df_c61_conditions_patients_death_gleason_met,
+            self.settings,
+            suffix="c61_conditions_patients_death_gleason_met",
+        )
 
         # TO DO: remove all the df transformation logic here, separate function
-        df_system_therapies = extract_systemtherapies(self.pc, self.data, self.settings, self.spark)
-        df_system_therapies = cast_study_dates(
-            df_system_therapies,
-            [
-                "therapy_start_date",
-                "therapy_end_date",
-            ],
+        # df_system_therapies = extract_systemtherapies(self.pc, self.data, self.settings, self.spark)
+        # df_system_therapies = cast_study_dates(
+        #     df_system_therapies,
+        #     [
+        #         "therapy_start_date",
+        #         "therapy_end_date",
+        #     ],
+        # )
+        # self.df_system_therapies = df_system_therapies
+        # save_final_df(df_system_therapies, self.settings, suffix="system_therapies")
+
+        # df_parents_radiotherapies, df_children_bestrahlung = extract_radiotherapies(
+        #     self.pc, self.data, self.settings, self.spark
+        # )
+
+        # self.df_parents_radiotherapies = df_parents_radiotherapies
+        # self.df_children_bestrahlung = df_children_bestrahlung
+
+        # df_radiotherapies_joined = join_radiotherapies(
+        #     df_parents_radiotherapies, df_children_bestrahlung
+        # )
+        # df_radiotherapies_joined = cast_study_dates(
+        #     df_radiotherapies_joined,
+        #     [
+        #         "therapy_start_date",
+        #         "therapy_end_date",
+        #     ],
+        # )
+        # self.df_radiotherapies_joined = df_radiotherapies_joined
+        # save_final_df(df_radiotherapies_joined, self.settings, suffix="radiotherapies_joined")
+
+        # df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        # df_ops = cast_study_dates(
+        #     df_ops,
+        #     [
+        #         "therapy_start_date",
+        #     ],
+        # )
+        # self.df_ops = df_ops
+
+        # save_final_df(
+        #     df_ops,
+        #     self.settings,
+        #     suffix="ops",
+        # )
+
+        # df_ops_grouped = group_ops(df_ops)
+        # self.df_ops_grouped = df_ops_grouped
+
+        # save_final_df(df_ops_grouped, self.settings, suffix="ops_grouped")
+
+        self.extract_save_therapies(
+            df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
+            crypto_key,
         )
-        self.df_system_therapies = df_system_therapies
-        save_final_df(df_system_therapies, self.settings, suffix="df_system_therapies")
 
-        df_parents_radiotherapies, df_children_bestrahlung = extract_radiotherapies(
-            self.pc, self.data, self.settings, self.spark
+        self.extract_save_n_m_tnm(
+            df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
+            crypto_key,
         )
-
-        self.df_parents_radiotherapies = df_parents_radiotherapies
-        self.df_children_bestrahlung = df_children_bestrahlung
-
-        df_radiotherapies_joined = join_radiotherapies(
-            df_parents_radiotherapies, df_children_bestrahlung
-        )
-        df_radiotherapies_joined = cast_study_dates(
-            df_radiotherapies_joined,
-            [
-                "therapy_start_date",
-                "therapy_end_date",
-            ],
-        )
-        self.df_radiotherapies_joined = df_radiotherapies_joined
-        save_final_df(df_radiotherapies_joined, self.settings, suffix="radiotherapies_joined")
-
-        df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
-        df_ops = cast_study_dates(
-            df_ops,
-            [
-                "therapy_start_date",
-            ],
-        )
-        self.df_ops = df_ops
-
-        save_final_df(
-            df_ops,
-            self.settings,
-            suffix="ops",
-        )
-
-        df_ops_grouped = group_ops(df_ops)
-        self.df_ops_grouped = df_ops_grouped
-
-        save_final_df(df_ops_grouped, self.settings, suffix="ops_grouped")
 
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")
 
+        crypto_key = secrets.token_hex(32)
+
         # 1) Extract
-        self.extract()
+        self.extract_from_obds(crypto_key)
 
         # 2) Prepare dates, age, cohort
-        df_c61 = self.prepare(self.df_c61)
-        df_c61.show()
+        df_c61_conditions_patients_death_gleason_met = self.prepare(
+            self.df_c61_conditions_patients_death_gleason_met
+        )
+        df_c61_conditions_patients_death_gleason_met.show()
 
         # 3) Clean + Jahr-Range
-        df_c61_clean = self.clean(df_c61)
-        logger.info("df_c61_clean count = {}", df_c61_clean.count())
-        self.year_min = df_c61_clean.select(F.min(F.year("asserted_date"))).first()[0]
-        self.year_max = df_c61_clean.select(F.max(F.year("asserted_date"))).first()[0]
+        df_c61_conditions_patients_death_gleason_met_clean = self.clean(
+            df_c61_conditions_patients_death_gleason_met
+        )
+        logger.info(
+            "df_c61_clean count = {}", df_c61_conditions_patients_death_gleason_met_clean.count()
+        )
+        self.year_min = df_c61_conditions_patients_death_gleason_met_clean.select(
+            F.min(F.year("asserted_date"))
+        ).first()[0]
+        self.year_max = df_c61_conditions_patients_death_gleason_met_clean.select(
+            F.max(F.year("asserted_date"))
+        ).first()[0]
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
-        self.df_c61_clean = df_c61_clean
-        save_final_df(df_c61_clean, self.settings, suffix="df_c61_clean")
+        self.df_c61_conditions_patients_death_gleason_met_clean = (
+            df_c61_conditions_patients_death_gleason_met_clean
+        )
+        save_final_df(
+            df_c61_conditions_patients_death_gleason_met_clean,
+            self.settings,
+            suffix="c61_conditions_patients_death_gleason_met_clean",
+        )
+        df_c61_conditions_patients_death_gleason_met_clean_deidentified = deidentify(
+            df_c61_conditions_patients_death_gleason_met_clean, IDENTIFYING_COLS, crypto_key
+        )
+        save_final_df(
+            df_c61_conditions_patients_death_gleason_met_clean_deidentified,
+            self.settings,
+            suffix="c61_conditions_patients_death_gleason_met_clean_deidentified",
+        )
 
         # 4) Nebendiagnosen: extract mii conditions + labs for c61 pats
-        pandas_df_pseudonyms_c61 = df_c61.toPandas()
+        pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
         df_list_c61 = pandas_df_pseudonyms_c61["patient_resource_id"].drop_duplicates().dropna()
-        self.extract_mii_conditions_labs(df_list_c61, suffix="")
+        self.extract_mii_conditions_labs(df_list_c61, suffix="", crypto_key=crypto_key)
 
         # 5) therapy sequence all therapies - for REACTO
         # df_therapy_sequence = union_sort_pivot_join(
-        #     df_c61_clean,
+        #     df_c61_conditions_patients_death_gleason_clean,
         #     self.df_ops_grouped,
         #     self.df_system_therapies,
         #     self.df_radiotherapies_joined,
@@ -156,24 +271,24 @@ class StudyProtocolPCa1:
         # self.generate_sequence_csv(df_therapy_sequence)
 
         # 6) first line therapy - within 4 months of diagnosis
-        df_therapy_sequence_first_line_4_months = union_sort_pivot_join(
-            df_c61_clean,
-            self.df_ops_grouped,
-            self.df_system_therapies,
-            self.df_radiotherapies_joined,
-            first_line_months_threshold=4,
-        )
-        df_therapy_sequence_first_line_4_months = with_mapped_atc_column(
-            df_therapy_sequence_first_line_4_months, self.spark
-        )
-        save_final_df(
-            df_therapy_sequence_first_line_4_months,
-            self.settings,
-            suffix="therapy_sequence_first_line_4_months",
-        )
+        # df_therapy_sequence_first_line_4_months = union_sort_pivot_join(
+        #     df_c61_conditions_patients_death_gleason_met_clean,
+        #     self.df_ops_grouped,
+        #     self.df_system_therapies,
+        #     self.df_radiotherapies_joined,
+        #     first_line_months_threshold=4,
+        # )
+        # df_therapy_sequence_first_line_4_months = with_mapped_atc_column(
+        #     df_therapy_sequence_first_line_4_months, self.spark
+        # )
+        # save_final_df(
+        #     df_therapy_sequence_first_line_4_months,
+        #     self.settings,
+        #     suffix="therapy_sequence_first_line_4_months",
+        # )
 
-        # 7) aggregate local csvs and save
-        aggregate_local_csvs(df_therapy_sequence_first_line_4_months, self.settings)
+        # # 7) aggregate local csvs and save
+        # aggregate_local_csvs(df_therapy_sequence_first_line_4_months, self.settings)
 
         logger.info("StudyProtocolPCa1 pipeline finished")
 
@@ -185,15 +300,15 @@ class StudyProtocolPCa1:
                 "recorded_date",
                 "deceased_datetime",
                 "date_death",
-                "gleason_date_first",
-                "metastasis_date_first",
+                "gleason_date",
+                "metastasis_date",
             ],
         )
         df = compute_age(df)
         df = flag_young_highrisk_cohort(df, age_col="age_at_diagnosis", gleason_col="gleason_score")
         # calculate gleason and metastasis months diff
-        df = months_diff(df, "gleason_date_first", "asserted_date")
-        df = months_diff(df, "metastasis_date_first", "asserted_date")
+        df = months_diff(df, "gleason_date", "asserted_date")
+        df = months_diff(df, "metastasis_date", "asserted_date")
         logger.info("months_diff")
         df.show()
 
@@ -224,11 +339,11 @@ class StudyProtocolPCa1:
         df.show()
         save_final_df(df, self.settings, suffix="therapy_sequence1")
 
-    def extract_mii_conditions_labs(self, df_list_c61, suffix):
+    def extract_mii_conditions_labs(self, df_list_c61, suffix, crypto_key):
         logger.info("start PyRate query for conditions + labs.")
         query = PyRateQuery(self.settings)
-        query.extract_conditions(df_list_c61, suffix)
-        query.extract_labs(df_list_c61, suffix)
+        query.extract_conditions(df_list_c61, suffix, crypto_key)
+        query.extract_labs(df_list_c61, suffix, crypto_key)
 
     def merged_plots(self):
         # führe alle einzel csvs zu gesamtheitlichen BZKF csvs zusammen
@@ -291,3 +406,187 @@ class StudyProtocolPCa1:
                     "",
                     self.settings,
                 )
+
+    def extract_save_therapies(self, df_all_conditions, crypto_key):
+        # system therapy
+        df_system_therapies = extract_systemtherapies(self.pc, self.data, self.settings, self.spark)
+        logger.info(f"df_system_therapies.count() = : {df_system_therapies.count()}")
+        df_system_therapies = cast_study_dates(
+            df_system_therapies,
+            [
+                "therapy_start_date",
+                "therapy_end_date",
+            ],
+        )
+        # right join to only keep system therapies for 1 or 2 malignancy conditions
+        df_system_therapies = df_system_therapies.join(
+            df_all_conditions,
+            df_all_conditions.condition_id == df_system_therapies.reason_reference,
+            "right",
+        )
+        save_final_df(
+            df_system_therapies,
+            self.settings,
+            suffix="system_therapies",
+        )
+        df_system_therapies_deidentified = deidentify(
+            df_system_therapies, IDENTIFYING_COLS, crypto_key
+        )
+        save_final_df(
+            df_system_therapies_deidentified,
+            self.settings,
+            suffix="system_therapies_deidentified",
+        )
+        save_final_df_parquet(
+            df_system_therapies_deidentified,
+            self.settings,
+            suffix="system_therapies_deidentified",
+        )
+
+        # radio therapy
+        df_parents_radiotherapies, df_children_bestrahlung = extract_radiotherapies(
+            self.pc, self.data, self.settings, self.spark
+        )
+
+        df_radiotherapies_joined = join_radiotherapies(
+            df_parents_radiotherapies, df_children_bestrahlung
+        )
+        logger.info(f"df_radiotherapies_joined.count() = : {df_radiotherapies_joined.count()}")
+        df_radiotherapies_joined = cast_study_dates(
+            df_radiotherapies_joined,
+            [
+                "therapy_start_date",
+                "therapy_end_date",
+            ],
+        )
+        df_radiotherapies_joined = df_radiotherapies_joined.join(
+            df_all_conditions,
+            df_all_conditions.condition_id == df_radiotherapies_joined.reason_reference,
+            "right",
+        )
+        save_final_df(
+            df_radiotherapies_joined,
+            self.settings,
+            suffix="radiotherapies_joined",
+        )
+        df_radiotherapies_joined_deidentified = deidentify(
+            df_radiotherapies_joined, IDENTIFYING_COLS, crypto_key
+        )
+        save_final_df(
+            df_radiotherapies_joined_deidentified,
+            self.settings,
+            suffix="radiotherapies_joined_deidentified",
+        )
+        save_final_df_parquet(
+            df_radiotherapies_joined_deidentified,
+            self.settings,
+            suffix="radiotherapies_joined_deidentified",
+        )
+
+        # surgery
+        df_ops = extract_surgeries(self.pc, self.data, self.settings, self.spark)
+        df_ops = cast_study_dates(
+            df_ops,
+            [
+                "therapy_start_date",
+            ],
+        )
+
+        df_ops_grouped = group_ops(df_ops)
+        logger.info(f"df_ops_grouped.count() = : {df_ops_grouped.count()}")
+        df_ops_grouped = df_ops_grouped.join(
+            df_all_conditions,
+            df_all_conditions.condition_id == df_ops_grouped.reason_reference,
+            "right",
+        )
+        save_final_df(
+            df_ops_grouped,
+            self.settings,
+            suffix="ops_grouped",
+        )
+        df_ops_grouped_deidentified = deidentify(df_ops_grouped, IDENTIFYING_COLS, crypto_key)
+        save_final_df(df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified")
+        save_final_df_parquet(
+            df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified"
+        )
+
+    def extract_save_n_m_tnm(self, df_all_conditions, crypto_key):
+        df_n_tnm = extract_n_tnm(self.pc, self.data, self.settings, self.spark)
+        df_n_tnm = cast_study_dates(
+            df_n_tnm,
+            [
+                "n_tnm_date",
+            ],
+        )
+
+        w = Window.partitionBy("condition_id").orderBy(F.col("n_tnm_date").asc())
+
+        df_n_tnm_first = (
+            df_n_tnm.withColumn("rn", F.row_number().over(w))
+            .filter(F.col("rn") == 1)  # nur die „erste“ Zeile behalten
+            .drop("rn")  # Hilfsspalte wieder entfernen
+            .orderBy("n_tnm_date")  # optional: Gesamtergebnis sortieren
+        )
+
+        logger.info("df_n_tnm_first count = {}", df_n_tnm_first.count())
+        df_n_tnm_first.show(truncate=False)
+
+        df_n_tnm_first = df_n_tnm_first.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+
+        save_final_df(df_n_tnm_first, self.settings, suffix="n_tnm_first")
+        df_n_tnm_first_deidentified = deidentify(df_n_tnm_first, IDENTIFYING_COLS, crypto_key)
+        save_final_df(
+            df_n_tnm_first_deidentified,
+            self.settings,
+            suffix="n_tnm_first_deidentified",
+        )
+        save_final_df_parquet(
+            df_n_tnm_first_deidentified,
+            self.settings,
+            suffix="n_tnm_first_deidentified",
+        )
+
+        df_m_tnm = extract_m_tnm(self.pc, self.data, self.settings, self.spark)
+        df_m_tnm = cast_study_dates(
+            df_m_tnm,
+            [
+                "m_tnm_date",
+            ],
+        )
+
+        w = Window.partitionBy("condition_id").orderBy(F.col("m_tnm_date").asc())
+
+        df_m_tnm_first = (
+            df_m_tnm.withColumn("rn", F.row_number().over(w))
+            .filter(F.col("rn") == 1)  # nur die „erste“ Zeile behalten
+            .drop("rn")  # Hilfsspalte wieder entfernen
+            .orderBy("m_tnm_date")  # optional: Gesamtergebnis sortieren
+        )
+
+        logger.info("df_m_tnm_first count = {}", df_m_tnm_first.count())
+        df_m_tnm_first.show(truncate=False)
+
+        df_m_tnm_first = df_m_tnm_first.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+
+        save_final_df(df_m_tnm_first, self.settings, suffix="m_tnm_first")
+        df_m_tnm_first_deidentified = deidentify(df_m_tnm_first, IDENTIFYING_COLS, crypto_key)
+        df_m_tnm_first_deidentified.show()
+
+        save_final_df(
+            df_m_tnm_first_deidentified,
+            self.settings,
+            suffix="m_tnm_first_deidentified",
+        )
+        save_final_df_parquet(
+            df_m_tnm_first_deidentified,
+            self.settings,
+            suffix="m_tnm_first_deidentified",
+        )
