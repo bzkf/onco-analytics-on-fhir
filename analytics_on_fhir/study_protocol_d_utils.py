@@ -13,19 +13,6 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from utils import save_plot
 
-IDENTIFYING_COLS = [
-    "meta_profile",
-    "condition_patient_resource_id",
-    "patid_pseudonym",
-    "deceased_boolean",
-    "observation_death_patient_resource_id",
-    "observation_resource_id",
-    "reason_reference",
-    "subject_reference",
-    "therapy_id",
-    "therapy_id_child",
-]
-
 
 def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_parent"):
     parent_col = "icd10_parent_tmp"
