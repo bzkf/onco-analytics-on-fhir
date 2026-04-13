@@ -76,6 +76,7 @@ IDENTIFYING_COLS = [
     "observation_gleason_condition_resource_id",
     "observation_gleason_patient_resource_id",
     "observation_metastasis_resource_id",
+    "observation_patient_reference",
 ]
 
 
