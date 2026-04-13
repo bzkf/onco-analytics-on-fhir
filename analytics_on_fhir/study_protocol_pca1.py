@@ -8,8 +8,7 @@ from pathling import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
-from study_protocol_pca_utils import (
-    aggregate_local_csvs,
+from study_protocol_pca_utils import (  # aggregate_local_csvs,; union_sort_pivot_join,
     flag_young_highrisk_cohort,
     plot_age_class,
     plot_diagnosis_year,
@@ -17,7 +16,6 @@ from study_protocol_pca_utils import (
     plot_therapies_metastasis_split,
     plot_therapy_combinations,
     read_merged_csvs,
-    union_sort_pivot_join,
     with_mapped_atc_column,
 )
 from utils import (
@@ -149,7 +147,8 @@ class StudyProtocolPCa1:
         )
 
         # TO DO: remove all the df transformation logic here, separate function
-        # df_system_therapies = extract_systemtherapies(self.pc, self.data, self.settings, self.spark)
+        # df_system_therapies = extract_systemtherapies(self.pc, self.data,
+        # self.settings, self.spark)
         # df_system_therapies = cast_study_dates(
         #     df_system_therapies,
         #     [
