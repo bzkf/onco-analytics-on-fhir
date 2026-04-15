@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.25.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.24.0...v2.25.0) (2026-04-13)
+
+
+### Features
+
+* pca updated extraction and preprocessing ([#422](https://github.com/bzkf/onco-analytics-on-fhir/issues/422)) ([00b5a10](https://github.com/bzkf/onco-analytics-on-fhir/commit/00b5a1015628e2430db08cfbe72cabadcc4cb958))
+
+
+### Bug Fixes
+
+* handle all medication statement possibilities ([#427](https://github.com/bzkf/onco-analytics-on-fhir/issues/427)) ([c71a8f4](https://github.com/bzkf/onco-analytics-on-fhir/commit/c71a8f4ebe717634f8398f773ec2e2ce337124be))
+
 ## [2.24.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.23.1...v2.24.0) (2026-04-09)
 
 
