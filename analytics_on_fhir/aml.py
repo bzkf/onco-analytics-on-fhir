@@ -38,7 +38,7 @@ DATA_DICTIONARY = {
         "birth_date": "Patient birth date",
         "gender": "Administrative gender of the patient",
     },
-    "aml_labs": {
+    "aml_all_labs": {
         "observation_id": "Unique identifier of the Observation resource",
         "observation_patient_reference": "FHIR reference to the patient (Patient/{id})",
         "loinc_code": "LOINC code of the laboratory observation",
@@ -47,6 +47,26 @@ DATA_DICTIONARY = {
         "lab_quantity_value": "Numeric value of the laboratory measurement",
         "lab_quantity_unit": "Unit of the laboratory measurement",
         "lab_codeableconcept_code": "Code of the lab value result (if applicable)",
+    },
+    "aml_all_meds": {
+        "medication_id": "Unique identifier of the Medication resource",
+        "medication_atc_code": "ATC code of the medication",
+        "medication_atc_display": "Human-readable ATC description",
+        "medication_pzn_code": "PZN code of the medication",
+        "medication_pzn_display": "Human-readable PZN description",
+        "ingredient": "Ingredient(s) of the medication",
+    },
+    "aml_all_med_reqs_stats_admins": {
+        "type": "FHIR Resource type of the source",
+        "id": "Unique identifier of the resource",
+        "patient_reference": "FHIR reference to the patient (Patient/{id})",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from Patient.identifier)",
+        "status": "Status of the medication order or statement",
+        "intent": "Intent of the medication order or statement",
+        "medication_reference": "FHIR Reference to the applied medication",
+        "datetime": "(Start) Datetime of the medication order or statement",
+        "dosage": "Dosage of the applied medication (in json representation)",
+        "period_end": "End Datetime of the medication order or statement",
     },
     "df_obds_deaths": {
         "observation_id": "Unique identifier of the death Observation resource",
@@ -291,6 +311,172 @@ class AMLStudy:
 
         self.post_process_lab_values(lab_df)
 
+    def extract_meds(self):  # , patient_list):
+        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+
+        # MedicationRequest + Medication
+        med_df = self.search.trade_rows_for_dataframe(
+            df=patient_df,
+            resource_type="MedicationRequest",
+            request_params={
+                "_count": self.settings.fhir.page_count,
+                "_include": "MedicationRequest:medication",
+            },
+            df_constraints={
+                "subject": "condition_patient_reference",
+            },
+            with_ref=False,
+            fhir_paths=[
+                ("type", "MedicationRequest.resourceType"),
+                ("id", "MedicationRequest.id"),
+                ("patient_reference", "MedicationRequest.subject.reference"),
+                (
+                    "patient_mrn",
+                    "MedicationRequest.subject.identifier.where("
+                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
+                ),
+                ("status", "MedicationRequest.status"),
+                ("intent", "MedicationRequest.intent"),
+                ("medication_reference", "MedicationRequest.medicationReference.reference"),
+                ("datetime", "MedicationRequest.authoredOn"),
+                ("dosage", "MedicationRequest.dosageInstruction"),
+                ("medication_id", "Medication.id"),
+                (
+                    "medication_atc_code",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+                ),
+                (
+                    "medication_atc_display",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
+                ),
+                (
+                    "medication_pzn_code",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
+                ),
+                (
+                    "medication_pzn_display",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
+                ),
+                ("ingredient", "Medication.ingredient"),
+            ],
+        )
+        med_req_df = med_df["MedicationRequest"]
+        med_df_1 = med_df["Medication"]
+
+        logger.info("all_med_reqs_df size: {}", med_req_df.count())
+
+        # MedicationStatement
+        med_statement = self.search.trade_rows_for_dataframe(
+            df=patient_df,
+            resource_type="MedicationStatement",
+            request_params={
+                "_count": self.settings.fhir.page_count,
+                "_include": "MedicationStatement:medication",
+            },
+            df_constraints={
+                "subject": "condition_patient_reference",
+            },
+            with_ref=False,
+            fhir_paths=[
+                ("type", "MedicationStatement.resourceType"),
+                ("id", "MedicationStatement.id"),
+                ("patient_reference", "MedicationStatement.subject.reference"),
+                (
+                    "patient_mrn",
+                    "MedicationStatement.subject.identifier.where("
+                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
+                ),
+                ("status", "MedicationStatement.status"),
+                ("datetime", "MedicationStatement.effectivePeriod.start"),
+                ("period_end", "MedicationStatement.effectivePeriod.end"),
+                ("medication_reference", "MedicationStatement.medicationReference.reference"),
+                ("dosage", "MedicationStatement.dosage"),
+                ("medication_id", "Medication.id"),
+                (
+                    "medication_atc_code",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+                ),
+                (
+                    "medication_atc_display",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
+                ),
+                (
+                    "medication_pzn_code",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
+                ),
+                (
+                    "medication_pzn_display",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
+                ),
+                ("ingredient", "Medication.ingredient"),
+            ],
+        )
+        med_statement_df = med_statement["MedicationStatement"]
+        med_df_2 = med_statement["Medication"]
+
+        logger.info("all_med_statements_df size: {}", med_statement_df.count())
+
+        # MedciationAdministration
+        med_administration = self.search.trade_rows_for_dataframe(
+            df=patient_df,
+            resource_type="MedicationAdministration",
+            request_params={
+                "_count": self.settings.fhir.page_count,
+                "_include": "MedicationAdministration:medication",
+            },
+            df_constraints={
+                "subject": "condition_patient_reference",
+            },
+            with_ref=False,
+            fhir_paths=[
+                ("type", "MedicationAdministration.resourceType"),
+                ("id", "MedicationAdministration.id"),
+                ("patient_reference", "MedicationAdministration.subject.reference"),
+                (
+                    "patient_mrn",
+                    "MedicationAdministration.subject.identifier.where("
+                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
+                ),
+                ("status", "MedicationAdministration.status"),
+                ("datetime", "MedicationAdministration.effectiveDateTime"),
+                ("medication_reference", "MedicationAdministration.medicationReference.reference"),
+                ("dosage", "MedicationAdministration.dosage"),
+                ("medication_id", "Medication.id"),
+                (
+                    "medication_atc_code",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+                ),
+                (
+                    "medication_atc_display",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
+                ),
+                (
+                    "medication_pzn_code",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
+                ),
+                (
+                    "medication_pzn_display",
+                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
+                ),
+                ("ingredient", "Medication.ingredient"),
+            ],
+        )
+
+        med_administration_df = med_administration["MedicationAdministration"]
+        med_df_3 = med_administration["Medication"]
+
+        logger.info("all_med_administrations_df size: {}", med_administration_df.count())
+
+        med_df = pd.concat([med_df_1, med_df_2, med_df_3])
+        logger.info("all_meds_df: {}", med_df.count())
+        med_df.drop_duplicates(subset=["medication_id"], inplace=True)
+        logger.info("all_meds_df after removing duplicates: {}", med_df.count())
+        req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
+        med_df.to_csv(os.path.join(self.output_dir, "aml_all_meds.csv"), index=False)
+        req_stat_admin_df.to_csv(
+            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), index=False
+        )
+
     def join_with_drug_data(self):
 
         zenzy_patient_ids = (
@@ -317,7 +503,12 @@ class AMLStudy:
         logger.info("Matched with AML cohort patient count: {}", len(filtered_ids))
 
         if len(filtered_ids) > 0:
-            lab_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_labs.csv"))
+            lab_df = pd.read_csv(
+                os.path.join(self.output_dir, "aml_all_labs.csv"),
+                sep=",",
+                dtype={"lab_quantity_value": "float"},
+                parse_dates=["lab_dateTime"],
+            )
             matched_lab_df = lab_df[lab_df["observation_patient_reference"].isin(filtered_refs)]
             matched_lab_df.to_csv(
                 os.path.join(self.output_dir, "aml_matched_zenzy_labs.csv"), index=False
@@ -713,8 +904,13 @@ class AMLStudy:
             "left",
         )
 
+        aml_condition_ids = [row["condition_id"] for row in conditions.collect()]
+        filtered_medication_statements = medication_statements.filter(
+            F.col("condition_id").isin(aml_condition_ids)
+        )
+
         save_final_df(
-            medication_statements,
+            filtered_medication_statements,
             self.settings,
             suffix="obds_systemtherapien",
         )
@@ -854,8 +1050,12 @@ class AMLStudy:
 
         weitere_klassifikationen.show()
 
+        filtered_weitere_klassifikationen = weitere_klassifikationen.filter(
+            F.col("observation_condition_reference").isin(aml_condition_ids)
+        )
+
         save_final_df(
-            weitere_klassifikationen,
+            filtered_weitere_klassifikationen,
             self.settings,
             suffix="obds_weitere_klassifikationen",
         )
