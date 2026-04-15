@@ -231,10 +231,10 @@ class StudyProtocolPCa1:
             F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         )
         mii_conditions_asserted = df_c61_conditions_patients_death_gleason_met.select(
-            "condition_id", "asserted_date"
+            "condition_id", "asserted_date", "condition_patient_resource_id"
         ).join(
             mii_conditions,
-            F.col("patient_resource_id") == F.col("condition_patient_reference"),
+            F.col("condition_patient_resource_id") == F.col("condition_patient_reference"),
             "left",
         )
         save_final_df(mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted")
@@ -264,10 +264,10 @@ class StudyProtocolPCa1:
         )
 
         mii_labs_asserted = df_c61_conditions_patients_death_gleason_met.select(
-            "condition_id", "asserted_date"
+            "condition_id", "asserted_date", "condition_patient_resource_id"
         ).join(
             mii_labs,
-            F.col("condition_patient_reference") == F.col("observation_patient_reference"),
+            F.col("condition_patient_resource_id") == F.col("observation_patient_reference"),
             "left",
         )
         save_final_df(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
