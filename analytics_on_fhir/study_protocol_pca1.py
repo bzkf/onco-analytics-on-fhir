@@ -736,3 +736,27 @@ class StudyProtocolPCa1:
             suffix="leistungszustand_ecog_karnofsky_deidentified",
             deidentified=True,
         )
+
+    def extract_save_metastasis(self, df_all_conditions, crypto_key):
+        df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
+        logger.info(f"df_1_2_cond_id_asserted.count() = : {df_all_conditions.count()}")
+        df_metastasis = df_metastasis.join(df_all_conditions, "condition_id", "left")
+        logger.info(f"df_1_2_mals_metastasis.count() = : {df_metastasis.count()}")
+
+        save_final_df(df_metastasis, self.settings, suffix="metastasis")
+        save_final_df_parquet(df_metastasis, self.settings, suffix="metastasis")
+
+        df_metastasis_deidentified = deidentify(df_metastasis, IDENTIFYING_COLS, crypto_key)
+
+        save_final_df(
+            df_metastasis_deidentified,
+            self.settings,
+            suffix="metastasis_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            df_metastasis_deidentified,
+            self.settings,
+            suffix="metastasis_deidentified",
+            deidentified=True,
+        )
