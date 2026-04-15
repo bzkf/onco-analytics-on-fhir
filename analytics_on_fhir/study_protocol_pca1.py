@@ -234,7 +234,7 @@ class StudyProtocolPCa1:
             "condition_id", "asserted_date"
         ).join(
             mii_conditions,
-            F.col("condition_patient_reference") == F.col("condition_patient_resource_id"),
+            F.col("condition_patient_resource_id") == F.col("condition_patient_reference"),
             "left",
         )
         save_final_df(mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted")
