@@ -174,7 +174,11 @@ def pivot_multi_single(df_clean: DataFrame, df_2_mals: DataFrame, df_1_mal: Data
 
 # presuffix="entity_or_parent" (combination) or entity (23 LGL entities) or
 # icd10parent (all parent codes); save outliers too
-def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_parent"):
+def aggregate_malignancy_pairs(
+    df_multiple_malignancies,
+    presuffix="entity_or_parent",
+    patient_resource_id_colname="patient_resource_id",
+):
     df_m1 = df_multiple_malignancies.filter(F.col("malignancy_number") == 1).withColumnRenamed(
         presuffix, presuffix + "_1"
     )
@@ -184,21 +188,23 @@ def aggregate_malignancy_pairs(df_multiple_malignancies, presuffix="entity_or_pa
     )
 
     m1_patients = df_m1.select(
-        "patient_resource_id",
+        patient_resource_id_colname,
         presuffix + "_1",
         F.col("age_at_diagnosis").alias("age_1"),
         "gender",
     )
     m2_patients = df_m2.select(
-        "patient_resource_id",
+        patient_resource_id_colname,
         presuffix + "_2",
         F.col("age_at_diagnosis").alias("age_2"),
         F.col("months_between").alias("months_between_2"),
     )
 
     m2_full = m2_patients.join(
-        m1_patients.select("patient_resource_id", presuffix + "_1", "age_1", "gender").distinct(),
-        on="patient_resource_id",
+        m1_patients.select(
+            patient_resource_id_colname, presuffix + "_1", "age_1", "gender"
+        ).distinct(),
+        on=patient_resource_id_colname,
         how="inner",
     )
 

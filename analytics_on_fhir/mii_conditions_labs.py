@@ -124,22 +124,10 @@ class PyRateQuery:
                 os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".parquet"),
                 index=False,
             )
-            condition_df_deidentified = deidentify_pandas(condition_df, crypto_key)
-            condition_df_deidentified.to_csv(
-                os.path.join(self.output_dir, "df_mii_conditions_deidentified" + suffix + ".csv"),
-                index=False,
-                sep=";",
-            )
-            # Parquet speichern (deidentified)
-            condition_df_deidentified.to_parquet(
-                os.path.join(
-                    self.output_dir, "df_mii_conditions_deidentified" + suffix + ".parquet"
-                ),
-                index=False,
-            )
 
             logger.info("condition_df size: {}", condition_df.count())
             self.post_process_values(condition_df, name="conditions", columns=["icd_code"])
+            return condition_df
         else:
             logger.info("Found no conditions to given patients.")
 
@@ -189,18 +177,6 @@ class PyRateQuery:
                 os.path.join(self.output_dir, "df_mii_labs" + suffix + ".csv"), index=False
             )
 
-            lab_df_deidentified = deidentify_pandas(lab_df, crypto_key)
-            lab_df_deidentified.to_csv(
-                os.path.join(self.output_dir, "df_mii_labs_deidentified" + suffix + ".csv"),
-                index=False,
-                sep=";",
-            )
-            # Parquet speichern (deidentified)
-            lab_df_deidentified.to_parquet(
-                os.path.join(self.output_dir, "df_mii_labs_deidentified" + suffix + ".parquet"),
-                index=False,
-            )
-
             logger.info("lab_df size: {}", lab_df.count())
 
             self.post_process_values(
@@ -213,6 +189,7 @@ class PyRateQuery:
                     "lab_codeableconcept_code",
                 ],
             )
+            return lab_df
         else:
             logger.info("Found no lab values to given patients.")
 
