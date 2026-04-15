@@ -1,7 +1,5 @@
 import os
-import secrets
 
-import pandas as pd
 from fhir_constants import FHIR_SYSTEM_PRIMAERTUMOR
 from loguru import logger
 from mii_conditions_labs import PyRateQuery
@@ -26,7 +24,6 @@ from utils import (
     cast_study_dates,
     compute_age,
     deidentify,
-    deidentify_pandas,
     extract_conditions_patients_death,
     extract_m_tnm,
     extract_metastasis,

@@ -40,7 +40,7 @@ from utils import (
     save_final_df,
     save_final_df_parquet,
 )
-from views import leistungszustand_ecog_karnofsky_view, progression_view
+from views import leistungszustand_ecog_karnofsky_view
 
 
 class StudyProtocolPCa1:
