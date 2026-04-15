@@ -1,6 +1,7 @@
 import os
 import secrets
 
+import pandas as pd
 from fhir_constants import FHIR_SYSTEM_PRIMAERTUMOR
 from loguru import logger
 from mii_conditions_labs import PyRateQuery
@@ -25,15 +26,27 @@ from utils import (
     cast_study_dates,
     compute_age,
     deidentify,
+    deidentify_pandas,
     extract_conditions_patients_death,
+    extract_m_tnm,
     extract_metastasis,
+    extract_n_tnm,
     extract_radiotherapies,
     extract_surgeries,
     extract_systemtherapies,
+    extract_t_tnm,
+    extract_uicc_tnm,
+    extract_y_tnm,
     group_ops,
     join_radiotherapies,
     save_final_df,
     save_final_df_parquet,
+)
+from views import (
+    grading_view,
+    leistungszustand_ecog_karnofsky_view,
+    progression_view,
+    weitere_klassifikation_view,
 )
 
 
@@ -55,6 +68,11 @@ class StudyProtocolD:
         self.year_min: int | None = None
         self.year_max: int | None = None
 
+        # TO DO - decouple settings object where only output dir is needed
+        self.output_dir = os.path.join(settings.results_directory_path, settings.study_name.value)
+
+        os.makedirs(self.output_dir, exist_ok=True)
+
     def extract(self) -> DataFrame:
         df = extract_conditions_patients_death(self.pc, self.data, self.settings, self.spark)
         df = df.checkpoint(eager=True)
@@ -70,7 +88,9 @@ class StudyProtocolD:
     def run(self):
         logger.info("StudyProtocolD pipeline started")
 
-        crypto_key = secrets.token_hex(32)
+        # crypto_key = secrets.token_hex(32)
+        # DEV
+        crypto_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
         # Extract
         df_extract = self.extract()
@@ -83,68 +103,263 @@ class StudyProtocolD:
         self.year_min = df_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_clean.select(F.max(F.year("asserted_date"))).first()[0]
 
+        save_final_df(df_clean, self.settings, suffix="oBDS_primaerdiagnosen")
+        save_final_df_parquet(df_clean, self.settings, suffix="oBDS_primaerdiagnosen")
+
         # 2mals vs single (1mal)
         df_2_mals = create_2_mals_df(df_clean)
-        df_2_mals_cond_id_asserted = df_2_mals.select(F.col("condition_id"), F.col("asserted_date"))
+        df_2_mals_cond_id_asserted = df_2_mals.select(
+            F.col("condition_id"),
+            F.col("asserted_date"),
+            F.col("condition_patient_resource_id"),
+        )
         df_1_mal = create_1_mal_df(df_clean)
-        df_1_mal_cond_id_asserted = df_1_mal.select(F.col("condition_id"), F.col("asserted_date"))
+        df_1_mal_cond_id_asserted = df_1_mal.select(
+            F.col("condition_id"),
+            F.col("asserted_date"),
+            F.col("condition_patient_resource_id"),
+        )
 
-        # collect all condition ids and asserted dates
+        # collect all condition ids, asserted dates and condition_patient_resource_id
+        # for all 1 and 2 mal patients
         df_all_conditions = df_1_mal_cond_id_asserted.union(df_2_mals_cond_id_asserted)
 
         # save all conditions
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
         df_clean_deidentified = deidentify(df_clean, IDENTIFYING_COLS, crypto_key)
         save_final_df(
-            df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
+            df_clean_deidentified,
+            self.settings,
+            suffix="oBDS_primaerdiagnosen_deidentified",
+            deidentified=True,
         )
         save_final_df_parquet(
-            df_clean_deidentified, self.settings, suffix="oBDS_primaerdiagnosen_deidentified"
+            df_clean_deidentified,
+            self.settings,
+            suffix="oBDS_primaerdiagnosen_deidentified",
+            deidentified=True,
         )
 
         # save 1 and 2 tumors
+        save_final_df(df_2_mals, self.settings, suffix="2_malignancies")
+        save_final_df_parquet(df_2_mals, self.settings, suffix="2_malignancies")
+        save_final_df(df_1_mal, self.settings, suffix="1_malignancy")
+        save_final_df_parquet(df_1_mal, self.settings, suffix="1_malignancy")
         df_2_mals_deidentified = deidentify(df_2_mals, IDENTIFYING_COLS, crypto_key)
-        save_final_df(df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified")
+        save_final_df(
+            df_2_mals_deidentified,
+            self.settings,
+            suffix="2_malignancies_deidentified",
+            deidentified=True,
+        )
         save_final_df_parquet(
-            df_2_mals_deidentified, self.settings, suffix="2_malignancies_deidentified"
+            df_2_mals_deidentified,
+            self.settings,
+            suffix="2_malignancies_deidentified",
+            deidentified=True,
         )
         df_1_mal_deidentified = deidentify(df_1_mal, IDENTIFYING_COLS, crypto_key)
-        save_final_df(df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified")
+        save_final_df(
+            df_1_mal_deidentified,
+            self.settings,
+            suffix="1_malignancy_deidentified",
+            deidentified=True,
+        )
         save_final_df_parquet(
-            df_1_mal_deidentified, self.settings, suffix="1_malignancy_deidentified"
+            df_1_mal_deidentified,
+            self.settings,
+            suffix="1_malignancy_deidentified",
+            deidentified=True,
         )
 
         # extract MII conditions
         pandas_df_2_mals = df_2_mals.toPandas()
         df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
         df_list_2_mals.drop_duplicates(inplace=True)
-        self.extract_mii_conditions(df_list_2_mals, suffix="_2_mals", crypto_key=crypto_key)
+        mii_condition_df_2_mals = self.extract_mii_conditions(
+            df_list_2_mals, suffix="_2_mals", crypto_key=crypto_key
+        )
+
+        # DEV
+        # REMOVE LATER READ FROM CSV - SELET # "condition_id_mii", later instead of condition_id
+        # output_dir = os.path.join(
+        #     HERE, self.settings.results_directory_path, self.settings.study_name.value
+        # )
+        # suffix = "mii_conditions_2_mals"
+        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
+        # mii_condition_df_2_mals = (
+        #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
+        # )
+        # mii_condition_df_2_mals = mii_condition_df_2_mals.select(
+        #     # "condition_id_mii",
+        #     "condition_id",
+        #     "condition_patient_reference",
+        #     "icd_code",
+        #     "diagnosis_recordedDate",
+        #     "diagnosis_onsetDateTime",
+        # )
+        # suffix = "2_malignancies"
+        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
+        # df_2_mals = self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
+
+        # TRANSFORM TO PYSPARK - parse dates
+        mii_condition_df_2_mals = self.spark.createDataFrame(mii_condition_df_2_mals)
+        mii_condition_df_2_mals = mii_condition_df_2_mals.withColumnRenamed(
+            "condition_id", "condition_id_mii"
+        )
+        mii_condition_df_2_mals = mii_condition_df_2_mals.withColumn(
+            "diagnosis_onsetDateTime",
+            F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+        ).withColumn(
+            "diagnosis_recordedDate",
+            F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+        )
+        # filter col malignancy number == 1 - because dates relative to first tumor diagnosis date
+        df_all_conditions_malignancy_number_1 = df_2_mals.filter(
+            F.col("malignancy_number") == 1
+        ).select("condition_patient_resource_id", "asserted_date")
+
+        mii_condition_df_2_mals_asserted = mii_condition_df_2_mals.join(
+            df_all_conditions_malignancy_number_1,
+            F.col("condition_patient_reference") == F.col("condition_patient_resource_id"),
+            "left",
+        )
+        save_final_df(
+            mii_condition_df_2_mals_asserted, self.settings, suffix="mii_conditions_2_mals_asserted"
+        )
+        save_final_df_parquet(
+            mii_condition_df_2_mals_asserted, self.settings, suffix="mii_conditions_2_mals_asserted"
+        )
+        mii_condition_df_2_mals_asserted_deidentified = deidentify(
+            mii_condition_df_2_mals_asserted, IDENTIFYING_COLS, crypto_key
+        )
+        save_final_df(
+            mii_condition_df_2_mals_asserted_deidentified,
+            self.settings,
+            suffix="mii_conditions_2_mals_asserted_deidentified",
+        )
+        save_final_df_parquet(
+            mii_condition_df_2_mals_asserted_deidentified,
+            self.settings,
+            suffix="mii_conditions_2_mals_asserted_deidentified",
+        )
+
         pandas_df_1_mal = df_1_mal.toPandas()
         df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
         df_list_1_mal.drop_duplicates(inplace=True)
-        self.extract_mii_conditions(df_list_1_mal, suffix="_1_mal", crypto_key=crypto_key)
+        mii_condition_df_1_mal = self.extract_mii_conditions(
+            df_list_1_mal, suffix="_1_mal", crypto_key=crypto_key
+        )
+        # DEV
+        # output_dir = os.path.join(
+        #     HERE, self.settings.results_directory_path, self.settings.study_name.value
+        # )
+        # suffix = "mii_conditions_1_mal"
+        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
+        # mii_condition_df_1_mal = (
+        #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
+        # )
+        # mii_condition_df_1_mal = mii_condition_df_1_mal.select(
+        #     "condition_id_mii",
+        #     # "condition_id",
+        #     "condition_patient_reference",
+        #     "icd_code",
+        #     "diagnosis_recordedDate",
+        #     "diagnosis_onsetDateTime",
+        # )
+        # suffix = "1_malignancy"
+        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
+        # df_1_mal = self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
 
+        # TRANSFORM TO PYSPARK
+        mii_condition_df_1_mal = self.spark.createDataFrame(mii_condition_df_1_mal)
+        mii_condition_df_1_mal = mii_condition_df_1_mal.withColumnRenamed(
+            "condition_id", "condition_id_mii"
+        )
+        mii_condition_df_1_mal = mii_condition_df_1_mal.withColumn(
+            "diagnosis_onsetDateTime",
+            F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+        ).withColumn(
+            "diagnosis_recordedDate",
+            F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+        )
+        df_1_mal_selection = df_1_mal.select("condition_patient_resource_id", "asserted_date")
+        mii_condition_df_1_mal_asserted = mii_condition_df_1_mal.join(
+            df_1_mal_selection,
+            F.col("condition_patient_reference") == F.col("condition_patient_resource_id"),
+            "left",
+        )
+        save_final_df(
+            mii_condition_df_1_mal_asserted, self.settings, suffix="mii_conditions_1_mal_asserted"
+        )
+        save_final_df_parquet(
+            mii_condition_df_1_mal_asserted, self.settings, suffix="mii_conditions_1_mal_asserted"
+        )
+        mii_condition_df_1_mal_asserted_deidentified = deidentify(
+            mii_condition_df_1_mal_asserted, IDENTIFYING_COLS, crypto_key
+        )
+        save_final_df(
+            mii_condition_df_1_mal_asserted_deidentified,
+            self.settings,
+            suffix="mii_conditions_1_mal_asserted_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            mii_condition_df_1_mal_asserted_deidentified,
+            self.settings,
+            suffix="mii_conditions_1_mal_asserted_deidentified",
+            deidentified=True,
+        )
+
+        # TO DO - prepare this for BZKF wide plots
         # pivot malignancy 2, union with single malignancy patients
         df_all_pivot = pivot_multi_single(df_clean, df_2_mals, df_1_mal)
         self.df_all_pivot = df_all_pivot
         save_final_df(df_all_pivot, self.settings, suffix="all_pivot")
+        save_final_df_parquet(df_all_pivot, self.settings, suffix="all_pivot")
         df_all_pivot_deidentified = deidentify(df_all_pivot, IDENTIFYING_COLS, crypto_key)
-        save_final_df(df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified")
+        save_final_df(
+            df_all_pivot_deidentified,
+            self.settings,
+            suffix="all_pivot_deidentified",
+            deidentified=True,
+        )
         save_final_df_parquet(
-            df_all_pivot_deidentified, self.settings, suffix="all_pivot_deidentified"
+            df_all_pivot_deidentified,
+            self.settings,
+            suffix="all_pivot_deidentified",
+            deidentified=True,
         )
 
         # aggregate pairs from df_2_mals - two malignancies
-        df_pairs_agg = aggregate_malignancy_pairs(df_2_mals, presuffix="entity_or_parent")
+        df_pairs_agg = aggregate_malignancy_pairs(
+            df_2_mals,
+            presuffix="entity_or_parent",
+            patient_resource_id_colname="patient_resource_id",
+        )
+
         save_final_df(
             df_pairs_agg.drop("outliers_age_1", "outliers_age_2", "outliers_months_between"),
             self.settings,
             suffix="pairs_agg",
         )
+        # does this also work with df_2_mals_deidentified ?
+        df_pairs_agg_deidentified = aggregate_malignancy_pairs(
+            df_2_mals_deidentified,
+            presuffix="entity_or_parent",
+            patient_resource_id_colname="patient_resource_id_hash",
+        )
+        save_final_df(
+            df_pairs_agg_deidentified.drop(
+                "outliers_age_1", "outliers_age_2", "outliers_months_between"
+            ),
+            self.settings,
+            suffix="pairs_agg_deidentified",
+            deidentified=True,
+        )
 
         # 7) plot
         # later: synchron/metachron and plot pair bubble gender (+age, +months between)
-        # later: prepare kaplan meier data, combine sites later and plot after
         df_pairs_agg_pd = df_pairs_agg.toPandas()
 
         # filter df: top30, top100, >5
@@ -168,6 +383,18 @@ class StudyProtocolD:
         self.extract_save_metastasis(df_all_conditions, crypto_key)
 
         self.extract_save_therapies(df_all_conditions, crypto_key)
+
+        self.extract_save_tnm(df_all_conditions, crypto_key)
+
+        self.extract_save_progressions(df_all_conditions, crypto_key)
+
+        self.extract_save_gradings(df_all_conditions, crypto_key)
+
+        # ! funktioniert nicht, to do: fix SQLSTATE: P0001
+        # Expecting a collection with a single element but it has many
+        # self.extract_save_weitere_klassifikationen(df_all_conditions, crypto_key)
+
+        self.extract_save_leistungszustand_ecog_karnofsky(df_all_conditions, crypto_key)
 
         logger.info("StudyProtocolD pipeline finished")
 
@@ -197,7 +424,8 @@ class StudyProtocolD:
     def extract_mii_conditions(self, df_list, suffix, crypto_key):
         logger.info("start PyRate query for conditions.")
         query = PyRateQuery(self.settings)
-        query.extract_conditions(df_list, suffix, crypto_key)
+        mii_condition_df = query.extract_conditions(df_list, suffix, crypto_key)
+        return mii_condition_df
 
     def plot_pairs(self, df: DataFrame, df_name: str) -> DataFrame:
         plot_pair_bubble_gender(
@@ -258,11 +486,22 @@ class StudyProtocolD:
         df_metastasis = df_metastasis.join(df_all_conditions, "condition_id", "left")
         logger.info(f"df_1_2_mals_metastasis.count() = : {df_metastasis.count()}")
 
+        save_final_df(df_metastasis, self.settings, suffix="metastasis")
+        save_final_df_parquet(df_metastasis, self.settings, suffix="metastasis")
+
         df_metastasis_deidentified = deidentify(df_metastasis, IDENTIFYING_COLS, crypto_key)
 
-        save_final_df(df_metastasis_deidentified, self.settings, suffix="metastasis_deidentified")
+        save_final_df(
+            df_metastasis_deidentified,
+            self.settings,
+            suffix="metastasis_deidentified",
+            deidentified=True,
+        )
         save_final_df_parquet(
-            df_metastasis_deidentified, self.settings, suffix="metastasis_deidentified"
+            df_metastasis_deidentified,
+            self.settings,
+            suffix="metastasis_deidentified",
+            deidentified=True,
         )
 
     def extract_save_therapies(self, df_all_conditions, crypto_key):
@@ -287,6 +526,7 @@ class StudyProtocolD:
             self.settings,
             suffix="system_therapies",
         )
+        save_final_df_parquet(df_system_therapies, self.settings, suffix="system_therapies")
         df_system_therapies_deidentified = deidentify(
             df_system_therapies, IDENTIFYING_COLS, crypto_key
         )
@@ -294,11 +534,13 @@ class StudyProtocolD:
             df_system_therapies_deidentified,
             self.settings,
             suffix="system_therapies_deidentified",
+            deidentified=True,
         )
         save_final_df_parquet(
             df_system_therapies_deidentified,
             self.settings,
             suffix="system_therapies_deidentified",
+            deidentified=True,
         )
 
         # radio therapy
@@ -327,6 +569,12 @@ class StudyProtocolD:
             self.settings,
             suffix="radiotherapies_joined",
         )
+        save_final_df_parquet(
+            df_radiotherapies_joined, self.settings, suffix="radiotherapies_joined"
+        )
+        df_system_therapies_deidentified = deidentify(
+            df_system_therapies, IDENTIFYING_COLS, crypto_key
+        )
         df_radiotherapies_joined_deidentified = deidentify(
             df_radiotherapies_joined, IDENTIFYING_COLS, crypto_key
         )
@@ -334,11 +582,13 @@ class StudyProtocolD:
             df_radiotherapies_joined_deidentified,
             self.settings,
             suffix="radiotherapies_joined_deidentified",
+            deidentified=True,
         )
         save_final_df_parquet(
             df_radiotherapies_joined_deidentified,
             self.settings,
             suffix="radiotherapies_joined_deidentified",
+            deidentified=True,
         )
 
         # surgery
@@ -348,6 +598,24 @@ class StudyProtocolD:
             [
                 "therapy_start_date",
             ],
+        )
+        df_ops = df_ops.join(
+            df_all_conditions,
+            df_all_conditions.condition_id == df_ops.reason_reference,
+            "right",
+        )
+        save_final_df(
+            df_ops,
+            self.settings,
+            suffix="ops",
+        )
+        save_final_df_parquet(df_ops, self.settings, suffix="ops")
+        df_ops_deidentified = deidentify(df_ops, IDENTIFYING_COLS, crypto_key)
+        save_final_df(
+            df_ops_deidentified, self.settings, suffix="ops_deidentified", deidentified=True
+        )
+        save_final_df_parquet(
+            df_ops_deidentified, self.settings, suffix="ops_deidentified", deidentified=True
         )
 
         df_ops_grouped = group_ops(df_ops)
@@ -363,7 +631,285 @@ class StudyProtocolD:
             suffix="ops_grouped",
         )
         df_ops_grouped_deidentified = deidentify(df_ops_grouped, IDENTIFYING_COLS, crypto_key)
-        save_final_df(df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified")
+        save_final_df(
+            df_ops_grouped_deidentified,
+            self.settings,
+            suffix="ops_grouped_deidentified",
+            deidentified=True,
+        )
         save_final_df_parquet(
-            df_ops_grouped_deidentified, self.settings, suffix="ops_grouped_deidentified"
+            df_ops_grouped_deidentified,
+            self.settings,
+            suffix="ops_grouped_deidentified",
+            deidentified=True,
+        )
+
+    def extract_save_tnm(self, df_all_conditions, crypto_key):
+        # extract t
+        df_t_tnm = extract_t_tnm(self.pc, self.data, self.settings, self.spark)
+        df_t_tnm = cast_study_dates(
+            df_t_tnm,
+            [
+                "t_tnm_date",
+            ],
+        )
+
+        df_t_tnm = df_t_tnm.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        df_t_tnm.show()
+
+        save_final_df(df_t_tnm, self.settings, suffix="t_tnm")
+        df_t_tnm_deidentified = deidentify(df_t_tnm, IDENTIFYING_COLS, crypto_key)
+        save_final_df(
+            df_t_tnm_deidentified, self.settings, suffix="t_tnm_deidentified", deidentified=True
+        )
+        save_final_df_parquet(
+            df_t_tnm_deidentified, self.settings, suffix="t_tnm_deidentified", deidentified=True
+        )
+
+        # extract n
+        df_n_tnm = extract_n_tnm(self.pc, self.data, self.settings, self.spark)
+        df_n_tnm = cast_study_dates(
+            df_n_tnm,
+            [
+                "n_tnm_date",
+            ],
+        )
+
+        df_n_tnm = df_n_tnm.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        df_n_tnm.show()
+
+        save_final_df(df_n_tnm, self.settings, suffix="n_tnm")
+        df_n_tnm_deidentified = deidentify(df_n_tnm, IDENTIFYING_COLS, crypto_key)
+        save_final_df(
+            df_n_tnm_deidentified, self.settings, suffix="n_tnm_deidentified", deidentified=True
+        )
+        save_final_df_parquet(
+            df_n_tnm_deidentified, self.settings, suffix="n_tnm_deidentified", deidentified=True
+        )
+
+        # extract m
+        df_m_tnm = extract_m_tnm(self.pc, self.data, self.settings, self.spark)
+        df_m_tnm = cast_study_dates(
+            df_m_tnm,
+            [
+                "m_tnm_date",
+            ],
+        )
+
+        df_m_tnm = df_m_tnm.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        df_m_tnm.show()
+
+        save_final_df(df_m_tnm, self.settings, suffix="m_tnm")
+        df_m_tnm_deidentified = deidentify(df_m_tnm, IDENTIFYING_COLS, crypto_key)
+        df_m_tnm_deidentified.show()
+
+        save_final_df(
+            df_m_tnm_deidentified, self.settings, suffix="m_tnm_deidentified", deidentified=True
+        )
+        save_final_df_parquet(
+            df_m_tnm_deidentified, self.settings, suffix="m_tnm_deidentified", deidentified=True
+        )
+
+        # extract y tnm
+        df_y_tnm = extract_y_tnm(self.pc, self.data, self.settings, self.spark)
+        df_y_tnm = cast_study_dates(
+            df_y_tnm,
+            [
+                "y_tnm_date",
+            ],
+        )
+
+        df_y_tnm = df_y_tnm.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        df_y_tnm.show()
+
+        save_final_df(df_y_tnm, self.settings, suffix="y_tnm")
+        df_y_tnm_deidentified = deidentify(df_y_tnm, IDENTIFYING_COLS, crypto_key)
+        df_y_tnm_deidentified.show()
+
+        save_final_df(
+            df_y_tnm_deidentified, self.settings, suffix="y_tnm_deidentified", deidentified=True
+        )
+        save_final_df_parquet(
+            df_y_tnm_deidentified, self.settings, suffix="y_tnm_deidentified", deidentified=True
+        )
+
+        # extract uicc
+        df_uicc_tnm = extract_uicc_tnm(self.pc, self.data, self.settings, self.spark)
+        df_uicc_tnm = cast_study_dates(
+            df_uicc_tnm,
+            [
+                "uicc_tnm_date",
+            ],
+        )
+
+        df_uicc_tnm = df_uicc_tnm.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        df_uicc_tnm.show()
+
+        save_final_df(df_uicc_tnm, self.settings, suffix="uicc_tnm")
+        df_uicc_tnm_deidentified = deidentify(df_uicc_tnm, IDENTIFYING_COLS, crypto_key)
+        df_uicc_tnm_deidentified.show()
+
+        save_final_df(
+            df_uicc_tnm_deidentified,
+            self.settings,
+            suffix="uicc_tnm_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            df_uicc_tnm_deidentified,
+            self.settings,
+            suffix="uicc_tnm_deidentified",
+            deidentified=True,
+        )
+
+    def extract_save_progressions(self, df_all_conditions, crypto_key):
+        progressions = progression_view(self.data)
+        progressions = cast_study_dates(
+            progressions,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        progressions = progressions.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        progressions.show()
+
+        save_final_df(progressions, self.settings, suffix="progressions")
+        progressions_deidentified = deidentify(progressions, IDENTIFYING_COLS, crypto_key)
+        progressions_deidentified.show()
+
+        save_final_df(
+            progressions_deidentified,
+            self.settings,
+            suffix="progressions_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            progressions_deidentified,
+            self.settings,
+            suffix="progressions_deidentified",
+            deidentified=True,
+        )
+
+    def extract_save_gradings(self, df_all_conditions, crypto_key):
+        gradings = grading_view(self.data)
+        gradings = cast_study_dates(
+            gradings,
+            [
+                "grading_date",
+            ],
+        )
+
+        gradings = gradings.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        gradings.show()
+
+        save_final_df(gradings, self.settings, suffix="gradings")
+        gradings_deidentified = deidentify(gradings, IDENTIFYING_COLS, crypto_key)
+        gradings_deidentified.show()
+
+        save_final_df(
+            gradings_deidentified, self.settings, suffix="gradings_deidentified", deidentified=True
+        )
+        save_final_df_parquet(
+            gradings_deidentified, self.settings, suffix="gradings_deidentified", deidentified=True
+        )
+
+    def extract_save_weitere_klassifikationen(self, df_all_conditions, crypto_key):
+        weitere_klassifikationen = weitere_klassifikation_view(self.data)
+        weitere_klassifikationen = cast_study_dates(
+            weitere_klassifikationen,
+            [
+                "weitere_klassifikation_date",
+            ],
+        )
+
+        weitere_klassifikationen = weitere_klassifikationen.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        weitere_klassifikationen.show()
+
+        save_final_df(weitere_klassifikationen, self.settings, suffix="weitere_klassifikationen")
+        weitere_klassifikationen_deidentified = deidentify(
+            weitere_klassifikationen, IDENTIFYING_COLS, crypto_key
+        )
+        weitere_klassifikationen_deidentified.show()
+
+        save_final_df(
+            weitere_klassifikationen_deidentified,
+            self.settings,
+            suffix="weitere_klassifikationen_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            weitere_klassifikationen_deidentified,
+            self.settings,
+            suffix="weitere_klassifikationen_deidentified",
+            deidentified=True,
+        )
+
+    def extract_save_leistungszustand_ecog_karnofsky(self, df_all_conditions, crypto_key):
+        leistungszustand_ecog_karnofsky = leistungszustand_ecog_karnofsky_view(self.data)
+        leistungszustand_ecog_karnofsky = cast_study_dates(
+            leistungszustand_ecog_karnofsky,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        leistungszustand_ecog_karnofsky = leistungszustand_ecog_karnofsky.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        leistungszustand_ecog_karnofsky.show()
+
+        save_final_df(
+            leistungszustand_ecog_karnofsky, self.settings, suffix="leistungszustand_ecog_karnofsky"
+        )
+        leistungszustand_ecog_karnofsky_deidentified = deidentify(
+            leistungszustand_ecog_karnofsky, IDENTIFYING_COLS, crypto_key
+        )
+        leistungszustand_ecog_karnofsky_deidentified.show()
+
+        save_final_df(
+            leistungszustand_ecog_karnofsky_deidentified,
+            self.settings,
+            suffix="leistungszustand_ecog_karnofsky_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            leistungszustand_ecog_karnofsky_deidentified,
+            self.settings,
+            suffix="leistungszustand_ecog_karnofsky_deidentified",
+            deidentified=True,
         )
