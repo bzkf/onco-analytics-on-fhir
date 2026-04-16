@@ -2454,7 +2454,6 @@ def extract_surgeries(
 def group_ops(df_ops: DataFrame) -> DataFrame:
     # ursprüngliche Reihenfolge beibehalten hier in den aggs
     window_spec = Window.partitionBy(
-        "meta_profile",
         "reason_reference",
         "subject_reference",
         "therapy_start_date",
@@ -2463,7 +2462,6 @@ def group_ops(df_ops: DataFrame) -> DataFrame:
     df_ops_with_index = df_ops.withColumn("row_idx", F.row_number().over(window_spec))
 
     df_ops_grouped = df_ops_with_index.groupBy(
-        "meta_profile",
         "reason_reference",
         "subject_reference",
         "therapy_start_date",
