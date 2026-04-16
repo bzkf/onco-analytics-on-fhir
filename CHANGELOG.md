@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.26.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.25.0...v2.26.0) (2026-04-16)
+
+
+### Features
+
+* adding medication to aml ([#432](https://github.com/bzkf/onco-analytics-on-fhir/issues/432)) ([764b6f4](https://github.com/bzkf/onco-analytics-on-fhir/commit/764b6f4dca758c04dbf559ad89e5b8048734aa6d))
+* extract tnm grading weitere klassifikation verlauf leistungszustand ([#434](https://github.com/bzkf/onco-analytics-on-fhir/issues/434)) ([4467407](https://github.com/bzkf/onco-analytics-on-fhir/commit/4467407617d44dadb9d2d504f44fb5967cd19ea3))
+* new study name all obds patients ([#436](https://github.com/bzkf/onco-analytics-on-fhir/issues/436)) ([7874ecb](https://github.com/bzkf/onco-analytics-on-fhir/commit/7874ecbf2d138d36cdc3e0d362c9f82aaf154404))
+
+
+### Bug Fixes
+
+* pca lab diff ([#435](https://github.com/bzkf/onco-analytics-on-fhir/issues/435)) ([e264903](https://github.com/bzkf/onco-analytics-on-fhir/commit/e264903bfc0db105e9a2fc48d7040fe9b4d4d451))
+
+
+### Miscellaneous Chores
+
+* **deps-dev:** bump pytest from 9.0.2 to 9.0.3 ([#430](https://github.com/bzkf/onco-analytics-on-fhir/issues/430)) ([a13f882](https://github.com/bzkf/onco-analytics-on-fhir/commit/a13f882b43965e9c9865cd294a1c7615488ed637))
+* **deps:** bump pillow from 12.1.1 to 12.2.0 ([#429](https://github.com/bzkf/onco-analytics-on-fhir/issues/429)) ([9f87137](https://github.com/bzkf/onco-analytics-on-fhir/commit/9f87137186f4c0f1ddb6b5c9f57be41ee6c801ad))
+
 ## [2.25.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.24.0...v2.25.0) (2026-04-13)
 
 
