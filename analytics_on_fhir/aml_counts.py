@@ -1,147 +1,218 @@
 import os
-from hashlib import sha256
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 from loguru import logger
 from settings import settings
 
-HERE = Path.cwd()
-
-patients_with_diagnoses = pd.read_csv(
-    HERE / "results" / "aml" / "aml_all_patients.csv",
-    sep=",",
-    dtype={"lab_quantity_value": "float"},
-)
-
-patients_with_diagnoses.groupby("icd_code")
-
-patients_with_diagnoses.info()
-
-# TODO add aml_icd_code
+HERE = Path(os.path.abspath(os.path.dirname(__file__)))
 
 
-df = patients_with_diagnoses
+def aml_summary_statistics():
 
-# Convert dates
-df["diagnosis_onsetDateTime"] = pd.to_datetime(df["diagnosis_onsetDateTime"], utc=True)
-df["deceased_dateTime"] = pd.to_datetime(df["deceased_dateTime"], utc=True)
-df["diagnosis_recordedDate"] = pd.to_datetime(df["diagnosis_recordedDate"], utc=True)
-df["birth_date"] = pd.to_datetime(df["birth_date"], utc=True)
+    logger.info("Writing summary statistics for AML")
 
-# Age at diagnosis
-df["age_at_diagnosis"] = (df["diagnosis_recordedDate"] - df["birth_date"]).dt.days / 365.25
+    output_dir = HERE / "results" / "aml" / "summary_statistics"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-# Age groups
-bins = [0, 18, 30, 45, 60, 75, 90, 120]
-labels = ["0-18", "18-30", "30-45", "45-60", "60-75", "75-90", "90+"]
-
-df["age_group"] = pd.cut(df["age_at_diagnosis"], bins=bins, labels=labels)
-
-patient_df = (
-    df.groupby("patient_mrn")
-    .agg(
-        {
-            "birth_date": "first",
-            "gender": "first",
-            "deceased": "max",
-            "age_at_diagnosis": "mean",
-        }
+    # Load datasets
+    patients_with_diagnoses = pd.read_csv(
+        HERE / "results" / "aml" / "aml_all_patients.csv",
+        sep=",",
     )
-    .reset_index()
-)
-
-
-n_patients = len(patient_df)
-
-summary_rows = []
-
-# Age
-summary_rows.append(
-    [
-        "Age at diagnosis (years), mean (SD)",
-        f"{patient_df['age_at_diagnosis'].mean():.1f} ({patient_df['age_at_diagnosis'].std():.1f})",
-    ]
-)
-
-summary_rows.append(
-    [
-        "Age at diagnosis (years), median (IQR)",
-        f"{patient_df['age_at_diagnosis'].median():.1f} "
-        f"({patient_df['age_at_diagnosis'].quantile(0.25):.1f}-{patient_df['age_at_diagnosis'].quantile(0.75):.1f})",
-    ]
-)
-
-# Gender
-gender_counts = patient_df["gender"].value_counts()
-
-for gender, count in gender_counts.items():
-    summary_rows.append([f"Gender: {gender}", f"{count} ({count / n_patients * 100:.1f}%)"])
-
-# Mortality
-deceased_count = patient_df["deceased"].sum()
-summary_rows.append(["Deceased", f"{deceased_count} ({deceased_count / n_patients * 100:.1f}%)"])
-
-# Age groups
-age_group_counts = df.groupby("patient_mrn")["age_group"].first().value_counts().sort_index()
-
-for group, count in age_group_counts.items():
-    summary_rows.append([f"Age group: {group}", f"{count} ({count / n_patients * 100:.1f}%)"])
-
-# Create final table
-table1 = pd.DataFrame(summary_rows, columns=["Characteristic", "Value"])
-
-table1
-
-
-# Group by icd_code and calculate per-ICD patient stats
-icd_group_df = (
-    df.groupby("icd_code")
-    .agg(
-        {
-            "patient_mrn": "nunique",  # Number of unique patients per ICD code
-            "age_at_diagnosis": "mean",  # Mean age at diagnosis
-            "gender": lambda x: x.value_counts(normalize=True).to_dict(),  # Gender distribution
-            "deceased": "mean",  # Mortality rate (mean of deceased column)
-        }
+    ecog_statuses = pd.read_csv(
+        HERE / "results" / "aml" / "df_obds_ecog_statuses.csv",
+        sep=";",
     )
-    .reset_index()
-)
+    eln_klassifikation = pd.read_csv(
+        HERE / "results" / "aml" / "df_obds_weitere_klassifikationen.csv",
+        sep=";",
+    )
+    lab_values = pd.read_csv(
+        HERE / "results" / "aml" / "aml_all_labs.csv",
+        sep=",",
+    )
 
-# Format gender distribution to make it readable
-icd_group_df["gender_female"] = icd_group_df["gender"].apply(
-    lambda x: x.get("female", 0) * 100 if isinstance(x, dict) else 0
-)
-icd_group_df["gender_male"] = icd_group_df["gender"].apply(
-    lambda x: x.get("male", 0) * 100 if isinstance(x, dict) else 0
-)
+    # Convert dates in patients_with_diagnoses
+    patients_with_diagnoses["diagnosis_onsetDateTime"] = pd.to_datetime(
+        patients_with_diagnoses["diagnosis_onsetDateTime"], utc=True
+    )
+    patients_with_diagnoses["deceased_dateTime"] = pd.to_datetime(
+        patients_with_diagnoses["deceased_dateTime"], utc=True
+    )
+    patients_with_diagnoses["diagnosis_recordedDate"] = pd.to_datetime(
+        patients_with_diagnoses["diagnosis_recordedDate"], utc=True
+    )
+    patients_with_diagnoses["birth_date"] = pd.to_datetime(
+        patients_with_diagnoses["birth_date"], utc=True
+    )
 
-# Drop 'gender' column as it's now split into 'gender_female' and 'gender_male'
-icd_group_df.drop(columns=["gender"], inplace=True)
+    # Calculate age at diagnosis
+    patients_with_diagnoses["age_at_diagnosis"] = (
+        patients_with_diagnoses["diagnosis_recordedDate"] - patients_with_diagnoses["birth_date"]
+    ).dt.days / 365.25
 
-# Calculate the number of deceased patients and the mortality rate
-icd_group_df["deceased_count"] = icd_group_df["deceased"] * icd_group_df["patient_mrn"]
-icd_group_df["deceased_rate"] = icd_group_df["deceased"] * 100  # Convert to percentage
+    # Age groups
+    bins = [0, 18, 30, 45, 60, 75, 90, 120]
+    labels = ["0-18", "18-30", "30-45", "45-60", "60-75", "75-90", "90+"]
+    patients_with_diagnoses["age_group"] = pd.cut(
+        patients_with_diagnoses["age_at_diagnosis"], bins=bins, labels=labels
+    )
 
-# Create a clean summary table
-icd_summary = icd_group_df[
-    ["icd_code", "patient_mrn", "age_at_diagnosis", "gender_female", "gender_male", "deceased_rate"]
-]
+    # ICD bins
+    def assign_icd_bin(code):
+        bin2_codes = ["C93.1", "C93.10", "C93.11"]
+        bin3_codes = ["C92.3", "C92.30", "C92.31"]
+        bin4_codes = ["C92.4", "C92.40", "C92.41"]
+        if code in bin2_codes:
+            return "C93.1"
+        elif code in bin3_codes:
+            return "C92.3"
+        elif code in bin4_codes:
+            return "C92.4"
+        else:
+            return "C92.0"
 
-# Rename the columns for readability
-icd_summary.columns = [
-    "ICD Code",
-    "Number of Patients",
-    "Mean Age at Diagnosis (years)",
-    "Female (%)",
-    "Male (%)",
-    "Mortality Rate (%)",
-]
+    patients_with_diagnoses["icd_bin"] = patients_with_diagnoses["icd_code"].apply(assign_icd_bin)
 
-# Sort by number of patients for better readability (optional)
-icd_summary = icd_summary.sort_values("Number of Patients", ascending=False).reset_index(drop=True)
+    # ECOG distribution
+    ecog_statuses["effective_dateTime"] = pd.to_datetime(
+        ecog_statuses["effective_dateTime"], utc=True, errors="coerce"
+    )
+    ecog_statuses = ecog_statuses.sort_values(
+        by=["patient_mrn", "effective_dateTime"], ascending=[True, False]
+    )
+    ecog_distribution = (
+        ecog_statuses.groupby("ecog_performance_status").size().reset_index(name="count")
+    )
+    ecog_distribution["percentage"] = (
+        ecog_distribution["count"] / ecog_distribution["count"].sum()
+    ) * 100
+    ecog_distribution.to_csv(
+        output_dir / (settings.location + "_ecog_distribution.csv"), index=False
+    )
 
-# Display the table (or export it)
-icd_summary
+    # ELN distribution
+    eln_klassifikation["effective_date_time"] = pd.to_datetime(
+        eln_klassifikation["effective_date_time"], utc=True, errors="coerce"
+    )
+    eln_filtered = eln_klassifikation[
+        eln_klassifikation["code_text"].str.startswith("ELN", na=False)
+    ].copy()
+    eln_filtered = eln_filtered.sort_values(
+        by=["patient_mrn", "effective_date_time"], ascending=[True, False]
+    )
+    latest_eln = eln_filtered.drop_duplicates(subset="patient_mrn", keep="first")[
+        ["patient_mrn", "value_code"]
+    ]
+    eln_distribution = latest_eln["value_code"].value_counts().reset_index()
+    eln_distribution.columns = ["eln_classification", "count"]
+    eln_distribution["percentage"] = (
+        eln_distribution["count"] / eln_distribution["count"].sum()
+    ) * 100
+    eln_distribution.to_csv(output_dir / (settings.location + "_eln_distribution.csv"), index=False)
+
+    # Summary Statistics to CSV
+    age_group_distribution = patients_with_diagnoses["age_group"].value_counts().reset_index()
+    age_group_distribution.columns = ["age_group", "count"]
+    age_group_distribution["percentage"] = (
+        age_group_distribution["count"] / age_group_distribution["count"].sum()
+    ) * 100
+    age_group_distribution.sort_values(by=["age_group"], inplace=True)
+    age_group_distribution.to_csv(
+        output_dir / (settings.location + "_age_group_distribution.csv"), index=False
+    )
+
+    gender_distribution = patients_with_diagnoses["gender"].value_counts().reset_index()
+    gender_distribution.columns = ["gender", "count"]
+    gender_distribution["percentage"] = (
+        gender_distribution["count"] / gender_distribution["count"].sum()
+    ) * 100
+    gender_distribution.to_csv(
+        output_dir / (settings.location + "_gender_distribution.csv"), index=False
+    )
+
+    icd_bin_distribution = patients_with_diagnoses["icd_bin"].value_counts().reset_index()
+    icd_bin_distribution.columns = ["icd_bin", "count"]
+    icd_bin_distribution["percentage"] = (
+        icd_bin_distribution["count"] / icd_bin_distribution["count"].sum()
+    ) * 100
+    icd_bin_distribution.to_csv(
+        output_dir / (settings.location + "_icd_bin_distribution.csv"), index=False
+    )
+
+    # Lab values
+    result = pd.DataFrame(columns=["lab_value", "unit", "count", "mean"])
+    lab_values["lab_dateTime"] = pd.to_datetime(
+        lab_values["lab_dateTime"], utc=True, errors="coerce"
+    )
+    all_loinc_codes = []
+    # Leukocytes
+    loinc_codes_leukocytes = ["leukocytes", "26464-8", "6690-2", "806-0", "24122-4", "53964-3"]
+    all_loinc_codes.append(loinc_codes_leukocytes)
+    # Platelets
+    loinc_codes_platelets = ["platelets", "777-3", "26515-7", "32623-1", "26515-7"]
+    all_loinc_codes.append(loinc_codes_platelets)
+    # Hemoglobin
+    loinc_codes_hemoglobin = ["hemoglobin", "718-7", "20509-6", "30352-9", "30350-3"]
+    all_loinc_codes.append(loinc_codes_hemoglobin)
+    # Blasts
+    loinc_codes_blasts = ["blasts", "709-6", "30376-8", "26446-5", "21114-4", "708-8", "44017-2"]
+    all_loinc_codes.append(loinc_codes_blasts)
+    # Macroblasts
+    loinc_codes_macroblasts = ["macroblasts", "51629-4"]
+    all_loinc_codes.append(loinc_codes_macroblasts)
+    # Normoblasts
+    loinc_codes_normoblasts = ["normoblasts", "33990-3", "715-3"]
+    all_loinc_codes.append(loinc_codes_normoblasts)
+    # Pronormoblasts
+    loinc_codes_pronormoblasts = ["pronormoblasts", "26033-1"]
+    all_loinc_codes.append(loinc_codes_pronormoblasts)
+    # Myeloblasts
+    loinc_codes_myeloblasts = ["myeloblasts", "11113-8"]
+    all_loinc_codes.append(loinc_codes_myeloblasts)
+    # Cells counted total in bone marrow
+    loinc_codes_cells = ["cells in bone marrow", "38257-2"]
+    all_loinc_codes.append(loinc_codes_cells)
+    # Abnormal lymphocytes/Leukocytes in Blood
+    loinc_codes_abnormal = [
+        "abnormal lymphocytes/Leukocytes in blood",
+        "30413-9",
+        "735-1",
+        "29261-5",
+    ]
+    all_loinc_codes.append(loinc_codes_abnormal)
+
+    for lab_value in all_loinc_codes:
+        lab_filtered = lab_values[lab_values["loinc_code"].isin(lab_value[1:])].copy()
+
+        filtered_merged = pd.merge(
+            patients_with_diagnoses,
+            lab_filtered,
+            left_on="condition_patient_reference",
+            right_on="observation_patient_reference",
+        )
+        filtered_merged["time_diff"] = (
+            filtered_merged["lab_dateTime"] - filtered_merged["diagnosis_recordedDate"]
+        ).dt.days.abs()
+        filtered_result = (
+            filtered_merged.sort_values("time_diff").groupby("patient_mrn").first().reset_index()
+        )
+        filtered_result["lab_quantity_value"] = pd.to_numeric(
+            filtered_result["lab_quantity_value"], errors="coerce"
+        )
+        unit_stats = (
+            filtered_result.groupby("lab_quantity_unit")["lab_quantity_value"]
+            .agg(["count", "mean"])
+            .reset_index()
+        )
+
+        for _, row in unit_stats.iterrows():
+            result.loc[len(result)] = [
+                lab_value[0],
+                row["lab_quantity_unit"],
+                row["count"],
+                row["mean"],
+            ]
+
+    result.to_csv(output_dir / (settings.location + "_lab_distribution.csv"), index=False)
