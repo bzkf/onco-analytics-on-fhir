@@ -86,9 +86,7 @@ class StudyProtocolD:
     def run(self):
         logger.info("StudyProtocolD pipeline started")
 
-        # crypto_key = secrets.token_hex(32)
-        # DEV
-        crypto_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        crypto_key = secrets.token_hex(32)
 
         # Extract
         df_extract = self.extract()
