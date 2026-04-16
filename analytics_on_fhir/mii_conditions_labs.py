@@ -173,7 +173,9 @@ class PyRateQuery:
         if all_labs:
             lab_df = pd.concat(all_labs, ignore_index=True)
             lab_df.to_csv(
-                os.path.join(self.output_dir, "df_mii_labs" + suffix + ".csv"), index=False
+                os.path.join(self.output_dir, "df_mii_labs" + suffix + ".csv"),
+                index=False,
+                sep=";",
             )
 
             logger.info("lab_df size: {}", lab_df.count())

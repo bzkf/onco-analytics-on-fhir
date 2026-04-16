@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from fhir_constants import FHIR_SYSTEM_PRIMAERTUMOR
 from loguru import logger
@@ -257,8 +258,8 @@ class StudyProtocolD:
         #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
         # )
         # mii_condition_df_1_mal = mii_condition_df_1_mal.select(
-        #     "condition_id_mii",
-        #     # "condition_id",
+        #     # "condition_id_mii",
+        #     "condition_id",
         #     "condition_patient_reference",
         #     "icd_code",
         #     "diagnosis_recordedDate",
