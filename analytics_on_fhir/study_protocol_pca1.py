@@ -154,6 +154,11 @@ class StudyProtocolPCa1:
             self.settings,
             suffix="c61_conditions_patients_death_gleason_met",
         )
+        save_final_df(
+            df_c61_conditions_patients_death_gleason_met,
+            self.settings,
+            suffix="c61_conditions_patients_death_gleason_met",
+        )
 
         self.extract_save_therapies(
             df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
@@ -211,10 +216,21 @@ class StudyProtocolPCa1:
             self.settings,
             suffix="c61_conditions_patients_death_gleason_met_clean",
         )
+        save_final_df_parquet(
+            df_c61_conditions_patients_death_gleason_met_clean,
+            self.settings,
+            suffix="c61_conditions_patients_death_gleason_met_clean",
+        )
         df_c61_conditions_patients_death_gleason_met_clean_deidentified = deidentify(
             df_c61_conditions_patients_death_gleason_met_clean, IDENTIFYING_COLS, crypto_key
         )
         save_final_df(
+            df_c61_conditions_patients_death_gleason_met_clean_deidentified,
+            self.settings,
+            suffix="c61_conditions_patients_death_gleason_met_clean_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
             df_c61_conditions_patients_death_gleason_met_clean_deidentified,
             self.settings,
             suffix="c61_conditions_patients_death_gleason_met_clean_deidentified",
