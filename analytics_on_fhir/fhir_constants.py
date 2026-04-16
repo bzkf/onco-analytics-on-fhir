@@ -1,3 +1,10 @@
+FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
+FHIR_SYSTEM_GRADING = (
+    "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-grading"
+)
+FHIR_CODE_SYSTEM_ECOG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-allgemeiner-leistungszustand-ecog"
+FHIR_CODE_SYSTEM_KARNOFSKY = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-allgemeiner-leistungszustand-karnofsky"
+FHIR_SYSTEM_ICDO3_T = "http://terminology.hl7.org/CodeSystem/icd-o-3"
 FHIR_SYSTEMS_CONDITION_ASSERTED_DATE = (
     "http://hl7.org/fhir/StructureDefinition/condition-assertedDate"
 )
@@ -16,7 +23,7 @@ FHIR_SYSTEM_METASTASIS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
     "CodeSystem/mii-cs-onko-fernmetastasen"
 )
-
+FHIR_SYSTEM_TNM_UICC = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/ValueSet/mii-vs-onko-tnm-uicc-stadium"
 SCT_CODE_DEATH = "184305005"
 SCT_CODE_GLEASON = "1812491000004107"
 SCT_CODE_METASTASIS = "385421009"
