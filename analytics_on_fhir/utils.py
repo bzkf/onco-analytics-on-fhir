@@ -2168,7 +2168,7 @@ def extract_systemtherapies(
             F.col("p.therapy_id").alias("therapy_id"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
-            F.col("p.meta_profile").alias("meta_profile"),
+            # F.col("p.meta_profile").alias("meta_profile"),
             F.col("p.therapy_intention").alias("therapy_intention"),
             F.col("p.stellung_op").alias("stellung_op"),
             F.col("p.therapy_type").alias("therapy_type"),
@@ -2302,7 +2302,7 @@ def join_radiotherapies(
         )
         .select(
             F.col("p.therapy_id").alias("therapy_id"),
-            F.col("p.meta_profile"),
+            # F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
             F.col("p.therapy_intention"),
@@ -2346,7 +2346,7 @@ def join_radiotherapies(
         )
         .select(
             F.col("p.therapy_id"),
-            F.col("p.meta_profile"),
+            # F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
             F.col("p.therapy_intention"),
@@ -2454,7 +2454,6 @@ def extract_surgeries(
 def group_ops(df_ops: DataFrame) -> DataFrame:
     # ursprüngliche Reihenfolge beibehalten hier in den aggs
     window_spec = Window.partitionBy(
-        "meta_profile",
         "reason_reference",
         "subject_reference",
         "therapy_start_date",
@@ -2463,7 +2462,6 @@ def group_ops(df_ops: DataFrame) -> DataFrame:
     df_ops_with_index = df_ops.withColumn("row_idx", F.row_number().over(window_spec))
 
     df_ops_grouped = df_ops_with_index.groupBy(
-        "meta_profile",
         "reason_reference",
         "subject_reference",
         "therapy_start_date",
@@ -2703,4 +2701,43 @@ def normalize_array_columns(df: pd.DataFrame) -> pd.DataFrame:
             df[colname] = df[colname].apply(
                 lambda x: ",".join(map(str, x)) if isinstance(x, (list, tuple)) else x
             )
+    return df
+
+
+def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_parent"):
+    parent_col = "icd10_parent_tmp"
+    df = df.withColumn(parent_col, F.regexp_replace(F.col(code_col), r"\..*$", ""))
+
+    df = df.withColumn(
+        target_col,
+        F.when(F.col(parent_col).between("C00", "C14"), F.lit("C00-C14"))
+        .when(F.col(parent_col) == "C15", F.lit("C15"))
+        .when(F.col(parent_col) == "C16", F.lit("C16"))
+        .when(F.col(parent_col).between("C18", "C21"), F.lit("C18-C21"))
+        .when(F.col(parent_col) == "C22", F.lit("C22"))
+        .when(F.col(parent_col).between("C23", "C24"), F.lit("C23-C24"))
+        .when(F.col(parent_col) == "C25", F.lit("C25"))
+        .when(F.col(parent_col) == "C32", F.lit("C32"))
+        .when(F.col(parent_col).between("C33", "C34"), F.lit("C33-C34"))
+        .when(F.col(parent_col) == "C43", F.lit("C43"))
+        .when(F.col(parent_col) == "C50", F.lit("C50"))
+        .when(F.col(parent_col) == "C53", F.lit("C53"))
+        .when(F.col(parent_col).between("C54", "C55"), F.lit("C54-C55"))
+        .when(F.col(parent_col) == "C56", F.lit("C56"))
+        .when(F.col(parent_col) == "C61", F.lit("C61"))
+        .when(F.col(parent_col) == "C62", F.lit("C62"))
+        .when(F.col(parent_col) == "C64", F.lit("C64"))
+        .when(F.col(parent_col) == "C67", F.lit("C67"))
+        .when(F.col(parent_col).between("C70", "C72"), F.lit("C70-C72"))
+        .when(F.col(parent_col) == "C73", F.lit("C73"))
+        .when(F.col(parent_col) == "C81", F.lit("C81"))
+        .when(F.col(parent_col).between("C82", "C88"), F.lit("C82-C88"))
+        .when(F.col(parent_col) == "C90", F.lit("C90"))
+        .when(F.col(parent_col).between("C91", "C95"), F.lit("C91-C95"))
+        .otherwise(
+            F.col(parent_col)
+        ),  # fallback = parent code - so verlieren wir nicht so viele (vgl entity)
+    )
+
+    df = df.drop(parent_col)
     return df

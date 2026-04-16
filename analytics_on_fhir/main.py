@@ -4,6 +4,7 @@ import sys
 from aml import AMLStudy
 from dq import DQStudy
 from embark_rwd import run
+from extract_all_obds import AllObdsPatients
 from loguru import logger
 from pathling.context import PathlingContext
 from pathling.datasource import DataSource
@@ -230,6 +231,14 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
         case StudyNames.DQ:
             dq = DQStudy(settings)
             dq.run(data)
+        case StudyNames.ALL_OBDS_PATIENTS:
+            extract_all_obds = AllObdsPatients(
+                pc=pc,
+                data=data,
+                settings=settings,
+                spark=pc.spark,
+            )
+            extract_all_obds.run()
         case _:
             logger.warning(f"No study case matched for: {study_name}")
 
