@@ -2302,7 +2302,7 @@ def join_radiotherapies(
         )
         .select(
             F.col("p.therapy_id").alias("therapy_id"),
-            F.col("p.meta_profile"),
+            # F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
             F.col("p.therapy_intention"),
@@ -2346,7 +2346,7 @@ def join_radiotherapies(
         )
         .select(
             F.col("p.therapy_id"),
-            F.col("p.meta_profile"),
+            # F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
             F.col("p.therapy_intention"),

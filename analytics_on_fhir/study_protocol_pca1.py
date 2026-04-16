@@ -579,7 +579,7 @@ class StudyProtocolPCa1:
             df_all_conditions,
             df_all_conditions.condition_id == df_ops.reason_reference,
             "right",
-        )
+        ).drop("meta_profile")
         save_final_df(
             df_ops,
             self.settings,
