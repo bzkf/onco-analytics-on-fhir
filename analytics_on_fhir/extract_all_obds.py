@@ -29,12 +29,7 @@ from utils import (
     save_final_df,
     save_final_df_parquet,
 )
-from views import (
-    grading_view,
-    leistungszustand_ecog_karnofsky_view,
-    progression_view,
-    weitere_klassifikation_view,
-)
+from views import grading_view, leistungszustand_ecog_karnofsky_view, progression_view
 
 
 class AllObdsPatients:
@@ -168,10 +163,6 @@ class AllObdsPatients:
         self.extract_save_progressions(df_all_obds_clean, crypto_key)
 
         self.extract_save_gradings(df_all_obds_clean, crypto_key)
-
-        # ! funktioniert nicht, to do: fix SQLSTATE: P0001
-        # Expecting a collection with a single element but it has many
-        # self.extract_save_weitere_klassifikationen(df_all_conditions, crypto_key)
 
         self.extract_save_leistungszustand_ecog_karnofsky(df_all_obds_clean, crypto_key)
 
