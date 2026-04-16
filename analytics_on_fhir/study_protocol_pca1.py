@@ -178,12 +178,10 @@ class StudyProtocolPCa1:
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")
 
-        # crypto_key = secrets.token_hex(32)
-        # DEV
-        crypto_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        crypto_key = secrets.token_hex(32)
 
         # 1) Extract
-        """ self.extract_from_obds(crypto_key)
+        self.extract_from_obds(crypto_key)
 
         # 2) Prepare dates, age, cohort
         df_c61_conditions_patients_death_gleason_met = self.prepare(
@@ -221,24 +219,23 @@ class StudyProtocolPCa1:
             self.settings,
             suffix="c61_conditions_patients_death_gleason_met_clean_deidentified",
             deidentified=True,
-        ) """
+        )
 
         # DEV
         # read csv here to pyspark
-        import pandas as pd
-
-        suffix = "c61_conditions_patients_death_gleason_met_clean"
-        csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
-        df_c61_conditions_patients_death_gleason_met_clean = (
-            self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
-        )
-        df_c61_conditions_patients_death_gleason_met_clean.show()
+        # import pandas as pd
+        # suffix = "c61_conditions_patients_death_gleason_met_clean"
+        # csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
+        # df_c61_conditions_patients_death_gleason_met_clean = (
+        #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
+        # )
+        # df_c61_conditions_patients_death_gleason_met_clean.show()
 
         # 4) Nebendiagnosen: extract mii conditions + labs for c61 pats
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
         df_list_c61 = pandas_df_pseudonyms_c61["patient_resource_id"].drop_duplicates().dropna()
 
-        """mii_conditions_pandas = self.extract_mii_conditions(
+        mii_conditions_pandas = self.extract_mii_conditions(
             df_list_c61, suffix="", crypto_key=crypto_key
         )
         mii_conditions = self.spark.createDataFrame(mii_conditions_pandas)
@@ -275,7 +272,7 @@ class StudyProtocolPCa1:
             self.settings,
             suffix="mii_conditions_asserted_deidentified",
             deidentified=True,
-        ) """
+        )
 
         # labs
         mii_labs_pandas = self.extract_mii_labs(df_list_c61, suffix="", crypto_key=crypto_key)
