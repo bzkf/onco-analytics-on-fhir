@@ -2694,3 +2694,13 @@ def keep_only_first_diagnosis(df, columns):
     df_sorted = df.sort_values(by=columns + ["diagnosis_recordedDate"])
     return df_sorted.drop_duplicates(subset=columns, keep="first")
     return df_sorted.drop_duplicates(subset=columns, keep="first")
+
+
+def normalize_array_columns(df: pd.DataFrame) -> pd.DataFrame:
+    for colname in df.columns:
+        # detect columns that contain lists/arrays in ANY row
+        if df[colname].apply(lambda x: isinstance(x, (list, tuple))).any():
+            df[colname] = df[colname].apply(
+                lambda x: ",".join(map(str, x)) if isinstance(x, (list, tuple)) else x
+            )
+    return df

@@ -1,3 +1,4 @@
+import os
 import re
 import secrets
 
@@ -37,6 +38,7 @@ from utils import (
     join_radiotherapies,
     map_gleason_sct_to_score,
     months_diff,
+    normalize_array_columns,
     save_final_df,
     save_final_df_parquet,
 )
@@ -67,6 +69,10 @@ class StudyProtocolPCa1:
         self.df_system_therapies: DataFrame | None = None
         self.year_min: int | None = None
         self.year_max: int | None = None
+
+        self.output_dir = os.path.join(settings.results_directory_path, settings.study_name.value)
+
+        os.makedirs(self.output_dir, exist_ok=True)
 
     def extract_from_obds(self, crypto_key) -> DataFrame:
         df = extract_conditions_patients_death(self.pc, self.data, self.settings, self.spark)
@@ -215,9 +221,20 @@ class StudyProtocolPCa1:
             deidentified=True,
         )
 
+        # DEV
+        # read csv here to pyspark
+        # import pandas as pd
+        # suffix = "c61_conditions_patients_death_gleason_met_clean"
+        # csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
+        # df_c61_conditions_patients_death_gleason_met_clean = (
+        #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
+        # )
+        # df_c61_conditions_patients_death_gleason_met_clean.show()
+
         # 4) Nebendiagnosen: extract mii conditions + labs for c61 pats
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
         df_list_c61 = pandas_df_pseudonyms_c61["patient_resource_id"].drop_duplicates().dropna()
+
         mii_conditions_pandas = self.extract_mii_conditions(
             df_list_c61, suffix="", crypto_key=crypto_key
         )
@@ -230,7 +247,7 @@ class StudyProtocolPCa1:
             "diagnosis_recordedDate",
             F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         )
-        mii_conditions_asserted = df_c61_conditions_patients_death_gleason_met.select(
+        mii_conditions_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
             "condition_id", "asserted_date", "condition_patient_resource_id"
         ).join(
             mii_conditions,
@@ -256,14 +273,45 @@ class StudyProtocolPCa1:
             suffix="mii_conditions_asserted_deidentified",
             deidentified=True,
         )
+
         # labs
         mii_labs_pandas = self.extract_mii_labs(df_list_c61, suffix="", crypto_key=crypto_key)
+
+        # DEV
+        # read csv to pandas here
+        # suffix = "mii_labs"
+        # csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
+        # mii_labs_pandas = pd.read_csv(csv_path, sep=";")
+
+        # debug schema equivalent
+        print(mii_labs_pandas.dtypes)
+        mii_labs_pandas = mii_labs_pandas.replace(["NaN", "nan"], None)
+        mii_labs_pandas = normalize_array_columns(mii_labs_pandas)
         mii_labs = self.spark.createDataFrame(mii_labs_pandas)
+        for field in mii_labs.schema.fields:
+            print(field.name, field.dataType)
+
+        # DEV
+        # read csv here to pyspark
+        # suffix = "mii_labs"
+        # csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
+        # # exchange sep to ; later here
+        # mii_labs = self.spark.read.option("header", "true").option("sep", ",").csv(csv_path)
+        # for field in mii_labs.schema.fields:
+        #     print(field.name, field.dataType)
+
+        # mii_labs = mii_labs.withColumn(
+        #     "lab_dateTime", F.to_date(F.col("lab_dateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX")
+        # )
+
         mii_labs = mii_labs.withColumn(
-            "lab_dateTime", F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX")
+            "lab_dateTime", F.expr("try_to_timestamp(lab_dateTime, \"yyyy-MM-dd'T'HH:mm:ssXXX\")")
         )
 
-        mii_labs_asserted = df_c61_conditions_patients_death_gleason_met.select(
+        # optional
+        mii_labs = mii_labs.withColumn("lab_dateTime", F.to_date("lab_dateTime"))
+
+        mii_labs_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
             "condition_id", "asserted_date", "condition_patient_resource_id"
         ).join(
             mii_labs,
