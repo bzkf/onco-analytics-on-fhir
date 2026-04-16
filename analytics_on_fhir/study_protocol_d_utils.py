@@ -14,45 +14,6 @@ from pyspark.sql.window import Window
 from utils import save_plot
 
 
-def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_parent"):
-    parent_col = "icd10_parent_tmp"
-    df = df.withColumn(parent_col, F.regexp_replace(F.col(code_col), r"\..*$", ""))
-
-    df = df.withColumn(
-        target_col,
-        F.when(F.col(parent_col).between("C00", "C14"), F.lit("C00-C14"))
-        .when(F.col(parent_col) == "C15", F.lit("C15"))
-        .when(F.col(parent_col) == "C16", F.lit("C16"))
-        .when(F.col(parent_col).between("C18", "C21"), F.lit("C18-C21"))
-        .when(F.col(parent_col) == "C22", F.lit("C22"))
-        .when(F.col(parent_col).between("C23", "C24"), F.lit("C23-C24"))
-        .when(F.col(parent_col) == "C25", F.lit("C25"))
-        .when(F.col(parent_col) == "C32", F.lit("C32"))
-        .when(F.col(parent_col).between("C33", "C34"), F.lit("C33-C34"))
-        .when(F.col(parent_col) == "C43", F.lit("C43"))
-        .when(F.col(parent_col) == "C50", F.lit("C50"))
-        .when(F.col(parent_col) == "C53", F.lit("C53"))
-        .when(F.col(parent_col).between("C54", "C55"), F.lit("C54-C55"))
-        .when(F.col(parent_col) == "C56", F.lit("C56"))
-        .when(F.col(parent_col) == "C61", F.lit("C61"))
-        .when(F.col(parent_col) == "C62", F.lit("C62"))
-        .when(F.col(parent_col) == "C64", F.lit("C64"))
-        .when(F.col(parent_col) == "C67", F.lit("C67"))
-        .when(F.col(parent_col).between("C70", "C72"), F.lit("C70-C72"))
-        .when(F.col(parent_col) == "C73", F.lit("C73"))
-        .when(F.col(parent_col) == "C81", F.lit("C81"))
-        .when(F.col(parent_col).between("C82", "C88"), F.lit("C82-C88"))
-        .when(F.col(parent_col) == "C90", F.lit("C90"))
-        .when(F.col(parent_col).between("C91", "C95"), F.lit("C91-C95"))
-        .otherwise(
-            F.col(parent_col)
-        ),  # fallback = parent code - so verlieren wir nicht so viele (vgl entity)
-    )
-
-    df = df.drop(parent_col)
-    return df
-
-
 def create_2_mals_df(df: DataFrame) -> DataFrame:
     # Filter patients with multiple malignancies, compute months between diagnoses
     df = df.filter(F.col("double_patid") == 1)
