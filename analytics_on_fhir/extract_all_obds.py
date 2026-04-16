@@ -559,41 +559,6 @@ class AllObdsPatients:
             gradings_deidentified, self.settings, suffix="gradings_deidentified", deidentified=True
         )
 
-    def extract_save_weitere_klassifikationen(self, df_all_conditions, crypto_key):
-        weitere_klassifikationen = weitere_klassifikation_view(self.data)
-        weitere_klassifikationen = cast_study_dates(
-            weitere_klassifikationen,
-            [
-                "weitere_klassifikation_date",
-            ],
-        )
-
-        weitere_klassifikationen = weitere_klassifikationen.join(
-            df_all_conditions,
-            on="condition_id",
-            how="right",
-        )
-        weitere_klassifikationen.show()
-
-        save_final_df(weitere_klassifikationen, self.settings, suffix="weitere_klassifikationen")
-        weitere_klassifikationen_deidentified = deidentify(
-            weitere_klassifikationen, IDENTIFYING_COLS, crypto_key
-        )
-        weitere_klassifikationen_deidentified.show()
-
-        save_final_df(
-            weitere_klassifikationen_deidentified,
-            self.settings,
-            suffix="weitere_klassifikationen_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            weitere_klassifikationen_deidentified,
-            self.settings,
-            suffix="weitere_klassifikationen_deidentified",
-            deidentified=True,
-        )
-
     def extract_save_leistungszustand_ecog_karnofsky(self, df_all_conditions, crypto_key):
         leistungszustand_ecog_karnofsky = leistungszustand_ecog_karnofsky_view(self.data)
         leistungszustand_ecog_karnofsky = cast_study_dates(
