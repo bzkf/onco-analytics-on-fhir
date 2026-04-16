@@ -9,7 +9,6 @@ from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from utils import (
-    HERE,
     IDENTIFYING_COLS,
     cast_study_dates,
     compute_age,
