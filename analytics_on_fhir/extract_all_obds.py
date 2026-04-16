@@ -207,59 +207,6 @@ class AllObdsPatients:
         mii_condition_df = query.extract_conditions(df_list, suffix, crypto_key)
         return mii_condition_df
 
-    def plot_pairs(self, df: DataFrame, df_name: str) -> DataFrame:
-        plot_pair_bubble_gender(
-            df=df,
-            value_col="count_pair",
-            subgroup_cbar_col="count_female_pair",
-            settings=self.settings,
-            plot_name=f"{df_name}_pairs_gender",
-            feature="pair frequencies with gender proportion",
-            period=f"diagnosis year {self.year_min} to {self.year_max}",
-            cbar_label="female ratio",
-        )
-
-    def plot_age(self, df: DataFrame, df_name: str) -> DataFrame:
-        plot_pair_boxplot_horizontal_custom(
-            df=df,
-            plot_name=f"{df_name}_age_boxplot_quartiles",
-            period=f"diagnosis year {self.year_min} to {self.year_max}",
-            settings=self.settings,
-            value_col="count_pair",
-            var_name="age at diagnosis",
-            var_name_median=["age_median_1", "age_median_2"],
-            var_name_q1=["age_q1_1", "age_q1_2"],
-            var_name_q3=["age_q3_1", "age_q3_2"],
-            var_name_min=["age_min_1", "age_min_2"],
-            var_name_max=["age_max_1", "age_max_2"],
-            var_name_outliers=["outliers_age_1", "outliers_age_2"],
-            show_entity1=True,
-        )
-
-    def plot_months_between(self, df: DataFrame, df_name: str) -> DataFrame:
-        plot_pair_boxplot_horizontal_custom(
-            df=df,
-            plot_name=f"{df_name}_months_between_boxplot_quartiles",
-            period=f"diagnosis year {self.year_min} to {self.year_max}",
-            settings=self.settings,
-            value_col="count_pair",
-            var_name="months between diagnoses (first and second malignancy)",
-            var_name_median="months_between_median_2",
-            var_name_q1="months_between_q1_2",
-            var_name_q3="months_between_q3_2",
-            var_name_min="months_between_min_2",
-            var_name_max="months_between_max_2",
-            var_name_outliers=["outliers_months_between"],
-            show_entity1=False,
-        )
-
-    def run_r_analysis(self):
-        logger.info("running r analysis")
-        script = os.path.join(HERE, "metastasis_analysis.R")
-        logger.info("script = {}", script)
-        run_r_script(script)
-        show_r_plots(os.path.join(HERE, "results/study_protocol_d/plots_r"))
-
     def extract_save_metastasis(self, df_all_conditions, crypto_key):
         df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
         logger.info(f"df_1_2_cond_id_asserted.count() = : {df_all_conditions.count()}")
