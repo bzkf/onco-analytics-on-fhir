@@ -5,6 +5,7 @@ from aml import AMLStudy
 from aml_counts import aml_summary_statistics
 from dq import DQStudy
 from embark_rwd import run
+from extract_all_obds import AllObdsPatients
 from loguru import logger
 from pathling.context import PathlingContext
 from pathling.datasource import DataSource
@@ -228,9 +229,18 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
             if settings.aml.use_cytostatics_data:
                 aml.join_with_drug_data()
             aml_summary_statistics()
+            aml.extract_meds()
         case StudyNames.DQ:
             dq = DQStudy(settings)
             dq.run(data)
+        case StudyNames.ALL_OBDS_PATIENTS:
+            extract_all_obds = AllObdsPatients(
+                pc=pc,
+                data=data,
+                settings=settings,
+                spark=pc.spark,
+            )
+            extract_all_obds.run()
         case _:
             logger.warning(f"No study case matched for: {study_name}")
 

@@ -8,18 +8,7 @@ from pathling import PathlingContext
 from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from study_protocol_d_utils import (
-    aggregate_malignancy_pairs,
-    create_1_mal_df,
-    create_2_mals_df,
-    pivot_multi_single,
-    plot_pair_boxplot_horizontal_custom,
-    plot_pair_bubble_gender,
-    run_r_script,
-    show_r_plots,
-)
 from utils import (
-    HERE,
     IDENTIFYING_COLS,
     cast_study_dates,
     compute_age,
@@ -40,15 +29,10 @@ from utils import (
     save_final_df,
     save_final_df_parquet,
 )
-from views import (
-    grading_view,
-    leistungszustand_ecog_karnofsky_view,
-    progression_view,
-    weitere_klassifikation_view,
-)
+from views import grading_view, leistungszustand_ecog_karnofsky_view, progression_view
 
 
-class StudyProtocolD:
+class AllObdsPatients:
     def __init__(
         self,
         pc: PathlingContext,
@@ -61,8 +45,6 @@ class StudyProtocolD:
         self.settings = settings
         self.spark: SparkSession = spark
 
-        self.df_extract: DataFrame | None = None
-        self.df_all_pivot: DataFrame | None = None
         self.year_min: int | None = None
         self.year_max: int | None = None
 
@@ -84,7 +66,7 @@ class StudyProtocolD:
         return df
 
     def run(self):
-        logger.info("StudyProtocolD pipeline started")
+        logger.info("All oBDS pipeline started")
 
         crypto_key = secrets.token_hex(32)
 
@@ -95,304 +77,96 @@ class StudyProtocolD:
         df_prepare = self.prepare(df_extract)
 
         # Clean + Jahr-Range
-        df_clean = self.clean(df_prepare)
-        self.year_min = df_clean.select(F.min(F.year("asserted_date"))).first()[0]
-        self.year_max = df_clean.select(F.max(F.year("asserted_date"))).first()[0]
+        df_all_obds_clean = self.clean(df_prepare)
+        self.year_min = df_all_obds_clean.select(F.min(F.year("asserted_date"))).first()[0]
+        self.year_max = df_all_obds_clean.select(F.max(F.year("asserted_date"))).first()[0]
 
-        save_final_df(df_clean, self.settings, suffix="oBDS_primaerdiagnosen")
-        save_final_df_parquet(df_clean, self.settings, suffix="oBDS_primaerdiagnosen")
-
-        # 2mals vs single (1mal)
-        df_2_mals = create_2_mals_df(df_clean)
-        df_2_mals_cond_id_asserted = df_2_mals.select(
-            F.col("condition_id"),
-            F.col("asserted_date"),
-            F.col("condition_patient_resource_id"),
-        )
-        df_1_mal = create_1_mal_df(df_clean)
-        df_1_mal_cond_id_asserted = df_1_mal.select(
-            F.col("condition_id"),
-            F.col("asserted_date"),
-            F.col("condition_patient_resource_id"),
-        )
-
-        # collect all condition ids, asserted dates and condition_patient_resource_id
-        # for all 1 and 2 mal patients
-        df_all_conditions = df_1_mal_cond_id_asserted.union(df_2_mals_cond_id_asserted)
+        save_final_df(df_all_obds_clean, self.settings, suffix="oBDS_primaerdiagnosen")
+        save_final_df_parquet(df_all_obds_clean, self.settings, suffix="oBDS_primaerdiagnosen")
 
         # save all conditions
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
-        df_clean_deidentified = deidentify(df_clean, IDENTIFYING_COLS, crypto_key)
+        df_all_obds_clean_deidentified = deidentify(df_all_obds_clean, IDENTIFYING_COLS, crypto_key)
         save_final_df(
-            df_clean_deidentified,
+            df_all_obds_clean_deidentified,
             self.settings,
-            suffix="oBDS_primaerdiagnosen_deidentified",
+            suffix="all_obds_clean_deidentified",
             deidentified=True,
         )
         save_final_df_parquet(
-            df_clean_deidentified,
+            df_all_obds_clean_deidentified,
             self.settings,
-            suffix="oBDS_primaerdiagnosen_deidentified",
-            deidentified=True,
-        )
-
-        # save 1 and 2 tumors
-        save_final_df(df_2_mals, self.settings, suffix="2_malignancies")
-        save_final_df_parquet(df_2_mals, self.settings, suffix="2_malignancies")
-        save_final_df(df_1_mal, self.settings, suffix="1_malignancy")
-        save_final_df_parquet(df_1_mal, self.settings, suffix="1_malignancy")
-        df_2_mals_deidentified = deidentify(df_2_mals, IDENTIFYING_COLS, crypto_key)
-        save_final_df(
-            df_2_mals_deidentified,
-            self.settings,
-            suffix="2_malignancies_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            df_2_mals_deidentified,
-            self.settings,
-            suffix="2_malignancies_deidentified",
-            deidentified=True,
-        )
-        df_1_mal_deidentified = deidentify(df_1_mal, IDENTIFYING_COLS, crypto_key)
-        save_final_df(
-            df_1_mal_deidentified,
-            self.settings,
-            suffix="1_malignancy_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            df_1_mal_deidentified,
-            self.settings,
-            suffix="1_malignancy_deidentified",
+            suffix="all_obds_clean_deidentified",
             deidentified=True,
         )
 
         # extract MII conditions
-        pandas_df_2_mals = df_2_mals.toPandas()
-        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
-        df_list_2_mals.drop_duplicates(inplace=True)
-        mii_condition_df_2_mals = self.extract_mii_conditions(
-            df_list_2_mals, suffix="_2_mals", crypto_key=crypto_key
+        pandas_df_clean = df_all_obds_clean.toPandas()
+        patient_list = pandas_df_clean["condition_patient_resource_id"].dropna()
+        patient_list.drop_duplicates(inplace=True)
+        mii_conditions_all_obds_pats_pandas = self.extract_mii_conditions(
+            patient_list, suffix="_2_mals", crypto_key=crypto_key
         )
-
-        # DEV
-        # REMOVE LATER READ FROM CSV - SELET # "condition_id_mii", later instead of condition_id
-        # output_dir = os.path.join(
-        #     HERE, self.settings.results_directory_path, self.settings.study_name.value
-        # )
-        # suffix = "mii_conditions_2_mals"
-        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
-        # mii_condition_df_2_mals = (
-        #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
-        # )
-        # mii_condition_df_2_mals = mii_condition_df_2_mals.select(
-        #     # "condition_id_mii",
-        #     "condition_id",
-        #     "condition_patient_reference",
-        #     "icd_code",
-        #     "diagnosis_recordedDate",
-        #     "diagnosis_onsetDateTime",
-        # )
-        # suffix = "2_malignancies"
-        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
-        # df_2_mals = self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
 
         # TRANSFORM TO PYSPARK - parse dates
-        mii_condition_df_2_mals = self.spark.createDataFrame(mii_condition_df_2_mals)
-        mii_condition_df_2_mals = mii_condition_df_2_mals.withColumnRenamed(
+        mii_conditions_all_obds_pats = self.spark.createDataFrame(
+            mii_conditions_all_obds_pats_pandas
+        )
+        mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumnRenamed(
             "condition_id", "condition_id_mii"
         )
-        mii_condition_df_2_mals = mii_condition_df_2_mals.withColumn(
+        mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumn(
             "diagnosis_onsetDateTime",
             F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         ).withColumn(
             "diagnosis_recordedDate",
             F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         )
-        # filter col malignancy number == 1 - because dates relative to first tumor diagnosis date
-        df_all_conditions_malignancy_number_1 = df_2_mals.filter(
-            F.col("malignancy_number") == 1
-        ).select("condition_patient_resource_id", "asserted_date")
 
-        mii_condition_df_2_mals_asserted = mii_condition_df_2_mals.join(
-            df_all_conditions_malignancy_number_1,
+        mii_conditions_all_obds_pats_asserted = df_all_obds_clean.select(
+            "condition_patient_resource_id", "asserted_date"
+        ).join(
+            mii_conditions_all_obds_pats,
             F.col("condition_patient_reference") == F.col("condition_patient_resource_id"),
             "left",
         )
         save_final_df(
-            mii_condition_df_2_mals_asserted, self.settings, suffix="mii_conditions_2_mals_asserted"
+            mii_conditions_all_obds_pats_asserted,
+            self.settings,
+            suffix="mii_conditions_2_mals_asserted",
         )
         save_final_df_parquet(
-            mii_condition_df_2_mals_asserted, self.settings, suffix="mii_conditions_2_mals_asserted"
+            mii_conditions_all_obds_pats_asserted,
+            self.settings,
+            suffix="mii_conditions_2_mals_asserted",
         )
-        mii_condition_df_2_mals_asserted_deidentified = deidentify(
-            mii_condition_df_2_mals_asserted, IDENTIFYING_COLS, crypto_key
+        mii_conditions_all_obds_pats_asserted_deidentified = deidentify(
+            mii_conditions_all_obds_pats_asserted, IDENTIFYING_COLS, crypto_key
         )
         save_final_df(
-            mii_condition_df_2_mals_asserted_deidentified,
+            mii_conditions_all_obds_pats_asserted_deidentified,
             self.settings,
-            suffix="mii_conditions_2_mals_asserted_deidentified",
+            suffix="mii_conditions_all_obds_pats_asserted_deidentified",
         )
         save_final_df_parquet(
-            mii_condition_df_2_mals_asserted_deidentified,
+            mii_conditions_all_obds_pats_asserted_deidentified,
             self.settings,
-            suffix="mii_conditions_2_mals_asserted_deidentified",
+            suffix="mii_conditions_all_obds_pats_asserted_deidentified",
         )
 
-        pandas_df_1_mal = df_1_mal.toPandas()
-        df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
-        df_list_1_mal.drop_duplicates(inplace=True)
-        mii_condition_df_1_mal = self.extract_mii_conditions(
-            df_list_1_mal, suffix="_1_mal", crypto_key=crypto_key
-        )
-        # DEV
-        # output_dir = os.path.join(
-        #     HERE, self.settings.results_directory_path, self.settings.study_name.value
-        # )
-        # suffix = "mii_conditions_1_mal"
-        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
-        # mii_condition_df_1_mal = (
-        #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
-        # )
-        # mii_condition_df_1_mal = mii_condition_df_1_mal.select(
-        #     # "condition_id_mii",
-        #     "condition_id",
-        #     "condition_patient_reference",
-        #     "icd_code",
-        #     "diagnosis_recordedDate",
-        #     "diagnosis_onsetDateTime",
-        # )
-        # suffix = "1_malignancy"
-        # csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
-        # df_1_mal = self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
+        self.extract_save_metastasis(df_all_obds_clean, crypto_key)
 
-        # TRANSFORM TO PYSPARK
-        mii_condition_df_1_mal = self.spark.createDataFrame(mii_condition_df_1_mal)
-        mii_condition_df_1_mal = mii_condition_df_1_mal.withColumnRenamed(
-            "condition_id", "condition_id_mii"
-        )
-        mii_condition_df_1_mal = mii_condition_df_1_mal.withColumn(
-            "diagnosis_onsetDateTime",
-            F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        ).withColumn(
-            "diagnosis_recordedDate",
-            F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        )
-        df_1_mal_selection = df_1_mal.select("condition_patient_resource_id", "asserted_date")
-        mii_condition_df_1_mal_asserted = mii_condition_df_1_mal.join(
-            df_1_mal_selection,
-            F.col("condition_patient_reference") == F.col("condition_patient_resource_id"),
-            "left",
-        )
-        save_final_df(
-            mii_condition_df_1_mal_asserted, self.settings, suffix="mii_conditions_1_mal_asserted"
-        )
-        save_final_df_parquet(
-            mii_condition_df_1_mal_asserted, self.settings, suffix="mii_conditions_1_mal_asserted"
-        )
-        mii_condition_df_1_mal_asserted_deidentified = deidentify(
-            mii_condition_df_1_mal_asserted, IDENTIFYING_COLS, crypto_key
-        )
-        save_final_df(
-            mii_condition_df_1_mal_asserted_deidentified,
-            self.settings,
-            suffix="mii_conditions_1_mal_asserted_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            mii_condition_df_1_mal_asserted_deidentified,
-            self.settings,
-            suffix="mii_conditions_1_mal_asserted_deidentified",
-            deidentified=True,
-        )
+        self.extract_save_therapies(df_all_obds_clean, crypto_key)
 
-        # TO DO - prepare this for BZKF wide plots
-        # pivot malignancy 2, union with single malignancy patients
-        df_all_pivot = pivot_multi_single(df_clean, df_2_mals, df_1_mal)
-        self.df_all_pivot = df_all_pivot
-        save_final_df(df_all_pivot, self.settings, suffix="all_pivot")
-        save_final_df_parquet(df_all_pivot, self.settings, suffix="all_pivot")
-        df_all_pivot_deidentified = deidentify(df_all_pivot, IDENTIFYING_COLS, crypto_key)
-        save_final_df(
-            df_all_pivot_deidentified,
-            self.settings,
-            suffix="all_pivot_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            df_all_pivot_deidentified,
-            self.settings,
-            suffix="all_pivot_deidentified",
-            deidentified=True,
-        )
+        self.extract_save_tnm(df_all_obds_clean, crypto_key)
 
-        # aggregate pairs from df_2_mals - two malignancies
-        df_pairs_agg = aggregate_malignancy_pairs(
-            df_2_mals,
-            presuffix="entity_or_parent",
-            patient_resource_id_colname="patient_resource_id",
-        )
+        self.extract_save_progressions(df_all_obds_clean, crypto_key)
 
-        save_final_df(
-            df_pairs_agg.drop("outliers_age_1", "outliers_age_2", "outliers_months_between"),
-            self.settings,
-            suffix="pairs_agg",
-        )
-        # does this also work with df_2_mals_deidentified ?
-        df_pairs_agg_deidentified = aggregate_malignancy_pairs(
-            df_2_mals_deidentified,
-            presuffix="entity_or_parent",
-            patient_resource_id_colname="patient_resource_id_hash",
-        )
-        save_final_df(
-            df_pairs_agg_deidentified.drop(
-                "outliers_age_1", "outliers_age_2", "outliers_months_between"
-            ),
-            self.settings,
-            suffix="pairs_agg_deidentified",
-            deidentified=True,
-        )
+        self.extract_save_gradings(df_all_obds_clean, crypto_key)
 
-        # 7) plot
-        # later: synchron/metachron and plot pair bubble gender (+age, +months between)
-        df_pairs_agg_pd = df_pairs_agg.toPandas()
+        self.extract_save_leistungszustand_ecog_karnofsky(df_all_obds_clean, crypto_key)
 
-        # filter df: top30, top100, >5
-        top30_pairs_pd = df_pairs_agg_pd.sort_values("count_pair", ascending=False).head(30)
-        top100_pairs_pd = df_pairs_agg_pd.sort_values("count_pair", ascending=False).head(100)
-        pairs_greater_than_5_pd = df_pairs_agg_pd[df_pairs_agg_pd["count_pair"] > 5]
-
-        # diagnosis pairs + gender
-        # age
-        # months between
-        for df_name, df_plot in [
-            ("top30", top30_pairs_pd),
-            ("top100", top100_pairs_pd),
-            ("gt5", pairs_greater_than_5_pd),
-            # ("all", df_pairs_agg_pd), # OOM in container
-        ]:
-            self.plot_pairs(df_plot, df_name)
-            self.plot_age(df_plot, df_name)
-            self.plot_months_between(df_plot, df_name)
-
-        self.extract_save_metastasis(df_all_conditions, crypto_key)
-
-        self.extract_save_therapies(df_all_conditions, crypto_key)
-
-        self.extract_save_tnm(df_all_conditions, crypto_key)
-
-        self.extract_save_progressions(df_all_conditions, crypto_key)
-
-        self.extract_save_gradings(df_all_conditions, crypto_key)
-
-        # ! funktioniert nicht, to do: fix SQLSTATE: P0001
-        # Expecting a collection with a single element but it has many
-        # self.extract_save_weitere_klassifikationen(df_all_conditions, crypto_key)
-
-        self.extract_save_leistungszustand_ecog_karnofsky(df_all_conditions, crypto_key)
-
-        logger.info("StudyProtocolD pipeline finished")
+        logger.info("All oBDS pipeline finished")
 
     def prepare(self, df: DataFrame) -> DataFrame:
         df = group_entity_or_parent(df, code_col="icd10_code", target_col="entity_or_parent")
@@ -422,59 +196,6 @@ class StudyProtocolD:
         query = PyRateQuery(self.settings)
         mii_condition_df = query.extract_conditions(df_list, suffix, crypto_key)
         return mii_condition_df
-
-    def plot_pairs(self, df: DataFrame, df_name: str) -> DataFrame:
-        plot_pair_bubble_gender(
-            df=df,
-            value_col="count_pair",
-            subgroup_cbar_col="count_female_pair",
-            settings=self.settings,
-            plot_name=f"{df_name}_pairs_gender",
-            feature="pair frequencies with gender proportion",
-            period=f"diagnosis year {self.year_min} to {self.year_max}",
-            cbar_label="female ratio",
-        )
-
-    def plot_age(self, df: DataFrame, df_name: str) -> DataFrame:
-        plot_pair_boxplot_horizontal_custom(
-            df=df,
-            plot_name=f"{df_name}_age_boxplot_quartiles",
-            period=f"diagnosis year {self.year_min} to {self.year_max}",
-            settings=self.settings,
-            value_col="count_pair",
-            var_name="age at diagnosis",
-            var_name_median=["age_median_1", "age_median_2"],
-            var_name_q1=["age_q1_1", "age_q1_2"],
-            var_name_q3=["age_q3_1", "age_q3_2"],
-            var_name_min=["age_min_1", "age_min_2"],
-            var_name_max=["age_max_1", "age_max_2"],
-            var_name_outliers=["outliers_age_1", "outliers_age_2"],
-            show_entity1=True,
-        )
-
-    def plot_months_between(self, df: DataFrame, df_name: str) -> DataFrame:
-        plot_pair_boxplot_horizontal_custom(
-            df=df,
-            plot_name=f"{df_name}_months_between_boxplot_quartiles",
-            period=f"diagnosis year {self.year_min} to {self.year_max}",
-            settings=self.settings,
-            value_col="count_pair",
-            var_name="months between diagnoses (first and second malignancy)",
-            var_name_median="months_between_median_2",
-            var_name_q1="months_between_q1_2",
-            var_name_q3="months_between_q3_2",
-            var_name_min="months_between_min_2",
-            var_name_max="months_between_max_2",
-            var_name_outliers=["outliers_months_between"],
-            show_entity1=False,
-        )
-
-    def run_r_analysis(self):
-        logger.info("running r analysis")
-        script = os.path.join(HERE, "metastasis_analysis.R")
-        logger.info("script = {}", script)
-        run_r_script(script)
-        show_r_plots(os.path.join(HERE, "results/study_protocol_d/plots_r"))
 
     def extract_save_metastasis(self, df_all_conditions, crypto_key):
         df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
@@ -600,7 +321,6 @@ class StudyProtocolD:
             df_all_conditions.condition_id == df_ops.reason_reference,
             "right",
         ).drop("meta_profile")
-
         save_final_df(
             df_ops,
             self.settings,
@@ -837,41 +557,6 @@ class StudyProtocolD:
         )
         save_final_df_parquet(
             gradings_deidentified, self.settings, suffix="gradings_deidentified", deidentified=True
-        )
-
-    def extract_save_weitere_klassifikationen(self, df_all_conditions, crypto_key):
-        weitere_klassifikationen = weitere_klassifikation_view(self.data)
-        weitere_klassifikationen = cast_study_dates(
-            weitere_klassifikationen,
-            [
-                "weitere_klassifikation_date",
-            ],
-        )
-
-        weitere_klassifikationen = weitere_klassifikationen.join(
-            df_all_conditions,
-            on="condition_id",
-            how="right",
-        )
-        weitere_klassifikationen.show()
-
-        save_final_df(weitere_klassifikationen, self.settings, suffix="weitere_klassifikationen")
-        weitere_klassifikationen_deidentified = deidentify(
-            weitere_klassifikationen, IDENTIFYING_COLS, crypto_key
-        )
-        weitere_klassifikationen_deidentified.show()
-
-        save_final_df(
-            weitere_klassifikationen_deidentified,
-            self.settings,
-            suffix="weitere_klassifikationen_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            weitere_klassifikationen_deidentified,
-            self.settings,
-            suffix="weitere_klassifikationen_deidentified",
-            deidentified=True,
         )
 
     def extract_save_leistungszustand_ecog_karnofsky(self, df_all_conditions, crypto_key):

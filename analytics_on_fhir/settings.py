@@ -17,6 +17,7 @@ class StudyNames(Enum):
     AML = "aml"
     REACTO_COUNTS = "reacto_counts"
     DQ = "dq"
+    ALL_OBDS_PATIENTS = "all_obds_patients"
     ALL = "all"
 
 

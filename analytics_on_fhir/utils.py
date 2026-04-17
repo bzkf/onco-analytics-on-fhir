@@ -8,10 +8,13 @@ from collections.abc import Iterable
 import pandas as pd
 from fhir_constants import (
     FHIR_SYSTEM_ICD10,
+    FHIR_SYSTEM_ICDO3_T,
     FHIR_SYSTEM_JNU,
+    FHIR_SYSTEM_LOINC,
     FHIR_SYSTEM_METASTASIS,
     FHIR_SYSTEM_PRIMAERTUMOR,
     FHIR_SYSTEM_SCT,
+    FHIR_SYSTEM_TNM_UICC,
     FHIR_SYSTEMS_CONDITION_ASSERTED_DATE,
     FHIR_SYSTEMS_CONDITION_MORPHOLOGY,
     FHIR_SYSTEMS_RADIO_THERAPY_INTENTION,
@@ -80,9 +83,14 @@ IDENTIFYING_COLS = [
 ]
 
 
-def save_final_df(pyspark_df, settings, suffix=""):
+def save_final_df(pyspark_df, settings, suffix="", deidentified=False):
     logger.info("start save pyspark_df with pyspark_df.coalesce(1).write...csv() ")
     output_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    if deidentified:
+        output_dir = os.path.join(
+            HERE, settings.results_directory_path, settings.study_name.value, "deidentified"
+        )
+
     os.makedirs(output_dir, exist_ok=True)
 
     final_csv_path = os.path.join(output_dir, f"df_{suffix}.csv")
@@ -101,8 +109,12 @@ def save_final_df(pyspark_df, settings, suffix=""):
     logger.info("end save pyspark_df")
 
 
-def save_final_df_parquet(pyspark_df, settings, suffix=""):
+def save_final_df_parquet(pyspark_df, settings, suffix="", deidentified=False):
     base_dir = os.path.join(HERE, settings.results_directory_path, settings.study_name.value)
+    if deidentified:
+        base_dir = os.path.join(
+            HERE, settings.results_directory_path, settings.study_name.value, "deidentified"
+        )
     parquet_dir = os.path.join(base_dir, "parquet")
 
     os.makedirs(parquet_dir, exist_ok=True)
@@ -282,7 +294,9 @@ def deidentify(
         "condition_id",
         "condition_id_1",
         "condition_id_2",
+        "condition_id_mii",
         "patient_resource_id",
+        "condition_patient_reference",
     ]
     hash_udf = _make_hash_udf(crypto_key)
 
@@ -309,6 +323,7 @@ def deidentify_pandas(df, crypto_key, drop_original=True):
     hash_target_cols = [
         "condition_id",
         "condition_patient_reference",
+        "observation_patient_reference",
     ]
 
     for col_name in hash_target_cols:
@@ -458,6 +473,13 @@ def extract_conditions_patients_death(
                         "path": f"extension('{FHIR_SYSTEMS_CONDITION_MORPHOLOGY}')"
                         + ".value.ofType(CodeableConcept).coding.first().code",
                         "name": "icdo3_morphology",
+                    },
+                    {
+                        "description": "ICD-O-3 Topography",
+                        "path": (
+                            f"bodySite.coding.where(system = '{FHIR_SYSTEM_ICDO3_T}').code.first()"
+                        ),
+                        "name": "icdo3_topography",
                     },
                 ]
             }
@@ -764,6 +786,100 @@ def extract_gleason(
     return observations_gleason
 
 
+def extract_t_tnm(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+
+    logger.info("extract T from tnm observations")
+
+    observations_t_tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "TNM T category",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            ".code"
+                        ),
+                        "name": "t_tnm",
+                    },
+                    {
+                        "description": "TNM c/p prefix",
+                        "path": (
+                            "code.extension.where("
+                            "url = 'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-ex-onko-tnm-cp-praefix'"
+                            ").value.ofType(CodeableConcept).coding.code.first()"
+                        ),
+                        "name": "t_tnm_prefix",
+                    },
+                    {
+                        "description": "TNM prefix SCT code",
+                        "path": f"code.coding.where(system = '{FHIR_SYSTEM_SCT}').code",
+                        "name": "t_tnm_c_p_snomed_prefix",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "t_tnm_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code "
+                    "einer der erlaubten SCT codes ist."
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_SCT}' and "
+                    "(code = '78873005' or code = '399504009' or code = '384625004')"
+                    ")"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+
+    # until t_tnm_prefix extraction works
+    observations_t_tnm = observations_t_tnm.withColumn(
+        "t_tnm_prefix_sct",
+        F.when(F.col("t_tnm_c_p_snomed_prefix") == "78873005", F.lit("T"))
+        .when(F.col("t_tnm_c_p_snomed_prefix") == "399504009", F.lit("cT"))
+        .when(F.col("t_tnm_c_p_snomed_prefix") == "384625004", F.lit("pT"))
+        .otherwise(None),
+    )
+
+    logger.info(
+        "observations_t_tnm count = {}",
+        observations_t_tnm.count(),
+    )
+    logger.info(
+        "observations_t_tnm distinct condition_id count = {}",
+        observations_t_tnm.select("condition_id").distinct().count(),
+    )
+    observations_t_tnm.orderBy(F.col("condition_id")).show()
+
+    return observations_t_tnm
+
+
 def extract_n_tnm(
     pc: PathlingContext,
     data: datasource.DataSource,
@@ -798,6 +914,20 @@ def extract_n_tnm(
                         "name": "n_tnm",
                     },
                     {
+                        "description": "TNM c/p prefix",
+                        "path": (
+                            "code.extension.where("
+                            "url = 'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-ex-onko-tnm-cp-praefix'"
+                            ").value.ofType(CodeableConcept).coding.code.first()"
+                        ),
+                        "name": "n_tnm_prefix",
+                    },
+                    {
+                        "description": "TNM prefix SCT code",
+                        "path": f"code.coding.where(system = '{FHIR_SYSTEM_SCT}').code",
+                        "name": "n_tnm_c_p_snomed_prefix",
+                    },
+                    {
                         "description": "TNM Observation Date",
                         "path": "effective.ofType(dateTime)",
                         "name": "n_tnm_date",
@@ -821,7 +951,15 @@ def extract_n_tnm(
             }
         ],
     )
-    observations_n_tnm.orderBy(F.col("condition_id")).show()
+
+    # until n_tnm_prefix extraction works
+    observations_n_tnm = observations_n_tnm.withColumn(
+        "n_tnm_prefix_sct",
+        F.when(F.col("n_tnm_c_p_snomed_prefix") == "277206009", F.lit("N"))
+        .when(F.col("n_tnm_c_p_snomed_prefix") == "399534004", F.lit("cN"))
+        .when(F.col("n_tnm_c_p_snomed_prefix") == "371494008", F.lit("pN"))
+        .otherwise(None),
+    )
 
     logger.info(
         "observations_n_tnm count = {}",
@@ -831,6 +969,7 @@ def extract_n_tnm(
         "observations_n_tnm distinct condition_id count = {}",
         observations_n_tnm.select("condition_id").distinct().count(),
     )
+    observations_n_tnm.orderBy(F.col("condition_id")).show()
 
     return observations_n_tnm
 
@@ -868,6 +1007,20 @@ def extract_m_tnm(
                         "name": "m_tnm",
                     },
                     {
+                        "description": "TNM c/p prefix",
+                        "path": (
+                            "code.extension.where("
+                            "url = 'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-ex-onko-tnm-cp-praefix'"
+                            ").value.ofType(CodeableConcept).coding.code.first()"
+                        ),
+                        "name": "m_tnm_prefix",
+                    },
+                    {
+                        "description": "TNM prefix SCT code",
+                        "path": f"code.coding.where(system = '{FHIR_SYSTEM_SCT}').code",
+                        "name": "m_tnm_c_p_snomed_prefix",
+                    },
+                    {
                         "description": "TNM Observation Date",
                         "path": "effective.ofType(dateTime)",
                         "name": "m_tnm_date",
@@ -891,7 +1044,15 @@ def extract_m_tnm(
             }
         ],
     )
-    observations_m_tnm.orderBy(F.col("condition_id")).show()
+
+    # until n_tnm_prefix extraction works
+    observations_m_tnm = observations_m_tnm.withColumn(
+        "m_tnm_prefix_sct",
+        F.when(F.col("m_tnm_c_p_snomed_prefix") == "277208005", F.lit("M"))
+        .when(F.col("m_tnm_c_p_snomed_prefix") == "399387003", F.lit("cM"))
+        .when(F.col("m_tnm_c_p_snomed_prefix") == "371497001", F.lit("pM"))
+        .otherwise(None),
+    )
 
     logger.info(
         "observations_m_tnm count = {}",
@@ -902,7 +1063,164 @@ def extract_m_tnm(
         observations_m_tnm.select("condition_id").distinct().count(),
     )
 
+    observations_m_tnm.orderBy(F.col("condition_id")).show()
+
     return observations_m_tnm
+
+
+def extract_uicc_tnm(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+
+    logger.info("extract UICC from tnm observations")
+
+    observations_uicc_tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "TNM UICC category",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            f".coding.where(system = '{FHIR_SYSTEM_TNM_UICC}')"
+                            ".code"
+                        ),
+                        "name": "uicc_tnm",
+                    },
+                    {
+                        "description": "UICC TNM prefix SCT code",
+                        "path": f"code.coding.where(system = '{FHIR_SYSTEM_SCT}').code",
+                        "name": "uicc_tnm_c_p_snomed_prefix",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "uicc_tnm_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code einer dieser"
+                    + "sct codes ist"
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_SCT}' and "
+                    "(code = '399390009' or code = '399537006' or code = '399588009')"
+                    ")"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+
+    observations_uicc_tnm = observations_uicc_tnm.withColumn(
+        "uicc_tnm_prefix_sct",
+        F.when(F.col("uicc_tnm_c_p_snomed_prefix") == "399390009", F.lit("UICC"))
+        .when(F.col("uicc_tnm_c_p_snomed_prefix") == "399537006", F.lit("cUICC"))
+        .when(F.col("uicc_tnm_c_p_snomed_prefix") == "399588009", F.lit("pUICC"))
+        .otherwise(None),
+    )
+
+    logger.info(
+        "observations_uicc_tnm count = {}",
+        observations_uicc_tnm.count(),
+    )
+    logger.info(
+        "observations_uicc_tnm distinct condition_id count = {}",
+        observations_uicc_tnm.select("condition_id").distinct().count(),
+    )
+
+    observations_uicc_tnm.orderBy(F.col("condition_id")).show()
+
+    return observations_uicc_tnm
+
+
+def extract_y_tnm(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+
+    logger.info("extract N from tnm observations")
+
+    observations_y_tnm = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                    {
+                        "description": "TNM Y category",
+                        "path": (
+                            "value.ofType(CodeableConcept)"
+                            f".coding.where(system = '{FHIR_SYSTEM_SCT}')"
+                            ".code"
+                        ),
+                        "name": "y_tnm_421755005",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "y_tnm_date",
+                    },
+                ]
+            }
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code dieser loinc code ist"
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_LOINC}' and "
+                    "code = '101658-3')"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+
+    logger.info(
+        "observations_y_tnm count = {}",
+        observations_y_tnm.count(),
+    )
+    logger.info(
+        "observations_y_tnm distinct condition_id count = {}",
+        observations_y_tnm.select("condition_id").distinct().count(),
+    )
+
+    observations_y_tnm.orderBy(F.col("condition_id")).show()
+
+    return observations_y_tnm
 
 
 def extract_df_study_protocol_a_d_mii(
@@ -1850,7 +2168,7 @@ def extract_systemtherapies(
             F.col("p.therapy_id").alias("therapy_id"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
-            F.col("p.meta_profile").alias("meta_profile"),
+            # F.col("p.meta_profile").alias("meta_profile"),
             F.col("p.therapy_intention").alias("therapy_intention"),
             F.col("p.stellung_op").alias("stellung_op"),
             F.col("p.therapy_type").alias("therapy_type"),
@@ -1984,7 +2302,7 @@ def join_radiotherapies(
         )
         .select(
             F.col("p.therapy_id").alias("therapy_id"),
-            F.col("p.meta_profile"),
+            # F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
             F.col("p.therapy_intention"),
@@ -2028,7 +2346,7 @@ def join_radiotherapies(
         )
         .select(
             F.col("p.therapy_id"),
-            F.col("p.meta_profile"),
+            # F.col("p.meta_profile"),
             F.col("p.subject_reference"),
             F.col("p.reason_reference"),
             F.col("p.therapy_intention"),
@@ -2136,7 +2454,6 @@ def extract_surgeries(
 def group_ops(df_ops: DataFrame) -> DataFrame:
     # ursprüngliche Reihenfolge beibehalten hier in den aggs
     window_spec = Window.partitionBy(
-        "meta_profile",
         "reason_reference",
         "subject_reference",
         "therapy_start_date",
@@ -2145,7 +2462,6 @@ def group_ops(df_ops: DataFrame) -> DataFrame:
     df_ops_with_index = df_ops.withColumn("row_idx", F.row_number().over(window_spec))
 
     df_ops_grouped = df_ops_with_index.groupBy(
-        "meta_profile",
         "reason_reference",
         "subject_reference",
         "therapy_start_date",
@@ -2375,3 +2691,53 @@ def clean_datetime_values(df, column):
 def keep_only_first_diagnosis(df, columns):
     df_sorted = df.sort_values(by=columns + ["diagnosis_recordedDate"])
     return df_sorted.drop_duplicates(subset=columns, keep="first")
+    return df_sorted.drop_duplicates(subset=columns, keep="first")
+
+
+def normalize_array_columns(df: pd.DataFrame) -> pd.DataFrame:
+    for colname in df.columns:
+        # detect columns that contain lists/arrays in ANY row
+        if df[colname].apply(lambda x: isinstance(x, (list, tuple))).any():
+            df[colname] = df[colname].apply(
+                lambda x: ",".join(map(str, x)) if isinstance(x, (list, tuple)) else x
+            )
+    return df
+
+
+def group_entity_or_parent(df, code_col="icd10_code", target_col="entity_and_parent"):
+    parent_col = "icd10_parent_tmp"
+    df = df.withColumn(parent_col, F.regexp_replace(F.col(code_col), r"\..*$", ""))
+
+    df = df.withColumn(
+        target_col,
+        F.when(F.col(parent_col).between("C00", "C14"), F.lit("C00-C14"))
+        .when(F.col(parent_col) == "C15", F.lit("C15"))
+        .when(F.col(parent_col) == "C16", F.lit("C16"))
+        .when(F.col(parent_col).between("C18", "C21"), F.lit("C18-C21"))
+        .when(F.col(parent_col) == "C22", F.lit("C22"))
+        .when(F.col(parent_col).between("C23", "C24"), F.lit("C23-C24"))
+        .when(F.col(parent_col) == "C25", F.lit("C25"))
+        .when(F.col(parent_col) == "C32", F.lit("C32"))
+        .when(F.col(parent_col).between("C33", "C34"), F.lit("C33-C34"))
+        .when(F.col(parent_col) == "C43", F.lit("C43"))
+        .when(F.col(parent_col) == "C50", F.lit("C50"))
+        .when(F.col(parent_col) == "C53", F.lit("C53"))
+        .when(F.col(parent_col).between("C54", "C55"), F.lit("C54-C55"))
+        .when(F.col(parent_col) == "C56", F.lit("C56"))
+        .when(F.col(parent_col) == "C61", F.lit("C61"))
+        .when(F.col(parent_col) == "C62", F.lit("C62"))
+        .when(F.col(parent_col) == "C64", F.lit("C64"))
+        .when(F.col(parent_col) == "C67", F.lit("C67"))
+        .when(F.col(parent_col).between("C70", "C72"), F.lit("C70-C72"))
+        .when(F.col(parent_col) == "C73", F.lit("C73"))
+        .when(F.col(parent_col) == "C81", F.lit("C81"))
+        .when(F.col(parent_col).between("C82", "C88"), F.lit("C82-C88"))
+        .when(F.col(parent_col) == "C90", F.lit("C90"))
+        .when(F.col(parent_col).between("C91", "C95"), F.lit("C91-C95"))
+        .otherwise(
+            F.col(parent_col)
+        ),  # fallback = parent code - so verlieren wir nicht so viele (vgl entity)
+    )
+
+    df = df.drop(parent_col)
+    return df
