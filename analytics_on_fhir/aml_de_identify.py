@@ -47,10 +47,6 @@ patients_with_diagnoses["condition_patient_reference"] = patients_with_diagnoses
     "condition_patient_reference"
 ].apply(lambda x: crypto_hash(x))
 
-patients_with_diagnoses["condition_patient_reference"] = patients_with_diagnoses[
-    "condition_patient_reference"
-].apply(lambda x: crypto_hash(x))
-
 patients_with_diagnoses["patient_mrn"] = patients_with_diagnoses["patient_mrn"].apply(
     lambda x: crypto_hash(str(x))
 )
