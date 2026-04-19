@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/apache/kafka:4.0.0@sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/apache/kafka:4.1.2@sha256:5cc2a2fd93fa2687b44015eee04fb2c3edd9e526bd64bf8bec5ff1e268772e0e
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -29,7 +29,7 @@ services:
       - "kafka_data:/var/lib/kafka/data:rw"
 
   kafka-connect:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/util-images/cricketeerone-kafka-connect:v1.6.5@sha256:fc1c777aedc7f302970e7e75bb6c7ec127af0a7b4628d6f8fe35e3f2706993f7
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/util-images/cricketeerone-kafka-connect:v1.7.4@sha256:c6ff8bad58877ee6e91302931ba9c34c0ea6ebfc022ebbd67c3ae7bd1a11a88f
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -56,7 +56,7 @@ services:
       - 127.0.0.1:8083:8083
 
   akhq:
-    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/tchiotludo/akhq:0.24.0@sha256:6ccf8323ae6e93a893107f857cd9f7210add3569743b2c8528c6567967cc636f
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/tchiotludo/akhq:0.27.0@sha256:c76377964bd51b0db2fd323c722d13e3991624e1410afcb23a58df6a1c7b80bf
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -80,5 +80,4 @@ services:
       - kafka
 
 volumes:
-  kafka_data:
-    driver: local
+  kafka_data: {}
