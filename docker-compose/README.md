@@ -2,7 +2,8 @@
 
 ![Figure Modular Pipeline](../img/fig1.png)
 
-#### Citation
+## Citation
+
 If you use this work, please cite:
 
 Ziegler J, Erpenbeck MP, Fuchs T, Saibold A, Volkmer PC, Schmidt G, Eicher J, Pallaoro P, De Souza Falguera R, Aubele F, Hagedorn M, Vansovich E, Raffler J, Ringshandl S, Kerscher A, Maurer JK, Kühnel B, Schenkirsch G, Kampf M, Kapsner LA, Ghanbarian H, Spengler H, Soto-Rey I, Albashiti F, Hellwig D, Ertl M, Fette G, Kraska D, Boeker M, Prokosch HU, Gulden C
@@ -16,13 +17,13 @@ J Med Internet Res 2025;27:e65681
 
 #### a) ONKOSTAR data base connector
 
-Configure kafka-connect in [compose.kafka.yaml](compose.kafka.yaml) and [docker-compose/kafka-connect-passwords.properties](kafka-connect-passwords.properties).
+Configure kafka-connect in [onkostar-db-connector.json](onkostar-db-connector.json) and [kafka-connect-passwords.properties](kafka-connect-passwords.properties).
 The oBDS single report XML-files will be loaded into the Kafka cluster.
-For more information about kafka-connect, refer to [7. Enable Kafka Connect and the connector.](#7-enable-kafka-konnect-and-the-connector)
+For more information about kafka-connect, refer to "Enable Kafka Connect and the connector" below.
 
 #### b) Folder import
 
-Copy your oBDS collection report XML-files to [docker-compose/input-obds-reports]().
+Copy your oBDS collection report XML-files to [./input-obds-reports](./input-obds-reports).
 
 ### 2. Start the Kafka Cluster
 
@@ -40,74 +41,79 @@ The oBDS single report XML-files from the ONKOSTAR database will be loaded into 
 
 #### b) Folder import
 
-Decompose oBDS collection report XML-files from [docker-compose/input-obds-reports](input-obds-reports) into single XML reports and load them into the Kafka cluster.
+The obds-to-fhir job directly reads oBDS reports from the [./input-obds-reports](./input-obds-reports) folder
+and writes the mapped FHIR resources to the `fhir.obds.bundles` Kafka topic and the [output-obds-reports](output-obds-reports)
+folder as files.
 
 ```sh
-USER_ID=${UID} GROUP_ID=${GID} docker compose -f compose.decompose-xmls.yaml up
+USER_ID=${UID} GROUP_ID=${GID} docker compose -f compose.obds-to-fhir.yaml -f compose.overrides.obds-to-fhir-from-directory.yaml up
 ```
 
+> [!TIP]
+> You can add `--env-file=.demo.env` after the `docker compose` above to run it using the
+> demo configuration which reads the sample reports from [./demo-obds-reports](./demo-obds-reports).
+
 The `USER_ID` and `GROUP_ID` env vars are used to make the container run as the current user,
-assuming the [docker-compose/output-obds-reports](output-obds-reports) is owned by them.
+which allows writing the output back to [output-obds-reports](output-obds-reports).
 
 ### 4. Transform oBDS XML-data to FHIR
+
+> [!NOTE]
+> not required if you did 3 b) before, which should alread have written the FHIR resources to
+> Kafka and the output folder.
 
 ```sh
 docker compose -f compose.obds-to-fhir.yaml up
 ```
 
-We currently use the FHIR profiles defined under <https://simplifier.net/oncology>.
-
 Note that this streaming job runs indefinitely. You can check the progress via akhq at <http://localhost:8084/>.
-There should be 4 messages in both the `fhir.obds.Patient` and `fhir.obds.Condition` topics respectively.
+There should be messages in the `fhir.obds.bundles` topic.
 
 You can then shutdown the job using Ctrl+C.
 
 > [!IMPORTANT]
 > For more information about this ETL job, see <https://github.com/bzkf/obds-to-fhir>
-> Looking for the latest version supporting oBDS version 3 and the MII FHIR Profiles?
-> Head to the `beta` branch: <https://github.com/bzkf/obds-to-fhir/tree/beta>
 
 ### 5. Load the FHIR resources as Delta Lake tables in MinIO
 
-This assumes that Kafka already contains the `fhir.obds.*` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
+This assumes that Kafka already contains the `fhir.obds.bundles` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
 
 ```sh
-docker compose --env-file=.demo.env -f compose.fhir-to-delta.yaml up
+docker compose -f compose.fhir-to-delta.yaml up
 ```
 
-To change the default password used by MinIO, please modify the [.demo.env](.demo.env) or provide an alternative .env file.
+> [!TIP]
+> You can add `--env-file=.demo.env` after the `docker compose` above to run it using the
+> demo configuration.
 
-### 6a. Convert the FHIR resources to a CSV dataset (obds-fhir-to-opal)
-
-- Select the study name in the compose.obds-fhir-to-opal.yaml file. Find out more about the available studies [here](../src/obds_fhir_to_opal/README.md).
-
-```sh
-sudo chown -R 1001:1001 ./opal-output/
-docker compose --env-file=.demo.env -f compose.obds-fhir-to-opal.yaml up
-```
-
-### 6b. Convert the FHIR resources to a CSV dataset (analytics-on-fhir)
+### 6. Convert the FHIR resources to a CSV dataset (analytics-on-fhir)
 
 ```sh
 sudo chown -R 65532:65532 ./opal-output/
-docker compose --env-file=.demo.env -f compose.analytics-on-fhir.yaml up
+docker compose -f compose.analytics-on-fhir.yaml up
 ```
 
 ### 7. Enable Kafka Connect and the connector
 
-Make sure to have access to Onkostar tables `lkr_meldung`, `lkr_meldung_export` and `erkrankung`.
+Make sure to have access to Onkostar tables `lkr_meldung_export`.
 
-The following SQL query will SELECT required information with columns filtered by type and containing required ICD_Version entry in `XML_DATEN`:
+Run the command below to start Kafka and Kafka connect (if not already running):
 
-```sql
-SELECT * FROM (
-  SELECT YEAR(STR_TO_DATE(EXTRACTVALUE(lme.xml_daten, '//Diagnosedatum'), '%d.%c.%Y')) AS YEAR, versionsnummer AS VERSIONSNUMMER, lme.id AS ID, CONVERT(lme.xml_daten using utf8) AS XML_DATEN
-    FROM lkr_meldung_export lme
-    WHERE lme.typ != '-1' AND lme.versionsnummer IS NOT NULL AND lme.XML_DATEN LIKE '%ICD_Version%'
-) o
+```sh
+docker compose -f compose.kafka.yaml up
 ```
 
-To remove leading zeros from `Patient_ID` (see: https://github.com/bzkf/onco-analytics-on-fhir/issues/188), you could use the following query.
+Next, enable the connector [onkostar-db-connector.json](onkostar-db-connector.json). If required,
+you can modify the SQL query to suit your needs by modifying the file.
+
+```sh
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -d @onkostar-db-connector.json \
+  http://localhost:8083/connectors
+```
+
+To remove leading zeros from `Patient_ID` (see: <https://github.com/bzkf/onco-analytics-on-fhir/issues/188>), you could use the following query.
 It will update `XML_DATEN` by replacing the attribute `Patient_ID` by using an `INT` if the value found can be casted into an integer but keeps the original value
 if any other (e.g. alphanumeric value) is used and the cast will result in `0` value.
 
@@ -135,41 +141,14 @@ SELECT * FROM (
     WHERE
         typ != '-1'
         AND versionsnummer IS NOT NULL
-        AND lme.XML_DATEN LIKE '%ICD_Version%'
-        AND EXTRACTVALUE(lme.xml_daten, '//ADT_GEKID/@Schema_Version') LIKE '2.%'
 ) o
-```
-
-If you are not using direct access to Onkostar MySQL/MariaDB database, you should use the following query that will fetch
-the diagnosis date from table `erkrankung`, because function `EXTRACTVALUE()` to extract values from XML is only
-supported on MySQL and MariaDB.
-This will require `JOIN`ing tables `lkr_meldung` and `erkrankung`.
-
-```sql
-SELECT * FROM (
-  SELECT YEAR(e.diagnosedatum) AS YEAR, versionsnummer AS VERSIONSNUMMER, lme.id AS ID, CONVERT(lme.xml_daten using utf8) AS XML_DATEN
-    FROM lkr_meldung_export lme
-    JOIN lkr_meldung lm ON lme.lkr_meldung = lm.id
-    JOIN erkrankung e ON lm.erkrankung_id = e.id
-    WHERE lme.typ != '-1' AND lme.versionsnummer IS NOT NULL AND lme.XML_DATEN LIKE '%ICD_Version%'
-) o
-```
-
-```sh
-docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml up
-```
-
-```sh
-curl -X POST \
-  -H 'Content-Type: application/json' \
-  -d @onkostar-db-connector.json \
-  http://localhost:8083/connectors
 ```
 
 ### 8. Run with enabled pseudonymization
 
-> **Warning**
-> Requires gPAS to be set-up and the [anonymization.yaml](anonymization.yaml) to be configured
+> [!IMPORTANT]
+> Requires gPAS or another pseudonymization to be set-up
+> and an `anonymization.yaml` to be configured.
 
 ```sh
 docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.pseudonymization.yaml up
@@ -179,26 +158,6 @@ docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.pse
 
 ```sh
 docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
-```
-
-### 10. Air-gapped installation
-
-In case of absence of Internet connectivity, container images cannot be pulled from the registry. Instead, download the air-gapped installer and move it to the deployment machine:
-
-<!-- x-release-please-start-version -->
-
-```sh
-curl -L -O https://github.com/bzkf/onco-analytics-on-fhir/releases/download/v2.2.2/air-gapped-installer.tgz
-```
-
-<!-- x-release-please-end -->
-
-Run the following steps on the deployment machine.
-
-Extract the archive:
-
-```sh
-tar xvzf ./air-gapped-installer.tgz
 ```
 
 ## Customize any compose file
