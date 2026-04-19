@@ -59,7 +59,7 @@ which allows writing the output back to [output-obds-reports](output-obds-report
 ### 4. Transform oBDS XML-data to FHIR
 
 > [!NOTE]
-> not required if you did 3 b) before, which should alread have written the FHIR resources to
+> Not required if you did 3 b) before, which should already have written the FHIR resources to
 > Kafka and the output folder.
 
 ```sh
