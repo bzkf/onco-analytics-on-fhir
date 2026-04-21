@@ -1,6 +1,6 @@
 services:
   minio:
-    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/minio/minio:RELEASE.2025-07-23T15-54-02Z@sha256:d249d1fb6966de4d8ad26c04754b545205ff15a62e4fd19ebd0f26fa5baacbc0
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     ipc: private
     command: server /data --console-address ":9001"
     environment:
@@ -16,7 +16,7 @@ services:
       - "127.0.0.1:9001:9001"
 
   wait-for-minio:
-    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/curlimages/curl:8.14.1@sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/curlimages/curl:8.19.0@sha256:9a6f6a17667960e077f1b153009aaf18ac99a622221084e1938a45a06fff057a
     ipc: none
     security_opt:
       - "no-new-privileges:true"
@@ -38,7 +38,7 @@ services:
         condition: service_started
 
   create-default-buckets:
-    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/minio/minio:RELEASE.2025-07-23T15-54-02Z@sha256:d249d1fb6966de4d8ad26c04754b545205ff15a62e4fd19ebd0f26fa5baacbc0
+    image: ${IMAGE_REGISTRY_DOCKER_IO:-docker.io}/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     restart: on-failure
     cap_drop:
       - ALL
@@ -61,7 +61,7 @@ services:
         /usr/bin/mc mb --ignore-existing minio/results;
 
   kafka-fhir-to-delta:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/fhir-to-lakehouse:v1.13.8@sha256:8364b70727fed8b2606efef6b240b1a6633269f8e918c915dd0b00441dcf457f
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/fhir-to-lakehouse:v1.13.11@sha256:bc51a5d241e6fb5df82d4f788da06e3f8ff2f1a9b739320fc95f3d27ae43f2fd
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -76,7 +76,8 @@ services:
       DELTA_DATABASE_DIR: "s3a://fhir/default"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?}
-      KAFKA_TOPICS: "fhir.pseudonymized.obds.bundles"
+      KAFKA_TOPICS: ${FHIR_TO_DELTA_KAFKA_TOPICS:?}
+      SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-8g}
     depends_on:
       wait-for-minio:
         condition: service_completed_successfully

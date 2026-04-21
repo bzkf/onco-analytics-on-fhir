@@ -1,6 +1,6 @@
 services:
   fhir-gateway:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/fhir-gateway:v3.12.8@sha256:2cf2d887b25594c04af3d6be302f8ccaea12dee90965fe4e2f81d24786ac3b6d
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/fhir-gateway:v6.1.0@sha256:a8099b5df4f59bcfb6fbda7377542ac2f38555dc02210ad246b6d473b8604e84
     restart: unless-stopped
     cap_drop:
       - ALL
@@ -22,15 +22,16 @@ services:
       MANAGEMENT_ENDPOINT_HEALTH_PROBES_ADD_ADDITIONAL_PATHS: "true"
       MANAGEMENT_SERVER_PORT: "8081"
       SERVICES_KAFKA_ENABLED: "true"
-      INPUT_TOPIC: "fhir.obds.bundles"
-      OUTPUT_TOPIC: "fhir.post-gateway"
-      BOOTSTRAP_SERVERS: "kafka:9092"
-      SECURITY_PROTOCOL: "PLAINTEXT"
-      SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_MATCH_EXPRESSION: "^fhir\\."
-      SERVICES_KAFKA_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
+      KAFKA_INPUT_TOPICS: "fhir.obds.bundles"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      SERVICES_KAFKA_PROCESSOR_ENABLED: "true"
+      SERVICES_KAFKA_PROCESSOR_CRYPTO_HASH_MESSAGE_KEYS_ENABLED: "true"
+      SERVICES_KAFKA_PROCESSOR_CRYPTO_HASH_MESSAGE_KEYS_KEY: "${FHIR_PSEUDONYMIZER_CRYPTO_HASH_KEY:?}"
+      SERVICES_KAFKA_PROCESSOR_GENERATE_OUTPUT_TOPIC_MATCH_EXPRESSION: "^fhir\\."
+      SERVICES_KAFKA_PROCESSOR_GENERATE_OUTPUT_TOPIC_REPLACE_WITH: "fhir.pseudonymized."
 
   fhir-pseudonymizer:
-    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/fhir-pseudonymizer:v2.22.6@sha256:c2652779d173dba020305775da4f1a52ba7dae8c9bb51ab3595f20bd187ee936
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/miracum/fhir-pseudonymizer:v2.25.0@sha256:e9ff406f538283e9be75a1595c3d797993278e6d8e126fd4f6e7105abb863acd
     restart: unless-stopped
     cap_drop:
       - ALL
