@@ -81,8 +81,8 @@ class AllObdsPatients:
         self.year_min = df_all_obds_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_all_obds_clean.select(F.max(F.year("asserted_date"))).first()[0]
 
-        save_final_df(df_all_obds_clean, self.settings, suffix="oBDS_primaerdiagnosen")
-        save_final_df_parquet(df_all_obds_clean, self.settings, suffix="oBDS_primaerdiagnosen")
+        save_final_df(df_all_obds_clean, self.settings, suffix="all_obds_clean")
+        save_final_df_parquet(df_all_obds_clean, self.settings, suffix="all_obds_clean")
 
         # save all conditions
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
