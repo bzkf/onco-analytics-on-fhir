@@ -105,7 +105,7 @@ class AllObdsPatients:
 
         # extract MII conditions
         pandas_df_clean = df_all_obds_clean.toPandas()
-        patient_list = pandas_df_clean["condition_patient_resource_id"].dropna() # patid_pseudonym
+        patient_list = pandas_df_clean["patid_pseudonym"].dropna() # patid_pseudonym
         patient_list.drop_duplicates(inplace=True)
         mii_conditions_all_obds_pats_pandas = self.extract_mii_conditions(
             patient_list, suffix="_2_mals", crypto_key=crypto_key

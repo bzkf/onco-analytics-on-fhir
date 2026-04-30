@@ -251,7 +251,7 @@ class StudyProtocolPCa1:
 
         # 4) Nebendiagnosen: extract mii conditions + labs for c61 pats
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
-        df_list_c61 = pandas_df_pseudonyms_c61["patient_resource_id"].drop_duplicates().dropna()
+        df_list_c61 = pandas_df_pseudonyms_c61["patid_pseudonym"].drop_duplicates().dropna()
 
         mii_conditions_pandas = self.extract_mii_conditions(
             df_list_c61, suffix="", crypto_key=crypto_key
