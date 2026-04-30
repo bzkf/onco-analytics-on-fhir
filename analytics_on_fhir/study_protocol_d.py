@@ -172,7 +172,7 @@ class StudyProtocolD:
 
         # extract MII conditions
         pandas_df_2_mals = df_2_mals.toPandas()
-        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
+        df_list_2_mals = pandas_df_2_mals["patid_pseudonym"].dropna()
         df_list_2_mals.drop_duplicates(inplace=True)
         mii_condition_df_2_mals = self.extract_mii_conditions(
             df_list_2_mals, suffix="_2_mals", crypto_key=crypto_key
