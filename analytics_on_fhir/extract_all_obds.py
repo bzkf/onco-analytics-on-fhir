@@ -6,6 +6,7 @@ from loguru import logger
 from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
 from pathling.datasource import DataSource
+from plot import plot_diagnoses
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from utils import (
@@ -68,7 +69,9 @@ class AllObdsPatients:
     def run(self):
         logger.info("All oBDS pipeline started")
 
-        crypto_key = secrets.token_hex(32)
+        # crypto_key = secrets.token_hex(32)
+        # DEV
+        crypto_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
         # Extract
         df_extract = self.extract()
@@ -81,7 +84,7 @@ class AllObdsPatients:
         self.year_min = df_all_obds_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_all_obds_clean.select(F.max(F.year("asserted_date"))).first()[0]
 
-        save_final_df(df_all_obds_clean, self.settings, suffix="all_obds_clean")
+        """ save_final_df(df_all_obds_clean, self.settings, suffix="all_obds_clean")
         save_final_df_parquet(df_all_obds_clean, self.settings, suffix="all_obds_clean")
 
         # save all conditions
@@ -102,7 +105,7 @@ class AllObdsPatients:
 
         # extract MII conditions
         pandas_df_clean = df_all_obds_clean.toPandas()
-        patient_list = pandas_df_clean["condition_patient_resource_id"].dropna()
+        patient_list = pandas_df_clean["condition_patient_resource_id"].dropna() # patid_pseudonym
         patient_list.drop_duplicates(inplace=True)
         mii_conditions_all_obds_pats_pandas = self.extract_mii_conditions(
             patient_list, suffix="_2_mals", crypto_key=crypto_key
@@ -164,9 +167,15 @@ class AllObdsPatients:
 
         self.extract_save_gradings(df_all_obds_clean, crypto_key)
 
-        self.extract_save_leistungszustand_ecog_karnofsky(df_all_obds_clean, crypto_key)
+        self.extract_save_leistungszustand_ecog_karnofsky(df_all_obds_clean, crypto_key) """
+
+        self.plot(df_all_obds_clean)
 
         logger.info("All oBDS pipeline finished")
+
+    def plot(self, df_all_obds_clean):
+
+        plot_diagnoses(self.settings, df_all_obds_clean)
 
     def prepare(self, df: DataFrame) -> DataFrame:
         df = group_entity_or_parent(df, code_col="icd10_code", target_col="entity_or_parent")

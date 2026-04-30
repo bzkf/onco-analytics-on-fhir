@@ -183,7 +183,9 @@ class StudyProtocolPCa1:
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")
 
-        crypto_key = secrets.token_hex(32)
+        # crypto_key = secrets.token_hex(32)
+        # DEV
+        crypto_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
         # 1) Extract
         self.extract_from_obds(crypto_key)

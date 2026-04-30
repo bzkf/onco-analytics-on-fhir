@@ -81,10 +81,7 @@ FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-intention"
 )
-FHIR_SYSTEMS_STELLUNG_OP_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-therapie-stellungzurop"
-)
+FHIR_SYSTEMS_STELLUNG_OP_CS = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-therapie-stellungzurop"
 FHIR_SYSTEMS_SYSTEM_THERAPY_TYP_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-therapie-typ"
