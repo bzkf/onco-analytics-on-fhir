@@ -1,15 +1,15 @@
 dependencies:
 - name: akhq
   repository: https://akhq.io/
-  version: 0.26.0
+  version: 0.27.0
 - name: stream-processors
   repository: https://miracum.github.io/charts
-  version: 1.11.2
+  version: 1.11.4
 - name: hapi-fhir-jpaserver
   repository: https://hapifhir.github.io/hapi-fhir-jpaserver-starter
-  version: 0.21.0
+  version: 0.22.0
 - name: fhir-gateway
   repository: https://miracum.github.io/charts
-  version: 10.0.10
-digest: sha256:38044f0300eacdb492c4eb931397f20eab03be039446445f1161f6e64ccb7c2c
-generated: "2026-03-06T08:59:00.065664355Z"
+  version: 10.0.25
+digest: sha256:ef2b7bbad8a684a8fefa9551875b6d2ee1a627f84c273278dd55eab727ba2c3e
+generated: "2026-05-02T05:43:21.779021423Z"
