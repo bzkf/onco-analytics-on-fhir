@@ -814,7 +814,7 @@ def extract_t_tnm(
                         "description": "TNM T category",
                         "path": (
                             "value.ofType(CodeableConcept)"
-                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            f".coding.where(system = '{FHIR_SYSTEM_TNM_UICC}')"
                             ".code"
                         ),
                         "name": "t_tnm",
@@ -908,7 +908,7 @@ def extract_n_tnm(
                         "description": "TNM N category",
                         "path": (
                             "value.ofType(CodeableConcept)"
-                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            f".coding.where(system = '{FHIR_SYSTEM_TNM_UICC}')"
                             ".code"
                         ),
                         "name": "n_tnm",
@@ -1001,7 +1001,7 @@ def extract_m_tnm(
                         "description": "TNM M category",
                         "path": (
                             "value.ofType(CodeableConcept)"
-                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            f".coding.where(system = '{FHIR_SYSTEM_TNM_UICC}')"
                             ".code"
                         ),
                         "name": "m_tnm",

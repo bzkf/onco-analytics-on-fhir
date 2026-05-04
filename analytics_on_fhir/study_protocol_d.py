@@ -86,7 +86,9 @@ class StudyProtocolD:
     def run(self):
         logger.info("StudyProtocolD pipeline started")
 
-        crypto_key = secrets.token_hex(32)
+        # crypto_key = secrets.token_hex(32)
+        # DEV
+        crypto_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
         # Extract
         df_extract = self.extract()
@@ -170,7 +172,7 @@ class StudyProtocolD:
 
         # extract MII conditions
         pandas_df_2_mals = df_2_mals.toPandas()
-        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
+        df_list_2_mals = pandas_df_2_mals["patid_pseudonym"].dropna()
         df_list_2_mals.drop_duplicates(inplace=True)
         mii_condition_df_2_mals = self.extract_mii_conditions(
             df_list_2_mals, suffix="_2_mals", crypto_key=crypto_key
@@ -241,7 +243,7 @@ class StudyProtocolD:
         )
 
         pandas_df_1_mal = df_1_mal.toPandas()
-        df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
+        df_list_1_mal = pandas_df_1_mal["patid_pseudonym"].dropna()
         df_list_1_mal.drop_duplicates(inplace=True)
         mii_condition_df_1_mal = self.extract_mii_conditions(
             df_list_1_mal, suffix="_1_mal", crypto_key=crypto_key

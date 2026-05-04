@@ -23,7 +23,7 @@ FHIR_SYSTEM_METASTASIS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/"
     "CodeSystem/mii-cs-onko-fernmetastasen"
 )
-FHIR_SYSTEM_TNM_UICC = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/ValueSet/mii-vs-onko-tnm-uicc-stadium"
+FHIR_SYSTEM_TNM_UICC = "https://www.uicc.org/resources/tnm"
 SCT_CODE_DEATH = "184305005"
 SCT_CODE_GLEASON = "1812491000004107"
 SCT_CODE_METASTASIS = "385421009"
@@ -81,10 +81,7 @@ FHIR_SYSTEMS_SYSTEM_THERAPY_INTENTION_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-intention"
 )
-FHIR_SYSTEMS_STELLUNG_OP_CS = (
-    "https://www.medizininformatik-initiative.de/fhir/ext/"
-    "modul-onko/CodeSystem/mii-cs-therapie-stellungzurop"
-)
+FHIR_SYSTEMS_STELLUNG_OP_CS = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-therapie-stellungzurop"
 FHIR_SYSTEMS_SYSTEM_THERAPY_TYP_CS = (
     "https://www.medizininformatik-initiative.de/fhir/ext/"
     "modul-onko/CodeSystem/mii-cs-onko-therapie-typ"
