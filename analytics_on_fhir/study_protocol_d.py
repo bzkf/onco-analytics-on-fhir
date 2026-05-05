@@ -44,6 +44,7 @@ from views import (
     grading_view,
     leistungszustand_ecog_karnofsky_view,
     progression_view,
+    vitalstatus_view,
     weitere_klassifikation_view,
 )
 
@@ -86,9 +87,7 @@ class StudyProtocolD:
     def run(self):
         logger.info("StudyProtocolD pipeline started")
 
-        # crypto_key = secrets.token_hex(32)
-        # DEV
-        crypto_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        crypto_key = secrets.token_hex(32)
 
         # Extract
         df_extract = self.extract()
@@ -388,11 +387,11 @@ class StudyProtocolD:
 
         self.extract_save_gradings(df_all_conditions, crypto_key)
 
-        # ! funktioniert nicht, to do: fix SQLSTATE: P0001
-        # Expecting a collection with a single element but it has many
-        # self.extract_save_weitere_klassifikationen(df_all_conditions, crypto_key)
-
         self.extract_save_leistungszustand_ecog_karnofsky(df_all_conditions, crypto_key)
+
+        self.extract_vitalstatus(df_all_conditions, crypto_key)
+
+        self.extract_weitere_klassifikation(df_all_conditions, crypto_key)
 
         logger.info("StudyProtocolD pipeline finished")
 
@@ -910,5 +909,73 @@ class StudyProtocolD:
             leistungszustand_ecog_karnofsky_deidentified,
             self.settings,
             suffix="leistungszustand_ecog_karnofsky_deidentified",
+            deidentified=True,
+        )
+
+    def extract_vitalstatus(self, df_all_conditions, crypto_key):
+        vitalstatus = vitalstatus_view(self.data)
+        vitalstatus = cast_study_dates(
+            vitalstatus,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        vitalstatus = vitalstatus.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        vitalstatus.show()
+
+        save_final_df(vitalstatus, self.settings, suffix="vitalstatus")
+
+        vitalstatus_deidentified = deidentify(vitalstatus, IDENTIFYING_COLS, crypto_key)
+
+        save_final_df(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+
+    def extract_weitere_klassifikation(self, df_all_conditions, crypto_key):
+        weitere_klassifikation = weitere_klassifikation_view(self.data)
+        weitere_klassifikation = cast_study_dates(
+            weitere_klassifikation,
+            [
+                "weitere_klassifikation_date",
+            ],
+        )
+
+        weitere_klassifikation = weitere_klassifikation.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        weitere_klassifikation.show()
+
+        save_final_df(weitere_klassifikation, self.settings, suffix="weitere_klassifikation")
+
+        weitere_klassifikation_deidentified = deidentify(
+            weitere_klassifikation, IDENTIFYING_COLS, crypto_key
+        )
+
+        save_final_df(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
             deidentified=True,
         )

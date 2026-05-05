@@ -1,3 +1,8 @@
+FHIR_SYSTEMS_VITALSTATUS = "https://www.medizininformatik-initiative.de/fhir/core/modul-person/StructureDefinition/Vitalstatus"
+FHIR_CODE_SYSTEM_VITALSTATUS = (
+    "https://www.medizininformatik-initiative.de/fhir/core/modul-person/ValueSet/Vitalstatus"
+)
+
 FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
 FHIR_SYSTEM_GRADING = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-grading"

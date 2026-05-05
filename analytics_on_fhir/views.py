@@ -5,6 +5,7 @@ from fhir_constants import (
     FHIR_SYSTEM_GRADING,
     FHIR_SYSTEM_LOINC,
     FHIR_SYSTEM_SCT,
+    FHIR_SYSTEMS_VITALSTATUS,
     FHIR_SYSTEMS_WEITERE_KLASSIFIKATION,
 )
 from pathling import datasource
@@ -156,18 +157,13 @@ def weitere_klassifikation_view(
                     },
                     {
                         "description": "Focus Condition (Primary Diagnosis)",
-                        "path": "focus.getReferenceKey()",
+                        "path": "focus.first().getReferenceKey()",
                         "name": "condition_id",
                     },
                     {
                         "description": "Value text",
-                        "path": "value.ofType(CodeableConcept).first().text",
-                        "name": "weitere_klassifikation_name_value",
-                    },
-                    {
-                        "description": "Observation value",
-                        "path": "value.ofType(CodeableConcept).coding.code.first()",  # können das mehrere sein pro Observation?
-                        "name": "weitere_klassifikation_stadium",
+                        "path": "value.ofType(CodeableConcept).text",
+                        "name": "weitere_klassifikation_value_text",
                     },
                     {
                         "description": "Weitere Klassifikation Observation Date",
@@ -175,7 +171,14 @@ def weitere_klassifikation_view(
                         "name": "weitere_klassifikation_date",
                     },
                 ],
-            }
+            },
+            {
+                "forEach": "value.ofType(CodeableConcept).coding",
+                "column": [
+                    {"name": "weitere_klassifikation_value_system", "path": "system"},
+                    {"name": "weitere_klassifikation_value_code", "path": "code"},
+                ],
+            },
         ],
     )
     weitere_klassifikationen.show()
@@ -237,3 +240,52 @@ def leistungszustand_ecog_karnofsky_view(
 
     leistungszustand_ecog_karnofsky.show()
     return leistungszustand_ecog_karnofsky
+
+
+def vitalstatus_view(
+    data: datasource.DataSource,
+) -> DataFrame:
+    vitalstatus = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "path": "getResourceKey()",
+                        "name": "observation_id",
+                    },
+                    {
+                        "description": "meta profile",
+                        "path": "meta.profile",
+                        "name": "meta_profile",
+                    },
+                    {
+                        "path": "subject.getReferenceKey()",
+                        "name": "observation_patient_reference",
+                    },
+                    {
+                        "path": "effective.ofType(dateTime)",
+                        "name": "effective_dateTime",
+                    },
+                    {
+                        "description": "Focus Condition (Primary Diagnosis)",
+                        "path": "focus.first().getReferenceKey()",
+                        "name": "condition_id",
+                    },
+                ]
+            },
+            {
+                "forEach": "value.ofType(CodeableConcept).coding",
+                "column": [
+                    {"name": "vitalstatus_system", "path": "system"},
+                    {"name": "vitalstatus_code", "path": "code"},
+                ],
+            },
+        ],
+    )
+    vitalstatus.show()
+    vitalstatus = vitalstatus.filter(
+        F.col("meta_profile").startswith(f"{FHIR_SYSTEMS_VITALSTATUS}")
+    )
+
+    return vitalstatus
