@@ -44,6 +44,7 @@ from views import (
     grading_view,
     leistungszustand_ecog_karnofsky_view,
     progression_view,
+    vitalstatus_view,
     weitere_klassifikation_view,
 )
 
@@ -170,7 +171,7 @@ class StudyProtocolD:
 
         # extract MII conditions
         pandas_df_2_mals = df_2_mals.toPandas()
-        df_list_2_mals = pandas_df_2_mals["condition_patient_resource_id"].dropna()
+        df_list_2_mals = pandas_df_2_mals["patid_pseudonym"].dropna()
         df_list_2_mals.drop_duplicates(inplace=True)
         mii_condition_df_2_mals = self.extract_mii_conditions(
             df_list_2_mals, suffix="_2_mals", crypto_key=crypto_key
@@ -241,7 +242,7 @@ class StudyProtocolD:
         )
 
         pandas_df_1_mal = df_1_mal.toPandas()
-        df_list_1_mal = pandas_df_1_mal["condition_patient_resource_id"].dropna()
+        df_list_1_mal = pandas_df_1_mal["patid_pseudonym"].dropna()
         df_list_1_mal.drop_duplicates(inplace=True)
         mii_condition_df_1_mal = self.extract_mii_conditions(
             df_list_1_mal, suffix="_1_mal", crypto_key=crypto_key
@@ -386,11 +387,11 @@ class StudyProtocolD:
 
         self.extract_save_gradings(df_all_conditions, crypto_key)
 
-        # ! funktioniert nicht, to do: fix SQLSTATE: P0001
-        # Expecting a collection with a single element but it has many
-        # self.extract_save_weitere_klassifikationen(df_all_conditions, crypto_key)
-
         self.extract_save_leistungszustand_ecog_karnofsky(df_all_conditions, crypto_key)
+
+        self.extract_vitalstatus(df_all_conditions, crypto_key)
+
+        self.extract_weitere_klassifikation(df_all_conditions, crypto_key)
 
         logger.info("StudyProtocolD pipeline finished")
 
@@ -908,5 +909,73 @@ class StudyProtocolD:
             leistungszustand_ecog_karnofsky_deidentified,
             self.settings,
             suffix="leistungszustand_ecog_karnofsky_deidentified",
+            deidentified=True,
+        )
+
+    def extract_vitalstatus(self, df_all_conditions, crypto_key):
+        vitalstatus = vitalstatus_view(self.data)
+        vitalstatus = cast_study_dates(
+            vitalstatus,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        vitalstatus = vitalstatus.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        vitalstatus.show()
+
+        save_final_df(vitalstatus, self.settings, suffix="vitalstatus")
+
+        vitalstatus_deidentified = deidentify(vitalstatus, IDENTIFYING_COLS, crypto_key)
+
+        save_final_df(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+
+    def extract_weitere_klassifikation(self, df_all_conditions, crypto_key):
+        weitere_klassifikation = weitere_klassifikation_view(self.data)
+        weitere_klassifikation = cast_study_dates(
+            weitere_klassifikation,
+            [
+                "weitere_klassifikation_date",
+            ],
+        )
+
+        weitere_klassifikation = weitere_klassifikation.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        weitere_klassifikation.show()
+
+        save_final_df(weitere_klassifikation, self.settings, suffix="weitere_klassifikation")
+
+        weitere_klassifikation_deidentified = deidentify(
+            weitere_klassifikation, IDENTIFYING_COLS, crypto_key
+        )
+
+        save_final_df(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
             deidentified=True,
         )

@@ -42,7 +42,12 @@ from utils import (
     save_final_df,
     save_final_df_parquet,
 )
-from views import leistungszustand_ecog_karnofsky_view
+from views import (
+    leistungszustand_ecog_karnofsky_view,
+    progression_view,
+    vitalstatus_view,
+    weitere_klassifikation_view,
+)
 
 
 class StudyProtocolPCa1:
@@ -180,6 +185,16 @@ class StudyProtocolPCa1:
             crypto_key,
         )
 
+        self.extract_vitalstatus(
+            df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
+            crypto_key,
+        )
+
+        self.extract_weitere_klassifikation(
+            df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
+            crypto_key,
+        )
+
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")
 
@@ -249,7 +264,7 @@ class StudyProtocolPCa1:
 
         # 4) Nebendiagnosen: extract mii conditions + labs for c61 pats
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
-        df_list_c61 = pandas_df_pseudonyms_c61["patient_resource_id"].drop_duplicates().dropna()
+        df_list_c61 = pandas_df_pseudonyms_c61["patid_pseudonym"].drop_duplicates().dropna()
 
         mii_conditions_pandas = self.extract_mii_conditions(
             df_list_c61, suffix="", crypto_key=crypto_key
@@ -801,6 +816,39 @@ class StudyProtocolPCa1:
             deidentified=True,
         )
 
+    def extract_save_progressions(self, df_all_conditions, crypto_key):
+        progressions = progression_view(self.data)
+        progressions = cast_study_dates(
+            progressions,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        progressions = progressions.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        progressions.show()
+
+        save_final_df(progressions, self.settings, suffix="progressions")
+        progressions_deidentified = deidentify(progressions, IDENTIFYING_COLS, crypto_key)
+        progressions_deidentified.show()
+
+        save_final_df(
+            progressions_deidentified,
+            self.settings,
+            suffix="progressions_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            progressions_deidentified,
+            self.settings,
+            suffix="progressions_deidentified",
+            deidentified=True,
+        )
+
     def extract_save_metastasis(self, df_all_conditions, crypto_key):
         df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
         logger.info(f"df_1_2_cond_id_asserted.count() = : {df_all_conditions.count()}")
@@ -822,5 +870,73 @@ class StudyProtocolPCa1:
             df_metastasis_deidentified,
             self.settings,
             suffix="metastasis_deidentified",
+            deidentified=True,
+        )
+
+    def extract_vitalstatus(self, df_all_conditions, crypto_key):
+        vitalstatus = vitalstatus_view(self.data)
+        vitalstatus = cast_study_dates(
+            vitalstatus,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        vitalstatus = vitalstatus.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        vitalstatus.show()
+
+        save_final_df(vitalstatus, self.settings, suffix="vitalstatus")
+
+        vitalstatus_deidentified = deidentify(vitalstatus, IDENTIFYING_COLS, crypto_key)
+
+        save_final_df(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+
+    def extract_weitere_klassifikation(self, df_all_conditions, crypto_key):
+        weitere_klassifikation = weitere_klassifikation_view(self.data)
+        weitere_klassifikation = cast_study_dates(
+            weitere_klassifikation,
+            [
+                "weitere_klassifikation_date",
+            ],
+        )
+
+        weitere_klassifikation = weitere_klassifikation.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        weitere_klassifikation.show()
+
+        save_final_df(weitere_klassifikation, self.settings, suffix="weitere_klassifikation")
+
+        weitere_klassifikation_deidentified = deidentify(
+            weitere_klassifikation, IDENTIFYING_COLS, crypto_key
+        )
+
+        save_final_df(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
             deidentified=True,
         )

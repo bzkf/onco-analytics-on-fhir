@@ -6,6 +6,7 @@ from loguru import logger
 from mii_conditions_labs import PyRateQuery
 from pathling import PathlingContext
 from pathling.datasource import DataSource
+from plot import plot_diagnoses
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from utils import (
@@ -29,7 +30,13 @@ from utils import (
     save_final_df,
     save_final_df_parquet,
 )
-from views import grading_view, leistungszustand_ecog_karnofsky_view, progression_view
+from views import (
+    grading_view,
+    leistungszustand_ecog_karnofsky_view,
+    progression_view,
+    vitalstatus_view,
+    weitere_klassifikation_view,
+)
 
 
 class AllObdsPatients:
@@ -81,8 +88,8 @@ class AllObdsPatients:
         self.year_min = df_all_obds_clean.select(F.min(F.year("asserted_date"))).first()[0]
         self.year_max = df_all_obds_clean.select(F.max(F.year("asserted_date"))).first()[0]
 
-        save_final_df(df_all_obds_clean, self.settings, suffix="oBDS_primaerdiagnosen")
-        save_final_df_parquet(df_all_obds_clean, self.settings, suffix="oBDS_primaerdiagnosen")
+        save_final_df(df_all_obds_clean, self.settings, suffix="all_obds_clean")
+        save_final_df_parquet(df_all_obds_clean, self.settings, suffix="all_obds_clean")
 
         # save all conditions
         logger.info(f"year range detected: {self.year_min} → {self.year_max}")
@@ -102,7 +109,7 @@ class AllObdsPatients:
 
         # extract MII conditions
         pandas_df_clean = df_all_obds_clean.toPandas()
-        patient_list = pandas_df_clean["condition_patient_resource_id"].dropna()
+        patient_list = pandas_df_clean["patid_pseudonym"].dropna()  # patid_pseudonym
         patient_list.drop_duplicates(inplace=True)
         mii_conditions_all_obds_pats_pandas = self.extract_mii_conditions(
             patient_list, suffix="_2_mals", crypto_key=crypto_key
@@ -133,12 +140,12 @@ class AllObdsPatients:
         save_final_df(
             mii_conditions_all_obds_pats_asserted,
             self.settings,
-            suffix="mii_conditions_2_mals_asserted",
+            suffix="mii_conditions_all_obds_pats_asserted",
         )
         save_final_df_parquet(
             mii_conditions_all_obds_pats_asserted,
             self.settings,
-            suffix="mii_conditions_2_mals_asserted",
+            suffix="mii_conditions_all_obds_pats_asserted",
         )
         mii_conditions_all_obds_pats_asserted_deidentified = deidentify(
             mii_conditions_all_obds_pats_asserted, IDENTIFYING_COLS, crypto_key
@@ -147,11 +154,13 @@ class AllObdsPatients:
             mii_conditions_all_obds_pats_asserted_deidentified,
             self.settings,
             suffix="mii_conditions_all_obds_pats_asserted_deidentified",
+            deidentified=True,
         )
         save_final_df_parquet(
             mii_conditions_all_obds_pats_asserted_deidentified,
             self.settings,
             suffix="mii_conditions_all_obds_pats_asserted_deidentified",
+            deidentified=True,
         )
 
         self.extract_save_metastasis(df_all_obds_clean, crypto_key)
@@ -166,7 +175,17 @@ class AllObdsPatients:
 
         self.extract_save_leistungszustand_ecog_karnofsky(df_all_obds_clean, crypto_key)
 
+        self.extract_vitalstatus(df_all_obds_clean, crypto_key)
+
+        self.extract_weitere_klassifikation(df_all_obds_clean, crypto_key)
+
+        # self.plot(df_all_obds_clean)
+
         logger.info("All oBDS pipeline finished")
+
+    def plot(self, df_all_obds_clean):
+
+        plot_diagnoses(self.output_dir, df_all_obds_clean)
 
     def prepare(self, df: DataFrame) -> DataFrame:
         df = group_entity_or_parent(df, code_col="icd10_code", target_col="entity_or_parent")
@@ -593,5 +612,73 @@ class AllObdsPatients:
             leistungszustand_ecog_karnofsky_deidentified,
             self.settings,
             suffix="leistungszustand_ecog_karnofsky_deidentified",
+            deidentified=True,
+        )
+
+    def extract_vitalstatus(self, df_all_conditions, crypto_key):
+        vitalstatus = vitalstatus_view(self.data)
+        vitalstatus = cast_study_dates(
+            vitalstatus,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        vitalstatus = vitalstatus.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        vitalstatus.show()
+
+        save_final_df(vitalstatus, self.settings, suffix="vitalstatus")
+
+        vitalstatus_deidentified = deidentify(vitalstatus, IDENTIFYING_COLS, crypto_key)
+
+        save_final_df(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            vitalstatus_deidentified,
+            self.settings,
+            suffix="vitalstatus_deidentified",
+            deidentified=True,
+        )
+
+    def extract_weitere_klassifikation(self, df_all_conditions, crypto_key):
+        weitere_klassifikation = weitere_klassifikation_view(self.data)
+        weitere_klassifikation = cast_study_dates(
+            weitere_klassifikation,
+            [
+                "weitere_klassifikation_date",
+            ],
+        )
+
+        weitere_klassifikation = weitere_klassifikation.join(
+            df_all_conditions,
+            on="condition_id",
+            how="inner",
+        )
+        weitere_klassifikation.show()
+
+        save_final_df(weitere_klassifikation, self.settings, suffix="weitere_klassifikation")
+
+        weitere_klassifikation_deidentified = deidentify(
+            weitere_klassifikation, IDENTIFYING_COLS, crypto_key
+        )
+
+        save_final_df(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            weitere_klassifikation_deidentified,
+            self.settings,
+            suffix="weitere_klassifikation_deidentified",
             deidentified=True,
         )

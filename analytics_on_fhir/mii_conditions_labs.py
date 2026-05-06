@@ -74,13 +74,64 @@ class PyRateQuery:
                 index=False,
             )
 
-    def extract_conditions(self, patient_list, suffix, crypto_key):
+    def extract_patients(self, patient_list, suffix, crypto_key):
 
         logger.info("input patient count: {}", len(patient_list))
 
-        all_conditions = []
+        all_patients = []
 
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
+            chunk_df = pd.DataFrame({"patient_list": [",".join(chunk)]})
+
+            patient_df_chunk = self.search.trade_rows_for_dataframe(
+                df=chunk_df,
+                resource_type="Patient",
+                request_params={
+                    "_elements": "identifier",
+                    "_include": "Patient",
+                    "_count": self.settings.fhir.page_count,
+                },
+                df_constraints={
+                    "identifier": "patient_list",
+                },
+                fhir_paths=[
+                    ("patient_id", "Patient.id"),
+                    (
+                        "patient_mrn",
+                        "Patient.identifier.where("
+                        + f"system='{self.settings.fhir.patient_identifier_system}').value",
+                    ),
+                ],
+            )
+
+            if len(patient_df_chunk) > 0:
+                all_patients.append(patient_df_chunk)
+
+        if all_patients:
+            patient_df = pd.concat(all_patients, ignore_index=True)
+            patient_df.drop(columns=["patient_list"], inplace=True)
+            patient_df.to_csv(
+                os.path.join(self.output_dir, "df_mii_patients" + suffix + ".csv"),
+                index=False,
+                sep=";",
+            )
+
+            logger.info("patient_df size: {}", patient_df.count())
+            patient_df.drop_duplicates(inplace=True)
+            return patient_df["patient_id"]
+        else:
+            logger.info("Found no patient resources to given patients.")
+            return []
+
+    def extract_conditions(self, patient_list, suffix, crypto_key):
+
+        patient_reference_list = self.extract_patients(patient_list, suffix, crypto_key)
+
+        logger.info("input patient count: {}", len(patient_reference_list))
+
+        all_conditions = []
+
+        for chunk in chunked(patient_reference_list, self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
             condition_df_chunk = self.search.trade_rows_for_dataframe(
@@ -131,9 +182,12 @@ class PyRateQuery:
             logger.info("Found no conditions to given patients.")
 
     def extract_labs(self, patient_list, suffix, crypto_key):
+
+        patient_reference_list = self.extract_patients(patient_list, suffix, crypto_key)
+
         all_labs = []
 
-        for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
+        for chunk in chunked(patient_reference_list, self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
             lab_df_chunk = self.search.trade_rows_for_dataframe(
