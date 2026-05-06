@@ -1,0 +1,20 @@
+services:
+  obds-to-fhir:
+    restart: "no"
+    user: "${USER_ID:-65532}:${GROUP_ID:-65532}"
+    environment:
+      SPRING_PROFILES_ACTIVE: "mappings,process-from-directory"
+      OBDS_PROCESS_FROM_DIRECTORY_OUTPUT_TO_KAFKA_ENABLED: "true"
+      OBDS_PROCESS_FROM_DIRECTORY_OUTPUT_TO_KAFKA_TOPIC: "fhir.obds.bundles"
+    volumes:
+      - type: bind
+        source: ${OBDS_TO_FHIR_INPUT_DIRECTORY:?}
+        target: /opt/obds-to-fhir/obds-input
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${OBDS_TO_FHIR_OUTPUT_DIRECTORY:?}
+        target: /opt/obds-to-fhir/fhir-output
+        bind:
+          create_host_path: false

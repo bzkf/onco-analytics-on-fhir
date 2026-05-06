@@ -548,175 +548,47 @@ def extract_conditions_patients_death(
     observation_death_count = observation_death.count()
 
     logger.info("observation_death_count = {}", observation_death_count)
-    observation_death = observation_death.orderBy("observation_death_patient_resource_id")
-    observation_death.show()
 
-    # show duplicates
-    duplicates = (
-        observation_death.groupBy("observation_death_patient_resource_id")
-        .count()
-        .filter(col("count") > 1)
+    event_window = Window.partitionBy("observation_death_patient_resource_id").orderBy(
+        F.col("date_death").asc_nulls_last(), F.col("observation_resource_id").asc()
     )
 
-    observation_death_dupes = observation_death.join(
-        duplicates.select("observation_death_patient_resource_id"),
-        on="observation_death_patient_resource_id",
+    observation_death_with_rank = observation_death.withColumn(
+        "rn", F.row_number().over(event_window)
+    )
+    first_event_keys = observation_death_with_rank.filter(F.col("rn") == 1).select(
+        "observation_death_patient_resource_id", "observation_resource_id", "date_death"
+    )
+    # falls mehrere Todesursachen: alle behalten
+    observation_death_filtered = observation_death.join(
+        first_event_keys,
+        on=["observation_death_patient_resource_id", "observation_resource_id", "date_death"],
         how="inner",
     )
-    observation_death_dupes_count = observation_death_dupes.count()
-    logger.info("observation_death_dupes_count = {}", observation_death_dupes_count)
-    observation_death_dupes.orderBy("observation_death_patient_resource_id").show(100)
 
-    # count distinct patients with death observation
-    observation_death_distinct_patients_count = (
-        observation_death.select("observation_death_patient_resource_id").distinct().count()
-    )
+    logger.info("observation_death_filtered count = {}", observation_death_filtered.count())
 
-    logger.info(
-        "observation_death_distinct_patients_count = {}",
-        observation_death_distinct_patients_count,
-    )
-
-    # ACHTUNG WORKAROUND weil doppelte Todesobservations - REMOVE
-    # Vorgehen:
-    # ich würd an der Stelle dann nach patient_resource_id, death_cause_icd10 und
-    # date_death gruppieren und death_cause_tumor dann die falschen "N" nochmal
-    # nachbearbeiten basierend auf death_cause_icd10
-    observation_death = observation_death.groupBy(
-        "observation_death_patient_resource_id",
-        "death_cause_icd10",
-        "date_death",
-    ).agg(
-        first("observation_resource_id", ignorenulls=True).alias("observation_resource_id"),
-        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
-    )
-
-    tumor_flag_fix_count = observation_death.filter(
-        (col("death_cause_icd10").startswith("C")) & (col("death_cause_tumor").isin("U", "N"))
-    ).count()
-
-    logger.info(
-        "death_cause_tumor auf 'J' gesetzt bei {} Datensätzen",
-        tumor_flag_fix_count,
-    )
-
-    observation_death.orderBy("observation_death_patient_resource_id").show(100)
-    observation_death_count = observation_death.count()
-    logger.info("observation_death_count after grouping = {}", observation_death_count)
-    # count distinct patients with death observation
-    observation_death_distinct_patients_count = (
-        observation_death.select("observation_death_patient_resource_id").distinct().count()
-    )
-
-    logger.info(
-        "observation_death_distinct_patients_count after grouping = {}",
-        observation_death_distinct_patients_count,
-    )
-
-    # dupes after grouping
-    # show duplicates
-    duplicates = (
-        observation_death.groupBy("observation_death_patient_resource_id")
-        .count()
-        .filter(col("count") > 1)
-    )
-
-    observation_death_dupes = observation_death.join(
-        duplicates.select("observation_death_patient_resource_id"),
-        on="observation_death_patient_resource_id",
-        how="inner",
-    )
-    observation_death_dupes_count = observation_death_dupes.count()
-    logger.info(
-        "observation_death_dupes_count after grouping = {}",
-        observation_death_dupes_count,
-    )
-    observation_death_dupes.orderBy("observation_death_patient_resource_id").show(100)
-
-    # concat multiple todesursachen icd10 into one col , seperated
-    death_cause_icd10_per_patient = (
-        observation_death.filter(col("death_cause_icd10").isNotNull())
-        .groupBy("observation_death_patient_resource_id")
-        .agg(
-            concat_ws("|", F.sort_array(collect_set("death_cause_icd10"))).alias(
-                "death_cause_icd10"
-            )
-        )
-    )
-
-    # group again by observation_death_patient_resource_id and keep first non null
-    observation_death_patient = observation_death.groupBy(
-        "observation_death_patient_resource_id"
-    ).agg(
-        first("date_death", ignorenulls=True).alias("date_death"),
-        first("observation_resource_id", ignorenulls=True).alias("observation_resource_id"),
-        first("death_cause_tumor", ignorenulls=True).alias("death_cause_tumor"),
-    )
-
-    # join back comma seperated death causes
-    observation_death_patient = observation_death_patient.join(
-        death_cause_icd10_per_patient,
-        on="observation_death_patient_resource_id",
-        how="left",
-    )
-
-    observation_death_patient_count = observation_death_patient.count()
-    logger.info(
-        "observation_death_patient_count after grouping 2 = {}",
-        observation_death_patient_count,
-    )
-
-    observation_death_patient.orderBy("observation_death_patient_resource_id").show(100)
-
-    observation_death_patient.filter(col("death_cause_icd10").contains("|")).show(
-        100, truncate=False
-    )
-
-    # join death observations to conditions_patients
-    conditions_patients_death = (
+    conditions_patients_death_filtered = (
         conditions_patients.alias("cp")
         .join(
-            observation_death_patient.alias("od"),
-            col("cp.patient_resource_id") == col("od.observation_death_patient_resource_id"),
+            observation_death_filtered.alias("od"),
+            F.col("cp.patient_resource_id") == F.col("od.observation_death_patient_resource_id"),
             "left",
         )
         .select("cp.*", "od.*")
     )
 
-    conditions_patients_death_count = conditions_patients_death.count()
+    conditions_patients_death_filtered = add_is_deceased(conditions_patients_death_filtered)
 
-    logger.info(
-        "conditions_patients_death_count = {}",
-        conditions_patients_death_count,
-    )
-
-    # add consolidated is_deceased flag from death information patient/observation
-    conditions_patients_death = add_is_deceased(conditions_patients_death)
-    logger.info("Add is deceased flag.")
-    conditions_patients_death.show()
-
-    # add double_patid column for studyprotocol D
+    # set this for uc zweitkarzinom
     window_spec = Window.partitionBy("patid_pseudonym")
 
-    conditions_patients_death = conditions_patients_death.withColumn(
+    conditions_patients_death_filtered = conditions_patients_death_filtered.withColumn(
         "double_patid",
-        when(count("patid_pseudonym").over(window_spec) > 1, 1).otherwise(0),
-    ).orderBy("patid_pseudonym")
-
-    conditions_patients_death_count = conditions_patients_death.count()
-    logger.info(
-        "added double_patid col for study protocol D, \
-        conditions_patients_death_count = {}",
-        conditions_patients_death_count,
-    )
-    double_patid_count = conditions_patients_death.filter(col("double_patid") == 1).count()
-
-    logger.info(
-        "Anzahl double_patid = 1 (Patienten mit mehreren Conditions) = {}",
-        double_patid_count,
+        F.when(F.count("patid_pseudonym").over(window_spec) > 1, 1).otherwise(0),
     )
 
-    return conditions_patients_death
+    return conditions_patients_death_filtered
 
 
 def extract_gleason(
@@ -814,7 +686,7 @@ def extract_t_tnm(
                         "description": "TNM T category",
                         "path": (
                             "value.ofType(CodeableConcept)"
-                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            f".coding.where(system = '{FHIR_SYSTEM_TNM_UICC}')"
                             ".code"
                         ),
                         "name": "t_tnm",
@@ -908,7 +780,7 @@ def extract_n_tnm(
                         "description": "TNM N category",
                         "path": (
                             "value.ofType(CodeableConcept)"
-                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            f".coding.where(system = '{FHIR_SYSTEM_TNM_UICC}')"
                             ".code"
                         ),
                         "name": "n_tnm",
@@ -1001,7 +873,7 @@ def extract_m_tnm(
                         "description": "TNM M category",
                         "path": (
                             "value.ofType(CodeableConcept)"
-                            ".coding.where(system = 'https://www.uicc.org/resources/tnm')"
+                            f".coding.where(system = '{FHIR_SYSTEM_TNM_UICC}')"
                             ".code"
                         ),
                         "name": "m_tnm",
