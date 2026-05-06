@@ -305,6 +305,8 @@ class AMLStudy:
             all_labs.append(lab_df_chunk)
 
         lab_df = pd.concat(all_labs, ignore_index=True)
+        if "lab_codeableconcept_code" not in lab_df.columns:
+            lab_df["lab_codeableconcept_code"] = None
         lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
 
         logger.info("all_labs_df size: {}", lab_df.count())
