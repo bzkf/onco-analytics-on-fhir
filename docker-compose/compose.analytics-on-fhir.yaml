@@ -23,5 +23,6 @@ services:
       FHIR_BASE_URL: ${FHIR_BASE_URL}
       FHIR_USER: ${FHIR_USER}
       FHIR_PASSWORD: ${FHIR_PASSWORD}
+      FHIR_PATIENT_IDENTIFIER_SYSTEM: ${FHIR_PATIENT_IDENTIFIER_SYSTEM:?}
     volumes:
       - ./opal-output:/home/nonroot/analytics-output/:rw
