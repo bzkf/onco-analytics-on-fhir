@@ -12,24 +12,25 @@ def aml_summary_statistics():
 
     logger.info("Writing summary statistics for AML")
 
-    output_dir = HERE / "results" / "aml" / "summary_statistics"
+    results_dir = Path(settings.results_directory_path) / settings.study_name.value
+    output_dir = results_dir / "summary_statistics"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load datasets
     patients_with_diagnoses = pd.read_csv(
-        HERE / "results" / "aml" / "aml_all_patients.csv",
+        results_dir / "aml_all_patients.csv",
         sep=",",
     )
     ecog_statuses = pd.read_csv(
-        HERE / "results" / "aml" / "df_obds_ecog_statuses.csv",
+        results_dir / "df_obds_ecog_statuses.csv",
         sep=";",
     )
     eln_klassifikation = pd.read_csv(
-        HERE / "results" / "aml" / "df_obds_weitere_klassifikationen.csv",
+        results_dir / "df_obds_weitere_klassifikationen.csv",
         sep=";",
     )
     lab_values = pd.read_csv(
-        HERE / "results" / "aml" / "aml_all_labs.csv",
+        results_dir / "aml_all_labs.csv",
         sep=",",
     )
 
