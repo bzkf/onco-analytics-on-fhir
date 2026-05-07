@@ -313,161 +313,99 @@ class AMLStudy:
 
         self.post_process_lab_values(lab_df)
 
+    _MEDICATION_FHIR_PATHS = [
+        ("medication_id", "Medication.id"),
+        (
+            "medication_atc_code",
+            "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+        ),
+        (
+            "medication_atc_display",
+            "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
+        ),
+        (
+            "medication_pzn_code",
+            "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
+        ),
+        (
+            "medication_pzn_display",
+            "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
+        ),
+        ("ingredient", "Medication.ingredient"),
+    ]
+
+    def _fetch_medication_resource(
+        self,
+        patient_df: pd.DataFrame,
+        resource_type: str,
+        extra_fhir_paths: list[tuple],
+    ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
+        common_fhir_paths = [
+            ("type", f"{resource_type}.resourceType"),
+            ("id", f"{resource_type}.id"),
+            ("patient_reference", f"{resource_type}.subject.reference"),
+            (
+                "patient_mrn",
+                f"{resource_type}.subject.identifier.where("
+                f"system='{self.settings.fhir.patient_identifier_system}').value",
+            ),
+            ("status", f"{resource_type}.status"),
+            ("medication_reference", f"{resource_type}.medicationReference.reference"),
+        ]
+        result = self.search.trade_rows_for_dataframe(
+            df=patient_df,
+            resource_type=resource_type,
+            request_params={
+                "_count": self.settings.fhir.page_count,
+                "_include": f"{resource_type}:medication",
+            },
+            df_constraints={"subject": "condition_patient_reference"},
+            with_ref=False,
+            fhir_paths=common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS,
+        )
+        if len(result) > 0:
+            resource_df = result[resource_type]
+            medication_df = result["Medication"]
+            logger.info("all_{}_df size: {}", resource_type, resource_df.count())
+            return resource_df, medication_df
+        logger.info("Found no {}/Medication FHIR resources", resource_type)
+        return None, None
+
     def extract_meds(self):  # , patient_list):
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
 
-        # MedicationRequest + Medication
-        med_df = self.search.trade_rows_for_dataframe(
-            df=patient_df,
+        med_req_df, med_df_1 = self._fetch_medication_resource(
+            patient_df=patient_df,
             resource_type="MedicationRequest",
-            request_params={
-                "_count": self.settings.fhir.page_count,
-                "_include": "MedicationRequest:medication",
-            },
-            df_constraints={
-                "subject": "condition_patient_reference",
-            },
-            with_ref=False,
-            fhir_paths=[
-                ("type", "MedicationRequest.resourceType"),
-                ("id", "MedicationRequest.id"),
-                ("patient_reference", "MedicationRequest.subject.reference"),
-                (
-                    "patient_mrn",
-                    "MedicationRequest.subject.identifier.where("
-                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
-                ),
-                ("status", "MedicationRequest.status"),
+            extra_fhir_paths=[
                 ("intent", "MedicationRequest.intent"),
-                ("medication_reference", "MedicationRequest.medicationReference.reference"),
                 ("datetime", "MedicationRequest.authoredOn"),
                 ("dosage", "MedicationRequest.dosageInstruction"),
-                ("medication_id", "Medication.id"),
-                (
-                    "medication_atc_code",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
-                ),
-                (
-                    "medication_atc_display",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
-                ),
-                (
-                    "medication_pzn_code",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
-                ),
-                (
-                    "medication_pzn_display",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
-                ),
-                ("ingredient", "Medication.ingredient"),
             ],
         )
-        med_req_df = med_df["MedicationRequest"]
-        med_df_1 = med_df["Medication"]
 
-        logger.info("all_med_reqs_df size: {}", med_req_df.count())
-
-        # MedicationStatement
-        med_statement = self.search.trade_rows_for_dataframe(
-            df=patient_df,
+        med_statement_df, med_df_2 = self._fetch_medication_resource(
+            patient_df=patient_df,
             resource_type="MedicationStatement",
-            request_params={
-                "_count": self.settings.fhir.page_count,
-                "_include": "MedicationStatement:medication",
-            },
-            df_constraints={
-                "subject": "condition_patient_reference",
-            },
-            with_ref=False,
-            fhir_paths=[
-                ("type", "MedicationStatement.resourceType"),
-                ("id", "MedicationStatement.id"),
-                ("patient_reference", "MedicationStatement.subject.reference"),
-                (
-                    "patient_mrn",
-                    "MedicationStatement.subject.identifier.where("
-                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
-                ),
-                ("status", "MedicationStatement.status"),
+            extra_fhir_paths=[
                 ("datetime", "MedicationStatement.effectivePeriod.start"),
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
-                ("medication_reference", "MedicationStatement.medicationReference.reference"),
                 ("dosage", "MedicationStatement.dosage"),
-                ("medication_id", "Medication.id"),
-                (
-                    "medication_atc_code",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
-                ),
-                (
-                    "medication_atc_display",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
-                ),
-                (
-                    "medication_pzn_code",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
-                ),
-                (
-                    "medication_pzn_display",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
-                ),
-                ("ingredient", "Medication.ingredient"),
             ],
         )
-        med_statement_df = med_statement["MedicationStatement"]
-        med_df_2 = med_statement["Medication"]
 
-        logger.info("all_med_statements_df size: {}", med_statement_df.count())
-
-        # MedciationAdministration
-        med_administration = self.search.trade_rows_for_dataframe(
-            df=patient_df,
+        med_administration_df, med_df_3 = self._fetch_medication_resource(
+            patient_df=patient_df,
             resource_type="MedicationAdministration",
-            request_params={
-                "_count": self.settings.fhir.page_count,
-                "_include": "MedicationAdministration:medication",
-            },
-            df_constraints={
-                "subject": "condition_patient_reference",
-            },
-            with_ref=False,
-            fhir_paths=[
-                ("type", "MedicationAdministration.resourceType"),
-                ("id", "MedicationAdministration.id"),
-                ("patient_reference", "MedicationAdministration.subject.reference"),
-                (
-                    "patient_mrn",
-                    "MedicationAdministration.subject.identifier.where("
-                    + f"system='{self.settings.fhir.patient_identifier_system}').value",
-                ),
-                ("status", "MedicationAdministration.status"),
+            extra_fhir_paths=[
                 ("datetime", "MedicationAdministration.effectiveDateTime"),
-                ("medication_reference", "MedicationAdministration.medicationReference.reference"),
                 ("dosage", "MedicationAdministration.dosage"),
-                ("medication_id", "Medication.id"),
-                (
-                    "medication_atc_code",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
-                ),
-                (
-                    "medication_atc_display",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
-                ),
-                (
-                    "medication_pzn_code",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
-                ),
-                (
-                    "medication_pzn_display",
-                    "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
-                ),
-                ("ingredient", "Medication.ingredient"),
             ],
         )
 
-        med_administration_df = med_administration["MedicationAdministration"]
-        med_df_3 = med_administration["Medication"]
-
-        logger.info("all_med_administrations_df size: {}", med_administration_df.count())
+        if med_req_df is None and med_statement_df is None and med_administration_df is None:
+            logger.info("Found no medication data to given patients")
+            return
 
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
         logger.info("all_meds_df: {}", med_df.count())
