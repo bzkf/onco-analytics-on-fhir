@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.27.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.26.0...v2.27.0) (2026-05-07)
+
+
+### Features
+
+* added aml summary stats ([#437](https://github.com/bzkf/onco-analytics-on-fhir/issues/437)) ([1b2e8c0](https://github.com/bzkf/onco-analytics-on-fhir/commit/1b2e8c09e8f538d41d3e07d65c18161bfb19bf7a))
+
+
+### Bug Fixes
+
+* join to kds ([#440](https://github.com/bzkf/onco-analytics-on-fhir/issues/440)) ([8e95d2a](https://github.com/bzkf/onco-analytics-on-fhir/commit/8e95d2af5625dc05d1730f57d53c4fe7d2e7a18b))
+* updated dependencies and rewrote docs for latest setup ([#438](https://github.com/bzkf/onco-analytics-on-fhir/issues/438)) ([92196e0](https://github.com/bzkf/onco-analytics-on-fhir/commit/92196e0fc65a39be658ed78516ab6d2668a9167b))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump jupyter-server from 2.17.0 to 2.18.0 ([#446](https://github.com/bzkf/onco-analytics-on-fhir/issues/446)) ([11b5ca3](https://github.com/bzkf/onco-analytics-on-fhir/commit/11b5ca3de09c5f8316c7b8d0fa8181784490e47c))
+* **deps:** bump jupyterlab from 4.5.6 to 4.5.7 ([#442](https://github.com/bzkf/onco-analytics-on-fhir/issues/442)) ([03ebd16](https://github.com/bzkf/onco-analytics-on-fhir/commit/03ebd16017b3c14e5b96748f284ce9d73b2cd769))
+* **deps:** bump nbconvert from 7.17.0 to 7.17.1 ([#439](https://github.com/bzkf/onco-analytics-on-fhir/issues/439)) ([6e86f71](https://github.com/bzkf/onco-analytics-on-fhir/commit/6e86f71093d01aa780eaaeb3978703df98a34c7f))
+* **deps:** bump notebook from 7.5.5 to 7.5.6 ([#441](https://github.com/bzkf/onco-analytics-on-fhir/issues/441)) ([0838ad0](https://github.com/bzkf/onco-analytics-on-fhir/commit/0838ad0e7094df3fa00f0169c458b2bd6da32d95))
+
 ## [2.26.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.25.0...v2.26.0) (2026-04-16)
 
 
