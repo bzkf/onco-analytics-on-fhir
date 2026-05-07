@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.27.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.27.0...v2.27.1) (2026-05-07)
+
+
+### Bug Fixes
+
+* only convert column if present ([#447](https://github.com/bzkf/onco-analytics-on-fhir/issues/447)) ([856f9be](https://github.com/bzkf/onco-analytics-on-fhir/commit/856f9bef9ad092c17c7e98b0501759430f4d7d88))
+
 ## [2.27.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.26.0...v2.27.0) (2026-05-07)
 
 
