@@ -362,10 +362,13 @@ class AMLStudy:
                 ("ingredient", "Medication.ingredient"),
             ],
         )
-        med_req_df = med_df["MedicationRequest"]
-        med_df_1 = med_df["Medication"]
-
-        logger.info("all_med_reqs_df size: {}", med_req_df.count())
+        if len(med_df) > 0:
+            med_req_df = med_df["MedicationRequest"]
+            med_df_1 = med_df["Medication"]
+            logger.info("all_med_reqs_df size: {}", med_req_df.count())
+        else:
+            med_req_df = med_df_1 = None
+            logger.info("Found no MedicationRequest/Medication FHIR resources")
 
         # MedicationStatement
         med_statement = self.search.trade_rows_for_dataframe(
@@ -413,10 +416,13 @@ class AMLStudy:
                 ("ingredient", "Medication.ingredient"),
             ],
         )
-        med_statement_df = med_statement["MedicationStatement"]
-        med_df_2 = med_statement["Medication"]
-
-        logger.info("all_med_statements_df size: {}", med_statement_df.count())
+        if len(med_statement) > 0:
+            med_statement_df = med_statement["MedicationStatement"]
+            med_df_2 = med_statement["Medication"]
+            logger.info("all_med_statements_df size: {}", med_statement_df.count())
+        else:
+            med_statement_df = med_df_2 = None
+            logger.info("Found no MedicationStatement/Medication FHIR resources")
 
         # MedciationAdministration
         med_administration = self.search.trade_rows_for_dataframe(
@@ -463,11 +469,17 @@ class AMLStudy:
                 ("ingredient", "Medication.ingredient"),
             ],
         )
+        if len(med_administration) > 0:
+            med_administration_df = med_administration["MedicationAdministration"]
+            med_df_3 = med_administration["Medication"]
+            logger.info("all_med_administrations_df size: {}", med_administration_df.count())
+        else:
+            med_administration_df = med_df_3 = None
+            logger.info("Found no MedicationAdministration/Medication FHIR resources")
 
-        med_administration_df = med_administration["MedicationAdministration"]
-        med_df_3 = med_administration["Medication"]
-
-        logger.info("all_med_administrations_df size: {}", med_administration_df.count())
+        if med_req_df is None and med_administration_df is None and med_statement_df is None:
+            logger.info("Found no medication data to given patients")
+            return
 
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
         logger.info("all_meds_df: {}", med_df.count())
