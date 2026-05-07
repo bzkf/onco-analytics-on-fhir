@@ -35,9 +35,10 @@ def aml_summary_statistics():
     )
 
     # Convert dates in patients_with_diagnoses
-    patients_with_diagnoses["diagnosis_onsetDateTime"] = pd.to_datetime(
-        patients_with_diagnoses["diagnosis_onsetDateTime"], utc=True
-    )
+    if "diagnosis_onsetDateTime" in patients_with_diagnoses.columns:
+        patients_with_diagnoses["diagnosis_onsetDateTime"] = pd.to_datetime(
+            patients_with_diagnoses["diagnosis_onsetDateTime"], utc=True
+        )
     patients_with_diagnoses["deceased_dateTime"] = pd.to_datetime(
         patients_with_diagnoses["deceased_dateTime"], utc=True
     )
