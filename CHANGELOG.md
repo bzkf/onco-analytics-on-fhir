@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.28.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.27.1...v2.28.0) (2026-05-08)
+
+
+### Features
+
+* add meds mapping ([#452](https://github.com/bzkf/onco-analytics-on-fhir/issues/452)) ([fb1e990](https://github.com/bzkf/onco-analytics-on-fhir/commit/fb1e990766ae481c3ff160491e3bf5323527f58d))
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([#307](https://github.com/bzkf/onco-analytics-on-fhir/issues/307)) ([299ac94](https://github.com/bzkf/onco-analytics-on-fhir/commit/299ac94e50382c552eb87c84907c808f643e5892))
+* return successfully if no medication data is available ([#449](https://github.com/bzkf/onco-analytics-on-fhir/issues/449)) ([ab75b91](https://github.com/bzkf/onco-analytics-on-fhir/commit/ab75b91b15f15d605a659ccfb2d279f394333534))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump mistune from 3.2.0 to 3.2.1 ([#451](https://github.com/bzkf/onco-analytics-on-fhir/issues/451)) ([d6bd027](https://github.com/bzkf/onco-analytics-on-fhir/commit/d6bd02772a287a5e2160e5c6765d72d21c285090))
+
 ## [2.27.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.27.0...v2.27.1) (2026-05-07)
 
 
