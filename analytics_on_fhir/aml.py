@@ -20,6 +20,8 @@ FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
 FHIR_CODE_SYSTEM_ECOG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-allgemeiner-leistungszustand-ecog"
 FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
 FHIR_CODE_SYSTEM_OPS = "http://fhir.de/CodeSystem/bfarm/ops"
+FHIR_CODE_SYSTEM_ATC = "http://fhir.de/CodeSystem/bfarm/atc"
+FHIR_CODE_SYSTEM_PZN = "http://fhir.de/CodeSystem/ifa/pzn"
 FHIR_CODE_SYSTEM_BODYSITE = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
 
 FHIR_PROFILE_WEITERE_KLASSIFIKATIONEN = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-pr-onko-weitere-klassifikationen"
@@ -54,6 +56,7 @@ DATA_DICTIONARY = {
         "medication_atc_display": "Human-readable ATC description",
         "medication_pzn_code": "PZN code of the medication",
         "medication_pzn_display": "Human-readable PZN description",
+        "medication_ops_code": "OPS code of the medication",
         "ingredient": "Ingredient(s) of the medication",
     },
     "aml_all_med_reqs_stats_admins": {
@@ -317,19 +320,23 @@ class AMLStudy:
         ("medication_id", "Medication.id"),
         (
             "medication_atc_code",
-            "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').code",
+            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".code",
         ),
-        (
-            "medication_atc_display",
-            "code.coding.where(system='http://fhir.de/CodeSystem/bfarm/atc').display",
-        ),
+        # (
+        #     "medication_atc_display",
+        #     "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".display",
+        # ),
         (
             "medication_pzn_code",
-            "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').code",
+            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_PZN}')" + ".code",
         ),
         (
             "medication_pzn_display",
-            "code.coding.where(system='http://fhir.de/CodeSystem/ifa/pzn').display",
+            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_PZN}')" + ".display",
+        ),
+        (
+            "medication_ops_code",
+            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
         ),
         ("ingredient", "Medication.ingredient"),
     ]
@@ -408,6 +415,12 @@ class AMLStudy:
             return
 
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
+        # ATC display mapping via Excel sheet
+        atc_mapping_df = pd.read_excel(
+            HERE / "ATC GKV-AI 2026.xlsx", sheet_name="WIdO-Index 2026 alphabetisch"
+        )
+        atc_mapping = dict(zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"]))
+        med_df["medication_atc_display"] = med_df["medication_atc_code"].map(atc_mapping)
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
