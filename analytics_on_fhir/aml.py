@@ -416,9 +416,11 @@ class AMLStudy:
 
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
         # ATC display mapping via Excel sheet
-        atc_mapping_df = pd.read_excel(HERE / "ATC GKV-AI 2026.xlsx", sheet_name='WIdO-Index 2026 alphabetisch')
-        atc_mapping = dict(zip(atc_mapping_df['ATC-Code'], atc_mapping_df['ATC-Bedeutung']))
-        med_df['medication_atc_display'] = med_df['medication_atc_code'].map(atc_mapping)
+        atc_mapping_df = pd.read_excel(
+            HERE / "ATC GKV-AI 2026.xlsx", sheet_name="WIdO-Index 2026 alphabetisch"
+        )
+        atc_mapping = dict(zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"]))
+        med_df["medication_atc_display"] = med_df["medication_atc_code"].map(atc_mapping)
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
