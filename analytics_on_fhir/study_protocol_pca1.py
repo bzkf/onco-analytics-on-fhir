@@ -271,13 +271,18 @@ class StudyProtocolPCa1:
         )
         mii_conditions = self.spark.createDataFrame(mii_conditions_pandas)
         mii_conditions = mii_conditions.withColumnRenamed("condition_id", "condition_id_mii")
-        mii_conditions = mii_conditions.withColumn(
-            "diagnosis_onsetDateTime",
-            F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        ).withColumn(
-            "diagnosis_recordedDate",
-            F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        )
+
+        if (
+            "diagnosis_onsetDateTime" in mii_conditions.columns
+            and "diagnosis_recordedDate" in mii_conditions.columns
+        ):
+            mii_conditions = mii_conditions.withColumn(
+                "diagnosis_onsetDateTime",
+                F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            ).withColumn(
+                "diagnosis_recordedDate",
+                F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            )
         mii_conditions_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
             "condition_id", "asserted_date", "condition_patient_resource_id"
         ).join(

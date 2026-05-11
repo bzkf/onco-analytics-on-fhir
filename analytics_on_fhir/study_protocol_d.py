@@ -204,13 +204,17 @@ class StudyProtocolD:
         mii_condition_df_2_mals = mii_condition_df_2_mals.withColumnRenamed(
             "condition_id", "condition_id_mii"
         )
-        mii_condition_df_2_mals = mii_condition_df_2_mals.withColumn(
-            "diagnosis_onsetDateTime",
-            F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        ).withColumn(
-            "diagnosis_recordedDate",
-            F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        )
+        if (
+            "diagnosis_onsetDateTime" in mii_condition_df_2_mals
+            and "diagnosis_recordedDate" in mii_condition_df_2_mals
+        ):
+            mii_condition_df_2_mals = mii_condition_df_2_mals.withColumn(
+                "diagnosis_onsetDateTime",
+                F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            ).withColumn(
+                "diagnosis_recordedDate",
+                F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            )
         # filter col malignancy number == 1 - because dates relative to first tumor diagnosis date
         df_all_conditions_malignancy_number_1 = df_2_mals.filter(
             F.col("malignancy_number") == 1
@@ -273,13 +277,17 @@ class StudyProtocolD:
         mii_condition_df_1_mal = mii_condition_df_1_mal.withColumnRenamed(
             "condition_id", "condition_id_mii"
         )
-        mii_condition_df_1_mal = mii_condition_df_1_mal.withColumn(
-            "diagnosis_onsetDateTime",
-            F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        ).withColumn(
-            "diagnosis_recordedDate",
-            F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        )
+        if (
+            "diagnosis_onsetDateTime" in mii_condition_df_1_mal
+            and "diagnosis_recordedDate" in mii_condition_df_1_mal
+        ):
+            mii_condition_df_1_mal = mii_condition_df_1_mal.withColumn(
+                "diagnosis_onsetDateTime",
+                F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            ).withColumn(
+                "diagnosis_recordedDate",
+                F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            )
         df_1_mal_selection = df_1_mal.select("condition_patient_resource_id", "asserted_date")
         mii_condition_df_1_mal_asserted = mii_condition_df_1_mal.join(
             df_1_mal_selection,

@@ -198,6 +198,8 @@ def create_year_col_asserted_death(df: DataFrame) -> DataFrame:
         df = df.withColumn("deceased_datetime_year", F.year("deceased_datetime"))
     if "date_death" in df.columns:
         df = df.withColumn("date_death_year", F.year("date_death"))
+    if "therapy_start_date" in df.columns:
+        df = df.withColumn("therapy_start_date_year", F.year("therapy_start_date"))
 
     return df
 
@@ -297,6 +299,7 @@ def deidentify(
         "condition_id_mii",
         "patient_resource_id",
         "condition_patient_reference",
+        "parent_tnm_observation_id",
     ]
     hash_udf = _make_hash_udf(crypto_key)
 
@@ -656,6 +659,63 @@ def extract_gleason(
     )
 
     return observations_gleason
+
+
+def extract_tnm_parent(
+    pc: PathlingContext,
+    data: datasource.DataSource,
+    settings,
+    spark: SparkSession,
+) -> DataFrame:
+
+    logger.info("extract extract_tnm_parent from tnm observations")
+
+    observations_tnm_parent = data.view(
+        "Observation",
+        select=[
+            {
+                "column": [
+                    {
+                        "description": "Observation ID",
+                        "path": "getResourceKey()",
+                        "name": "parent_tnm_observation_id",
+                    },
+                    {
+                        "description": "TNM Observation Date",
+                        "path": "effective.ofType(dateTime)",
+                        "name": "parent_tnm_date",
+                    },
+                ]
+            },
+            {
+                "forEach": "hasMember",
+                "column": [
+                    {
+                        "description": "has member references to single TNM observations",
+                        "path": "getReferenceKey()",
+                        "name": "has_member",
+                    },
+                ],
+            },
+        ],
+        where=[
+            {
+                "description": (
+                    "Nur Observations, deren Observation.code.coding.code "
+                    "einer der erlaubten SCT codes ist."
+                ),
+                "path": (
+                    "code.coding.where("
+                    f"system = '{FHIR_SYSTEM_SCT}' and "
+                    "(code = '399390009' or code = '399537006' or code = '399588009')"
+                    ")"
+                    ".exists()"
+                ),
+            }
+        ],
+    )
+
+    return observations_tnm_parent
 
 
 def extract_t_tnm(
