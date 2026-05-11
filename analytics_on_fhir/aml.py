@@ -1025,6 +1025,11 @@ class AMLStudy:
         def crypto_hash(s: str):
             return hmac.new(CRYPTO_HASH_KEY, s.encode("utf-8"), hashlib.sha256).hexdigest()
 
+        def crypto_hash_nullable(value):
+            if pd.isna(value):
+                return pd.NA
+            return crypto_hash(str(value))
+
         patients_with_diagnoses = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_patients.csv"),
             parse_dates=[
@@ -1049,7 +1054,7 @@ class AMLStudy:
         ].apply(lambda x: crypto_hash(x))
 
         patients_with_diagnoses["patient_mrn"] = patients_with_diagnoses["patient_mrn"].apply(
-            lambda x: crypto_hash(str(x))
+            crypto_hash_nullable
         )
 
         columns_to_shift = [
@@ -1101,11 +1106,9 @@ class AMLStudy:
             DAY_SHIFT, unit="D"
         )
 
-        zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(
-            lambda x: crypto_hash(str(x))
-        )
+        zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
         zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
-            lambda x: crypto_hash(str(x))
+            crypto_hash_nullable
         )
 
         zenzy_df = zenzy_df.drop(
@@ -1132,7 +1135,7 @@ class AMLStudy:
         ]
 
         for column in columns_to_hash:
-            fhir_medikation[column] = fhir_medikation[column].apply(crypto_hash)
+            fhir_medikation[column] = fhir_medikation[column].apply(crypto_hash_nullable)
 
         columns_to_shift = ["datetime", "period_end"]
         for column in columns_to_shift:
