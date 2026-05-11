@@ -1023,6 +1023,9 @@ class AMLStudy:
         DAY_SHIFT = secrets.randbelow(201) - 100
 
         def crypto_hash(s: str):
+            if pd.isna(s):
+                 return pd.NA
+
             return hmac.new(CRYPTO_HASH_KEY, s.encode("utf-8"), hashlib.sha256).hexdigest()
 
         def crypto_hash_nullable(value):
