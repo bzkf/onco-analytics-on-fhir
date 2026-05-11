@@ -931,7 +931,7 @@ class StudyProtocolD:
 
         vitalstatus = vitalstatus.join(
             df_all_conditions,
-            on="condition_id",
+            F.col("patient_resource_id") == F.col("observation_patient_reference"),
             how="inner",
         )
         vitalstatus.show()
