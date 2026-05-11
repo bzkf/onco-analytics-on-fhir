@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.28.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.28.0...v2.28.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* vitalstatus ([#453](https://github.com/bzkf/onco-analytics-on-fhir/issues/453)) ([f7bbaee](https://github.com/bzkf/onco-analytics-on-fhir/commit/f7bbaeec485a5185180c4356c06ee6a84ffe2cae))
+
 ## [2.28.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.27.1...v2.28.0) (2026-05-08)
 
 
