@@ -1135,7 +1135,7 @@ class AMLStudy:
             fhir_medikation[column] = fhir_medikation[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         de_identified_dir = Path(self.output_dir) / "de-identified"
-        Path.mkdir(de_identified_dir, parents=True, exist_ok=True)
+        de_identified_dir.mkdir(parents=True, exist_ok=True)
 
         # lab_with_diagnosis.to_csv(de_identified_dir / "aml_matched_zenzy_labs.csv", index=False)
         zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
