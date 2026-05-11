@@ -1068,7 +1068,9 @@ class AMLStudy:
             dtype={"patient_mrn": str},
         ).drop(columns=["Volumen (ml)"])
 
-        zenzy_df = zenzy_df[zenzy_df["KIS-Patienten-ID"] != "*** VALUE NOT FOUND ***"]
+        zenzy_df = zenzy_df[
+            zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
+        ]
 
         zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
             zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
@@ -1102,11 +1104,13 @@ class AMLStudy:
         zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(
             lambda x: crypto_hash(str(x))
         )
-        zenzy_df["patient_mrn"] = zenzy_df["KIS-Patienten-ID"].apply(lambda x: crypto_hash(str(x)))
+        zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
+            lambda x: crypto_hash(str(x))
+        )
 
         zenzy_df = zenzy_df.drop(
             columns=[
-                "KIS-Patienten-ID",
+                self.settings.aml.csv_patient_column,
                 "Datum",
                 "Zeit",
                 "Herstellungsdatum",
