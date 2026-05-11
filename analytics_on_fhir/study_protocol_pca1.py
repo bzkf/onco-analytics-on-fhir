@@ -186,7 +186,9 @@ class StudyProtocolPCa1:
         )
 
         self.extract_vitalstatus(
-            df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
+            df_c61_conditions_patients_death_gleason_met.select(
+                "condition_id", "patient_resource_id", "asserted_date"
+            ),
             crypto_key,
         )
 
@@ -889,7 +891,7 @@ class StudyProtocolPCa1:
 
         vitalstatus = vitalstatus.join(
             df_all_conditions,
-            F.col("patient_resource_id") == F.col("observation_patient_reference"),
+            F.col("observation_patient_reference") == F.col("patient_resource_id"),
             how="inner",
         )
         vitalstatus.show()
