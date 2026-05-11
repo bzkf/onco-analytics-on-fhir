@@ -5,7 +5,6 @@ from fhir_constants import (
     FHIR_SYSTEM_GRADING,
     FHIR_SYSTEM_LOINC,
     FHIR_SYSTEM_SCT,
-    FHIR_SYSTEMS_VITALSTATUS,
     FHIR_SYSTEMS_WEITERE_KLASSIFIKATION,
 )
 from pathling import datasource
