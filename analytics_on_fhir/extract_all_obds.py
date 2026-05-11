@@ -123,13 +123,24 @@ class AllObdsPatients:
         mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumnRenamed(
             "condition_id", "condition_id_mii"
         )
-        mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumn(
-            "diagnosis_onsetDateTime",
-            F.to_date(F.col("diagnosis_onsetDateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        ).withColumn(
-            "diagnosis_recordedDate",
-            F.to_date(F.col("diagnosis_recordedDate"), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        )
+
+        if "diagnosis_onsetDateTime" in mii_conditions_all_obds_pats.columns:
+            mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumn(
+                "diagnosis_onsetDateTime",
+                F.to_date(
+                    F.col("diagnosis_onsetDateTime"),
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                ),
+            )
+
+        if "diagnosis_recordedDate" in mii_conditions_all_obds_pats.columns:
+            mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumn(
+                "diagnosis_recordedDate",
+                F.to_date(
+                    F.col("diagnosis_recordedDate"),
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                ),
+            )
 
         mii_conditions_all_obds_pats_asserted = df_all_obds_clean.select(
             "condition_patient_resource_id", "asserted_date"
@@ -387,7 +398,7 @@ class AllObdsPatients:
         df_tnm_parent = cast_study_dates(
             df_tnm_parent,
             [
-                "tnm_date",
+                "parent_tnm_date",
             ],
         )
         df_tnm_parent.show()
