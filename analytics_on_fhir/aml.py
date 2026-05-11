@@ -1074,17 +1074,8 @@ class AMLStudy:
             zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
         )
 
-        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].apply(
-            lambda x: (
-                x + pd.Timedelta(hours=1)
-                if (x.day == 31 and x.month == 3 and x.hour == 2)
-                or (x.day == 25 and x.month == 3 and x.hour == 2)
-                else x
-            )
-        )
-
         zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].dt.tz_localize(
-            "Europe/Berlin", ambiguous="NaT"
+            "Europe/Berlin", ambiguous="NaT", nonexistent="shift_forward"
         )
 
         zenzy_df["label"] = (
