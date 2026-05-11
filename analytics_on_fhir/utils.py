@@ -299,6 +299,7 @@ def deidentify(
         "condition_id_mii",
         "patient_resource_id",
         "condition_patient_reference",
+        "parent_tnm_observation_id",
     ]
     hash_udf = _make_hash_udf(crypto_key)
 
@@ -677,7 +678,7 @@ def extract_tnm_parent(
                     {
                         "description": "Observation ID",
                         "path": "getResourceKey()",
-                        "name": "parent_observation_id",
+                        "name": "parent_tnm_observation_id",
                     },
                     {
                         "description": "TNM Observation Date",
