@@ -1,4 +1,7 @@
+import hashlib
+import hmac
 import os
+import secrets
 from pathlib import Path
 
 import pandas as pd
@@ -419,7 +422,9 @@ class AMLStudy:
         atc_mapping_df = pd.read_excel(
             HERE / "ATC GKV-AI 2026.xlsx", sheet_name="WIdO-Index 2026 alphabetisch"
         )
-        atc_mapping = dict(zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"]))
+        atc_mapping = dict(
+            zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"], strict=True)
+        )
         med_df["medication_atc_display"] = med_df["medication_atc_code"].map(atc_mapping)
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
@@ -1012,3 +1017,137 @@ class AMLStudy:
             self.settings,
             suffix="obds_weitere_klassifikationen",
         )
+
+    def de_identify(self):
+        CRYPTO_HASH_KEY = secrets.token_bytes(256)
+        DAY_SHIFT = secrets.randbelow(201) - 100
+
+        def crypto_hash(s: str):
+            return hmac.new(CRYPTO_HASH_KEY, s.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        patients_with_diagnoses = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv"),
+            parse_dates=[
+                "diagnosis_onsetDateTime",
+                "diagnosis_recordedDate",
+                "deceased_dateTime",
+                "birth_date",
+            ],
+            dtype={"patient_mrn": str},
+        )
+
+        patients_with_diagnoses["condition_id"] = patients_with_diagnoses["condition_id"].apply(
+            lambda x: crypto_hash(x)
+        )
+
+        patients_with_diagnoses["birth_year"] = patients_with_diagnoses["birth_date"].dt.year
+
+        patients_with_diagnoses = patients_with_diagnoses.drop(columns=["birth_date"])
+
+        patients_with_diagnoses["condition_patient_reference"] = patients_with_diagnoses[
+            "condition_patient_reference"
+        ].apply(lambda x: crypto_hash(x))
+
+        patients_with_diagnoses["patient_mrn"] = patients_with_diagnoses["patient_mrn"].apply(
+            lambda x: crypto_hash(str(x))
+        )
+
+        columns_to_shift = [
+            "diagnosis_onsetDateTime",
+            "diagnosis_recordedDate",
+            "deceased_dateTime",
+        ]
+        for column in columns_to_shift:
+            patients_with_diagnoses[column] = patients_with_diagnoses[column] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
+            )
+
+        zenzy_df = pd.read_csv(
+            self.settings.aml.csv_input_file,
+            sep=";",
+            dtype={"patient_mrn": str},
+        ).drop(columns=["Volumen (ml)"])
+
+        zenzy_df = zenzy_df[zenzy_df["KIS-Patienten-ID"] != "*** VALUE NOT FOUND ***"]
+
+        zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
+            zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
+        )
+
+        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].apply(
+            lambda x: (
+                x + pd.Timedelta(hours=1)
+                if (x.day == 31 and x.month == 3 and x.hour == 2)
+                or (x.day == 25 and x.month == 3 and x.hour == 2)
+                else x
+            )
+        )
+
+        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].dt.tz_localize(
+            "Europe/Berlin", ambiguous="NaT"
+        )
+
+        zenzy_df["label"] = (
+            "Wirkstoff: "
+            + zenzy_df["Wirkstoff"].astype(str)
+            + " ("
+            + "Dosis: "
+            + zenzy_df["Dosis"].astype(str)
+            + ") "
+            + "Protokoll: "
+            + zenzy_df["Therapieprotokoll"].astype(str)
+            + " "
+            + "Applikationsart: "
+            + zenzy_df["Applikationsart"].astype(str)
+            + " "
+            + "Retoure?: "
+            + zenzy_df["Retoure"].astype(str)
+        )
+
+        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"] + pd.to_timedelta(
+            DAY_SHIFT, unit="D"
+        )
+
+        zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(
+            lambda x: crypto_hash(str(x))
+        )
+        zenzy_df["patient_mrn"] = zenzy_df["KIS-Patienten-ID"].apply(lambda x: crypto_hash(str(x)))
+
+        zenzy_df = zenzy_df.drop(
+            columns=[
+                "KIS-Patienten-ID",
+                "Datum",
+                "Zeit",
+                "Herstellungsdatum",
+                "Herstellungszeit",
+            ],
+            inplace=False,
+        )
+
+        fhir_medikation = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
+            sep=",",
+            parse_dates=["datetime", "period_end"],
+        )
+
+        columns_to_hash = [
+            "id",
+            "patient_reference",
+            "patient_mrn",
+        ]
+
+        for column in columns_to_hash:
+            fhir_medikation[column] = fhir_medikation[column].apply(crypto_hash)
+
+        columns_to_shift = ["datetime", "period_end"]
+        for column in columns_to_shift:
+            fhir_medikation[column] = fhir_medikation[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        de_identified_dir = Path(self.output_dir) / "de-identified"
+        Path.mkdir(de_identified_dir, parents=True, exist_ok=True)
+
+        # lab_with_diagnosis.to_csv(de_identified_dir / "aml_matched_zenzy_labs.csv", index=False)
+        zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
+        patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
+        # sap_medikation.to_csv(de_identified_dir / "sap_medikation.csv", index=False)
+        fhir_medikation.to_csv(de_identified_dir / "aml_fhir_medication.csv", index=False)
