@@ -22,6 +22,7 @@ from utils import (
     extract_surgeries,
     extract_systemtherapies,
     extract_t_tnm,
+    extract_tnm_parent,
     extract_uicc_tnm,
     extract_y_tnm,
     group_entity_or_parent,
@@ -381,6 +382,16 @@ class AllObdsPatients:
         )
 
     def extract_save_tnm(self, df_all_conditions, crypto_key):
+        # extract tnm parent and inner join to single files
+        df_tnm_parent = extract_tnm_parent(self.pc, self.data, self.settings, self.spark)
+        df_tnm_parent = cast_study_dates(
+            df_tnm_parent,
+            [
+                "tnm_date",
+            ],
+        )
+        df_tnm_parent.show()
+
         # extract t
         df_t_tnm = extract_t_tnm(self.pc, self.data, self.settings, self.spark)
         df_t_tnm = cast_study_dates(
@@ -394,6 +405,14 @@ class AllObdsPatients:
             df_all_conditions,
             on="condition_id",
             how="right",
+        )
+        df_t_tnm.show()
+
+        # join parent
+        df_t_tnm = df_t_tnm.alias("t").join(
+            df_tnm_parent.alias("p"),
+            F.col("t.observation_id") == F.col("p.has_member"),
+            "left",
         )
         df_t_tnm.show()
 
@@ -420,6 +439,12 @@ class AllObdsPatients:
             on="condition_id",
             how="right",
         )
+        # join parent
+        df_n_tnm = df_n_tnm.alias("n").join(
+            df_tnm_parent.alias("p"),
+            F.col("n.observation_id") == F.col("p.has_member"),
+            "left",
+        )
         df_n_tnm.show()
 
         save_final_df(df_n_tnm, self.settings, suffix="n_tnm")
@@ -444,6 +469,12 @@ class AllObdsPatients:
             df_all_conditions,
             on="condition_id",
             how="right",
+        )
+        # join parent
+        df_m_tnm = df_m_tnm.alias("m").join(
+            df_tnm_parent.alias("p"),
+            F.col("m.observation_id") == F.col("p.has_member"),
+            "left",
         )
         df_m_tnm.show()
 
@@ -472,6 +503,12 @@ class AllObdsPatients:
             on="condition_id",
             how="right",
         )
+        # join parent
+        df_y_tnm = df_y_tnm.alias("y").join(
+            df_tnm_parent.alias("p"),
+            F.col("y.observation_id") == F.col("p.has_member"),
+            "left",
+        )
         df_y_tnm.show()
 
         save_final_df(df_y_tnm, self.settings, suffix="y_tnm")
@@ -498,6 +535,12 @@ class AllObdsPatients:
             df_all_conditions,
             on="condition_id",
             how="right",
+        )
+        # join parent
+        df_uicc_tnm = df_uicc_tnm.alias("u").join(
+            df_tnm_parent.alias("p"),
+            F.col("u.observation_id") == F.col("p.has_member"),
+            "left",
         )
         df_uicc_tnm.show()
 
@@ -626,7 +669,7 @@ class AllObdsPatients:
 
         vitalstatus = vitalstatus.join(
             df_all_conditions,
-            on="condition_id",
+            F.col("patient_resource_id") == F.col("observation_patient_reference"),
             how="inner",
         )
         vitalstatus.show()

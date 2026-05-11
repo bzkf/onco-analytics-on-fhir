@@ -267,11 +267,6 @@ def vitalstatus_view(
                         "path": "effective.ofType(dateTime)",
                         "name": "effective_dateTime",
                     },
-                    {
-                        "description": "Focus Condition (Primary Diagnosis)",
-                        "path": "focus.first().getReferenceKey()",
-                        "name": "condition_id",
-                    },
                 ]
             },
             {
@@ -282,10 +277,14 @@ def vitalstatus_view(
                 ],
             },
         ],
+        where=[
+            {
+                "description": "Only vitalstatus observations",
+                "path": f"code.coding.where(system='{FHIR_SYSTEM_LOINC}' "
+                + "and code='67162-8').exists()",
+            }
+        ],
     )
     vitalstatus.show()
-    vitalstatus = vitalstatus.filter(
-        F.col("meta_profile").startswith(f"{FHIR_SYSTEMS_VITALSTATUS}")
-    )
 
     return vitalstatus
