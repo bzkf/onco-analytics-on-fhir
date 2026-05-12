@@ -205,8 +205,8 @@ class StudyProtocolD:
             "condition_id", "condition_id_mii"
         )
         if (
-            "diagnosis_onsetDateTime" in mii_condition_df_2_mals
-            and "diagnosis_recordedDate" in mii_condition_df_2_mals
+            "diagnosis_onsetDateTime" in mii_condition_df_2_mals.columns
+            and "diagnosis_recordedDate" in mii_condition_df_2_mals.columns
         ):
             mii_condition_df_2_mals = mii_condition_df_2_mals.withColumn(
                 "diagnosis_onsetDateTime",
