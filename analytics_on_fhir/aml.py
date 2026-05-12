@@ -365,26 +365,38 @@ class AMLStudy:
             ("status", f"{resource_type}.status"),
             ("medication_reference", f"{resource_type}.medicationReference.reference"),
         ]
-        result = self.search.trade_rows_for_dataframe(
-            df=patient_df,
-            resource_type=resource_type,
-            request_params={
-                "_count": self.settings.fhir.page_count,
-                "_include": f"{resource_type}:medication",
-            },
-            df_constraints={"subject": "condition_patient_reference"},
-            with_ref=False,
-            fhir_paths=common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS,
-        )
 
-        if len(result) > 0:
-            resource_df = result[resource_type]
-            medication_df = result["Medication"]
-            logger.info(f"all_{resource_type}_df size: {resource_df.count()}. {resource_df.dtypes}")
-            return resource_df, medication_df
+        fhir_paths = common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS
 
-        logger.info(f"Found no {resource_type}/Medication FHIR resources")
-        return None, None
+        resource_chunks: list[pd.DataFrame] = []
+        medication_chunks: list[pd.DataFrame] = []
+
+        indices = list(range(len(patient_df)))
+        for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
+            chunk_df = patient_df.iloc[list(chunk_indices)]
+            result = self.search.trade_rows_for_dataframe(
+                df=chunk_df,
+                resource_type=resource_type,
+                request_params={
+                    "_count": self.settings.fhir.page_count,
+                    "_include": f"{resource_type}:medication",
+                },
+                df_constraints={"subject": "condition_patient_reference"},
+                with_ref=False,
+                fhir_paths=fhir_paths,
+            )
+            if len(result) > 0:
+                resource_chunks.append(result[resource_type])
+                medication_chunks.append(result["Medication"])
+
+        if not resource_chunks:
+            logger.info(f"Found no {resource_type}/Medication FHIR resources")
+            return None, None
+
+        resource_df = pd.concat(resource_chunks, ignore_index=True)
+        medication_df = pd.concat(medication_chunks, ignore_index=True)
+        logger.info(f"all_{resource_type}_df size: {len(resource_df)}. {resource_df.dtypes}")
+        return resource_df, medication_df
 
     def extract_meds(self):  # , patient_list):
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
