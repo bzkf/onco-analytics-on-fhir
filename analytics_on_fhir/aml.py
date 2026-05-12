@@ -15,6 +15,9 @@ from settings import Settings
 from urllib3 import Retry
 from utils import save_final_df
 
+pd.options.mode.string_storage = "pyarrow"
+pd.options.future.infer_string = True
+
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
 FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
