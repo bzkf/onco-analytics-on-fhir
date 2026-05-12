@@ -264,8 +264,8 @@ class AMLStudy:
 
         merged_df.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
-        logger.info("merged_df size: {}", merged_df.count())
-        logger.info("patient_df size: {}", patient_df.count())
+        logger.info(f"merged_df size: {merged_df.count()}. {merged_df.dtypes}")
+        logger.info(f"patient_df size: {patient_df.count()}. {patient_df.dtypes}")
 
         patient_list = merged_df["condition_patient_reference"]
         patient_list.drop_duplicates(inplace=True)
@@ -315,7 +315,7 @@ class AMLStudy:
             lab_df["lab_codeableconcept_code"] = None
         lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
 
-        logger.info("all_labs_df size: {}", lab_df.count())
+        logger.info(f"all_labs_df size: {lab_df.count()}. {lab_df.dtypes}")
 
         self.post_process_lab_values(lab_df)
 
@@ -325,10 +325,10 @@ class AMLStudy:
             "medication_atc_code",
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".code",
         ),
-        # (
-        #     "medication_atc_display",
-        #     "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".display",
-        # ),
+        (
+            "medication_code_text",
+            "code.text",
+        ),
         (
             "medication_pzn_code",
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_PZN}')" + ".code",
@@ -373,12 +373,14 @@ class AMLStudy:
             with_ref=False,
             fhir_paths=common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS,
         )
+
         if len(result) > 0:
             resource_df = result[resource_type]
             medication_df = result["Medication"]
-            logger.info("all_{}_df size: {}", resource_type, resource_df.count())
+            logger.info(f"all_{resource_type}_df size: {resource_df.count()}. {resource_df.dtypes}")
             return resource_df, medication_df
-        logger.info("Found no {}/Medication FHIR resources", resource_type)
+
+        logger.info(f"Found no {resource_type}/Medication FHIR resources")
         return None, None
 
     def extract_meds(self):  # , patient_list):
