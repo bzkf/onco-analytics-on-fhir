@@ -110,7 +110,6 @@ jobs:
         with:
           files: |
             dist/*.tgz
-            dist/*.tar.gz.*
             dist/*.sha256
 
   provenance:
