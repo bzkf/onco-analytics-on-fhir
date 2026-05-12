@@ -374,11 +374,11 @@ class AMLStudy:
             return resource_df, medication_df
         logger.info("Found no {}/Medication FHIR resources", resource_type)
         return None, None
-    
+
     def load_ops_codes(self, filepath):
         ops_code_map = {}
-        with open(filepath, 'r', encoding='utf-8') as file:
-            content = csv.reader(file, delimiter=';')
+        with open(filepath, "r", encoding="utf-8") as file:
+            content = csv.reader(file, delimiter=";")
             for row in content:
                 if len(row) >= 9:
                     code = row[6]
@@ -421,7 +421,7 @@ class AMLStudy:
         if med_req_df is None and med_statement_df is None and med_administration_df is None:
             logger.info("Found no medication data to given patients")
             return
-        
+
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
 
         if "medication_atc_code" in med_df.columns:
