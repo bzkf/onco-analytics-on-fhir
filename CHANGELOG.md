@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.28.4](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.28.3...v2.28.4) (2026-05-12)
+
+
+### Bug Fixes
+
+* fix missing  .columns ([#461](https://github.com/bzkf/onco-analytics-on-fhir/issues/461)) ([762aa8f](https://github.com/bzkf/onco-analytics-on-fhir/commit/762aa8f453111b97b69673bf5044b06881f5fb0b))
+
 ## [2.28.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.28.2...v2.28.3) (2026-05-11)
 
 
