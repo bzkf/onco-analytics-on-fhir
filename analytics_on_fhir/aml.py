@@ -429,18 +429,26 @@ class AMLStudy:
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
 
         logger.info("Mapping ATC codes to display values using Excel sheet")
-        # ATC display mapping via Excel sheet
+        # ATC display mapping via Excel sheet — load only the two needed columns
         atc_mapping_df = pd.read_excel(
-            HERE / "ATC GKV-AI 2026.xlsx", sheet_name="WIdO-Index 2026 alphabetisch"
+            HERE / "ATC GKV-AI 2026.xlsx",
+            sheet_name="WIdO-Index 2026 alphabetisch",
+            usecols=["ATC-Code", "ATC-Bedeutung"],
         )
 
-        logger.info("Loaded ATC mapping with {} entries", atc_mapping_df.count())
-        atc_mapping = dict(
-            zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"], strict=True)
-        )
-
+        logger.info("Loaded ATC mapping with {} entries", len(atc_mapping_df))
         logger.info("Mapping ATC codes to display values")
-        med_df["medication_atc_display"] = med_df["medication_atc_code"].map(atc_mapping)
+        med_df = med_df.merge(
+            atc_mapping_df.rename(
+                columns={
+                    "ATC-Code": "medication_atc_code",
+                    "ATC-Bedeutung": "medication_atc_display",
+                }
+            ),
+            on="medication_atc_code",
+            how="left",
+        )
+
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
