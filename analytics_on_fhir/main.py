@@ -231,9 +231,7 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
             aml_summary_statistics()
             aml.extract_meds()
             de_identify_input_files = [
-                pathlib.Path(settings.aml.csv_input_file)
-                if settings.aml.csv_input_file
-                else None,
+                pathlib.Path(settings.aml.csv_input_file) if settings.aml.csv_input_file else None,
                 pathlib.Path(aml.output_dir) / "aml_all_med_reqs_stats_admins.csv",
             ]
             if all(path is not None and path.is_file() for path in de_identify_input_files):

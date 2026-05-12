@@ -384,6 +384,7 @@ class AMLStudy:
     def extract_meds(self):  # , patient_list):
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
 
+        logger.info("Fetching MedicationRequest")
         med_req_df, med_df_1 = self._fetch_medication_resource(
             patient_df=patient_df,
             resource_type="MedicationRequest",
@@ -394,6 +395,7 @@ class AMLStudy:
             ],
         )
 
+        logger.info("Fetching MedicationStatement")
         med_statement_df, med_df_2 = self._fetch_medication_resource(
             patient_df=patient_df,
             resource_type="MedicationStatement",
@@ -404,6 +406,7 @@ class AMLStudy:
             ],
         )
 
+        logger.info("Fetching MedicationAdministration")
         med_administration_df, med_df_3 = self._fetch_medication_resource(
             patient_df=patient_df,
             resource_type="MedicationAdministration",
@@ -417,14 +420,21 @@ class AMLStudy:
             logger.info("Found no medication data to given patients")
             return
 
+        logger.info("Combining medication data from different resource types")
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
+
+        logger.info("Mapping ATC codes to display values using Excel sheet")
         # ATC display mapping via Excel sheet
         atc_mapping_df = pd.read_excel(
             HERE / "ATC GKV-AI 2026.xlsx", sheet_name="WIdO-Index 2026 alphabetisch"
         )
+
+        logger.info("Loaded ATC mapping with {} entries", atc_mapping_df.count())
         atc_mapping = dict(
             zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"], strict=True)
         )
+
+        logger.info("Mapping ATC codes to display values")
         med_df["medication_atc_display"] = med_df["medication_atc_code"].map(atc_mapping)
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
@@ -1024,7 +1034,7 @@ class AMLStudy:
 
         def crypto_hash(s: str):
             if pd.isna(s):
-                 return pd.NA
+                return pd.NA
 
             return hmac.new(CRYPTO_HASH_KEY, s.encode("utf-8"), hashlib.sha256).hexdigest()
 
