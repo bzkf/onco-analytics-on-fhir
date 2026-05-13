@@ -67,12 +67,36 @@ class Settings:
     delta_database_path: str = ""
     fhir_bundles_path: str = os.path.join(HERE, "../tests/fixtures/fhir/")
     study_name: StudyNames = StudyNames.ALL
+    study_names: list[StudyNames] = ts.option(
+        default=[],
+        help=(
+            "Comma-separated list of study names to run (e.g. 'embark_rwd,dq'). "
+            "If set, takes precedence over STUDY_NAME."
+        ),
+    )
     results_directory_path: str = os.path.join(HERE, "results/")
     location: str = "BZKF"
 
 
 converter = ts.converters.get_default_cattrs_converter()
 converter.register_structure_hook(StudyNames, ts.converters.to_enum_by_value)
+
+
+def _structure_study_names_list(val, _typ):
+    if isinstance(val, list):
+        return [StudyNames(v) if isinstance(v, str) else v for v in val]
+    if isinstance(val, str):
+        return [StudyNames(v.strip()) for v in val.split(",") if v.strip()]
+    raise ValueError(
+        f"Cannot convert {val!r} to list[StudyNames]. "
+        f"Expected a comma-separated string or list of study names."
+    )
+
+
+converter.register_structure_hook_func(
+    lambda t: t == list[StudyNames],
+    _structure_study_names_list,
+)
 
 loaders = [
     *ts.default_loaders("analytics_on_fhir", env_prefix=""),

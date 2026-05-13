@@ -123,8 +123,20 @@ def main():
             ],
         )
 
-    study_name = settings.study_name
-    if settings.study_name == StudyNames.ALL:
+    if settings.study_names:
+        studies_to_run = settings.study_names
+        if StudyNames.ALL in studies_to_run:
+            logger.info("Running all studies in sequence (via STUDY_NAMES)")
+            studies_to_run = [s for s in StudyNames if s != StudyNames.ALL]
+        else:
+            logger.info(f"Running studies: {[s.value for s in studies_to_run]}")
+        for study_name in studies_to_run:
+            # this is really hacky: currently the "settings" object
+            # is a bit too coupled with some helper functions
+            settings.study_name = study_name
+            logger.info(f"Running {study_name.value}")
+            run_study(study_name, data, pc)
+    elif settings.study_name == StudyNames.ALL:
         logger.info("Running all studies in sequence")
         for study_name in StudyNames:
             # this is really hacky: currently the "settings" object
@@ -133,7 +145,7 @@ def main():
             logger.info(f"Running {study_name.value}")
             run_study(study_name, data, pc)
     else:
-        run_study(study_name, data, pc)
+        run_study(settings.study_name, data, pc)
 
 
 def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
