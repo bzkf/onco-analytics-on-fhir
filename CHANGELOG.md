@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.0...v2.29.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* remove file existence check before de-identifying and re-added optional sap medication de-identification ([#468](https://github.com/bzkf/onco-analytics-on-fhir/issues/468)) ([6f36739](https://github.com/bzkf/onco-analytics-on-fhir/commit/6f36739541d0d1c0375bb3bb60abcbb0dc3b9c3b))
+
 ## [2.29.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.28.4...v2.29.0) (2026-05-13)
 
 
