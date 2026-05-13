@@ -53,9 +53,10 @@ patients_with_diagnoses["patient_mrn"] = patients_with_diagnoses["patient_mrn"].
 
 columns_to_shift = ["diagnosis_onsetDateTime", "diagnosis_recordedDate", "deceased_dateTime"]
 for column in columns_to_shift:
-    patients_with_diagnoses[column] = patients_with_diagnoses[column] + pd.to_timedelta(
-        DAY_SHIFT, unit="D"
-    )
+    if column in patients_with_diagnoses.columns:
+        patients_with_diagnoses[column] = patients_with_diagnoses[column] + pd.to_timedelta(
+            DAY_SHIFT, unit="D"
+        )
 
 
 diagnosis_unique = patients_with_diagnoses.drop_duplicates(
