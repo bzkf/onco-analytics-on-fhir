@@ -2490,7 +2490,7 @@
             label,
             data: SITES.map((s) => s.tumours[i]),
             backgroundColor: rgba(tumourColors[i], 0.82),
-            borderRadius: i === tumourLabels.length - 1 ? { topLeft: 4, topRight: 4 } : 0,
+            borderRadius: i === tumourLabels.length - 1 ? { topLeft: 4, topRight: 4 } : undefined,
           })),
         },
         options: {
