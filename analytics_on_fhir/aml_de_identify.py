@@ -183,13 +183,15 @@ zenzy_df = zenzy_df.drop(
 #     "patient_id",
 # ]
 # for column in columns_to_hash:
-#     obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[column].apply(crypto_hash)
+#     obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[
+#         column
+#     ].apply(crypto_hash)
 
 # columns_to_shift = ["effective_date_time"]
 # for column in columns_to_shift:
-#     obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[column] + pd.to_timedelta(
-#         DAY_SHIFT, unit="D"
-#     )
+#     obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[
+#         column
+#     ] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
 # with open(
 #     HERE / "results" / "aml" / "2026-04-15 F_MED_REZEPTE_202604151635 Pseudonymisiert_qs.csv",
