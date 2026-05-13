@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.29.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.28.4...v2.29.0) (2026-05-13)
+
+
+### Features
+
+* adds ops mappings for aml ([#463](https://github.com/bzkf/onco-analytics-on-fhir/issues/463)) ([ed1879e](https://github.com/bzkf/onco-analytics-on-fhir/commit/ed1879e269d3f84467e918fb4a63c90b03426d44))
+* integrated aml de-identification code ([#460](https://github.com/bzkf/onco-analytics-on-fhir/issues/460)) ([c661d79](https://github.com/bzkf/onco-analytics-on-fhir/commit/c661d79cb34f02d4149dedf520e2d590f1b3fa11))
+
+
+### Bug Fixes
+
+* fix d again ([#465](https://github.com/bzkf/onco-analytics-on-fhir/issues/465)) ([13dd6f8](https://github.com/bzkf/onco-analytics-on-fhir/commit/13dd6f833fa47144a006ef48c2b96794e4de5f15))
+
 ## [2.28.4](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.28.3...v2.28.4) (2026-05-12)
 
 
