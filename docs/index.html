@@ -1,0 +1,1998 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oncology Research Data Portal – BZKF</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+      /* ─── Reset & Base ─────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --teal: #0d9488;
+        --teal-dark: #0f766e;
+        --teal-light: #ccfbf1;
+        --slate: #1e293b;
+        --slate-mid: #334155;
+        --slate-light: #64748b;
+        --bg: #f0fdf4;
+        --card-bg: #ffffff;
+        --accent-amber: #f59e0b;
+        --accent-rose: #f43f5e;
+        --accent-violet: #7c3aed;
+        --accent-blue: #3b82f6;
+        --accent-orange: #ea580c;
+        --radius: 16px;
+        --shadow: 0 4px 24px rgba(13, 148, 136, 0.10);
+        --shadow-hover: 0 8px 32px rgba(13, 148, 136, 0.18);
+        --font: "Inter", system-ui, sans-serif;
+      }
+
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--slate);
+        line-height: 1.6;
+      }
+
+      a {
+        color: var(--teal);
+        text-decoration: none;
+      }
+
+      /* ─── Hero / Header ────────────────────────────────────── */
+      header {
+        background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
+        color: #fff;
+        padding: 64px 24px 80px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      header::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      }
+
+      .hero-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 999px;
+        padding: 4px 16px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+      }
+
+      header h1 {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+      }
+
+      header p.subtitle {
+        font-size: 1.15rem;
+        opacity: 0.85;
+        max-width: 640px;
+        margin: 0 auto 32px;
+      }
+
+      .hero-stats {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      .hero-stat {
+        text-align: center;
+      }
+
+      .hero-stat .num {
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .hero-stat .label {
+        font-size: 0.8rem;
+        opacity: 0.75;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      /* ─── Nav Pills ─────────────────────────────────────────── */
+      nav {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 20px 24px;
+        background: var(--card-bg);
+        border-bottom: 1px solid #e2e8f0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      }
+
+      nav a {
+        padding: 6px 18px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--slate-light);
+        transition: all 0.2s;
+        border: 1px solid transparent;
+      }
+
+      nav a:hover {
+        background: var(--teal-light);
+        color: var(--teal-dark);
+        border-color: var(--teal);
+      }
+
+      /* ─── Layout ────────────────────────────────────────────── */
+      main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+
+      section {
+        margin-bottom: 72px;
+        scroll-margin-top: 80px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+
+      .section-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        flex-shrink: 0;
+      }
+
+      .section-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--slate);
+      }
+
+      .section-header p {
+        font-size: 0.9rem;
+        color: var(--slate-light);
+        margin-top: 2px;
+      }
+
+      /* ─── KPI Cards ──────────────────────────────────────────── */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 40px;
+      }
+
+      .kpi-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 24px 20px;
+        box-shadow: var(--shadow);
+        border-left: 4px solid transparent;
+        transition: box-shadow 0.2s, transform 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .kpi-card:hover {
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+      }
+
+      .kpi-card .kpi-icon {
+        font-size: 1.8rem;
+        margin-bottom: 8px;
+      }
+
+      .kpi-card .kpi-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+
+      .kpi-card .kpi-label {
+        font-size: 0.8rem;
+        color: var(--slate-light);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .kpi-card .kpi-sub {
+        font-size: 0.75rem;
+        color: var(--teal);
+        font-weight: 600;
+        margin-top: 6px;
+      }
+
+      /* ─── Chart Grid ─────────────────────────────────────────── */
+      .chart-grid {
+        display: grid;
+        gap: 20px;
+      }
+
+      .chart-grid-2 {
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      }
+
+      .chart-grid-3 {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+
+      .chart-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 28px 24px 20px;
+        box-shadow: var(--shadow);
+        transition: box-shadow 0.2s, transform 0.2s;
+      }
+
+      .chart-card:hover {
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+      }
+
+      .chart-card h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--slate);
+        margin-bottom: 4px;
+      }
+
+      .chart-card .chart-desc {
+        font-size: 0.8rem;
+        color: var(--slate-light);
+        margin-bottom: 20px;
+      }
+
+      .chart-wrap {
+        position: relative;
+        width: 100%;
+      }
+
+      /* ─── Tag Badges ─────────────────────────────────────────── */
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .tag {
+        background: var(--teal-light);
+        color: var(--teal-dark);
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      /* ─── Data Table ─────────────────────────────────────────── */
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card-bg);
+        font-size: 0.88rem;
+      }
+
+      thead {
+        background: linear-gradient(90deg, var(--teal-dark), #1d4ed8);
+        color: #fff;
+      }
+
+      th {
+        padding: 14px 18px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      td {
+        padding: 12px 18px;
+        border-bottom: 1px solid #f1f5f9;
+        color: var(--slate);
+      }
+
+      tbody tr:hover {
+        background: #f8fafc;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+
+      /* ─── Progress Bar ───────────────────────────────────────── */
+      .progress-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .progress-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .progress-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        width: 160px;
+        flex-shrink: 0;
+        color: var(--slate);
+      }
+
+      .progress-bar-wrap {
+        flex: 1;
+        background: #e2e8f0;
+        border-radius: 999px;
+        height: 10px;
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 1s ease;
+      }
+
+      .progress-value {
+        font-size: 0.8rem;
+        font-weight: 700;
+        width: 44px;
+        text-align: right;
+        color: var(--slate-light);
+      }
+
+      /* ─── TNM Grid ───────────────────────────────────────────── */
+      .tnm-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+
+      .tnm-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 22px;
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .tnm-card .tnm-letter {
+        font-size: 2.5rem;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+
+      .tnm-card .tnm-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--slate-light);
+        margin-bottom: 14px;
+      }
+
+      /* ─── Timeline ───────────────────────────────────────────── */
+      .timeline {
+        position: relative;
+        padding-left: 32px;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, var(--teal), #1d4ed8);
+        border-radius: 999px;
+      }
+
+      .timeline-item {
+        position: relative;
+        margin-bottom: 28px;
+      }
+
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -28px;
+        top: 6px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--teal);
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 3px var(--teal-light);
+      }
+
+      .timeline-date {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--teal-dark);
+        margin-bottom: 4px;
+      }
+
+      .timeline-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--slate);
+        margin-bottom: 2px;
+      }
+
+      .timeline-desc {
+        font-size: 0.82rem;
+        color: var(--slate-light);
+      }
+
+      /* ─── Info Cards ─────────────────────────────────────────── */
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+
+      .info-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 22px;
+        box-shadow: var(--shadow);
+        border-top: 3px solid transparent;
+      }
+
+      .info-card h4 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+      }
+
+      .info-card p {
+        font-size: 0.85rem;
+        color: var(--slate-light);
+        line-height: 1.55;
+      }
+
+      /* ─── Footer ─────────────────────────────────────────────── */
+      footer {
+        background: var(--slate);
+        color: rgba(255, 255, 255, 0.7);
+        text-align: center;
+        padding: 32px 24px;
+        font-size: 0.82rem;
+        line-height: 1.8;
+      }
+
+      footer strong {
+        color: #fff;
+      }
+
+      footer a {
+        color: var(--teal-light);
+      }
+
+      /* ─── Utility ─────────────────────────────────────────────── */
+      .disclaimer {
+        background: #fefce8;
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        padding: 12px 18px;
+        font-size: 0.8rem;
+        color: #92400e;
+        margin-bottom: 32px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      @media (max-width: 600px) {
+        .hero-stats {
+          gap: 24px;
+        }
+
+        .chart-grid-2,
+        .chart-grid-3 {
+          grid-template-columns: 1fr;
+        }
+
+        .progress-label {
+          width: 120px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ═══ HERO ═══════════════════════════════════════════════════ -->
+    <header>
+      <div class="hero-badge">🔬 BZKF · Research Data Portal</div>
+      <h1>Oncology Research Data<br />Available for Study</h1>
+      <p class="subtitle">
+        A structured overview of harmonised, FHIR-encoded clinical data from the
+        Bavarian Cancer Research Centre — ready for federated, privacy-preserving
+        analysis.
+      </p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="num">12,847</div>
+          <div class="label">Patients</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">6</div>
+          <div class="label">Partner Sites</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">94,213</div>
+          <div class="label">FHIR Resources</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">2015–2024</div>
+          <div class="label">Observation Period</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══ NAV ════════════════════════════════════════════════════ -->
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#diagnoses">Diagnoses</a>
+      <a href="#tnm">TNM Staging</a>
+      <a href="#labs">Lab Values</a>
+      <a href="#encounters">Encounters</a>
+      <a href="#treatments">Treatments</a>
+      <a href="#demographics">Demographics</a>
+      <a href="#fhir">FHIR Resources</a>
+    </nav>
+
+    <main>
+      <!-- ─── DISCLAIMER ──────────────────────────────────────────── -->
+      <div class="disclaimer">
+        ⚠️ <strong>Demo data only.</strong> All figures shown on this page are
+        synthetic dummy data for illustration purposes. They do not represent
+        real patient records.
+      </div>
+
+      <!-- ═══ OVERVIEW KPIs ══════════════════════════════════════════ -->
+      <section id="overview">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #ccfbf1; color: var(--teal)"
+          >
+            📊
+          </div>
+          <div>
+            <h2>Dataset at a Glance</h2>
+            <p>
+              High-level summary of all available data domains and their
+              coverage
+            </p>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-color: var(--teal)">
+            <div class="kpi-icon">🏥</div>
+            <div class="kpi-value" style="color: var(--teal)">12,847</div>
+            <div class="kpi-label">Total Patients</div>
+            <div class="kpi-sub">↑ 8 % vs. prior cohort</div>
+          </div>
+          <div class="kpi-card" style="border-color: var(--accent-blue)">
+            <div class="kpi-icon">🩺</div>
+            <div class="kpi-value" style="color: var(--accent-blue)">
+              31,204
+            </div>
+            <div class="kpi-label">Diagnoses (Conditions)</div>
+            <div class="kpi-sub">ICD-10-GM coded</div>
+          </div>
+          <div class="kpi-card" style="border-color: var(--accent-violet)">
+            <div class="kpi-icon">🔬</div>
+            <div class="kpi-value" style="color: var(--accent-violet)">
+              218,541
+            </div>
+            <div class="kpi-label">Lab Observations</div>
+            <div class="kpi-sub">LOINC-mapped values</div>
+          </div>
+          <div class="kpi-card" style="border-color: var(--accent-amber)">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-value" style="color: var(--accent-amber)">
+              67,390
+            </div>
+            <div class="kpi-label">Encounters</div>
+            <div class="kpi-sub">In-/outpatient combined</div>
+          </div>
+          <div class="kpi-card" style="border-color: var(--accent-rose)">
+            <div class="kpi-icon">💉</div>
+            <div class="kpi-value" style="color: var(--accent-rose)">
+              48,917
+            </div>
+            <div class="kpi-label">Medication Requests</div>
+            <div class="kpi-sub">SNOMED + ATC coded</div>
+          </div>
+          <div class="kpi-card" style="border-color: var(--accent-orange)">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value" style="color: var(--accent-orange)">
+              9,103
+            </div>
+            <div class="kpi-label">TNM Stagings</div>
+            <div class="kpi-sub">oBDS / UICC coded</div>
+          </div>
+        </div>
+
+        <!-- Coverage progress bars -->
+        <div class="chart-card">
+          <h3>Data Domain Completeness</h3>
+          <p class="chart-desc">
+            Percentage of patients with at least one record in each domain
+          </p>
+          <div class="progress-list" id="completeness-bars"></div>
+        </div>
+      </section>
+
+      <!-- ═══ DIAGNOSES ══════════════════════════════════════════════ -->
+      <section id="diagnoses">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #dbeafe; color: var(--accent-blue)"
+          >
+            🩺
+          </div>
+          <div>
+            <h2>Diagnoses</h2>
+            <p>Distribution of oncological diagnoses (ICD-10-GM)</p>
+          </div>
+        </div>
+
+        <div class="chart-grid chart-grid-2">
+          <div class="chart-card">
+            <h3>Top 10 Primary Tumour Entities</h3>
+            <p class="chart-desc">By patient count — ICD-10 chapter C</p>
+            <div class="chart-wrap" style="height: 340px">
+              <canvas id="diagnosisBar"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Tumour Entity Distribution</h3>
+            <p class="chart-desc">Proportional share across all diagnoses</p>
+            <div class="chart-wrap" style="height: 340px">
+              <canvas id="diagnosisDoughnut"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Available ICD-10 Code Groups</h3>
+          <p class="chart-desc">Oncological code ranges present in the dataset</p>
+          <div class="tag-list">
+            <span class="tag">C00–C14 Lip/Oral cavity</span>
+            <span class="tag">C15–C26 Digestive organs</span>
+            <span class="tag">C30–C39 Respiratory</span>
+            <span class="tag">C40–C41 Bone</span>
+            <span class="tag">C43–C44 Skin</span>
+            <span class="tag">C45–C49 Soft tissue</span>
+            <span class="tag">C50 Breast</span>
+            <span class="tag">C51–C58 Female genital</span>
+            <span class="tag">C60–C63 Male genital</span>
+            <span class="tag">C64–C68 Urinary tract</span>
+            <span class="tag">C69–C72 Eye/Brain/CNS</span>
+            <span class="tag">C73–C75 Endocrine</span>
+            <span class="tag">C76–C80 Ill-defined sites</span>
+            <span class="tag">C81–C96 Haematological</span>
+            <span class="tag">D00–D09 CIS</span>
+            <span class="tag">D37–D48 Uncertain behaviour</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ TNM STAGING ════════════════════════════════════════════ -->
+      <section id="tnm">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #ede9fe; color: var(--accent-violet)"
+          >
+            📋
+          </div>
+          <div>
+            <h2>TNM Staging</h2>
+            <p>
+              Tumour · Node · Metastasis classification at time of diagnosis
+            </p>
+          </div>
+        </div>
+
+        <div class="tnm-grid">
+          <div class="tnm-card">
+            <div class="tnm-letter" style="color: var(--teal)">T</div>
+            <div class="tnm-title">Primary Tumour</div>
+            <div class="chart-wrap" style="height: 220px">
+              <canvas id="tnmT"></canvas>
+            </div>
+          </div>
+          <div class="tnm-card">
+            <div class="tnm-letter" style="color: var(--accent-blue)">N</div>
+            <div class="tnm-title">Regional Lymph Nodes</div>
+            <div class="chart-wrap" style="height: 220px">
+              <canvas id="tnmN"></canvas>
+            </div>
+          </div>
+          <div class="tnm-card">
+            <div class="tnm-letter" style="color: var(--accent-rose)">M</div>
+            <div class="tnm-title">Distant Metastasis</div>
+            <div class="chart-wrap" style="height: 220px">
+              <canvas id="tnmM"></canvas>
+            </div>
+          </div>
+          <div class="tnm-card">
+            <div class="tnm-letter" style="color: var(--accent-amber)">G</div>
+            <div class="tnm-title">Histological Grade</div>
+            <div class="chart-wrap" style="height: 220px">
+              <canvas id="tnmG"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>UICC Stage Distribution by Tumour Entity</h3>
+          <p class="chart-desc">
+            Stacked breakdown of UICC stages I–IV at initial diagnosis
+          </p>
+          <div class="chart-wrap" style="height: 320px">
+            <canvas id="uiccStacked"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ LAB VALUES ═════════════════════════════════════════════ -->
+      <section id="labs">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #ede9fe; color: var(--accent-violet)"
+          >
+            🔬
+          </div>
+          <div>
+            <h2>Laboratory Values</h2>
+            <p>LOINC-coded lab observations available across the cohort</p>
+          </div>
+        </div>
+
+        <div class="chart-grid chart-grid-2">
+          <div class="chart-card">
+            <h3>Most Frequently Measured Parameters</h3>
+            <p class="chart-desc">Number of observations per LOINC group</p>
+            <div class="chart-wrap" style="height: 320px">
+              <canvas id="labBar"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>PSA Trend Over Time</h3>
+            <p class="chart-desc">
+              Median PSA (ng/mL) by quarter in prostate cancer patients
+            </p>
+            <div class="chart-wrap" style="height: 320px">
+              <canvas id="psaLine"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>LOINC Code</th>
+                  <th>Parameter</th>
+                  <th>Unit</th>
+                  <th>Patients w/ ≥1 Value</th>
+                  <th>Median Obs./Patient</th>
+                  <th>Normal Range</th>
+                  <th>Coverage</th>
+                </tr>
+              </thead>
+              <tbody id="labTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ ENCOUNTERS ═════════════════════════════════════════════ -->
+      <section id="encounters">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #fef9c3; color: var(--accent-amber)"
+          >
+            📅
+          </div>
+          <div>
+            <h2>Encounters</h2>
+            <p>Inpatient, outpatient, and day-clinic contacts</p>
+          </div>
+        </div>
+
+        <div class="chart-grid chart-grid-2">
+          <div class="chart-card">
+            <h3>Annual Encounter Volume</h3>
+            <p class="chart-desc">Total encounters per calendar year</p>
+            <div class="chart-wrap" style="height: 280px">
+              <canvas id="encounterLine"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Encounter Type Split</h3>
+            <p class="chart-desc">Inpatient vs. outpatient vs. day clinic</p>
+            <div class="chart-wrap" style="height: 280px">
+              <canvas id="encounterPie"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Median Length of Stay by Tumour Entity</h3>
+          <p class="chart-desc">Inpatient encounters only — days</p>
+          <div class="chart-wrap" style="height: 280px">
+            <canvas id="losBar"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ TREATMENTS ═════════════════════════════════════════════ -->
+      <section id="treatments">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #ffe4e6; color: var(--accent-rose)"
+          >
+            💊
+          </div>
+          <div>
+            <h2>Treatments &amp; Procedures</h2>
+            <p>Surgery, chemotherapy, radiation, immunotherapy, and more</p>
+          </div>
+        </div>
+
+        <div class="chart-grid chart-grid-2">
+          <div class="chart-card">
+            <h3>Treatment Modality Distribution</h3>
+            <p class="chart-desc">Proportion of patients per treatment type</p>
+            <div class="chart-wrap" style="height: 300px">
+              <canvas id="treatmentDoughnut"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Chemotherapy Regimens — Top 10</h3>
+            <p class="chart-desc">By number of treatment courses</p>
+            <div class="chart-wrap" style="height: 300px">
+              <canvas id="chemoBar"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Surgery Procedures (OPS Codes)</h3>
+          <p class="chart-desc">
+            Most frequently documented surgical procedure groups
+          </p>
+          <div class="chart-wrap" style="height: 260px">
+            <canvas id="surgeryBar"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ DEMOGRAPHICS ═══════════════════════════════════════════ -->
+      <section id="demographics">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #fef3c7; color: #d97706"
+          >
+            👥
+          </div>
+          <div>
+            <h2>Patient Demographics</h2>
+            <p>Age, sex, and regional distribution of the study cohort</p>
+          </div>
+        </div>
+
+        <div class="chart-grid chart-grid-3">
+          <div class="chart-card">
+            <h3>Sex Distribution</h3>
+            <p class="chart-desc">Biological sex at diagnosis</p>
+            <div class="chart-wrap" style="height: 240px">
+              <canvas id="sexPie"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Age at Diagnosis</h3>
+            <p class="chart-desc">10-year age brackets</p>
+            <div class="chart-wrap" style="height: 240px">
+              <canvas id="ageBar"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>New Cases Per Year</h3>
+            <p class="chart-desc">Incident cases 2015–2024</p>
+            <div class="chart-wrap" style="height: 240px">
+              <canvas id="incidenceLine"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Age–Sex Pyramid at Diagnosis</h3>
+          <p class="chart-desc">
+            Male (left) vs. Female (right) by 5-year age group
+          </p>
+          <div class="chart-wrap" style="height: 360px">
+            <canvas id="pyramid"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ FHIR RESOURCES ══════════════════════════════════════════ -->
+      <section id="fhir">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #dcfce7; color: #15803d"
+          >
+            ⚙️
+          </div>
+          <div>
+            <h2>FHIR Resource Coverage</h2>
+            <p>
+              Which HL7® FHIR® R4 resource types are populated in this dataset
+            </p>
+          </div>
+        </div>
+
+        <div class="info-grid" id="fhirCards"></div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Resource Volume by Type</h3>
+          <p class="chart-desc">Absolute resource counts across all sites</p>
+          <div class="chart-wrap" style="height: 300px">
+            <canvas id="fhirBar"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Data Availability Timeline</h3>
+          <p class="chart-desc">
+            Key milestones in the data collection process
+          </p>
+          <div class="timeline" id="timeline"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ═══ FOOTER ═════════════════════════════════════════════════ -->
+    <footer>
+      <strong>BZKF · Bayerisches Zentrum für Krebsforschung</strong><br />
+      onco-analytics-on-fhir ·
+      <a
+        href="https://github.com/bzkf/onco-analytics-on-fhir"
+        target="_blank"
+        rel="noopener"
+        >GitHub</a
+      >
+      · Licensed under Apache 2.0<br />
+      <span style="opacity: 0.5">
+        All figures on this page are synthetic demo data for illustration only.
+      </span>
+    </footer>
+
+    <!-- ═══ SCRIPTS ════════════════════════════════════════════════ -->
+    <script>
+      /* ── Shared palette ─────────────────────────────────────────── */
+      const COLORS = {
+        teal: "#0d9488",
+        blue: "#3b82f6",
+        violet: "#7c3aed",
+        rose: "#f43f5e",
+        amber: "#f59e0b",
+        orange: "#ea580c",
+        emerald: "#10b981",
+        sky: "#0ea5e9",
+        fuchsia: "#d946ef",
+        lime: "#84cc16",
+      };
+
+      const PALETTE = Object.values(COLORS);
+
+      function rgba(hex, a) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${a})`;
+      }
+
+      const defaultFont = { family: "Inter, system-ui, sans-serif", size: 12 };
+
+      Chart.defaults.font = defaultFont;
+      Chart.defaults.color = "#64748b";
+      Chart.defaults.plugins.legend.labels.usePointStyle = true;
+      Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
+
+      /* ── 1. Completeness bars ───────────────────────────────────── */
+      const completeness = [
+        { label: "Diagnoses / Conditions", pct: 100, color: COLORS.teal },
+        { label: "TNM / Staging", pct: 71, color: COLORS.violet },
+        { label: "Lab Observations", pct: 88, color: COLORS.blue },
+        { label: "Encounters", pct: 95, color: COLORS.amber },
+        { label: "Medications", pct: 79, color: COLORS.rose },
+        { label: "Procedures (OPS)", pct: 83, color: COLORS.orange },
+        { label: "Vital Signs", pct: 64, color: COLORS.emerald },
+        { label: "Follow-Up Status", pct: 69, color: COLORS.sky },
+      ];
+
+      const barsEl = document.getElementById("completeness-bars");
+      completeness.forEach(({ label, pct, color }) => {
+        barsEl.innerHTML += `
+        <div class="progress-item">
+          <span class="progress-label">${label}</span>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" style="width:${pct}%;background:${color}"></div>
+          </div>
+          <span class="progress-value">${pct} %</span>
+        </div>`;
+      });
+
+      /* ── 2. Diagnosis bar chart ──────────────────────────────────── */
+      new Chart(document.getElementById("diagnosisBar"), {
+        type: "bar",
+        data: {
+          labels: [
+            "C50 Breast",
+            "C61 Prostate",
+            "C34 Lung",
+            "C18 Colon",
+            "C25 Pancreas",
+            "C64 Kidney",
+            "C43 Melanoma",
+            "C81-C96 Haem.",
+            "C67 Bladder",
+            "C15 Oesophagus",
+          ],
+          datasets: [
+            {
+              label: "Patients",
+              data: [2340, 1980, 1650, 1420, 890, 780, 710, 690, 560, 430],
+              backgroundColor: PALETTE.map((c) => rgba(c, 0.8)),
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { color: "#f1f5f9" },
+              ticks: { font: defaultFont },
+            },
+            y: { grid: { display: false }, ticks: { font: defaultFont } },
+          },
+        },
+      });
+
+      /* ── 3. Diagnosis doughnut ──────────────────────────────────── */
+      new Chart(document.getElementById("diagnosisDoughnut"), {
+        type: "doughnut",
+        data: {
+          labels: [
+            "Breast",
+            "Prostate",
+            "Lung",
+            "Colon",
+            "Pancreas",
+            "Kidney",
+            "Melanoma",
+            "Haematological",
+            "Other",
+          ],
+          datasets: [
+            {
+              data: [18.2, 15.4, 12.8, 11.1, 6.9, 6.1, 5.5, 5.4, 18.6],
+              backgroundColor: PALETTE,
+              borderWidth: 2,
+              borderColor: "#fff",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "60%",
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { font: { size: 11 }, padding: 10 },
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` ${ctx.label}: ${ctx.parsed} %`,
+              },
+            },
+          },
+        },
+      });
+
+      /* ── 4. TNM charts ──────────────────────────────────────────── */
+      function miniPie(id, labels, data, colors) {
+        new Chart(document.getElementById(id), {
+          type: "pie",
+          data: {
+            labels,
+            datasets: [
+              {
+                data,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: "#fff",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { font: { size: 10 }, padding: 8 },
+              },
+            },
+          },
+        });
+      }
+
+      miniPie(
+        "tnmT",
+        ["T1", "T2", "T3", "T4", "Tx"],
+        [28, 32, 22, 14, 4],
+        [COLORS.teal, COLORS.emerald, COLORS.amber, COLORS.rose, "#cbd5e1"],
+      );
+      miniPie(
+        "tnmN",
+        ["N0", "N1", "N2", "N3", "Nx"],
+        [42, 25, 18, 8, 7],
+        [COLORS.blue, COLORS.sky, COLORS.violet, COLORS.fuchsia, "#cbd5e1"],
+      );
+      miniPie(
+        "tnmM",
+        ["M0", "M1", "Mx"],
+        [68, 24, 8],
+        [COLORS.teal, COLORS.rose, "#cbd5e1"],
+      );
+      miniPie(
+        "tnmG",
+        ["G1", "G2", "G3", "G4", "Gx"],
+        [14, 38, 33, 8, 7],
+        [
+          COLORS.emerald,
+          COLORS.amber,
+          COLORS.orange,
+          COLORS.rose,
+          "#cbd5e1",
+        ],
+      );
+
+      /* ── 5. UICC stacked bar ────────────────────────────────────── */
+      new Chart(document.getElementById("uiccStacked"), {
+        type: "bar",
+        data: {
+          labels: [
+            "Breast",
+            "Prostate",
+            "Lung",
+            "Colon",
+            "Pancreas",
+            "Kidney",
+          ],
+          datasets: [
+            {
+              label: "Stage I",
+              data: [35, 40, 18, 28, 10, 38],
+              backgroundColor: rgba(COLORS.emerald, 0.85),
+              borderRadius: { topLeft: 0, topRight: 0 },
+            },
+            {
+              label: "Stage II",
+              data: [28, 25, 22, 30, 15, 25],
+              backgroundColor: rgba(COLORS.amber, 0.85),
+            },
+            {
+              label: "Stage III",
+              data: [22, 20, 28, 24, 25, 20],
+              backgroundColor: rgba(COLORS.orange, 0.85),
+            },
+            {
+              label: "Stage IV",
+              data: [15, 15, 32, 18, 50, 17],
+              backgroundColor: rgba(COLORS.rose, 0.85),
+              borderRadius: { topLeft: 4, topRight: 4 },
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: {
+              stacked: true,
+              grid: { color: "#f1f5f9" },
+              ticks: {
+                callback: (v) => v + " %",
+              },
+              max: 100,
+            },
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y} %`,
+              },
+            },
+          },
+        },
+      });
+
+      /* ── 6. Lab bar ─────────────────────────────────────────────── */
+      new Chart(document.getElementById("labBar"), {
+        type: "bar",
+        data: {
+          labels: [
+            "Haemoglobin",
+            "Leucocytes",
+            "Platelets",
+            "CRP",
+            "Creatinine",
+            "ALT/SGPT",
+            "PSA",
+            "CA 19-9",
+            "CEA",
+            "CA 125",
+          ],
+          datasets: [
+            {
+              label: "Observations",
+              data: [
+                38200, 37100, 36800, 31000, 28700, 24100, 18300, 12600, 11800,
+                9400,
+              ],
+              backgroundColor: rgba(COLORS.violet, 0.75),
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#f1f5f9" } },
+            y: { grid: { display: false } },
+          },
+        },
+      });
+
+      /* ── 7. PSA line ────────────────────────────────────────────── */
+      const quarters = [
+        "Q1 '20",
+        "Q2 '20",
+        "Q3 '20",
+        "Q4 '20",
+        "Q1 '21",
+        "Q2 '21",
+        "Q3 '21",
+        "Q4 '21",
+        "Q1 '22",
+        "Q2 '22",
+        "Q3 '22",
+        "Q4 '22",
+        "Q1 '23",
+        "Q2 '23",
+        "Q3 '23",
+        "Q4 '23",
+      ];
+      new Chart(document.getElementById("psaLine"), {
+        type: "line",
+        data: {
+          labels: quarters,
+          datasets: [
+            {
+              label: "Pre-treatment PSA",
+              data: [
+                8.2, 9.1, 8.7, 7.9, 9.4, 10.2, 9.8, 8.6, 8.1, 7.4, 7.0, 6.8,
+                6.5, 6.2, 5.9, 5.4,
+              ],
+              borderColor: COLORS.violet,
+              backgroundColor: rgba(COLORS.violet, 0.1),
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+            },
+            {
+              label: "Post-treatment PSA",
+              data: [
+                null,
+                null,
+                null,
+                4.1,
+                2.8,
+                1.9,
+                1.4,
+                1.1,
+                0.9,
+                0.7,
+                0.6,
+                0.5,
+                0.45,
+                0.4,
+                0.38,
+                0.35,
+              ],
+              borderColor: COLORS.teal,
+              backgroundColor: rgba(COLORS.teal, 0.1),
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              borderDash: [5, 3],
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false }, ticks: { maxRotation: 45 } },
+            y: {
+              grid: { color: "#f1f5f9" },
+              title: { display: true, text: "PSA (ng/mL)" },
+            },
+          },
+          plugins: { legend: { position: "bottom" } },
+        },
+      });
+
+      /* ── 8. Lab table ───────────────────────────────────────────── */
+      const labRows = [
+        ["718-7", "Haemoglobin", "g/dL", 11240, 8, "12–17", "87 %"],
+        ["6690-2", "Leucocytes (WBC)", "10⁹/L", 10980, 9, "4–11", "85 %"],
+        ["777-3", "Platelets", "10⁹/L", 10850, 8, "150–400", "84 %"],
+        ["1988-5", "CRP", "mg/L", 9300, 7, "< 5", "72 %"],
+        ["2160-0", "Creatinine", "µmol/L", 8600, 6, "44–115", "67 %"],
+        ["1742-6", "ALT / SGPT", "U/L", 7100, 5, "< 56", "55 %"],
+        ["10334-1", "PSA (total)", "ng/mL", 5400, 11, "< 4", "42 %"],
+        ["24108-3", "CA 19-9", "U/mL", 3800, 6, "< 37", "30 %"],
+        ["2857-1", "CEA", "ng/mL", 3500, 5, "< 5", "27 %"],
+        ["10334-1", "CA 125", "U/mL", 2800, 7, "< 35", "22 %"],
+      ];
+
+      const colours = [
+        "#ccfbf1",
+        "#dbeafe",
+        "#ede9fe",
+        "#fef9c3",
+        "#ffe4e6",
+        "#fed7aa",
+        "#d1fae5",
+        "#e0f2fe",
+        "#fae8ff",
+        "#ecfccb",
+      ];
+      const tbodyEl = document.getElementById("labTable");
+      labRows.forEach(([code, name, unit, pts, med, range, cov], i) => {
+        tbodyEl.innerHTML += `
+        <tr>
+          <td><code>${code}</code></td>
+          <td><strong>${name}</strong></td>
+          <td>${unit}</td>
+          <td>${pts.toLocaleString()}</td>
+          <td>${med}×</td>
+          <td>${range}</td>
+          <td><span class="badge" style="background:${colours[i]};color:#1e293b">${cov}</span></td>
+        </tr>`;
+      });
+
+      /* ── 9. Encounter line ──────────────────────────────────────── */
+      new Chart(document.getElementById("encounterLine"), {
+        type: "line",
+        data: {
+          labels: [
+            "2015",
+            "2016",
+            "2017",
+            "2018",
+            "2019",
+            "2020",
+            "2021",
+            "2022",
+            "2023",
+            "2024",
+          ],
+          datasets: [
+            {
+              label: "Total Encounters",
+              data: [
+                4200, 5100, 5800, 6400, 7100, 5900, 6800, 7600, 8200, 8100,
+              ],
+              borderColor: COLORS.amber,
+              backgroundColor: rgba(COLORS.amber, 0.12),
+              fill: true,
+              tension: 0.4,
+              pointRadius: 5,
+              borderWidth: 2.5,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "#f1f5f9" } },
+          },
+        },
+      });
+
+      /* ── 10. Encounter pie ──────────────────────────────────────── */
+      new Chart(document.getElementById("encounterPie"), {
+        type: "pie",
+        data: {
+          labels: ["Inpatient", "Outpatient", "Day Clinic"],
+          datasets: [
+            {
+              data: [48, 38, 14],
+              backgroundColor: [COLORS.amber, COLORS.teal, COLORS.violet],
+              borderWidth: 2,
+              borderColor: "#fff",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: { label: (c) => ` ${c.label}: ${c.parsed} %` },
+            },
+          },
+        },
+      });
+
+      /* ── 11. Length of stay bar ─────────────────────────────────── */
+      new Chart(document.getElementById("losBar"), {
+        type: "bar",
+        data: {
+          labels: ["Breast", "Prostate", "Lung", "Colon", "Pancreas", "Kidney"],
+          datasets: [
+            {
+              label: "Median LOS (days)",
+              data: [5, 4, 8, 10, 14, 6],
+              backgroundColor: [
+                rgba(COLORS.rose, 0.75),
+                rgba(COLORS.blue, 0.75),
+                rgba(COLORS.sky, 0.75),
+                rgba(COLORS.orange, 0.75),
+                rgba(COLORS.amber, 0.75),
+                rgba(COLORS.violet, 0.75),
+              ],
+              borderRadius: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              grid: { color: "#f1f5f9" },
+              title: { display: true, text: "Days" },
+            },
+          },
+        },
+      });
+
+      /* ── 12. Treatment doughnut ─────────────────────────────────── */
+      new Chart(document.getElementById("treatmentDoughnut"), {
+        type: "doughnut",
+        data: {
+          labels: [
+            "Surgery",
+            "Chemotherapy",
+            "Radiation",
+            "Immunotherapy",
+            "Hormone Therapy",
+            "Targeted Therapy",
+            "Watchful Waiting",
+          ],
+          datasets: [
+            {
+              data: [72, 58, 45, 31, 28, 24, 12],
+              backgroundColor: PALETTE,
+              borderWidth: 2,
+              borderColor: "#fff",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "55%",
+          plugins: {
+            legend: { position: "bottom", labels: { font: { size: 11 } } },
+            tooltip: {
+              callbacks: { label: (c) => ` ${c.label}: ${c.parsed} %` },
+            },
+          },
+        },
+      });
+
+      /* ── 13. Chemo regimens bar ─────────────────────────────────── */
+      new Chart(document.getElementById("chemoBar"), {
+        type: "bar",
+        data: {
+          labels: [
+            "FOLFOX",
+            "AC-T",
+            "Gemcitabine",
+            "Carboplatin/Paclitaxel",
+            "CHOP",
+            "FOLFIRI",
+            "Docetaxel",
+            "Capecitabine",
+            "Cisplatin/Etoposide",
+            "R-CHOP",
+          ],
+          datasets: [
+            {
+              label: "Courses",
+              data: [1840, 1620, 1390, 1180, 1020, 960, 880, 760, 640, 580],
+              backgroundColor: rgba(COLORS.rose, 0.75),
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#f1f5f9" } },
+            y: { grid: { display: false } },
+          },
+        },
+      });
+
+      /* ── 14. Surgery OPS bar ────────────────────────────────────── */
+      new Chart(document.getElementById("surgeryBar"), {
+        type: "bar",
+        data: {
+          labels: [
+            "5-872 Mastectomy",
+            "5-604 Prostatectomy",
+            "5-455 Hemicolectomy",
+            "5-322 Pneumonectomy",
+            "5-524 Pancreatectomy",
+            "5-554 Nephrectomy",
+          ],
+          datasets: [
+            {
+              label: "Procedures",
+              data: [2180, 1740, 1320, 980, 720, 680],
+              backgroundColor: PALETTE.slice(0, 6).map((c) => rgba(c, 0.8)),
+              borderRadius: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxRotation: 30 } },
+            y: { grid: { color: "#f1f5f9" } },
+          },
+        },
+      });
+
+      /* ── 15. Sex pie ────────────────────────────────────────────── */
+      new Chart(document.getElementById("sexPie"), {
+        type: "pie",
+        data: {
+          labels: ["Female", "Male", "Other / Unknown"],
+          datasets: [
+            {
+              data: [52.4, 46.8, 0.8],
+              backgroundColor: [COLORS.rose, COLORS.blue, "#94a3b8"],
+              borderWidth: 2,
+              borderColor: "#fff",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+        },
+      });
+
+      /* ── 16. Age bar ────────────────────────────────────────────── */
+      new Chart(document.getElementById("ageBar"), {
+        type: "bar",
+        data: {
+          labels: [
+            "0–19",
+            "20–29",
+            "30–39",
+            "40–49",
+            "50–59",
+            "60–69",
+            "70–79",
+            "80+",
+          ],
+          datasets: [
+            {
+              label: "Patients",
+              data: [48, 124, 380, 890, 2340, 4100, 3460, 1505],
+              backgroundColor: rgba(COLORS.amber, 0.8),
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "#f1f5f9" } },
+          },
+        },
+      });
+
+      /* ── 17. Incidence line ─────────────────────────────────────── */
+      new Chart(document.getElementById("incidenceLine"), {
+        type: "line",
+        data: {
+          labels: [
+            "2015",
+            "2016",
+            "2017",
+            "2018",
+            "2019",
+            "2020",
+            "2021",
+            "2022",
+            "2023",
+            "2024",
+          ],
+          datasets: [
+            {
+              label: "New Cases",
+              data: [
+                920, 1050, 1140, 1230, 1360, 1090, 1270, 1410, 1540, 1520,
+              ],
+              borderColor: COLORS.orange,
+              backgroundColor: rgba(COLORS.orange, 0.12),
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              borderWidth: 2.5,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "#f1f5f9" } },
+          },
+        },
+      });
+
+      /* ── 18. Age–sex pyramid ────────────────────────────────────── */
+      const ageGroups = [
+        "80+",
+        "75–79",
+        "70–74",
+        "65–69",
+        "60–64",
+        "55–59",
+        "50–54",
+        "45–49",
+        "40–44",
+        "35–39",
+        "< 35",
+      ];
+      const male = [-620, -780, -950, -1120, -1080, -920, -760, -560, -310, -150, -80];
+      const female = [885, 1020, 1180, 1040, 920, 810, 680, 510, 280, 130, 60];
+
+      new Chart(document.getElementById("pyramid"), {
+        type: "bar",
+        data: {
+          labels: ageGroups,
+          datasets: [
+            {
+              label: "Male",
+              data: male,
+              backgroundColor: rgba(COLORS.blue, 0.75),
+              borderRadius: { topLeft: 4, bottomLeft: 4 },
+            },
+            {
+              label: "Female",
+              data: female,
+              backgroundColor: rgba(COLORS.rose, 0.75),
+              borderRadius: { topRight: 4, bottomRight: 4 },
+            },
+          ],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx) =>
+                  ` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.x).toLocaleString()}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { color: "#f1f5f9" },
+              ticks: {
+                callback: (v) => Math.abs(v).toLocaleString(),
+              },
+            },
+            y: { grid: { display: false }, stacked: false },
+          },
+        },
+      });
+
+      /* ── 19. FHIR resource cards ────────────────────────────────── */
+      const fhirResources = [
+        {
+          name: "Patient",
+          count: "12,847",
+          desc: "Demographics and identifiers — pseudonymised.",
+          color: COLORS.teal,
+        },
+        {
+          name: "Condition",
+          count: "31,204",
+          desc: "ICD-10-GM coded diagnoses with onset dates.",
+          color: COLORS.blue,
+        },
+        {
+          name: "Observation",
+          count: "218,541",
+          desc: "Lab values and vital signs (LOINC).",
+          color: COLORS.violet,
+        },
+        {
+          name: "Encounter",
+          count: "67,390",
+          desc: "Inpatient, outpatient, and day-clinic contacts.",
+          color: COLORS.amber,
+        },
+        {
+          name: "MedicationRequest",
+          count: "48,917",
+          desc: "Prescribed medications (ATC/SNOMED).",
+          color: COLORS.rose,
+        },
+        {
+          name: "Procedure",
+          count: "38,204",
+          desc: "OPS-coded surgical and therapeutic procedures.",
+          color: COLORS.orange,
+        },
+        {
+          name: "DiagnosticReport",
+          count: "22,180",
+          desc: "Pathology, radiology, and lab reports.",
+          color: COLORS.emerald,
+        },
+        {
+          name: "Specimen",
+          count: "16,092",
+          desc: "Tissue and liquid biopsy samples.",
+          color: COLORS.sky,
+        },
+        {
+          name: "ClinicalImpression",
+          count: "9,103",
+          desc: "TNM staging and clinical assessments.",
+          color: COLORS.fuchsia,
+        },
+        {
+          name: "CarePlan",
+          count: "7,841",
+          desc: "Multidisciplinary tumour board decisions.",
+          color: COLORS.lime,
+        },
+        {
+          name: "Organization",
+          count: "6",
+          desc: "Participating BZKF partner sites.",
+          color: COLORS.slate,
+        },
+        {
+          name: "ResearchStudy",
+          count: "14",
+          desc: "Linked clinical studies and registries.",
+          color: "#d97706",
+        },
+      ];
+
+      const cardsEl = document.getElementById("fhirCards");
+      fhirResources.forEach(({ name, count, desc, color }) => {
+        cardsEl.innerHTML += `
+        <div class="info-card" style="border-color:${color}">
+          <h4 style="color:${color}">${name}</h4>
+          <div style="font-size:1.6rem;font-weight:800;color:${color};margin-bottom:6px">${count}</div>
+          <p>${desc}</p>
+        </div>`;
+      });
+
+      /* ── 20. FHIR resource bar ──────────────────────────────────── */
+      new Chart(document.getElementById("fhirBar"), {
+        type: "bar",
+        data: {
+          labels: fhirResources
+            .filter((r) => !["Organization", "ResearchStudy"].includes(r.name))
+            .map((r) => r.name),
+          datasets: [
+            {
+              label: "Resources",
+              data: [
+                12847, 31204, 218541, 67390, 48917, 38204, 22180, 16092, 9103,
+                7841,
+              ],
+              backgroundColor: fhirResources
+                .filter(
+                  (r) => !["Organization", "ResearchStudy"].includes(r.name),
+                )
+                .map((r) => rgba(r.color, 0.8)),
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 30, font: { size: 11 } },
+            },
+            y: {
+              grid: { color: "#f1f5f9" },
+              ticks: { callback: (v) => v.toLocaleString() },
+            },
+          },
+        },
+      });
+
+      /* ── 21. Timeline ───────────────────────────────────────────── */
+      const milestones = [
+        {
+          date: "Jan 2015",
+          title: "Cohort Start",
+          desc: "First tumour documentation data ingested from Site 1 (Erlangen).",
+        },
+        {
+          date: "Mar 2018",
+          title: "FHIR Mapping Launched",
+          desc: "oBDS XML → HL7® FHIR® R4 transformation pipeline deployed.",
+        },
+        {
+          date: "Sep 2020",
+          title: "Multi-site Rollout",
+          desc: "Sites 2–6 onboarded; federated query infrastructure activated.",
+        },
+        {
+          date: "Feb 2022",
+          title: "Lab Integration",
+          desc: "Laboratory observations (LOINC) added to the data model.",
+        },
+        {
+          date: "Jun 2023",
+          title: "MII Compliance",
+          desc: "Dataset aligned with German Medical Informatics Initiative (MII) core data set.",
+        },
+        {
+          date: "Jan 2024",
+          title: "Research Data Access",
+          desc: "Federated analysis via MIRACUM DataSHIELD and TriNetX infrastructure enabled.",
+        },
+      ];
+
+      const tlEl = document.getElementById("timeline");
+      milestones.forEach(({ date, title, desc }) => {
+        tlEl.innerHTML += `
+        <div class="timeline-item">
+          <div class="timeline-date">${date}</div>
+          <div class="timeline-title">${title}</div>
+          <div class="timeline-desc">${desc}</div>
+        </div>`;
+      });
+    </script>
+  </body>
+</html>
