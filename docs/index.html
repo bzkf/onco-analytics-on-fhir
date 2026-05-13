@@ -557,6 +557,171 @@
           width: 120px;
         }
       }
+
+      /* ─── Site Cards ─────────────────────────────────────────── */
+      .site-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .site-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 22px 20px;
+        box-shadow: var(--shadow);
+        border-top: 4px solid transparent;
+        transition: box-shadow 0.2s, transform 0.2s;
+      }
+
+      .site-card:hover {
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+      }
+
+      .site-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .site-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #fff;
+        flex-shrink: 0;
+      }
+
+      .site-name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--slate);
+        line-height: 1.2;
+      }
+
+      .site-city {
+        font-size: 0.75rem;
+        color: var(--slate-light);
+      }
+
+      .site-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .site-stat {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+
+      .site-stat-val {
+        font-size: 1.1rem;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .site-stat-lbl {
+        font-size: 0.68rem;
+        color: var(--slate-light);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .site-domains {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 12px;
+      }
+
+      .site-domain-tag {
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: var(--slate-light);
+      }
+
+      .site-domain-tag.active {
+        background: var(--teal-light);
+        color: var(--teal-dark);
+      }
+
+      /* ─── Heatmap Table ──────────────────────────────────────── */
+      .heatmap-wrap {
+        overflow-x: auto;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .heatmap-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card-bg);
+        font-size: 0.85rem;
+        min-width: 560px;
+      }
+
+      .heatmap-table thead {
+        background: linear-gradient(90deg, var(--teal-dark), #1d4ed8);
+        color: #fff;
+      }
+
+      .heatmap-table th {
+        padding: 12px 14px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+
+      .heatmap-table th:first-child {
+        text-align: left;
+      }
+
+      .heatmap-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.8rem;
+      }
+
+      .heatmap-table td:first-child {
+        text-align: left;
+        font-weight: 600;
+        color: var(--slate);
+        white-space: nowrap;
+      }
+
+      .heatmap-table tbody tr:hover {
+        background: #f8fafc;
+      }
+
+      .heatmap-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .hm-cell {
+        display: inline-block;
+        border-radius: 6px;
+        padding: 3px 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        min-width: 48px;
+      }
     </style>
   </head>
   <body>
@@ -598,6 +763,7 @@
       <a href="#encounters">Encounters</a>
       <a href="#treatments">Treatments</a>
       <a href="#demographics">Demographics</a>
+      <a href="#sites">Sites</a>
       <a href="#fhir">FHIR Resources</a>
     </nav>
 
@@ -985,6 +1151,83 @@
           </p>
           <div class="chart-wrap" style="height: 360px">
             <canvas id="pyramid"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ DATA SOURCES BY SITE ══════════════════════════════════ -->
+      <section id="sites">
+        <div class="section-header">
+          <div
+            class="section-icon"
+            style="background: #e0f2fe; color: #0369a1"
+          >
+            🏛️
+          </div>
+          <div>
+            <h2>Data Sources by Site</h2>
+            <p>
+              Which partner sites contribute data and what each site provides
+            </p>
+          </div>
+        </div>
+
+        <!-- Site summary cards -->
+        <div class="site-grid" id="siteCards"></div>
+
+        <!-- Charts row -->
+        <div class="chart-grid chart-grid-2">
+          <div class="chart-card">
+            <h3>Patient Volume per Site</h3>
+            <p class="chart-desc">
+              Total patients contributed by each partner site
+            </p>
+            <div class="chart-wrap" style="height: 300px">
+              <canvas id="sitePatientBar"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Data Domain Completeness per Site</h3>
+            <p class="chart-desc">
+              Radar view of domain coverage (% of patients with ≥ 1 record)
+            </p>
+            <div class="chart-wrap" style="height: 300px">
+              <canvas id="siteRadar"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Tumour Entity Mix per Site</h3>
+          <p class="chart-desc">
+            Stacked bar — proportional share of top tumour entities at each site
+          </p>
+          <div class="chart-wrap" style="height: 320px">
+            <canvas id="siteTumourStacked"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>FHIR Resource Volume per Site</h3>
+          <p class="chart-desc">
+            Grouped bar — resource counts by type broken down across sites
+          </p>
+          <div class="chart-wrap" style="height: 320px">
+            <canvas id="siteFhirGrouped"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px">
+          <h3>Data Domain × Site Coverage Matrix</h3>
+          <p class="chart-desc">
+            Percentage of patients with at least one record in each domain,
+            per site — colour intensity indicates completeness
+          </p>
+          <div class="heatmap-wrap">
+            <table class="heatmap-table" id="heatmapTable">
+              <thead id="heatmapHead"></thead>
+              <tbody id="heatmapBody"></tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -1993,6 +2236,368 @@
           <div class="timeline-desc">${desc}</div>
         </div>`;
       });
+      /* ── 22. Site definitions ──────────────────────────────────── */
+      const SITES = [
+        {
+          id: "erlangen",
+          name: "Universitätsklinikum Erlangen",
+          short: "Erlangen",
+          color: COLORS.teal,
+          patients: 3142,
+          onboarded: "Jan 2015",
+          resources: 24810,
+          domains: {
+            Conditions: 100,
+            TNM: 78,
+            Labs: 91,
+            Encounters: 98,
+            Medications: 84,
+            Procedures: 89,
+          },
+          tumours: [38, 26, 14, 9, 6, 7],
+        },
+        {
+          id: "muenchen-lmu",
+          name: "LMU Klinikum München",
+          short: "LMU München",
+          color: COLORS.blue,
+          patients: 2891,
+          onboarded: "Sep 2020",
+          resources: 22640,
+          domains: {
+            Conditions: 100,
+            TNM: 74,
+            Labs: 89,
+            Encounters: 96,
+            Medications: 79,
+            Procedures: 85,
+          },
+          tumours: [30, 22, 18, 11, 8, 11],
+        },
+        {
+          id: "augsburg",
+          name: "Universitätsklinikum Augsburg",
+          short: "Augsburg",
+          color: COLORS.violet,
+          patients: 2204,
+          onboarded: "Sep 2020",
+          resources: 17280,
+          domains: {
+            Conditions: 100,
+            TNM: 68,
+            Labs: 85,
+            Encounters: 94,
+            Medications: 76,
+            Procedures: 80,
+          },
+          tumours: [32, 28, 16, 10, 5, 9],
+        },
+        {
+          id: "regensburg",
+          name: "Universitätsklinikum Regensburg",
+          short: "Regensburg",
+          color: COLORS.amber,
+          patients: 1986,
+          onboarded: "Sep 2020",
+          resources: 15620,
+          domains: {
+            Conditions: 100,
+            TNM: 72,
+            Labs: 88,
+            Encounters: 93,
+            Medications: 81,
+            Procedures: 83,
+          },
+          tumours: [28, 24, 20, 12, 7, 9],
+        },
+        {
+          id: "wuerzburg",
+          name: "Universitätsklinikum Würzburg",
+          short: "Würzburg",
+          color: COLORS.rose,
+          patients: 1538,
+          onboarded: "Sep 2020",
+          resources: 9820,
+          domains: {
+            Conditions: 100,
+            TNM: 66,
+            Labs: 82,
+            Encounters: 91,
+            Medications: 72,
+            Procedures: 76,
+          },
+          tumours: [35, 20, 15, 14, 9, 7],
+        },
+        {
+          id: "bayreuth",
+          name: "Klinikum Bayreuth",
+          short: "Bayreuth",
+          color: COLORS.orange,
+          patients: 1086,
+          onboarded: "Sep 2020",
+          resources: 6850,
+          domains: {
+            Conditions: 100,
+            TNM: 61,
+            Labs: 78,
+            Encounters: 88,
+            Medications: 68,
+            Procedures: 71,
+          },
+          tumours: [29, 25, 17, 13, 9, 7],
+        },
+      ];
+
+      /* ── 23. Site cards ────────────────────────────────────────── */
+      const siteCardsEl = document.getElementById("siteCards");
+      const allDomainKeys = Object.keys(SITES[0].domains);
+      SITES.forEach((site) => {
+        const domainTags = allDomainKeys
+          .map(
+            (d) =>
+              `<span class="site-domain-tag active">${d}</span>`,
+          )
+          .join("");
+        siteCardsEl.innerHTML += `
+          <div class="site-card" style="border-color:${site.color}">
+            <div class="site-card-header">
+              <div class="site-avatar" style="background:${site.color}">${site.short[0]}</div>
+              <div>
+                <div class="site-name">${site.name}</div>
+                <div class="site-city">Since ${site.onboarded}</div>
+              </div>
+            </div>
+            <div class="site-stats">
+              <div class="site-stat">
+                <div class="site-stat-val" style="color:${site.color}">${site.patients.toLocaleString()}</div>
+                <div class="site-stat-lbl">Patients</div>
+              </div>
+              <div class="site-stat">
+                <div class="site-stat-val" style="color:${site.color}">${site.resources.toLocaleString()}</div>
+                <div class="site-stat-lbl">FHIR Resources</div>
+              </div>
+              <div class="site-stat">
+                <div class="site-stat-val" style="color:${site.color}">${site.domains.TNM} %</div>
+                <div class="site-stat-lbl">TNM Coverage</div>
+              </div>
+              <div class="site-stat">
+                <div class="site-stat-val" style="color:${site.color}">${site.domains.Labs} %</div>
+                <div class="site-stat-lbl">Lab Coverage</div>
+              </div>
+            </div>
+            <div class="site-domains">${domainTags}</div>
+          </div>`;
+      });
+
+      /* ── 24. Patient volume bar ─────────────────────────────────── */
+      new Chart(document.getElementById("sitePatientBar"), {
+        type: "bar",
+        data: {
+          labels: SITES.map((s) => s.short),
+          datasets: [
+            {
+              label: "Patients",
+              data: SITES.map((s) => s.patients),
+              backgroundColor: SITES.map((s) => rgba(s.color, 0.8)),
+              borderRadius: 8,
+              borderSkipped: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (c) => ` ${c.parsed.y.toLocaleString()} patients`,
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              grid: { color: "#f1f5f9" },
+              ticks: { callback: (v) => v.toLocaleString() },
+            },
+          },
+        },
+      });
+
+      /* ── 25. Radar — domain completeness per site ───────────────── */
+      new Chart(document.getElementById("siteRadar"), {
+        type: "radar",
+        data: {
+          labels: allDomainKeys,
+          datasets: SITES.map((site) => ({
+            label: site.short,
+            data: allDomainKeys.map((k) => site.domains[k]),
+            borderColor: site.color,
+            backgroundColor: rgba(site.color, 0.08),
+            borderWidth: 2,
+            pointBackgroundColor: site.color,
+            pointRadius: 3,
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0,
+              max: 100,
+              ticks: { stepSize: 25, font: { size: 10 }, backdropColor: "transparent" },
+              pointLabels: { font: { size: 11, weight: "600" } },
+              grid: { color: "#e2e8f0" },
+              angleLines: { color: "#e2e8f0" },
+            },
+          },
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { font: { size: 10 }, padding: 8 },
+            },
+            tooltip: {
+              callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.r} %` },
+            },
+          },
+        },
+      });
+
+      /* ── 26. Stacked bar — tumour entity mix per site ───────────── */
+      const tumourLabels = [
+        "Breast",
+        "Prostate / Gynaecological",
+        "Lung",
+        "Colorectal",
+        "Pancreas / GI",
+        "Other",
+      ];
+      const tumourColors = [
+        COLORS.rose,
+        COLORS.blue,
+        COLORS.sky,
+        COLORS.orange,
+        COLORS.amber,
+        "#94a3b8",
+      ];
+      new Chart(document.getElementById("siteTumourStacked"), {
+        type: "bar",
+        data: {
+          labels: SITES.map((s) => s.short),
+          datasets: tumourLabels.map((label, i) => ({
+            label,
+            data: SITES.map((s) => s.tumours[i]),
+            backgroundColor: rgba(tumourColors[i], 0.82),
+            borderRadius: i === tumourLabels.length - 1 ? { topLeft: 4, topRight: 4 } : 0,
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: {
+              stacked: true,
+              max: 100,
+              grid: { color: "#f1f5f9" },
+              ticks: { callback: (v) => v + " %" },
+            },
+          },
+          plugins: {
+            legend: { position: "bottom", labels: { font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: (c) => ` ${c.dataset.label}: ${c.parsed.y} %`,
+              },
+            },
+          },
+        },
+      });
+
+      /* ── 27. Grouped bar — FHIR resource volume per site ─────────── */
+      const fhirDomains = [
+        "Conditions",
+        "Observations",
+        "Encounters",
+        "Medications",
+        "Procedures",
+      ];
+      const fhirPerSite = [
+        [3142, 9800, 6400, 3210, 2258],
+        [2891, 8400, 5820, 2980, 2210],
+        [2204, 6400, 4120, 2280, 1780],
+        [1986, 5800, 3900, 2050, 1640],
+        [1538, 4100, 2940, 1620, 1240],
+        [1086, 2900, 2100, 1140,  870],
+      ];
+      new Chart(document.getElementById("siteFhirGrouped"), {
+        type: "bar",
+        data: {
+          labels: fhirDomains,
+          datasets: SITES.map((site, i) => ({
+            label: site.short,
+            data: fhirPerSite[i],
+            backgroundColor: rgba(site.color, 0.78),
+            borderRadius: 4,
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              grid: { color: "#f1f5f9" },
+              ticks: { callback: (v) => v.toLocaleString() },
+            },
+          },
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { font: { size: 11 }, padding: 10 },
+            },
+          },
+        },
+      });
+
+      /* ── 28. Heatmap — domain × site ───────────────────────────── */
+      function hmColor(pct) {
+        if (pct >= 90) return { bg: "#ccfbf1", fg: "#0f766e" };
+        if (pct >= 75) return { bg: "#d1fae5", fg: "#065f46" };
+        if (pct >= 60) return { bg: "#fef9c3", fg: "#92400e" };
+        return { bg: "#ffe4e6", fg: "#9f1239" };
+      }
+
+      const headEl = document.getElementById("heatmapHead");
+      const bodyEl = document.getElementById("heatmapBody");
+
+      headEl.innerHTML =
+        "<tr><th>Domain</th>" +
+        SITES.map((s) => `<th>${s.short}</th>`).join("") +
+        "</tr>";
+
+      allDomainKeys.forEach((domain) => {
+        const cells = SITES.map((site) => {
+          const pct = site.domains[domain];
+          const { bg, fg } = hmColor(pct);
+          return `<td><span class="hm-cell" style="background:${bg};color:${fg}">${pct} %</span></td>`;
+        }).join("");
+        bodyEl.innerHTML += `<tr><td>${domain}</td>${cells}</tr>`;
+      });
+
+      /* Legend row */
+      bodyEl.innerHTML += `
+        <tr style="background:#f8fafc">
+          <td style="font-size:0.72rem;color:var(--slate-light);padding-top:10px">Coverage key</td>
+          <td colspan="${SITES.length}" style="padding-top:10px">
+            <span class="hm-cell" style="background:#ccfbf1;color:#0f766e">≥ 90 %</span>
+            <span class="hm-cell" style="background:#d1fae5;color:#065f46;margin-left:6px">75–89 %</span>
+            <span class="hm-cell" style="background:#fef9c3;color:#92400e;margin-left:6px">60–74 %</span>
+            <span class="hm-cell" style="background:#ffe4e6;color:#9f1239;margin-left:6px">&lt; 60 %</span>
+          </td>
+        </tr>`;
     </script>
   </body>
 </html>
