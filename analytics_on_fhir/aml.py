@@ -1,3 +1,4 @@
+import csv
 import hashlib
 import hmac
 import os
@@ -398,6 +399,17 @@ class AMLStudy:
         logger.info(f"all_{resource_type}_df size: {len(resource_df)}. {resource_df.dtypes}")
         return resource_df, medication_df
 
+    def load_ops_codes(self, filepath):
+        ops_code_map = {}
+        with open(filepath, encoding="utf-8") as file:
+            content = csv.reader(file, delimiter=";")
+            for row in content:
+                if len(row) >= 9:
+                    code = row[6]
+                    title = row[8]
+                    ops_code_map[code] = title
+        return ops_code_map
+
     def extract_meds(self):  # , patient_list):
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
 
@@ -440,27 +452,28 @@ class AMLStudy:
         logger.info("Combining medication data from different resource types")
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
 
-        logger.info("Mapping ATC codes to display values using Excel sheet")
-        # ATC display mapping via Excel sheet — load only the two needed columns
-        atc_mapping_df = pd.read_excel(
-            HERE / "ATC GKV-AI 2026.xlsx",
-            sheet_name="WIdO-Index 2026 alphabetisch",
-            usecols=["ATC-Code", "ATC-Bedeutung"],
-        )
-
-        logger.info("Loaded ATC mapping with {} entries", len(atc_mapping_df))
-        logger.info("Mapping ATC codes to display values")
-        med_df = med_df.merge(
-            atc_mapping_df.rename(
-                columns={
-                    "ATC-Code": "medication_atc_code",
-                    "ATC-Bedeutung": "medication_atc_display",
-                }
-            ),
-            on="medication_atc_code",
-            how="left",
-        )
-
+        if "medication_atc_code" in med_df.columns:
+            logger.info("Mapping ATC codes to display values using Excel sheet")
+            atc_mapping_df = pd.read_excel(
+                HERE / "ATC GKV-AI 2026.xlsx",
+                sheet_name="WIdO-Index 2026 alphabetisch",
+                usecols=["ATC-Code", "ATC-Bedeutung"],
+            )
+            logger.info("Loaded ATC mapping with {} entries", len(atc_mapping_df))
+            med_df = med_df.merge(
+                atc_mapping_df.rename(
+                    columns={
+                        "ATC-Code": "medication_atc_code",
+                        "ATC-Bedeutung": "medication_atc_display",
+                    }
+                ),
+                on="medication_atc_code",
+                how="left",
+            )
+        if "medication_ops_code" in med_df.columns:
+            logger.info("Loading OPS mappings")
+            ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
+            med_df["medication_ops_display"] = med_df["medication_ops_code"].map(ops_mapping)
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
