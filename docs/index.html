@@ -763,7 +763,7 @@
       <a href="#encounters">Encounters</a>
       <a href="#treatments">Treatments</a>
       <a href="#demographics">Demographics</a>
-      <a href="#sites">Sites</a>
+      <a href="#provenance">Provenance</a>
       <a href="#fhir">FHIR Resources</a>
     </nav>
 
@@ -1155,78 +1155,60 @@
         </div>
       </section>
 
-      <!-- ═══ DATA SOURCES BY SITE ══════════════════════════════════ -->
-      <section id="sites">
+      <!-- ═══ DATA PROVENANCE ════════════════════════════════════════ -->
+      <section id="provenance">
         <div class="section-header">
           <div
             class="section-icon"
             style="background: #e0f2fe; color: #0369a1"
           >
-            🏛️
+            🗂️
           </div>
           <div>
-            <h2>Data Sources by Site</h2>
+            <h2>Data Provenance</h2>
             <p>
-              Which partner sites contribute data and what each site provides
+              Which internal source system within a site produced each piece of
+              clinical data
             </p>
           </div>
         </div>
 
-        <!-- Site summary cards -->
-        <div class="site-grid" id="siteCards"></div>
+        <!-- Source system cards -->
+        <div class="site-grid" id="provenanceCards"></div>
 
-        <!-- Charts row -->
+        <!-- Doughnut + stacked bar row -->
         <div class="chart-grid chart-grid-2">
           <div class="chart-card">
-            <h3>Patient Volume per Site</h3>
+            <h3>Records by Source System</h3>
             <p class="chart-desc">
-              Total patients contributed by each partner site
+              Proportional share of all FHIR resources per originating system
             </p>
             <div class="chart-wrap" style="height: 300px">
-              <canvas id="sitePatientBar"></canvas>
+              <canvas id="provenanceDoughnut"></canvas>
             </div>
           </div>
           <div class="chart-card">
-            <h3>Data Domain Completeness per Site</h3>
+            <h3>FHIR Resource Mix per Source System</h3>
             <p class="chart-desc">
-              Radar view of domain coverage (% of patients with ≥ 1 record)
+              Stacked bar — resource types contributed by each source system
             </p>
             <div class="chart-wrap" style="height: 300px">
-              <canvas id="siteRadar"></canvas>
+              <canvas id="provenanceStacked"></canvas>
             </div>
           </div>
         </div>
 
         <div class="chart-card" style="margin-top: 20px">
-          <h3>Tumour Entity Mix per Site</h3>
+          <h3>Resource Type × Source System — Provenance Matrix</h3>
           <p class="chart-desc">
-            Stacked bar — proportional share of top tumour entities at each site
-          </p>
-          <div class="chart-wrap" style="height: 320px">
-            <canvas id="siteTumourStacked"></canvas>
-          </div>
-        </div>
-
-        <div class="chart-card" style="margin-top: 20px">
-          <h3>FHIR Resource Volume per Site</h3>
-          <p class="chart-desc">
-            Grouped bar — resource counts by type broken down across sites
-          </p>
-          <div class="chart-wrap" style="height: 320px">
-            <canvas id="siteFhirGrouped"></canvas>
-          </div>
-        </div>
-
-        <div class="chart-card" style="margin-top: 20px">
-          <h3>Data Domain × Site Coverage Matrix</h3>
-          <p class="chart-desc">
-            Percentage of patients with at least one record in each domain,
-            per site — colour intensity indicates completeness
+            For each FHIR resource type, the percentage of records originating
+            from each source system — colour indicates whether the system is the
+            primary, secondary, or minor contributor
           </p>
           <div class="heatmap-wrap">
-            <table class="heatmap-table" id="heatmapTable">
-              <thead id="heatmapHead"></thead>
-              <tbody id="heatmapBody"></tbody>
+            <table class="heatmap-table" id="provenanceHeatTable">
+              <thead id="provenanceHeatHead"></thead>
+              <tbody id="provenanceHeatBody"></tbody>
             </table>
           </div>
         </div>
@@ -2236,261 +2218,178 @@
           <div class="timeline-desc">${desc}</div>
         </div>`;
       });
-      /* ── 22. Site definitions ──────────────────────────────────── */
-      const SITES = [
+      /* ── 22. Source-system definitions ─────────────────────────── */
+      const SOURCE_SYSTEMS = [
         {
-          id: "erlangen",
-          name: "Universitätsklinikum Erlangen",
-          short: "Erlangen",
+          id: "obds",
+          name: "Tumour Documentation (oBDS)",
+          short: "oBDS",
+          icon: "🗂️",
           color: COLORS.teal,
-          patients: 3142,
-          onboarded: "Jan 2015",
-          resources: 24810,
-          domains: {
-            Conditions: 100,
-            TNM: 78,
-            Labs: 91,
-            Encounters: 98,
-            Medications: 84,
-            Procedures: 89,
+          desc: "Primary oncological diagnoses, TNM staging, grading and treatment plans. Structured via oBDS XML and transformed into FHIR Conditions and Observations.",
+          resources: {
+            Conditions: 31204,
+            Observations: 9103,
+            Encounters: 0,
+            MedicationRequests: 0,
+            Procedures: 4200,
           },
-          tumours: [38, 26, 14, 9, 6, 7],
         },
         {
-          id: "muenchen-lmu",
-          name: "LMU Klinikum München",
-          short: "LMU München",
+          id: "kis",
+          name: "Clinical Information System (KIS)",
+          short: "KIS",
+          icon: "🏥",
           color: COLORS.blue,
-          patients: 2891,
-          onboarded: "Sep 2020",
-          resources: 22640,
-          domains: {
-            Conditions: 100,
-            TNM: 74,
-            Labs: 89,
-            Encounters: 96,
-            Medications: 79,
-            Procedures: 85,
+          desc: "Encounters, clinical procedures, and secondary diagnoses. Exported from the hospital's central patient administration and clinical documentation system.",
+          resources: {
+            Conditions: 8210,
+            Observations: 0,
+            Encounters: 67390,
+            MedicationRequests: 0,
+            Procedures: 18730,
           },
-          tumours: [30, 22, 18, 11, 8, 11],
         },
         {
-          id: "augsburg",
-          name: "Universitätsklinikum Augsburg",
-          short: "Augsburg",
+          id: "lis",
+          name: "Laboratory Information System (LIS)",
+          short: "LIS",
+          icon: "🔬",
           color: COLORS.violet,
-          patients: 2204,
-          onboarded: "Sep 2020",
-          resources: 17280,
-          domains: {
-            Conditions: 100,
-            TNM: 68,
-            Labs: 85,
-            Encounters: 94,
-            Medications: 76,
-            Procedures: 80,
+          desc: "LOINC-coded laboratory results including tumour markers, complete blood count, and clinical chemistry. Transmitted via HL7 v2 and mapped to FHIR Observations.",
+          resources: {
+            Conditions: 0,
+            Observations: 218541,
+            Encounters: 0,
+            MedicationRequests: 0,
+            Procedures: 0,
           },
-          tumours: [32, 28, 16, 10, 5, 9],
         },
         {
-          id: "regensburg",
-          name: "Universitätsklinikum Regensburg",
-          short: "Regensburg",
+          id: "pharmacy",
+          name: "Pharmacy / Medication System",
+          short: "Pharmacy",
+          icon: "💊",
           color: COLORS.amber,
-          patients: 1986,
-          onboarded: "Sep 2020",
-          resources: 15620,
-          domains: {
-            Conditions: 100,
-            TNM: 72,
-            Labs: 88,
-            Encounters: 93,
-            Medications: 81,
-            Procedures: 83,
+          desc: "Medication requests and chemotherapy protocols. Sourced from the clinical pharmacy dispensing and oncology treatment planning system.",
+          resources: {
+            Conditions: 0,
+            Observations: 0,
+            Encounters: 0,
+            MedicationRequests: 48917,
+            Procedures: 0,
           },
-          tumours: [28, 24, 20, 12, 7, 9],
         },
         {
-          id: "wuerzburg",
-          name: "Universitätsklinikum Würzburg",
-          short: "Würzburg",
+          id: "pathology",
+          name: "Pathology System",
+          short: "Pathology",
+          icon: "🧫",
           color: COLORS.rose,
-          patients: 1538,
-          onboarded: "Sep 2020",
-          resources: 9820,
-          domains: {
-            Conditions: 100,
-            TNM: 66,
-            Labs: 82,
-            Encounters: 91,
-            Medications: 72,
-            Procedures: 76,
+          desc: "Histopathological findings, SNOMED-encoded morphology codes, and specimen reports from the pathology information system.",
+          resources: {
+            Conditions: 0,
+            Observations: 14820,
+            Encounters: 0,
+            MedicationRequests: 0,
+            Procedures: 0,
           },
-          tumours: [35, 20, 15, 14, 9, 7],
-        },
-        {
-          id: "bayreuth",
-          name: "Klinikum Bayreuth",
-          short: "Bayreuth",
-          color: COLORS.orange,
-          patients: 1086,
-          onboarded: "Sep 2020",
-          resources: 6850,
-          domains: {
-            Conditions: 100,
-            TNM: 61,
-            Labs: 78,
-            Encounters: 88,
-            Medications: 68,
-            Procedures: 71,
-          },
-          tumours: [29, 25, 17, 13, 9, 7],
         },
       ];
 
-      /* ── 23. Site cards ────────────────────────────────────────── */
-      const siteCardsEl = document.getElementById("siteCards");
-      const allDomainKeys = Object.keys(SITES[0].domains);
-      SITES.forEach((site) => {
-        const domainTags = allDomainKeys
+      const PROV_TYPES = [
+        "Conditions",
+        "Observations",
+        "Encounters",
+        "MedicationRequests",
+        "Procedures",
+      ];
+
+      function sysTotal(sys) {
+        return PROV_TYPES.reduce((s, t) => s + sys.resources[t], 0);
+      }
+
+      /* ── 23. Source-system cards ────────────────────────────────── */
+      const provenanceCardsEl = document.getElementById("provenanceCards");
+      SOURCE_SYSTEMS.forEach((sys) => {
+        const total = sysTotal(sys);
+        const contributing = PROV_TYPES.filter(
+          (t) => sys.resources[t] > 0,
+        );
+        const tags = contributing
           .map(
-            (d) =>
-              `<span class="site-domain-tag active">${d}</span>`,
+            (t) =>
+              `<span class="site-domain-tag active">${t}</span>`,
           )
           .join("");
-        siteCardsEl.innerHTML += `
-          <div class="site-card" style="border-color:${site.color}">
+        provenanceCardsEl.innerHTML += `
+          <div class="site-card" style="border-color:${sys.color}">
             <div class="site-card-header">
-              <div class="site-avatar" style="background:${site.color}">${site.short[0]}</div>
+              <div class="site-avatar" style="background:${sys.color};font-size:1.4rem">${sys.icon}</div>
               <div>
-                <div class="site-name">${site.name}</div>
-                <div class="site-city">Since ${site.onboarded}</div>
+                <div class="site-name">${sys.name}</div>
+                <div class="site-city">${total.toLocaleString()} FHIR resources</div>
               </div>
             </div>
-            <div class="site-stats">
-              <div class="site-stat">
-                <div class="site-stat-val" style="color:${site.color}">${site.patients.toLocaleString()}</div>
-                <div class="site-stat-lbl">Patients</div>
-              </div>
-              <div class="site-stat">
-                <div class="site-stat-val" style="color:${site.color}">${site.resources.toLocaleString()}</div>
-                <div class="site-stat-lbl">FHIR Resources</div>
-              </div>
-              <div class="site-stat">
-                <div class="site-stat-val" style="color:${site.color}">${site.domains.TNM} %</div>
-                <div class="site-stat-lbl">TNM Coverage</div>
-              </div>
-              <div class="site-stat">
-                <div class="site-stat-val" style="color:${site.color}">${site.domains.Labs} %</div>
-                <div class="site-stat-lbl">Lab Coverage</div>
-              </div>
-            </div>
-            <div class="site-domains">${domainTags}</div>
+            <p style="font-size:0.78rem;color:var(--slate-light);line-height:1.5;margin-bottom:12px">${sys.desc}</p>
+            <div class="site-domains">${tags}</div>
           </div>`;
       });
 
-      /* ── 24. Patient volume bar ─────────────────────────────────── */
-      new Chart(document.getElementById("sitePatientBar"), {
-        type: "bar",
+      /* ── 24. Doughnut — records by source system ────────────────── */
+      new Chart(document.getElementById("provenanceDoughnut"), {
+        type: "doughnut",
         data: {
-          labels: SITES.map((s) => s.short),
+          labels: SOURCE_SYSTEMS.map((s) => s.short),
           datasets: [
             {
-              label: "Patients",
-              data: SITES.map((s) => s.patients),
-              backgroundColor: SITES.map((s) => rgba(s.color, 0.8)),
-              borderRadius: 8,
-              borderSkipped: false,
+              data: SOURCE_SYSTEMS.map(sysTotal),
+              backgroundColor: SOURCE_SYSTEMS.map((s) => rgba(s.color, 0.85)),
+              borderColor: SOURCE_SYSTEMS.map((s) => s.color),
+              borderWidth: 2,
+              hoverOffset: 10,
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (c) => ` ${c.parsed.y.toLocaleString()} patients`,
-              },
-            },
-          },
-          scales: {
-            x: { grid: { display: false } },
-            y: {
-              grid: { color: "#f1f5f9" },
-              ticks: { callback: (v) => v.toLocaleString() },
-            },
-          },
-        },
-      });
-
-      /* ── 25. Radar — domain completeness per site ───────────────── */
-      new Chart(document.getElementById("siteRadar"), {
-        type: "radar",
-        data: {
-          labels: allDomainKeys,
-          datasets: SITES.map((site) => ({
-            label: site.short,
-            data: allDomainKeys.map((k) => site.domains[k]),
-            borderColor: site.color,
-            backgroundColor: rgba(site.color, 0.08),
-            borderWidth: 2,
-            pointBackgroundColor: site.color,
-            pointRadius: 3,
-          })),
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              min: 0,
-              max: 100,
-              ticks: { stepSize: 25, font: { size: 10 }, backdropColor: "transparent" },
-              pointLabels: { font: { size: 11, weight: "600" } },
-              grid: { color: "#e2e8f0" },
-              angleLines: { color: "#e2e8f0" },
-            },
-          },
+          cutout: "60%",
           plugins: {
             legend: {
               position: "bottom",
-              labels: { font: { size: 10 }, padding: 8 },
+              labels: { font: { size: 11 }, padding: 10 },
             },
             tooltip: {
-              callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.r} %` },
+              callbacks: {
+                label: (c) =>
+                  ` ${c.label}: ${c.parsed.toLocaleString()} resources`,
+              },
             },
           },
         },
       });
 
-      /* ── 26. Stacked bar — tumour entity mix per site ───────────── */
-      const tumourLabels = [
-        "Breast",
-        "Prostate / Gynaecological",
-        "Lung",
-        "Colorectal",
-        "Pancreas / GI",
-        "Other",
-      ];
-      const tumourColors = [
-        COLORS.rose,
+      /* ── 25. Stacked bar — resource mix per source system ───────── */
+      const provTypeColors = [
+        COLORS.teal,
+        COLORS.violet,
         COLORS.blue,
-        COLORS.sky,
-        COLORS.orange,
         COLORS.amber,
-        "#94a3b8",
+        COLORS.orange,
       ];
-      new Chart(document.getElementById("siteTumourStacked"), {
+      new Chart(document.getElementById("provenanceStacked"), {
         type: "bar",
         data: {
-          labels: SITES.map((s) => s.short),
-          datasets: tumourLabels.map((label, i) => ({
-            label,
-            data: SITES.map((s) => s.tumours[i]),
-            backgroundColor: rgba(tumourColors[i], 0.82),
-            borderRadius: i === tumourLabels.length - 1 ? { topLeft: 4, topRight: 4 } : undefined,
+          labels: SOURCE_SYSTEMS.map((s) => s.short),
+          datasets: PROV_TYPES.map((type, i) => ({
+            label: type,
+            data: SOURCE_SYSTEMS.map((s) => s.resources[type]),
+            backgroundColor: rgba(provTypeColors[i], 0.82),
+            borderRadius:
+              i === PROV_TYPES.length - 1
+                ? { topLeft: 4, topRight: 4 }
+                : undefined,
           })),
         },
         options: {
@@ -2500,55 +2399,6 @@
             x: { stacked: true, grid: { display: false } },
             y: {
               stacked: true,
-              max: 100,
-              grid: { color: "#f1f5f9" },
-              ticks: { callback: (v) => v + " %" },
-            },
-          },
-          plugins: {
-            legend: { position: "bottom", labels: { font: { size: 11 } } },
-            tooltip: {
-              callbacks: {
-                label: (c) => ` ${c.dataset.label}: ${c.parsed.y} %`,
-              },
-            },
-          },
-        },
-      });
-
-      /* ── 27. Grouped bar — FHIR resource volume per site ─────────── */
-      const fhirDomains = [
-        "Conditions",
-        "Observations",
-        "Encounters",
-        "Medications",
-        "Procedures",
-      ];
-      const fhirPerSite = [
-        [3142, 9800, 6400, 3210, 2258],
-        [2891, 8400, 5820, 2980, 2210],
-        [2204, 6400, 4120, 2280, 1780],
-        [1986, 5800, 3900, 2050, 1640],
-        [1538, 4100, 2940, 1620, 1240],
-        [1086, 2900, 2100, 1140,  870],
-      ];
-      new Chart(document.getElementById("siteFhirGrouped"), {
-        type: "bar",
-        data: {
-          labels: fhirDomains,
-          datasets: SITES.map((site, i) => ({
-            label: site.short,
-            data: fhirPerSite[i],
-            backgroundColor: rgba(site.color, 0.78),
-            borderRadius: 4,
-          })),
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { grid: { display: false } },
-            y: {
               grid: { color: "#f1f5f9" },
               ticks: { callback: (v) => v.toLocaleString() },
             },
@@ -2556,46 +2406,62 @@
           plugins: {
             legend: {
               position: "bottom",
-              labels: { font: { size: 11 }, padding: 10 },
+              labels: { font: { size: 11 }, padding: 8 },
+            },
+            tooltip: {
+              callbacks: {
+                label: (c) =>
+                  c.parsed.y > 0
+                    ? ` ${c.dataset.label}: ${c.parsed.y.toLocaleString()}`
+                    : null,
+              },
             },
           },
         },
       });
 
-      /* ── 28. Heatmap — domain × site ───────────────────────────── */
-      function hmColor(pct) {
-        if (pct >= 90) return { bg: "#ccfbf1", fg: "#0f766e" };
-        if (pct >= 75) return { bg: "#d1fae5", fg: "#065f46" };
-        if (pct >= 60) return { bg: "#fef9c3", fg: "#92400e" };
-        return { bg: "#ffe4e6", fg: "#9f1239" };
+      /* ── 26. Provenance heatmap — resource type × source system ─── */
+      function provHmColor(pct) {
+        if (pct >= 80) return { bg: "#ccfbf1", fg: "#0f766e" };
+        if (pct >= 30) return { bg: "#dbeafe", fg: "#1e40af" };
+        if (pct > 0) return { bg: "#fef9c3", fg: "#92400e" };
+        return { bg: "#f1f5f9", fg: "#94a3b8" };
       }
 
-      const headEl = document.getElementById("heatmapHead");
-      const bodyEl = document.getElementById("heatmapBody");
+      const provHeatHead = document.getElementById("provenanceHeatHead");
+      const provHeatBody = document.getElementById("provenanceHeatBody");
 
-      headEl.innerHTML =
-        "<tr><th>Domain</th>" +
-        SITES.map((s) => `<th>${s.short}</th>`).join("") +
+      provHeatHead.innerHTML =
+        "<tr><th>FHIR Resource Type</th>" +
+        SOURCE_SYSTEMS.map((s) => `<th>${s.icon} ${s.short}</th>`).join("") +
         "</tr>";
 
-      allDomainKeys.forEach((domain) => {
-        const cells = SITES.map((site) => {
-          const pct = site.domains[domain];
-          const { bg, fg } = hmColor(pct);
-          return `<td><span class="hm-cell" style="background:${bg};color:${fg}">${pct} %</span></td>`;
-        }).join("");
-        bodyEl.innerHTML += `<tr><td>${domain}</td>${cells}</tr>`;
+      PROV_TYPES.forEach((type) => {
+        const counts = SOURCE_SYSTEMS.map((s) => s.resources[type]);
+        const total = counts.reduce((a, b) => a + b, 0);
+        const cells = counts
+          .map((count) => {
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            const { bg, fg } = provHmColor(pct);
+            const label =
+              pct > 0
+                ? `${pct} % <span style="font-weight:400;font-size:0.7rem">(${count.toLocaleString()})</span>`
+                : "—";
+            return `<td><span class="hm-cell" style="background:${bg};color:${fg};min-width:90px">${label}</span></td>`;
+          })
+          .join("");
+        provHeatBody.innerHTML += `<tr><td>${type}</td>${cells}</tr>`;
       });
 
       /* Legend row */
-      bodyEl.innerHTML += `
+      provHeatBody.innerHTML += `
         <tr style="background:#f8fafc">
-          <td style="font-size:0.72rem;color:var(--slate-light);padding-top:10px">Coverage key</td>
-          <td colspan="${SITES.length}" style="padding-top:10px">
-            <span class="hm-cell" style="background:#ccfbf1;color:#0f766e">≥ 90 %</span>
-            <span class="hm-cell" style="background:#d1fae5;color:#065f46;margin-left:6px">75–89 %</span>
-            <span class="hm-cell" style="background:#fef9c3;color:#92400e;margin-left:6px">60–74 %</span>
-            <span class="hm-cell" style="background:#ffe4e6;color:#9f1239;margin-left:6px">&lt; 60 %</span>
+          <td style="font-size:0.72rem;color:var(--slate-light);padding-top:10px">Contribution key</td>
+          <td colspan="${SOURCE_SYSTEMS.length}" style="padding-top:10px">
+            <span class="hm-cell" style="background:#ccfbf1;color:#0f766e">≥ 80 % primary</span>
+            <span class="hm-cell" style="background:#dbeafe;color:#1e40af;margin-left:6px">30–79 % secondary</span>
+            <span class="hm-cell" style="background:#fef9c3;color:#92400e;margin-left:6px">&lt; 30 % minor</span>
+            <span class="hm-cell" style="background:#f1f5f9;color:#94a3b8;margin-left:6px">— none</span>
           </td>
         </tr>`;
     </script>
