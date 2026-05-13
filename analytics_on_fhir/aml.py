@@ -1,3 +1,4 @@
+import csv
 import os
 from pathlib import Path
 
@@ -322,10 +323,10 @@ class AMLStudy:
             "medication_atc_code",
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".code",
         ),
-        # (
-        #     "medication_atc_display",
-        #     "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".display",
-        # ),
+        (
+            "medication_ops_code",
+            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
+        ),
         (
             "medication_pzn_code",
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_PZN}')" + ".code",
@@ -333,10 +334,6 @@ class AMLStudy:
         (
             "medication_pzn_display",
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_PZN}')" + ".display",
-        ),
-        (
-            "medication_ops_code",
-            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
         ),
         ("ingredient", "Medication.ingredient"),
     ]
@@ -378,6 +375,17 @@ class AMLStudy:
         logger.info("Found no {}/Medication FHIR resources", resource_type)
         return None, None
 
+    def load_ops_codes(self, filepath):
+        ops_code_map = {}
+        with open(filepath, "r", encoding="utf-8") as file:
+            content = csv.reader(file, delimiter=";")
+            for row in content:
+                if len(row) >= 9:
+                    code = row[6]
+                    title = row[8]
+                    ops_code_map[code] = title
+        return ops_code_map
+
     def extract_meds(self):  # , patient_list):
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
 
@@ -415,12 +423,23 @@ class AMLStudy:
             return
 
         med_df = pd.concat([med_df_1, med_df_2, med_df_3])
-        # ATC display mapping via Excel sheet
-        atc_mapping_df = pd.read_excel(
-            HERE / "ATC GKV-AI 2026.xlsx", sheet_name="WIdO-Index 2026 alphabetisch"
-        )
-        atc_mapping = dict(zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"]))
-        med_df["medication_atc_display"] = med_df["medication_atc_code"].map(atc_mapping)
+
+        if "medication_atc_code" in med_df.columns:
+            logger.info("loading ATC mappings")
+            atc_mapping_df = pd.read_excel(
+                HERE / "ATC GKV-AI 2026.xlsx", sheet_name="WIdO-Index 2026 alphabetisch"
+            )
+            atc_mapping = dict(zip(atc_mapping_df["ATC-Code"], atc_mapping_df["ATC-Bedeutung"]))
+            medication_atc_display = med_df["medication_atc_code"].map(atc_mapping)
+            med_df.insert(2, "medication_atc_display", medication_atc_display, True)
+            index = 4
+        else:
+            index = 2
+        if "medication_ops_code" in med_df.columns:
+            logger.info("loading OPS mappings")
+            ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
+            medication_ops_display = med_df["medication_ops_code"].map(ops_mapping)
+            med_df.insert(index, "medication_ops_display", medication_ops_display, True)
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
