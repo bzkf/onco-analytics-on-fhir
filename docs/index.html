@@ -16,9 +16,9 @@
       }
 
       :root {
-        --teal: #0d9488;
-        --teal-dark: #0f766e;
-        --teal-light: #ccfbf1;
+        --teal: #22a654;
+        --teal-dark: #166534;
+        --teal-light: #dcfce7;
         --slate: #1e293b;
         --slate-mid: #334155;
         --slate-light: #64748b;
@@ -30,8 +30,8 @@
         --accent-blue: #3b82f6;
         --accent-orange: #ea580c;
         --radius: 16px;
-        --shadow: 0 4px 24px rgba(13, 148, 136, 0.10);
-        --shadow-hover: 0 8px 32px rgba(13, 148, 136, 0.18);
+        --shadow: 0 4px 24px rgba(22, 101, 52, 0.10);
+        --shadow-hover: 0 8px 32px rgba(22, 101, 52, 0.18);
         --font: "Inter", system-ui, sans-serif;
       }
 
@@ -49,7 +49,7 @@
 
       /* ─── Hero / Header ────────────────────────────────────── */
       header {
-        background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, #14532d 0%, #16a34a 100%);
         color: #fff;
         padding: 64px 24px 80px;
         text-align: center;
@@ -317,7 +317,7 @@
       }
 
       thead {
-        background: linear-gradient(90deg, var(--teal-dark), #1d4ed8);
+        background: linear-gradient(90deg, var(--teal-dark), var(--teal));
         color: #fff;
       }
 
@@ -439,7 +439,7 @@
         top: 0;
         bottom: 0;
         width: 2px;
-        background: linear-gradient(to bottom, var(--teal), #1d4ed8);
+        background: linear-gradient(to bottom, var(--teal-dark), var(--teal));
         border-radius: 999px;
       }
 
@@ -674,7 +674,7 @@
       }
 
       .heatmap-table thead {
-        background: linear-gradient(90deg, var(--teal-dark), #1d4ed8);
+        background: linear-gradient(90deg, var(--teal-dark), var(--teal));
         color: #fff;
       }
 
@@ -780,7 +780,7 @@
         <div class="section-header">
           <div
             class="section-icon"
-            style="background: #ccfbf1; color: var(--teal)"
+            style="background: #dcfce7; color: var(--teal)"
           >
             📊
           </div>
@@ -1271,7 +1271,7 @@
     <script>
       /* ── Shared palette ─────────────────────────────────────────── */
       const COLORS = {
-        teal: "#0d9488",
+        teal: "#22a654",
         blue: "#3b82f6",
         violet: "#7c3aed",
         rose: "#f43f5e",
@@ -1659,7 +1659,7 @@
       ];
 
       const colours = [
-        "#ccfbf1",
+        "#dcfce7",
         "#dbeafe",
         "#ede9fe",
         "#fef9c3",
@@ -2422,7 +2422,7 @@
 
       /* ── 26. Provenance heatmap — resource type × source system ─── */
       function provHmColor(pct) {
-        if (pct >= 80) return { bg: "#ccfbf1", fg: "#0f766e" };
+        if (pct >= 80) return { bg: "#dcfce7", fg: "#166534" };
         if (pct >= 30) return { bg: "#dbeafe", fg: "#1e40af" };
         if (pct > 0) return { bg: "#fef9c3", fg: "#92400e" };
         return { bg: "#f1f5f9", fg: "#94a3b8" };
@@ -2458,7 +2458,7 @@
         <tr style="background:#f8fafc">
           <td style="font-size:0.72rem;color:var(--slate-light);padding-top:10px">Contribution key</td>
           <td colspan="${SOURCE_SYSTEMS.length}" style="padding-top:10px">
-            <span class="hm-cell" style="background:#ccfbf1;color:#0f766e">≥ 80 % primary</span>
+            <span class="hm-cell" style="background:#dcfce7;color:#166534">≥ 80 % primary</span>
             <span class="hm-cell" style="background:#dbeafe;color:#1e40af;margin-left:6px">30–79 % secondary</span>
             <span class="hm-cell" style="background:#fef9c3;color:#92400e;margin-left:6px">&lt; 30 % minor</span>
             <span class="hm-cell" style="background:#f1f5f9;color:#94a3b8;margin-left:6px">— none</span>
