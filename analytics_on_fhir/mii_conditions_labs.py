@@ -226,6 +226,8 @@ class PyRateQuery:
 
         if all_labs:
             lab_df = pd.concat(all_labs, ignore_index=True)
+            if "lab_codeableconcept_code" not in lab_df.columns:
+                lab_df["lab_codeableconcept_code"] = None
             lab_df.to_csv(
                 os.path.join(self.output_dir, "df_mii_labs" + suffix + ".csv"),
                 index=False,
