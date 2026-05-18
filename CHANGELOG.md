@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.2...v2.29.3) (2026-05-18)
+
+
+### Bug Fixes
+
+* hash obs id from uicc to allow connecting of related TNM uicc and y ([#474](https://github.com/bzkf/onco-analytics-on-fhir/issues/474)) ([acb7af1](https://github.com/bzkf/onco-analytics-on-fhir/commit/acb7af166e67a09853a7f9d83189bfa1a0f13543))
+
 ## [2.29.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.1...v2.29.2) (2026-05-15)
 
 
