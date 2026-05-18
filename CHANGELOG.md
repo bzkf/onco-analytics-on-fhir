@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.1...v2.29.2) (2026-05-15)
+
+
+### Bug Fixes
+
+* add colum lab_codeableconcept_code if it's empty ([#471](https://github.com/bzkf/onco-analytics-on-fhir/issues/471)) ([a46ea4f](https://github.com/bzkf/onco-analytics-on-fhir/commit/a46ea4f4c644b269f8295d08a60f7f20fc8a1194))
+
 ## [2.29.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.0...v2.29.1) (2026-05-13)
 
 
