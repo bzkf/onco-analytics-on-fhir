@@ -300,6 +300,8 @@ def deidentify(
         "patient_resource_id",
         "condition_patient_reference",
         "parent_tnm_observation_id",
+        "uicc_observation_id",
+        "has_member",
     ]
     hash_udf = _make_hash_udf(crypto_key)
 
@@ -1017,7 +1019,7 @@ def extract_uicc_tnm(
                     {
                         "description": "Observation ID",
                         "path": "getResourceKey()",
-                        "name": "observation_id",
+                        "name": "uicc_observation_id",
                     },
                     {
                         "description": "Focus Condition (Primary Diagnosis)",
