@@ -424,7 +424,7 @@ class AMLStudy:
                 ("intent", "MedicationRequest.intent"),
                 (
                     "datetime",
-                    "MedicationRequest.dosageInstruction.timing.event "
+                    "MedicationRequest.dosageInstruction.timing.event.first() "
                     + "| MedicationRequest.authoredOn",
                 ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
