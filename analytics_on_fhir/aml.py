@@ -1243,6 +1243,6 @@ class AMLStudy:
                     DAY_SHIFT, unit="D"
                 )
 
-            sap_medikation.to_csv(de_identified_dir / "sap_medikation.csv", index=False)
+            sap_medikation.to_csv(de_identified_dir / "aml_sap_medication.csv", index=False)
 
         # lab_with_diagnosis.to_csv(de_identified_dir / "aml_matched_zenzy_labs.csv", index=False)
