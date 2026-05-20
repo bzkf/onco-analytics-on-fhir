@@ -422,7 +422,11 @@ class AMLStudy:
             resource_type="MedicationRequest",
             extra_fhir_paths=[
                 ("intent", "MedicationRequest.intent"),
-                ("datetime", "MedicationRequest.authoredOn"),
+                (
+                    "datetime",
+                    "MedicationRequest.dosageInstruction.timing.event "
+                    + "| MedicationRequest.authoredOn",
+                ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
             ],
         )
@@ -432,7 +436,11 @@ class AMLStudy:
             patient_df=patient_df,
             resource_type="MedicationStatement",
             extra_fhir_paths=[
-                ("datetime", "MedicationStatement.effectivePeriod.start"),
+                (
+                    "datetime",
+                    "MedicationStatement.effectiveDateTime "
+                    + "| MedicationStatement.effectivePeriod.start",
+                ),
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
             ],
@@ -443,7 +451,12 @@ class AMLStudy:
             patient_df=patient_df,
             resource_type="MedicationAdministration",
             extra_fhir_paths=[
-                ("datetime", "MedicationAdministration.effectiveDateTime"),
+                (
+                    "datetime",
+                    "MedicationAdministration.effectiveDateTime "
+                    + "| MedicationAdministration.effectivePeriod.start",
+                ),
+                ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
             ],
         )
@@ -482,6 +495,10 @@ class AMLStudy:
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
         req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
         med_df.to_csv(os.path.join(self.output_dir, "aml_all_meds.csv"), index=False)
+
+        if "period_end" not in req_stat_admin_df.columns:
+            req_stat_admin_df["period_end"] = pd.NaT
+
         req_stat_admin_df.to_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), index=False
         )
