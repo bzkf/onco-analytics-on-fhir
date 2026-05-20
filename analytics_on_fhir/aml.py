@@ -409,6 +409,7 @@ class AMLStudy:
             )
         patient_mrn_lookup = (
             patient_df[["condition_patient_reference", "patient_mrn"]]
+            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
             .sort_values("patient_mrn")
             .drop_duplicates(subset=["condition_patient_reference"], keep="first")
             .set_index("condition_patient_reference")["patient_mrn"]
