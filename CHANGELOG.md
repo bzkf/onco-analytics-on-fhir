@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.29.7](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.6...v2.29.7) (2026-05-20)
+
+
+### Bug Fixes
+
+* derive patient_mrn from Patient resource via join instead of subject.identifier ([#485](https://github.com/bzkf/onco-analytics-on-fhir/issues/485)) ([c7aad94](https://github.com/bzkf/onco-analytics-on-fhir/commit/c7aad947d2e6a6dd705fc8db6ccf7e23d6bc95a7))
+* disable errors for Trivy and Grype in MegaLinter configuration ([#478](https://github.com/bzkf/onco-analytics-on-fhir/issues/478)) ([2de9577](https://github.com/bzkf/onco-analytics-on-fhir/commit/2de9577d6a923c6e9109ac633685fe220f0a5092))
+
 ## [2.29.6](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.5...v2.29.6) (2026-05-20)
 
 
