@@ -395,9 +395,22 @@ class AMLStudy:
         resource_df = pd.concat(resource_chunks, ignore_index=True)
         medication_df = pd.concat(medication_chunks, ignore_index=True)
 
+        mrn_per_ref = (
+            patient_df.groupby("condition_patient_reference")["patient_mrn"]
+            .nunique()
+        )
+        conflicting = mrn_per_ref[mrn_per_ref > 1]
+        if not conflicting.empty:
+            logger.warning(
+                "Multiple distinct patient_mrn values found for {} patient reference(s); "
+                "the first (sorted) MRN will be used: {}",
+                len(conflicting),
+                conflicting.index.tolist(),
+            )
         patient_mrn_lookup = (
             patient_df[["condition_patient_reference", "patient_mrn"]]
-            .drop_duplicates(subset=["condition_patient_reference"])
+            .sort_values("patient_mrn")
+            .drop_duplicates(subset=["condition_patient_reference"], keep="first")
             .set_index("condition_patient_reference")["patient_mrn"]
         )
         resource_df["patient_mrn"] = resource_df["patient_reference"].map(patient_mrn_lookup)
