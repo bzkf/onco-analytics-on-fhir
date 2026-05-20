@@ -17,7 +17,7 @@ J Med Internet Res 2025;27:e65681
 
 #### a) ONKOSTAR data base connector
 
-Configure kafka-connect in [deploy-connectors.sh](deploy-connectors.sh) and [kafka-connect-passwords.properties](kafka-connect-passwords.properties).
+Configure kafka-connect in [onkostar-db-connector.json](onkostar-db-connector.json), [onkostar-meldung-export-connector.json](onkostar-meldung-export-connector.json) and [kafka-connect-passwords.properties](kafka-connect-passwords.properties).
 The oBDS single report XML-files will be loaded into the Kafka cluster.
 For more information about kafka-connect, refer to "Enable Kafka Connect and the connector" below.
 
