@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.5](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.4...v2.29.5) (2026-05-20)
+
+
+### Miscellaneous Chores
+
+* deploy connector via bash script and include new connector ([#480](https://github.com/bzkf/onco-analytics-on-fhir/issues/480)) ([381ca8e](https://github.com/bzkf/onco-analytics-on-fhir/commit/381ca8e0026ff0a970938c6f782c2a8c17a88f54))
+
 ## [2.29.4](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.3...v2.29.4) (2026-05-20)
 
 
