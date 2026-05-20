@@ -17,7 +17,7 @@ J Med Internet Res 2025;27:e65681
 
 #### a) ONKOSTAR data base connector
 
-Configure kafka-connect in [onkostar-db-connector.json](onkostar-db-connector.json) and [kafka-connect-passwords.properties](kafka-connect-passwords.properties).
+Configure kafka-connect in [onkostar-db-connector.json](onkostar-db-connector.json), [onkostar-meldung-export-connector.json](onkostar-meldung-export-connector.json) and [kafka-connect-passwords.properties](kafka-connect-passwords.properties).
 The oBDS single report XML-files will be loaded into the Kafka cluster.
 For more information about kafka-connect, refer to "Enable Kafka Connect and the connector" below.
 
@@ -95,7 +95,11 @@ docker compose -f compose.analytics-on-fhir.yaml up
 
 ### 7. Enable Kafka Connect and the connector
 
-Make sure to have access to Onkostar tables `lkr_meldung_export`.
+Make sure to have access to Onkostar tables `lkr_meldung_export`
+and the following when using the onkostar-db-connector:
+- `patient`
+- `prozedur`
+- `dk_bestoftumor`
 
 Run the command below to start Kafka and Kafka connect (if not already running):
 
@@ -103,14 +107,11 @@ Run the command below to start Kafka and Kafka connect (if not already running):
 docker compose -f compose.kafka.yaml up
 ```
 
-Next, enable the connector [onkostar-db-connector.json](onkostar-db-connector.json). If required,
+Next, enable the connector [deploy-connectors.sh](deploy-connectors.sh). If required,
 you can modify the SQL query to suit your needs by modifying the file.
 
 ```sh
-curl -X POST \
-  -H 'Content-Type: application/json' \
-  -d @onkostar-db-connector.json \
-  http://localhost:8083/connectors
+sh deploy-connectors.sh
 ```
 
 To remove leading zeros from `Patient_ID` (see: <https://github.com/bzkf/onco-analytics-on-fhir/issues/188>), you could use the following query.
