@@ -1081,6 +1081,9 @@ class AMLStudy:
                 return pd.NA
             return crypto_hash(str(value))
 
+        de_identified_dir = Path(self.output_dir) / "de-identified"
+        de_identified_dir.mkdir(parents=True, exist_ok=True)
+
         patients_with_diagnoses = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_patients.csv"),
             parse_dates=[
@@ -1118,6 +1121,9 @@ class AMLStudy:
                 DAY_SHIFT, unit="D"
             )
 
+        patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
+
+        # Zenzy
         zenzy_df = pd.read_csv(
             self.settings.aml.csv_input_file,
             sep=";",
@@ -1173,6 +1179,9 @@ class AMLStudy:
             inplace=False,
         )
 
+        zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
+
+        # FHIR Medikation
         fhir_medikation = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
             sep=",",
@@ -1192,11 +1201,45 @@ class AMLStudy:
         for column in columns_to_shift:
             fhir_medikation[column] = fhir_medikation[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
-        de_identified_dir = Path(self.output_dir) / "de-identified"
-        de_identified_dir.mkdir(parents=True, exist_ok=True)
+        fhir_medikation.to_csv(de_identified_dir / "aml_fhir_medication.csv", index=False)
+
+        # SAP Medikation
+        sap_medication_path = os.path.join(self.output_dir, "sap_medikation_working_pseuded.csv")
+        if os.path.exists(sap_medication_path):
+            sap_medikation = (
+                pd.read_csv(
+                    sap_medication_path,
+                    sep=";",
+                    parse_dates=["AUFNAHME_DATUM", "ENTLASS_DATUM"],
+                )
+                .drop(columns=["FALL_ID", "TEILFALL_ID", "PATIENT_ID"])
+                .rename(columns={"Pseudonyme von PATIENT_ID": "patient_mrn"})
+            )
+
+            sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
+                sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
+            )
+
+            sap_medikation["ENTLASS_DATUM"] = pd.to_datetime(
+                sap_medikation["ENTLASS_DATUM"], format="%Y-%m-%d", errors="coerce"
+            )
+            sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
+                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
+            )
+
+            columns_to_hash = [
+                "REZEPT_ID",
+                "patient_mrn",
+            ]
+            for column in columns_to_hash:
+                sap_medikation[column] = sap_medikation[column].apply(crypto_hash_nullable)
+
+            columns_to_shift = ["REZEPT_DATUM", "ENTLASS_DATUM", "AUFNAHME_DATUM"]
+            for column in columns_to_shift:
+                sap_medikation[column] = sap_medikation[column] + pd.to_timedelta(
+                    DAY_SHIFT, unit="D"
+                )
+
+            sap_medikation.to_csv(de_identified_dir / "sap_medikation.csv", index=False)
 
         # lab_with_diagnosis.to_csv(de_identified_dir / "aml_matched_zenzy_labs.csv", index=False)
-        zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
-        patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
-        # sap_medikation.to_csv(de_identified_dir / "sap_medikation.csv", index=False)
-        fhir_medikation.to_csv(de_identified_dir / "aml_fhir_medication.csv", index=False)

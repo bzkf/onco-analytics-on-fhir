@@ -550,7 +550,7 @@ class AllObdsPatients:
         # join parent
         df_uicc_tnm = df_uicc_tnm.alias("u").join(
             df_tnm_parent.alias("p"),
-            F.col("u.observation_id") == F.col("p.has_member"),
+            F.col("u.uicc_observation_id") == F.col("p.has_member"),
             "left",
         )
         df_uicc_tnm.show()
