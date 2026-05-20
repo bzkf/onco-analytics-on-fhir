@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.29.6](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.5...v2.29.6) (2026-05-20)
+
+
+### Bug Fixes
+
+* parse potentially promatic columns explicitly as str ([#483](https://github.com/bzkf/onco-analytics-on-fhir/issues/483)) ([7535980](https://github.com/bzkf/onco-analytics-on-fhir/commit/75359803b140c1b5d548b85b71a00b30a3b05e5f))
+* update datetime paths for Medication to default to effective if set. add missing period_end column ([#482](https://github.com/bzkf/onco-analytics-on-fhir/issues/482)) ([2ff07e2](https://github.com/bzkf/onco-analytics-on-fhir/commit/2ff07e2c4f515aefa49f75ba014ae99b3524230d))
+
 ## [2.29.5](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.4...v2.29.5) (2026-05-20)
 
 
