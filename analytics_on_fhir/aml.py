@@ -262,6 +262,9 @@ class AMLStudy:
         if "deceased_dateTime" not in merged_df.columns:
             merged_df["deceased_dateTime"] = pd.NaT
 
+        if "diagnosis_onsetDateTime" not in merged_df.columns:
+            merged_df["diagnosis_onsetDateTime"] = pd.NaT
+
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
