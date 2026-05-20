@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.29.4](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.3...v2.29.4) (2026-05-20)
+
+
+### Bug Fixes
+
+* add diagnosis_onsetDateTime column if missing ([#477](https://github.com/bzkf/onco-analytics-on-fhir/issues/477)) ([9ef3b06](https://github.com/bzkf/onco-analytics-on-fhir/commit/9ef3b06211e8fca837dc50923ec276e5142226b4))
+* AML prefix in CSV filename ([#470](https://github.com/bzkf/onco-analytics-on-fhir/issues/470)) ([71ae4c1](https://github.com/bzkf/onco-analytics-on-fhir/commit/71ae4c1a3b0045625c740447a3f7542c46d6eb8b))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump idna from 3.11 to 3.15 ([#476](https://github.com/bzkf/onco-analytics-on-fhir/issues/476)) ([fb4a054](https://github.com/bzkf/onco-analytics-on-fhir/commit/fb4a05430c44a5753f38a03ceed7c46adc30bd6e))
+
+
+### Build
+
+* dropped support for building air-gapped artifacts ([#464](https://github.com/bzkf/onco-analytics-on-fhir/issues/464)) ([935ecba](https://github.com/bzkf/onco-analytics-on-fhir/commit/935ecbad905295f41a4dc0e25e4405a774b33f8c))
+
 ## [2.29.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.2...v2.29.3) (2026-05-18)
 
 
