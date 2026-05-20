@@ -395,15 +395,12 @@ class AMLStudy:
         resource_df = pd.concat(resource_chunks, ignore_index=True)
         medication_df = pd.concat(medication_chunks, ignore_index=True)
 
-        patient_mrn_df = patient_df[["condition_patient_reference", "patient_mrn"]].drop_duplicates(
-            subset=["condition_patient_reference"]
+        patient_mrn_lookup = (
+            patient_df[["condition_patient_reference", "patient_mrn"]]
+            .drop_duplicates(subset=["condition_patient_reference"])
+            .set_index("condition_patient_reference")["patient_mrn"]
         )
-        resource_df = resource_df.merge(
-            patient_mrn_df,
-            left_on="patient_reference",
-            right_on="condition_patient_reference",
-            how="left",
-        ).drop(columns=["condition_patient_reference"])
+        resource_df["patient_mrn"] = resource_df["patient_reference"].map(patient_mrn_lookup)
 
         logger.info(f"all_{resource_type}_df size: {len(resource_df)}. {resource_df.dtypes}")
         return resource_df, medication_df
