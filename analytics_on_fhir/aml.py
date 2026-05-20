@@ -70,7 +70,7 @@ DATA_DICTIONARY = {
         "type": "FHIR Resource type of the source",
         "id": "Unique identifier of the resource",
         "patient_reference": "FHIR reference to the patient (Patient/{id})",
-        "patient_mrn": "Medical Record Number of the patient (Patient ID from Patient.identifier)",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced Patient resource identifier)",
         "status": "Status of the medication order or statement",
         "intent": "Intent of the medication order or statement",
         "medication_reference": "FHIR Reference to the applied medication",
@@ -361,11 +361,6 @@ class AMLStudy:
             ("type", f"{resource_type}.resourceType"),
             ("id", f"{resource_type}.id"),
             ("patient_reference", f"{resource_type}.subject.reference"),
-            (
-                "patient_mrn",
-                f"{resource_type}.subject.identifier.where("
-                f"system='{self.settings.fhir.patient_identifier_system}').value",
-            ),
             ("status", f"{resource_type}.status"),
             ("medication_reference", f"{resource_type}.medicationReference.reference"),
         ]
@@ -399,6 +394,28 @@ class AMLStudy:
 
         resource_df = pd.concat(resource_chunks, ignore_index=True)
         medication_df = pd.concat(medication_chunks, ignore_index=True)
+
+        mrn_per_ref = (
+            patient_df.groupby("condition_patient_reference")["patient_mrn"]
+            .nunique()
+        )
+        conflicting = mrn_per_ref[mrn_per_ref > 1]
+        if not conflicting.empty:
+            logger.warning(
+                "Multiple distinct patient_mrn values found for {} patient reference(s); "
+                "the first (sorted) MRN will be used: {}",
+                len(conflicting),
+                conflicting.index.tolist(),
+            )
+        patient_mrn_lookup = (
+            patient_df[["condition_patient_reference", "patient_mrn"]]
+            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+            .sort_values("patient_mrn")
+            .drop_duplicates(subset=["condition_patient_reference"], keep="first")
+            .set_index("condition_patient_reference")["patient_mrn"]
+        )
+        resource_df["patient_mrn"] = resource_df["patient_reference"].map(patient_mrn_lookup)
+
         logger.info(f"all_{resource_type}_df size: {len(resource_df)}. {resource_df.dtypes}")
         return resource_df, medication_df
 
