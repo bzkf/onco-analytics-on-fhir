@@ -397,7 +397,7 @@ class AMLStudy:
         medication_df = pd.concat(medication_chunks, ignore_index=True)
 
         # add the "Medication" prefix to the id so they match the medication_reference column
-        medication_df["id"] = "Medication/" + medication_df["id"].astype(str)
+        medication_df["medication_id"] = "Medication/" + medication_df["medication_id"].astype(str)
 
         mrn_per_ref = patient_df.groupby("condition_patient_reference")["patient_mrn"].nunique()
         conflicting = mrn_per_ref[mrn_per_ref > 1]
@@ -1258,7 +1258,7 @@ class AMLStudy:
         )
 
         columns_to_hash = [
-            "id",
+            "medication_id",
         ]
 
         for column in columns_to_hash:
