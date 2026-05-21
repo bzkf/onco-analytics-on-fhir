@@ -396,6 +396,9 @@ class AMLStudy:
         resource_df = pd.concat(resource_chunks, ignore_index=True)
         medication_df = pd.concat(medication_chunks, ignore_index=True)
 
+        # add the "Medication" prefix to the id so they match the medication_reference column
+        medication_df["id"] = "Medication/" + medication_df["id"].astype(str)
+
         mrn_per_ref = patient_df.groupby("condition_patient_reference")["patient_mrn"].nunique()
         conflicting = mrn_per_ref[mrn_per_ref > 1]
         if not conflicting.empty:
@@ -1235,6 +1238,7 @@ class AMLStudy:
             "id",
             "patient_reference",
             "patient_mrn",
+            "medication_reference",
         ]
 
         for column in columns_to_hash:
@@ -1253,8 +1257,12 @@ class AMLStudy:
             sep=",",
         )
 
-        # for now, the internal references between statements etc. and medication are
-        # not hashed as they are purely technical.
+        columns_to_hash = [
+            "id",
+        ]
+
+        for column in columns_to_hash:
+            fhir_all_medication[column] = fhir_all_medication[column].apply(crypto_hash_nullable)
 
         fhir_all_medication.to_csv(de_identified_dir / "aml_all_meds.csv", index=False)
 
