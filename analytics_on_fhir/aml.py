@@ -1170,6 +1170,13 @@ class AMLStudy:
             zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
         ]
 
+        if "Zeit" not in zenzy_df.columns:
+            logger.warning(
+                "Zeit column not found in Zenzy input data. "
+                + "Setting default time to 08:00 for all records"
+            )
+            zenzy_df["Zeit"] = "08:00"
+
         zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
             zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
         )
