@@ -70,7 +70,8 @@ DATA_DICTIONARY = {
         "type": "FHIR Resource type of the source",
         "id": "Unique identifier of the resource",
         "patient_reference": "FHIR reference to the patient (Patient/{id})",
-        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced Patient resource identifier)",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced Patient "
+        + "resource identifier)",
         "status": "Status of the medication order or statement",
         "intent": "Intent of the medication order or statement",
         "medication_reference": "FHIR Reference to the applied medication",
@@ -395,10 +396,7 @@ class AMLStudy:
         resource_df = pd.concat(resource_chunks, ignore_index=True)
         medication_df = pd.concat(medication_chunks, ignore_index=True)
 
-        mrn_per_ref = (
-            patient_df.groupby("condition_patient_reference")["patient_mrn"]
-            .nunique()
-        )
+        mrn_per_ref = patient_df.groupby("condition_patient_reference")["patient_mrn"].nunique()
         conflicting = mrn_per_ref[mrn_per_ref > 1]
         if not conflicting.empty:
             logger.warning(
@@ -510,8 +508,9 @@ class AMLStudy:
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
-        req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
         med_df.to_csv(os.path.join(self.output_dir, "aml_all_meds.csv"), index=False)
+
+        req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
 
         if "period_end" not in req_stat_admin_df.columns:
             req_stat_admin_df["period_end"] = pd.NaT
@@ -1218,7 +1217,7 @@ class AMLStudy:
 
         zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
 
-        # FHIR Medikation
+        # FHIR Medikation Statements, Requests, Administrations
         fhir_medikation = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
             sep=",",
@@ -1239,6 +1238,18 @@ class AMLStudy:
             fhir_medikation[column] = fhir_medikation[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         fhir_medikation.to_csv(de_identified_dir / "aml_fhir_medication.csv", index=False)
+
+        # referenced Medications for MedicationStatements, MedicationRequests,
+        # MedicationAdministrations
+        fhir_all_medication = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_meds.csv"),
+            sep=",",
+        )
+
+        # for now, the internal references between statements etc. and medication are
+        # not hashed as they are purely technical.
+
+        fhir_all_medication.to_csv(de_identified_dir / "aml_all_meds.csv", index=False)
 
         # SAP Medikation
         sap_medication_path = os.path.join(self.output_dir, "sap_medikation_working_pseuded.csv")
