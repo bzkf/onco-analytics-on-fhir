@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.10](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.9...v2.29.10) (2026-05-21)
+
+
+### Bug Fixes
+
+* handle missing 'Retoure' column and conditionally hash 'Herstellungs-ID' ([#492](https://github.com/bzkf/onco-analytics-on-fhir/issues/492)) ([6b5d8a4](https://github.com/bzkf/onco-analytics-on-fhir/commit/6b5d8a4ba18bc58b13ae8a28e9a8dda715424e5a))
+
 ## [2.29.9](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.8...v2.29.9) (2026-05-21)
 
 
