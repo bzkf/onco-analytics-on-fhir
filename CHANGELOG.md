@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.9](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.8...v2.29.9) (2026-05-21)
+
+
+### Bug Fixes
+
+* update medication ID field to match reference column ([#489](https://github.com/bzkf/onco-analytics-on-fhir/issues/489)) ([a68ae17](https://github.com/bzkf/onco-analytics-on-fhir/commit/a68ae17b6dcab22afaec8471b25f77e097ed1dd3))
+
 ## [2.29.8](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.7...v2.29.8) (2026-05-21)
 
 
