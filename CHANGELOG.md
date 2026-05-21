@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.8](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.7...v2.29.8) (2026-05-21)
+
+
+### Bug Fixes
+
+* include list of medications in output and fix tmpfs missing exec bit ([#487](https://github.com/bzkf/onco-analytics-on-fhir/issues/487)) ([b89fa70](https://github.com/bzkf/onco-analytics-on-fhir/commit/b89fa701c6c9df0f978c455482bb7e7650650322))
+
 ## [2.29.7](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.6...v2.29.7) (2026-05-20)
 
 
