@@ -1229,6 +1229,15 @@ class AMLStudy:
             crypto_hash_nullable
         )
 
+        if "Datum" not in zenzy_df.columns:
+            zenzy_df["Datum"] = pd.NaT
+        if "Zeit" not in zenzy_df.columns:
+            zenzy_df["Zeit"] = pd.NaT
+        if "Herstellungsdatum" not in zenzy_df.columns:
+            zenzy_df["Herstellungsdatum"] = pd.NaT
+        if "Herstellungszeit" not in zenzy_df.columns:
+            zenzy_df["Herstellungszeit"] = pd.NaT
+
         zenzy_df = zenzy_df.drop(
             columns=[
                 self.settings.aml.csv_patient_column,
@@ -1237,7 +1246,6 @@ class AMLStudy:
                 "Herstellungsdatum",
                 "Herstellungszeit",
             ],
-            errors="ignore",
             inplace=False,
         )
 
