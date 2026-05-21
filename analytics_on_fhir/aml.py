@@ -1173,6 +1173,13 @@ class AMLStudy:
             zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
         ]
 
+        if "Retoure" not in zenzy_df.columns:
+            logger.warning(
+                "Retoure column not found in Zenzy input data. "
+                + "Setting default Retoure to 'FALSCH' for all records"
+            )
+            zenzy_df["Retoure"] = "FALSCH"
+
         if "Zeit" not in zenzy_df.columns:
             logger.warning(
                 "Zeit column not found in Zenzy input data. "
@@ -1209,7 +1216,15 @@ class AMLStudy:
             DAY_SHIFT, unit="D"
         )
 
+        if "Herstellungs-ID" not in zenzy_df.columns:
+            logger.warning(
+                "Herstellungs-ID column not found in Zenzy input data. "
+                + "Setting default Herstellungs-ID for all records to the row index"
+            )
+            zenzy_df["Herstellungs-ID"] = zenzy_df.index
+
         zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
+
         zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
             crypto_hash_nullable
         )
@@ -1222,6 +1237,7 @@ class AMLStudy:
                 "Herstellungsdatum",
                 "Herstellungszeit",
             ],
+            errors="ignore",
             inplace=False,
         )
 
