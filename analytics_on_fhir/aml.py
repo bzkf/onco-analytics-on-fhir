@@ -70,7 +70,8 @@ DATA_DICTIONARY = {
         "type": "FHIR Resource type of the source",
         "id": "Unique identifier of the resource",
         "patient_reference": "FHIR reference to the patient (Patient/{id})",
-        "patient_mrn": "Medical Record Number of the patient (Patient ID from Patient.identifier)",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced Patient "
+        + "resource identifier)",
         "status": "Status of the medication order or statement",
         "intent": "Intent of the medication order or statement",
         "medication_reference": "FHIR Reference to the applied medication",
@@ -262,6 +263,9 @@ class AMLStudy:
         if "deceased_dateTime" not in merged_df.columns:
             merged_df["deceased_dateTime"] = pd.NaT
 
+        if "diagnosis_onsetDateTime" not in merged_df.columns:
+            merged_df["diagnosis_onsetDateTime"] = pd.NaT
+
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
@@ -358,11 +362,6 @@ class AMLStudy:
             ("type", f"{resource_type}.resourceType"),
             ("id", f"{resource_type}.id"),
             ("patient_reference", f"{resource_type}.subject.reference"),
-            (
-                "patient_mrn",
-                f"{resource_type}.subject.identifier.where("
-                f"system='{self.settings.fhir.patient_identifier_system}').value",
-            ),
             ("status", f"{resource_type}.status"),
             ("medication_reference", f"{resource_type}.medicationReference.reference"),
         ]
@@ -396,6 +395,28 @@ class AMLStudy:
 
         resource_df = pd.concat(resource_chunks, ignore_index=True)
         medication_df = pd.concat(medication_chunks, ignore_index=True)
+
+        # add the "Medication" prefix to the id so they match the medication_reference column
+        medication_df["medication_id"] = "Medication/" + medication_df["medication_id"].astype(str)
+
+        mrn_per_ref = patient_df.groupby("condition_patient_reference")["patient_mrn"].nunique()
+        conflicting = mrn_per_ref[mrn_per_ref > 1]
+        if not conflicting.empty:
+            logger.warning(
+                "Multiple distinct patient_mrn values found for {} patient reference(s); "
+                "the first (sorted) MRN will be used: {}",
+                len(conflicting),
+                conflicting.index.tolist(),
+            )
+        patient_mrn_lookup = (
+            patient_df[["condition_patient_reference", "patient_mrn"]]
+            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+            .sort_values("patient_mrn")
+            .drop_duplicates(subset=["condition_patient_reference"], keep="first")
+            .set_index("condition_patient_reference")["patient_mrn"]
+        )
+        resource_df["patient_mrn"] = resource_df["patient_reference"].map(patient_mrn_lookup)
+
         logger.info(f"all_{resource_type}_df size: {len(resource_df)}. {resource_df.dtypes}")
         return resource_df, medication_df
 
@@ -419,7 +440,11 @@ class AMLStudy:
             resource_type="MedicationRequest",
             extra_fhir_paths=[
                 ("intent", "MedicationRequest.intent"),
-                ("datetime", "MedicationRequest.authoredOn"),
+                (
+                    "datetime",
+                    "MedicationRequest.dosageInstruction.timing.event.first() "
+                    + "| MedicationRequest.authoredOn",
+                ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
             ],
         )
@@ -429,7 +454,11 @@ class AMLStudy:
             patient_df=patient_df,
             resource_type="MedicationStatement",
             extra_fhir_paths=[
-                ("datetime", "MedicationStatement.effectivePeriod.start"),
+                (
+                    "datetime",
+                    "MedicationStatement.effectiveDateTime "
+                    + "| MedicationStatement.effectivePeriod.start",
+                ),
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
             ],
@@ -440,7 +469,12 @@ class AMLStudy:
             patient_df=patient_df,
             resource_type="MedicationAdministration",
             extra_fhir_paths=[
-                ("datetime", "MedicationAdministration.effectiveDateTime"),
+                (
+                    "datetime",
+                    "MedicationAdministration.effectiveDateTime "
+                    + "| MedicationAdministration.effectivePeriod.start",
+                ),
+                ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
             ],
         )
@@ -477,8 +511,13 @@ class AMLStudy:
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
-        req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
         med_df.to_csv(os.path.join(self.output_dir, "aml_all_meds.csv"), index=False)
+
+        req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
+
+        if "period_end" not in req_stat_admin_df.columns:
+            req_stat_admin_df["period_end"] = pd.NaT
+
         req_stat_admin_df.to_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), index=False
         )
@@ -1134,6 +1173,20 @@ class AMLStudy:
             zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
         ]
 
+        if "Retoure" not in zenzy_df.columns:
+            logger.warning(
+                "Retoure column not found in Zenzy input data. "
+                + "Setting default Retoure to 'FALSCH' for all records"
+            )
+            zenzy_df["Retoure"] = "FALSCH"
+
+        if "Zeit" not in zenzy_df.columns:
+            logger.warning(
+                "Zeit column not found in Zenzy input data. "
+                + "Setting default time to 08:00 for all records"
+            )
+            zenzy_df["Zeit"] = "08:00"
+
         zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
             zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
         )
@@ -1163,10 +1216,27 @@ class AMLStudy:
             DAY_SHIFT, unit="D"
         )
 
+        if "Herstellungs-ID" not in zenzy_df.columns:
+            logger.warning(
+                "Herstellungs-ID column not found in Zenzy input data. "
+                + "Setting default Herstellungs-ID for all records to the row index"
+            )
+            zenzy_df["Herstellungs-ID"] = zenzy_df.index
+
         zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
+
         zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
             crypto_hash_nullable
         )
+
+        if "Datum" not in zenzy_df.columns:
+            zenzy_df["Datum"] = pd.NaT
+        if "Zeit" not in zenzy_df.columns:
+            zenzy_df["Zeit"] = pd.NaT
+        if "Herstellungsdatum" not in zenzy_df.columns:
+            zenzy_df["Herstellungsdatum"] = pd.NaT
+        if "Herstellungszeit" not in zenzy_df.columns:
+            zenzy_df["Herstellungszeit"] = pd.NaT
 
         zenzy_df = zenzy_df.drop(
             columns=[
@@ -1181,7 +1251,7 @@ class AMLStudy:
 
         zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
 
-        # FHIR Medikation
+        # FHIR Medikation Statements, Requests, Administrations
         fhir_medikation = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
             sep=",",
@@ -1192,6 +1262,7 @@ class AMLStudy:
             "id",
             "patient_reference",
             "patient_mrn",
+            "medication_reference",
         ]
 
         for column in columns_to_hash:
@@ -1202,6 +1273,22 @@ class AMLStudy:
             fhir_medikation[column] = fhir_medikation[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         fhir_medikation.to_csv(de_identified_dir / "aml_fhir_medication.csv", index=False)
+
+        # referenced Medications for MedicationStatements, MedicationRequests,
+        # MedicationAdministrations
+        fhir_all_medication = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_meds.csv"),
+            sep=",",
+        )
+
+        columns_to_hash = [
+            "medication_id",
+        ]
+
+        for column in columns_to_hash:
+            fhir_all_medication[column] = fhir_all_medication[column].apply(crypto_hash_nullable)
+
+        fhir_all_medication.to_csv(de_identified_dir / "aml_all_meds.csv", index=False)
 
         # SAP Medikation
         sap_medication_path = os.path.join(self.output_dir, "sap_medikation_working_pseuded.csv")
@@ -1240,6 +1327,6 @@ class AMLStudy:
                     DAY_SHIFT, unit="D"
                 )
 
-            sap_medikation.to_csv(de_identified_dir / "sap_medikation.csv", index=False)
+            sap_medikation.to_csv(de_identified_dir / "aml_sap_medication.csv", index=False)
 
         # lab_with_diagnosis.to_csv(de_identified_dir / "aml_matched_zenzy_labs.csv", index=False)

@@ -1,5 +1,67 @@
 # Changelog
 
+## [2.29.10](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.9...v2.29.10) (2026-05-21)
+
+
+### Bug Fixes
+
+* handle missing 'Retoure' column and conditionally hash 'Herstellungs-ID' ([#492](https://github.com/bzkf/onco-analytics-on-fhir/issues/492)) ([6b5d8a4](https://github.com/bzkf/onco-analytics-on-fhir/commit/6b5d8a4ba18bc58b13ae8a28e9a8dda715424e5a))
+
+## [2.29.9](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.8...v2.29.9) (2026-05-21)
+
+
+### Bug Fixes
+
+* update medication ID field to match reference column ([#489](https://github.com/bzkf/onco-analytics-on-fhir/issues/489)) ([a68ae17](https://github.com/bzkf/onco-analytics-on-fhir/commit/a68ae17b6dcab22afaec8471b25f77e097ed1dd3))
+
+## [2.29.8](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.7...v2.29.8) (2026-05-21)
+
+
+### Bug Fixes
+
+* include list of medications in output and fix tmpfs missing exec bit ([#487](https://github.com/bzkf/onco-analytics-on-fhir/issues/487)) ([b89fa70](https://github.com/bzkf/onco-analytics-on-fhir/commit/b89fa701c6c9df0f978c455482bb7e7650650322))
+
+## [2.29.7](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.6...v2.29.7) (2026-05-20)
+
+
+### Bug Fixes
+
+* derive patient_mrn from Patient resource via join instead of subject.identifier ([#485](https://github.com/bzkf/onco-analytics-on-fhir/issues/485)) ([c7aad94](https://github.com/bzkf/onco-analytics-on-fhir/commit/c7aad947d2e6a6dd705fc8db6ccf7e23d6bc95a7))
+* disable errors for Trivy and Grype in MegaLinter configuration ([#478](https://github.com/bzkf/onco-analytics-on-fhir/issues/478)) ([2de9577](https://github.com/bzkf/onco-analytics-on-fhir/commit/2de9577d6a923c6e9109ac633685fe220f0a5092))
+
+## [2.29.6](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.5...v2.29.6) (2026-05-20)
+
+
+### Bug Fixes
+
+* parse potentially promatic columns explicitly as str ([#483](https://github.com/bzkf/onco-analytics-on-fhir/issues/483)) ([7535980](https://github.com/bzkf/onco-analytics-on-fhir/commit/75359803b140c1b5d548b85b71a00b30a3b05e5f))
+* update datetime paths for Medication to default to effective if set. add missing period_end column ([#482](https://github.com/bzkf/onco-analytics-on-fhir/issues/482)) ([2ff07e2](https://github.com/bzkf/onco-analytics-on-fhir/commit/2ff07e2c4f515aefa49f75ba014ae99b3524230d))
+
+## [2.29.5](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.4...v2.29.5) (2026-05-20)
+
+
+### Miscellaneous Chores
+
+* deploy connector via bash script and include new connector ([#480](https://github.com/bzkf/onco-analytics-on-fhir/issues/480)) ([381ca8e](https://github.com/bzkf/onco-analytics-on-fhir/commit/381ca8e0026ff0a970938c6f782c2a8c17a88f54))
+
+## [2.29.4](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.3...v2.29.4) (2026-05-20)
+
+
+### Bug Fixes
+
+* add diagnosis_onsetDateTime column if missing ([#477](https://github.com/bzkf/onco-analytics-on-fhir/issues/477)) ([9ef3b06](https://github.com/bzkf/onco-analytics-on-fhir/commit/9ef3b06211e8fca837dc50923ec276e5142226b4))
+* AML prefix in CSV filename ([#470](https://github.com/bzkf/onco-analytics-on-fhir/issues/470)) ([71ae4c1](https://github.com/bzkf/onco-analytics-on-fhir/commit/71ae4c1a3b0045625c740447a3f7542c46d6eb8b))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump idna from 3.11 to 3.15 ([#476](https://github.com/bzkf/onco-analytics-on-fhir/issues/476)) ([fb4a054](https://github.com/bzkf/onco-analytics-on-fhir/commit/fb4a05430c44a5753f38a03ceed7c46adc30bd6e))
+
+
+### Build
+
+* dropped support for building air-gapped artifacts ([#464](https://github.com/bzkf/onco-analytics-on-fhir/issues/464)) ([935ecba](https://github.com/bzkf/onco-analytics-on-fhir/commit/935ecbad905295f41a4dc0e25e4405a774b33f8c))
+
 ## [2.29.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.2...v2.29.3) (2026-05-18)
 
 
