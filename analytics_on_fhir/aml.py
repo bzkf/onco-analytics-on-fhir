@@ -278,6 +278,7 @@ class AMLStudy:
         patient_list = merged_df["condition_patient_reference"]
         patient_list.drop_duplicates(inplace=True)
         self.extract_labs(patient_list=patient_list)
+        self.extract_procedures(patient_list=patient_list)
 
     def extract_labs(self, patient_list):
         all_labs = []
@@ -521,6 +522,52 @@ class AMLStudy:
         req_stat_admin_df.to_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), index=False
         )
+
+    def extract_procedures(self, patient_list):
+        all_procedures = []
+
+        for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
+            chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
+
+            procedure_df_chunk = self.search.trade_rows_for_dataframe(
+                df=chunk_df,
+                resource_type="Procedure",
+                request_params={
+                    # "category": "http://snomed.info/sct|18629005",
+                    "_count": self.settings.fhir.page_count,
+                    "_elements": "subject,performed,code,status",
+                },
+                df_constraints={
+                    "subject": "subject_list",
+                },
+                with_ref=False,
+                fhir_paths=[
+                    ("procedure_id", "id"),
+                    ("procedure_patient_reference", "subject.reference"),
+                    (
+                        "procedure_ops_code",
+                        "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
+                    ),
+                    ("procedure_performed_period_start", "performedPeriod.start"),
+                    ("procedure_performed_period_end", "performedPeriod.end"),
+                    ("procedure_performed_datetime", "performedDateTime"),
+                    ("procedure_status", "status"),
+                ],
+            )
+
+            all_procedures.append(procedure_df_chunk)
+
+        procedure_df = pd.concat(all_procedures, ignore_index=True)
+        if "procedure_ops_code" in procedure_df.columns:
+            filtered_df = procedure_df[procedure_df["procedure_ops_code"].str.startswith("6")]
+            logger.info("Loading OPS mappings")
+            ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
+            filtered_df["procedure_ops_display"] = filtered_df["procedure_ops_code"].map(
+                ops_mapping
+            )
+        filtered_df.to_csv(os.path.join(self.output_dir, "aml_all_procedures.csv"), index=False)
+
+        logger.info(f"all_procedures_df size: {filtered_df.count()}. {filtered_df.dtypes}")
 
     def join_with_drug_data(self):
 
