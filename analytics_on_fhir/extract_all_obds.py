@@ -128,8 +128,8 @@ class AllObdsPatients:
             mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumn(
                 "diagnosis_onsetDateTime",
                 F.to_date(
-                    F.col("diagnosis_onsetDateTime"),
-                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    F.substring(F.col("diagnosis_onsetDateTime"), 1, 10),
+                    "yyyy-MM-dd",
                 ),
             )
 
@@ -137,8 +137,8 @@ class AllObdsPatients:
             mii_conditions_all_obds_pats = mii_conditions_all_obds_pats.withColumn(
                 "diagnosis_recordedDate",
                 F.to_date(
-                    F.col("diagnosis_recordedDate"),
-                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    F.substring(F.col("diagnosis_recordedDate"), 1, 10),
+                    "yyyy-MM-dd",
                 ),
             )
 
@@ -678,6 +678,8 @@ class AllObdsPatients:
             ],
         )
 
+        # this explodes the data on condition level but it is on patient level
+        # fix
         vitalstatus = vitalstatus.join(
             df_all_conditions,
             F.col("patient_resource_id") == F.col("observation_patient_reference"),
