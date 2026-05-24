@@ -576,7 +576,7 @@ class AMLStudy:
             .set_index("condition_patient_reference")["patient_mrn"]
         )
 
-        procedure_df["patient_mrn"] = procedure_df["procedure_patient_reference"].map(
+        filtered_df["patient_mrn"] = filtered_df["procedure_patient_reference"].map(
             patient_mrn_lookup
         )
 
