@@ -561,7 +561,9 @@ class AMLStudy:
 
         procedure_df = pd.concat(all_procedures, ignore_index=True)
         if "procedure_ops_code" in procedure_df.columns:
-            filtered_df = procedure_df[procedure_df["procedure_ops_code"].str.startswith("6")]
+            filtered_df = procedure_df[
+                procedure_df["procedure_ops_code"].str.startswith("6", na=False)
+            ]
             logger.info("Loading OPS mappings")
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
             filtered_df["procedure_ops_display"] = filtered_df["procedure_ops_code"].map(
