@@ -1416,7 +1416,9 @@ class AMLStudy:
             sap_medikation.to_csv(de_identified_dir / "aml_sap_medication.csv", index=False)
 
         date_prefix = datetime.datetime.now().strftime("%Y-%m-%d")
-        zip_path = Path(self.output_dir) / f"{date_prefix}-aml-de-identified.zip"
+        zip_path = (
+            Path(self.output_dir) / f"{date_prefix}-{self.settings.location}-aml-de-identified.zip"
+        )
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for file_path in de_identified_base_dir.rglob("*"):
