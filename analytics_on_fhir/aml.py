@@ -540,7 +540,7 @@ class AMLStudy:
             )
 
             logger.info(
-                "Exported %d unmapped OPS codes to %s",
+                "Exported {} unmapped OPS codes to {}",
                 len(unmapped_ops),
                 HERE / "aml_unmapped_medication_ops_codes.csv",
             )
