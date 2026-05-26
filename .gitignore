@@ -194,5 +194,6 @@ docker-compose/save-images.sh
 
 analytics_on_fhir/results/
 analytics_on_fhir/spark-checkpoints/
+analytics_on_fhir/data/
 
 .env
