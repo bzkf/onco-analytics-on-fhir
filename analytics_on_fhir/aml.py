@@ -550,7 +550,6 @@ class AMLStudy:
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
 
         for col in [
-            "ATC-Bedeutung",
             "medication_code_text",
             "medication_atc_display",
             "medication_ops_display",
@@ -563,7 +562,6 @@ class AMLStudy:
         med_df["text"] = (
             med_df[
                 [
-                    "ATC-Bedeutung",
                     "medication_atc_display",
                     "medication_ops_display",
                     "medication_code_text",
