@@ -81,7 +81,8 @@ class PyRateQuery:
         all_patients = []
 
         for chunk in chunked(patient_list_obds, self.settings.fhir.chunk_size):
-            chunk_df = pd.DataFrame({"patient_list_obds": [",".join(chunk)]})
+            # chunk_df = pd.DataFrame({"patient_list_obds": [",".join(chunk)]})
+            chunk_df = pd.DataFrame({"patient_list_obds": chunk})
 
             patient_df_chunk = self.search.trade_rows_for_dataframe(
                 df=chunk_df,
@@ -94,12 +95,14 @@ class PyRateQuery:
                 df_constraints={
                     "identifier": "patient_list_obds",
                 },
+                # with_ref=True,
+                with_columns=["patient_list_obds"],
                 fhir_paths=[
                     ("patient_id", "Patient.id"),
                     (
                         "patient_mrn",
                         "Patient.identifier.where("
-                        + f"system='{self.settings.fhir.patient_identifier_system}').first().value",  # warum ist die spalte nicht da
+                        + f"system='{self.settings.fhir.patient_identifier_system}')[0].value",  # warum ist die spalte nicht da
                     ),
                 ],
             )
