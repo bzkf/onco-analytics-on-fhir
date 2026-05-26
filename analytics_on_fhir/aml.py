@@ -353,6 +353,10 @@ class AMLStudy:
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
         ),
         (
+            "medication_ops_version",
+            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".version",
+        ),
+        (
             "medication_ingredient_text",
             "Medication.ingredient.itemCodeableConcept.text | "
             + "Medication.ingredient.itemReference.display",
@@ -517,6 +521,29 @@ class AMLStudy:
             logger.info("Loading OPS mappings")
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
             med_df["medication_ops_display"] = med_df["medication_ops_code"].map(ops_mapping)
+
+            if "medication_ops_version" not in med_df.columns:
+                med_df["medication_ops_version"] = None
+
+            # Export unmapped OPS codes (distinct by version + code)
+            unmapped_ops = (
+                med_df[
+                    med_df["medication_ops_display"].isna() & med_df["medication_ops_code"].notna()
+                ][["medication_ops_version", "medication_ops_code"]]
+                .drop_duplicates()
+                .sort_values(["medication_ops_version", "medication_ops_code"])
+            )
+
+            unmapped_ops.to_csv(
+                HERE / "aml_unmapped_medication_ops_codes.csv",
+                index=False,
+            )
+
+            logger.info(
+                "Exported %d unmapped OPS codes to %s",
+                len(unmapped_ops),
+                HERE / "aml_unmapped_medication_ops_codes.csv",
+            )
 
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
