@@ -276,7 +276,7 @@ def km_lifeline(
     if ylim is not None:
         ax.set_ylim(ylim)
     else:
-        ax.set_ylim(0, 1)
+        ax.set_ylim(0, 1.02)
 
     ax.grid(
         True,
