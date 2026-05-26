@@ -352,6 +352,11 @@ class AMLStudy:
             "medication_ops_code",
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
         ),
+        (
+            "medication_ingredient_text",
+            "Medication.ingredient.itemCodeableConcept.text | "
+            + "Medication.ingredient.itemReference.display",
+        ),
         ("ingredient", "Medication.ingredient"),
     ]
 
@@ -507,13 +512,42 @@ class AMLStudy:
                 on="medication_atc_code",
                 how="left",
             )
+
         if "medication_ops_code" in med_df.columns:
             logger.info("Loading OPS mappings")
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
             med_df["medication_ops_display"] = med_df["medication_ops_code"].map(ops_mapping)
+
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
+
+        for col in [
+            "ATC-Bedeutung",
+            "medication_code_text",
+            "medication_atc_display",
+            "medication_ops_display",
+            "medication_pzn_display",
+            "medication_ingredient_text",
+        ]:
+            if col not in med_df.columns:
+                med_df[col] = None
+
+        med_df["text"] = (
+            med_df[
+                [
+                    "ATC-Bedeutung",
+                    "medication_atc_display",
+                    "medication_ops_display",
+                    "medication_code_text",
+                    "medication_ingredient_text",
+                    "medication_pzn_display",
+                ]
+            ]
+            .bfill(axis=1)
+            .iloc[:, 0]
+        )
+
         med_df.to_csv(os.path.join(self.output_dir, "aml_all_meds.csv"), index=False)
 
         req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
