@@ -1,8 +1,10 @@
 import csv
+import datetime
 import hashlib
 import hmac
 import os
 import secrets
+import zipfile
 from pathlib import Path
 
 import pandas as pd
@@ -432,7 +434,7 @@ class AMLStudy:
                     ops_code_map[code] = title
         return ops_code_map
 
-    def extract_meds(self):  # , patient_list):
+    def extract_meds(self):
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
 
         logger.info("Fetching MedicationRequest")
@@ -524,6 +526,8 @@ class AMLStudy:
         )
 
     def extract_procedures(self, patient_list):
+        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+
         all_procedures = []
 
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
@@ -548,9 +552,7 @@ class AMLStudy:
                         "procedure_ops_code",
                         "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
                     ),
-                    ("procedure_performed_period_start", "performedPeriod.start"),
-                    ("procedure_performed_period_end", "performedPeriod.end"),
-                    ("procedure_performed_datetime", "performedDateTime"),
+                    ("timestamp", "performedDateTime | performedPeriod.start"),
                     ("procedure_status", "status"),
                 ],
             )
@@ -559,18 +561,32 @@ class AMLStudy:
 
         procedure_df = pd.concat(all_procedures, ignore_index=True)
         if "procedure_ops_code" in procedure_df.columns:
-            filtered_df = procedure_df[procedure_df["procedure_ops_code"].str.startswith("6")]
+            filtered_df = procedure_df[
+                procedure_df["procedure_ops_code"].str.startswith("6", na=False)
+            ]
             logger.info("Loading OPS mappings")
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
             filtered_df["procedure_ops_display"] = filtered_df["procedure_ops_code"].map(
                 ops_mapping
             )
+
+        patient_mrn_lookup = (
+            patient_df[["condition_patient_reference", "patient_mrn"]]
+            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+            .sort_values("patient_mrn")
+            .drop_duplicates(subset=["condition_patient_reference"], keep="first")
+            .set_index("condition_patient_reference")["patient_mrn"]
+        )
+
+        filtered_df["patient_mrn"] = filtered_df["procedure_patient_reference"].map(
+            patient_mrn_lookup
+        )
+
         filtered_df.to_csv(os.path.join(self.output_dir, "aml_all_procedures.csv"), index=False)
 
         logger.info(f"all_procedures_df size: {filtered_df.count()}. {filtered_df.dtypes}")
 
     def join_with_drug_data(self):
-
         zenzy_patient_ids = (
             pd.read_csv(
                 os.path.join(self.settings.aml.csv_input_file),
@@ -1167,7 +1183,8 @@ class AMLStudy:
                 return pd.NA
             return crypto_hash(str(value))
 
-        de_identified_dir = Path(self.output_dir) / "de-identified"
+        de_identified_base_dir = Path(self.output_dir) / "de-identified"
+        de_identified_dir = de_identified_base_dir / self.settings.location.lower()
         de_identified_dir.mkdir(parents=True, exist_ok=True)
 
         patients_with_diagnoses = pd.read_csv(
@@ -1337,6 +1354,28 @@ class AMLStudy:
 
         fhir_all_medication.to_csv(de_identified_dir / "aml_all_meds.csv", index=False)
 
+        # FHIR Procedure
+        fhir_procedures = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_procedures.csv"),
+            sep=",",
+            parse_dates=["timestamp"],
+        )
+
+        columns_to_hash = [
+            "procedure_id",
+            "procedure_patient_reference",
+            "patient_mrn",
+        ]
+
+        for column in columns_to_hash:
+            fhir_procedures[column] = fhir_procedures[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["timestamp"]
+        for column in columns_to_shift:
+            fhir_procedures[column] = fhir_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        fhir_procedures.to_csv(de_identified_dir / "aml_fhir_procedures.csv", index=False)
+
         # SAP Medikation
         sap_medication_path = os.path.join(self.output_dir, "sap_medikation_working_pseuded.csv")
         if os.path.exists(sap_medication_path):
@@ -1376,4 +1415,14 @@ class AMLStudy:
 
             sap_medikation.to_csv(de_identified_dir / "aml_sap_medication.csv", index=False)
 
-        # lab_with_diagnosis.to_csv(de_identified_dir / "aml_matched_zenzy_labs.csv", index=False)
+        date_prefix = datetime.datetime.now().strftime("%Y-%m-%d")
+        zip_path = (
+            Path(self.output_dir)
+            / f"{date_prefix}-{self.settings.location.lower()}-aml-de-identified.zip"
+        )
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for file_path in de_identified_base_dir.rglob("*"):
+                if file_path.is_file():
+                    # Preserve relative paths inside the zip
+                    zipf.write(file_path, file_path.relative_to(de_identified_base_dir))
