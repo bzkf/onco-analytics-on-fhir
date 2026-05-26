@@ -99,7 +99,7 @@ class PyRateQuery:
                     (
                         "patient_mrn",
                         "Patient.identifier.where("
-                        + f"system='{self.settings.fhir.patient_identifier_system}').value",  # warum ist die spalte nicht da
+                        + f"system='{self.settings.fhir.patient_identifier_system}').first().value",  # warum ist die spalte nicht da
                     ),
                 ],
             )
@@ -109,6 +109,7 @@ class PyRateQuery:
 
         if all_patients:
             patient_df = pd.concat(all_patients, ignore_index=True)
+            print(patient_df)
             # patient_df.drop(columns=["patient_list_obds"], inplace=True)
             # das funktioniert nicht, weil patient_list_obds eine Liste ist
             # - wie kann ich die Zuordnung patient obds und patient mii beibehalten,
