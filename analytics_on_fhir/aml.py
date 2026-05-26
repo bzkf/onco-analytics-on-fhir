@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import os
 import secrets
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -535,14 +536,7 @@ class AMLStudy:
             )
 
             unmapped_ops.to_csv(
-                HERE / "aml_unmapped_medication_ops_codes.csv",
-                index=False,
-            )
-
-            logger.info(
-                "Exported {} unmapped OPS codes to {}",
-                len(unmapped_ops),
-                HERE / "aml_unmapped_medication_ops_codes.csv",
+                os.path.join(self.output_dir, "aml_unmapped_medication_ops_codes.csv"), index=False
             )
 
         logger.info("all_meds_df: {}", med_df.count())
@@ -1434,6 +1428,16 @@ class AMLStudy:
             fhir_procedures[column] = fhir_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         fhir_procedures.to_csv(de_identified_dir / "aml_fhir_procedures.csv", index=False)
+
+        unmapped_medication_ops_codes_path = os.path.join(
+            self.output_dir, "aml_unmapped_medication_ops_codes.csv"
+        )
+
+        if os.path.exists(unmapped_medication_ops_codes_path):
+            shutil.copy2(
+                unmapped_medication_ops_codes_path,
+                de_identified_dir / "aml_unmapped_medication_ops_codes.csv",
+            )
 
         # SAP Medikation
         sap_medication_path = os.path.join(self.output_dir, "sap_medikation_working_pseuded.csv")
