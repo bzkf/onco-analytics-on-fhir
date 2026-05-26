@@ -1447,7 +1447,7 @@ class AMLStudy:
                     sap_medication_path,
                     sep=";",
                 )
-                .drop(columns=["FALL_ID", "TEILFALL_ID", "PATIENT_ID"])
+                .drop(columns=["FALL_ID", "TEILFALL_ID"])
                 .rename(columns={"PATIENT_ID": "patient_mrn"})
             )
 
