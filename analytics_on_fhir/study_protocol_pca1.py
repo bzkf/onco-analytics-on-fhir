@@ -268,55 +268,55 @@ class StudyProtocolPCa1:
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
         df_list_c61 = pandas_df_pseudonyms_c61["patid_pseudonym"].drop_duplicates().dropna()
 
-        mii_conditions_pandas = self.extract_mii_conditions(
-            df_list_c61, suffix="", crypto_key=crypto_key
-        )
-        mii_conditions = self.spark.createDataFrame(mii_conditions_pandas)
-        mii_conditions = mii_conditions.withColumnRenamed("condition_id", "condition_id_mii")
+        # mii_conditions_pandas = self.extract_mii_conditions(
+        #     df_list_c61, suffix="", crypto_key=crypto_key
+        # )
+        # mii_conditions = self.spark.createDataFrame(mii_conditions_pandas)
+        # mii_conditions = mii_conditions.withColumnRenamed("condition_id", "condition_id_mii")
 
-        if "diagnosis_onsetDateTime" in mii_conditions.columns:
-            mii_conditions = mii_conditions.withColumn(
-                "diagnosis_onsetDateTime",
-                F.to_date(
-                    F.substring(F.col("diagnosis_onsetDateTime"), 1, 10),
-                    "yyyy-MM-dd",
-                ),
-            )
+        # if "diagnosis_onsetDateTime" in mii_conditions.columns:
+        #     mii_conditions = mii_conditions.withColumn(
+        #         "diagnosis_onsetDateTime",
+        #         F.to_date(
+        #             F.substring(F.col("diagnosis_onsetDateTime"), 1, 10),
+        #             "yyyy-MM-dd",
+        #         ),
+        #     )
 
-        if "diagnosis_recordedDate" in mii_conditions.columns:
-            mii_conditions = mii_conditions.withColumn(
-                "diagnosis_recordedDate",
-                F.to_date(
-                    F.substring(F.col("diagnosis_recordedDate"), 1, 10),
-                    "yyyy-MM-dd",
-                ),
-            )
-        mii_conditions_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
-            "condition_id", "asserted_date", "condition_patient_resource_id"
-        ).join(
-            mii_conditions,
-            F.col("condition_patient_resource_id") == F.col("condition_patient_reference"),
-            "left",
-        )
-        save_final_df(mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted")
-        save_final_df_parquet(
-            mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted"
-        )
-        mii_conditions_asserted_deidentified = deidentify(
-            mii_conditions_asserted, IDENTIFYING_COLS, crypto_key
-        )
-        save_final_df(
-            mii_conditions_asserted_deidentified,
-            self.settings,
-            suffix="mii_conditions_asserted_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            mii_conditions_asserted_deidentified,
-            self.settings,
-            suffix="mii_conditions_asserted_deidentified",
-            deidentified=True,
-        )
+        # if "diagnosis_recordedDate" in mii_conditions.columns:
+        #     mii_conditions = mii_conditions.withColumn(
+        #         "diagnosis_recordedDate",
+        #         F.to_date(
+        #             F.substring(F.col("diagnosis_recordedDate"), 1, 10),
+        #             "yyyy-MM-dd",
+        #         ),
+        #     )
+        # mii_conditions_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
+        #     "condition_id", "asserted_date", "condition_patient_resource_id"
+        # ).join(
+        #     mii_conditions,
+        #     F.col("condition_patient_resource_id") == F.col("condition_patient_reference"),
+        #     "left",
+        # )
+        # save_final_df(mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted")
+        # save_final_df_parquet(
+        #     mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted"
+        # )
+        # mii_conditions_asserted_deidentified = deidentify(
+        #     mii_conditions_asserted, IDENTIFYING_COLS, crypto_key
+        # )
+        # save_final_df(
+        #     mii_conditions_asserted_deidentified,
+        #     self.settings,
+        #     suffix="mii_conditions_asserted_deidentified",
+        #     deidentified=True,
+        # )
+        # save_final_df_parquet(
+        #     mii_conditions_asserted_deidentified,
+        #     self.settings,
+        #     suffix="mii_conditions_asserted_deidentified",
+        #     deidentified=True,
+        # )
 
         # labs
         mii_labs_pandas = self.extract_mii_labs(df_list_c61, suffix="", crypto_key=crypto_key)
@@ -354,12 +354,15 @@ class StudyProtocolPCa1:
 
         # optional
         mii_labs = mii_labs.withColumn("lab_dateTime", F.to_date("lab_dateTime"))
+        mii_labs = mii_labs.withColumn(
+            "patient_list_obds", F.col("patient_list_obds").cast("string")
+        )
 
         mii_labs_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
             "condition_id", "asserted_date", "condition_patient_resource_id"
         ).join(
             mii_labs,
-            F.col("condition_patient_resource_id") == F.col("observation_patient_reference"),
+            F.col("condition_patient_resource_id") == F.col("patient_list_obds"),
             "left",
         )
         save_final_df(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
