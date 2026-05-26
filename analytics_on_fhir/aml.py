@@ -518,27 +518,6 @@ class AMLStudy:
                 how="left",
             )
 
-        if "medication_ops_code" in med_df.columns:
-            logger.info("Loading OPS mappings")
-            ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
-            med_df["medication_ops_display"] = med_df["medication_ops_code"].map(ops_mapping)
-
-            if "medication_ops_version" not in med_df.columns:
-                med_df["medication_ops_version"] = None
-
-            # Export unmapped OPS codes (distinct by version + code)
-            unmapped_ops = (
-                med_df[
-                    med_df["medication_ops_display"].isna() & med_df["medication_ops_code"].notna()
-                ][["medication_ops_version", "medication_ops_code"]]
-                .drop_duplicates()
-                .sort_values(["medication_ops_version", "medication_ops_code"])
-            )
-
-            unmapped_ops.to_csv(
-                os.path.join(self.output_dir, "aml_unmapped_medication_ops_codes.csv"), index=False
-            )
-
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
@@ -605,6 +584,10 @@ class AMLStudy:
                         "procedure_ops_code",
                         "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
                     ),
+                    (
+                        "procedure_ops_version",
+                        "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".version",
+                    ),
                     ("timestamp", "performedDateTime | performedPeriod.start"),
                     ("procedure_status", "status"),
                 ],
@@ -621,6 +604,23 @@ class AMLStudy:
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
             filtered_df["procedure_ops_display"] = filtered_df["procedure_ops_code"].map(
                 ops_mapping
+            )
+
+            if "procedure_ops_version" not in filtered_df.columns:
+                filtered_df["procedure_ops_version"] = None
+
+            # Export unmapped OPS codes (distinct by version + code)
+            unmapped_ops = (
+                filtered_df[
+                    filtered_df["procedure_ops_display"].isna()
+                    & filtered_df["procedure_ops_code"].notna()
+                ][["procedure_ops_version", "procedure_ops_code"]]
+                .drop_duplicates()
+                .sort_values(["procedure_ops_version", "procedure_ops_code"])
+            )
+
+            unmapped_ops.to_csv(
+                os.path.join(self.output_dir, "aml_unmapped_procedure_ops_codes.csv"), index=False
             )
 
         patient_mrn_lookup = (
@@ -1429,14 +1429,14 @@ class AMLStudy:
 
         fhir_procedures.to_csv(de_identified_dir / "aml_fhir_procedures.csv", index=False)
 
-        unmapped_medication_ops_codes_path = os.path.join(
-            self.output_dir, "aml_unmapped_medication_ops_codes.csv"
+        unmapped_procedure_ops_codes_path = os.path.join(
+            self.output_dir, "aml_unmapped_procedure_ops_codes.csv"
         )
 
-        if os.path.exists(unmapped_medication_ops_codes_path):
+        if os.path.exists(unmapped_procedure_ops_codes_path):
             shutil.copy2(
-                unmapped_medication_ops_codes_path,
-                de_identified_dir / "aml_unmapped_medication_ops_codes.csv",
+                unmapped_procedure_ops_codes_path,
+                de_identified_dir / "aml_unmapped_procedure_ops_codes.csv",
             )
 
         # SAP Medikation
