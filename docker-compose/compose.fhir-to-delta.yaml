@@ -83,6 +83,8 @@ services:
         condition: service_completed_successfully
     ports:
       - "127.0.0.1:4041:4040"
+    volumes:
+      - ./spark-defaults.conf:/app/spark/conf/spark-defaults.conf:ro
 
 volumes:
   fhir-to-delta-minio-data: {}
