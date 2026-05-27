@@ -362,7 +362,8 @@ class StudyProtocolPCa1:
             "condition_id", "asserted_date", "condition_patient_resource_id", "patid_pseudonym"
         ).join(
             mii_labs,
-            F.col("patid_pseudonym") == F.col("patient_list_obds"),
+            df_c61_conditions_patients_death_gleason_met_clean["patid_pseudonym"]
+            == mii_labs["patient_mrn"],
             "left",
         )
         save_final_df(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
