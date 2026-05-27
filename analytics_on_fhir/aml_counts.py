@@ -51,9 +51,12 @@ def aml_summary_statistics():
         utc=True,
         errors="coerce",
     )
-    mask = patients_with_diagnoses["diagnosis_recordedDate"].isna()
+    mask = (
+        patients_with_diagnoses["diagnosis_recordedDate"].isna()
+        & patients_with_diagnoses_original["diagnosis_recordedDate"].notna()
+    )
 
-    if not mask.empty:
+    if mask.any():
         logger.warning(
             "diagnosis_recordedDate failed: {}",
             patients_with_diagnoses_original.loc[mask, "diagnosis_recordedDate"],
