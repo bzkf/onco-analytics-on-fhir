@@ -94,8 +94,8 @@ class PyRateQuery:
                 df=chunk_df,
                 resource_type="Patient",
                 request_params={
-                    # "_elements": "identifier",
-                    # "_include": "Patient",
+                    "_elements": "identifier",
+                    "_include": "Patient",
                     "_count": self.settings.fhir.page_count,
                 },
                 df_constraints={
