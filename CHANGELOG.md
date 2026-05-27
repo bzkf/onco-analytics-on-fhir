@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.31.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.30.0...v2.31.0) (2026-05-27)
+
+
+### Features
+
+* simplify medikation text dataframe ([#503](https://github.com/bzkf/onco-analytics-on-fhir/issues/503)) ([ca70bcc](https://github.com/bzkf/onco-analytics-on-fhir/commit/ca70bcca34a041096cb3f91ca7327aaa6ce8b3f3))
+
+
+### Miscellaneous Chores
+
+* **deps:** updated pseudonymizer image ([#499](https://github.com/bzkf/onco-analytics-on-fhir/issues/499)) ([edd1025](https://github.com/bzkf/onco-analytics-on-fhir/commit/edd1025432faf47b853b522bb75cbb35c540cd97))
+
 ## [2.30.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.10...v2.30.0) (2026-05-26)
 
 
