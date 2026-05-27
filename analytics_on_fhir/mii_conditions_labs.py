@@ -89,7 +89,6 @@ class PyRateQuery:
 
         for chunk in chunked(patient_list_obds, self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"patient_list_obds": [",".join(chunk)]})
-            # chunk_df = pd.DataFrame({"patient_list_obds": chunk})
 
             patient_df_chunk = self.search.trade_rows_for_dataframe(
                 df=chunk_df,
@@ -175,7 +174,7 @@ class PyRateQuery:
 
         if all_conditions:
             condition_df = pd.concat(all_conditions, ignore_index=True)
-            # condition_df.drop(columns=["subject_list"], inplace=True)
+            condition_df.drop(columns=["subject_list"], inplace=True)
 
             # join oBDS patient identifier from patient_df to join back to other dfs later
             patient_df["patient_id_prefixed"] = "Patient/" + patient_df["patient_id"].astype(str)
