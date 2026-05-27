@@ -34,19 +34,33 @@ def aml_summary_statistics():
         sep=",",
     )
 
+    patients_with_diagnoses_original = patients_with_diagnoses.copy()
+
     # Convert dates in patients_with_diagnoses
     if "diagnosis_onsetDateTime" in patients_with_diagnoses.columns:
         patients_with_diagnoses["diagnosis_onsetDateTime"] = pd.to_datetime(
-            patients_with_diagnoses["diagnosis_onsetDateTime"], utc=True
+            patients_with_diagnoses["diagnosis_onsetDateTime"], format="ISO8601", utc=True
         )
     patients_with_diagnoses["deceased_dateTime"] = pd.to_datetime(
-        patients_with_diagnoses["deceased_dateTime"], utc=True
+        patients_with_diagnoses["deceased_dateTime"], format="ISO8601", utc=True
     )
+
     patients_with_diagnoses["diagnosis_recordedDate"] = pd.to_datetime(
-        patients_with_diagnoses["diagnosis_recordedDate"], utc=True
+        patients_with_diagnoses["diagnosis_recordedDate"],
+        format="ISO8601",
+        utc=True,
+        errors="coerce",
     )
+    mask = patients_with_diagnoses["diagnosis_recordedDate"].isna()
+
+    if not mask.empty:
+        logger.warning(
+            "diagnosis_recordedDate failed: {}",
+            patients_with_diagnoses_original.loc[mask, "diagnosis_recordedDate"],
+        )
+
     patients_with_diagnoses["birth_date"] = pd.to_datetime(
-        patients_with_diagnoses["birth_date"], utc=True
+        patients_with_diagnoses["birth_date"], format="ISO8601", utc=True
     )
 
     # Calculate age at diagnosis
@@ -79,7 +93,7 @@ def aml_summary_statistics():
 
     # ECOG distribution
     ecog_statuses["effective_dateTime"] = pd.to_datetime(
-        ecog_statuses["effective_dateTime"], utc=True, errors="coerce"
+        ecog_statuses["effective_dateTime"], utc=True, errors="coerce", format="ISO8601"
     )
     ecog_statuses = ecog_statuses.sort_values(
         by=["patient_mrn", "effective_dateTime"], ascending=[True, False]
@@ -96,7 +110,7 @@ def aml_summary_statistics():
 
     # ELN distribution
     eln_klassifikation["effective_date_time"] = pd.to_datetime(
-        eln_klassifikation["effective_date_time"], utc=True, errors="coerce"
+        eln_klassifikation["effective_date_time"], utc=True, errors="coerce", format="ISO8601"
     )
     eln_filtered = eln_klassifikation[
         eln_klassifikation["code_text"].str.startswith("ELN", na=False)
@@ -146,7 +160,7 @@ def aml_summary_statistics():
     # Lab values
     result = pd.DataFrame(columns=["lab_value", "unit", "count", "mean"])
     lab_values["lab_dateTime"] = pd.to_datetime(
-        lab_values["lab_dateTime"], utc=True, errors="coerce"
+        lab_values["lab_dateTime"], utc=True, errors="coerce", format="ISO8601"
     )
     all_loinc_codes = []
     # Leukocytes
