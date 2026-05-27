@@ -146,8 +146,6 @@ class AllObdsPatients:
             "condition_patient_resource_id", "asserted_date"
         ).join(
             mii_conditions_all_obds_pats,
-            # df_c61_conditions_patients_death_gleason_met_clean.patid_pseudonym
-            # == mii_labs.patient_mrn,
             df_all_obds_clean["patid_pseudonym"] == mii_conditions_all_obds_pats["patient_mrn"],
             "left",
         )

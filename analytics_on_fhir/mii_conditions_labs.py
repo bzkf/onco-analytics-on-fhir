@@ -204,7 +204,6 @@ class PyRateQuery:
             logger.info("Found no conditions to given patients.")
 
     def extract_labs(self, patient_list, suffix, crypto_key):
-
         patient_df = self.extract_patients(patient_list, suffix, crypto_key)
 
         all_labs = []
@@ -269,7 +268,6 @@ class PyRateQuery:
             )
 
             logger.info("lab_df size: {}", lab_df.count())
-            logger.info(lab_df.show())
 
             self.post_process_values(
                 lab_df,
@@ -282,8 +280,9 @@ class PyRateQuery:
                 ],
             )
             return lab_df, patient_df
-        else:
-            logger.info("Found no lab values to given patients.")
+
+    # else:
+    #    logger.info("Found no lab values to given patients.")
 
     def post_process_values(self, df, name, columns):
 
