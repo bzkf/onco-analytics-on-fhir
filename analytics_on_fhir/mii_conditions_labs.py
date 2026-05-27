@@ -75,21 +75,28 @@ class PyRateQuery:
             )
 
     def extract_patients(self, patient_list_obds, suffix, crypto_key):
+        if self.settings.fhir.patient_identifier_system is None:
+            raise KeyError("Please set the variable FHIR_PATIENT_IDENTIFIER_SYSTEM")
+
+        logger.info(
+            "patient_identifier_system: {}",
+            self.settings.fhir.patient_identifier_system,
+        )
 
         logger.info("input patient count: {}", len(patient_list_obds))
 
         all_patients = []
 
         for chunk in chunked(patient_list_obds, self.settings.fhir.chunk_size):
-            # chunk_df = pd.DataFrame({"patient_list_obds": [",".join(chunk)]})
-            chunk_df = pd.DataFrame({"patient_list_obds": chunk})
+            chunk_df = pd.DataFrame({"patient_list_obds": [",".join(chunk)]})
+            # chunk_df = pd.DataFrame({"patient_list_obds": chunk})
 
             patient_df_chunk = self.search.trade_rows_for_dataframe(
                 df=chunk_df,
                 resource_type="Patient",
                 request_params={
-                    "_elements": "identifier",
-                    "_include": "Patient",
+                    # "_elements": "identifier",
+                    # "_include": "Patient",
                     "_count": self.settings.fhir.page_count,
                 },
                 df_constraints={
@@ -102,7 +109,7 @@ class PyRateQuery:
                     (
                         "patient_mrn",
                         "Patient.identifier.where("
-                        + f"system='{self.settings.fhir.patient_identifier_system}')[0].value",  # warum ist die spalte nicht da
+                        + f"system='{self.settings.fhir.patient_identifier_system}').value",  # warum ist die spalte nicht da
                     ),
                 ],
             )
@@ -171,6 +178,17 @@ class PyRateQuery:
         if all_conditions:
             condition_df = pd.concat(all_conditions, ignore_index=True)
             # condition_df.drop(columns=["subject_list"], inplace=True)
+
+            # join oBDS patient identifier from patient_df to join back to other dfs later
+            patient_df["patient_id_prefixed"] = "Patient/" + patient_df["patient_id"].astype(str)
+
+            condition_df = condition_df.merge(
+                patient_df,
+                left_on="condition_patient_reference",
+                right_on="patient_id_prefixed",
+                how="left",
+            )
+
             condition_df.to_csv(
                 os.path.join(self.output_dir, "df_mii_conditions" + suffix + ".csv"),
                 index=False,
@@ -193,7 +211,6 @@ class PyRateQuery:
         patient_df = self.extract_patients(patient_list, suffix, crypto_key)
 
         all_labs = []
-        # patient_df["patient_id"]
         for chunk in chunked(patient_df["patient_id"], self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
