@@ -55,6 +55,7 @@ class AMLSettings:
     # column where the patient ids from input csv match column 'patient_mrn' in aml_all_patients.csv
     csv_patient_column: str = "KIS-Patienten-ID"
     use_cytostatics_data: bool = False
+    extra_medication_file: str = ""
 
 
 @ts.settings
