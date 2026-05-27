@@ -1297,6 +1297,13 @@ class AMLStudy:
             )
             zenzy_df["Retoure"] = "FALSCH"
 
+        if "Applikationsart" not in zenzy_df.columns:
+            logger.warning(
+                "Applikationsart column not found in Zenzy input data. "
+                + "Setting default Applikationsart to 'NA' for all records"
+            )
+            zenzy_df["Applikationsart"] = pd.NA
+
         if "Zeit" not in zenzy_df.columns:
             logger.warning(
                 "Zeit column not found in Zenzy input data. "
