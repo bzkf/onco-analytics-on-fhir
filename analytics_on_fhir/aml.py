@@ -1442,17 +1442,17 @@ class AMLStudy:
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
         if sap_medication_path and os.path.exists(sap_medication_path):
-            sap_medikation = (
-                pd.read_csv(
-                    sap_medication_path,
-                    sep=";",
-                )
-                .drop(columns=["FALL_ID", "TEILFALL_ID"])
-                .rename(columns={"PATIENT_ID": "patient_mrn"})
-            )
+            sap_medikation = pd.read_csv(
+                sap_medication_path,
+                sep=";",
+            ).drop(columns=["FALL_ID", "TEILFALL_ID"])
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
                 sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
+            )
+
+            sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
+                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
 
             columns_to_hash = [
@@ -1462,7 +1462,7 @@ class AMLStudy:
             for column in columns_to_hash:
                 sap_medikation[column] = sap_medikation[column].apply(crypto_hash_nullable)
 
-            columns_to_shift = ["REZEPT_DATUM"]
+            columns_to_shift = ["REZEPT_DATUM", "AUFNAHME_DATUM"]
             for column in columns_to_shift:
                 sap_medikation[column] = sap_medikation[column] + pd.to_timedelta(
                     DAY_SHIFT, unit="D"
