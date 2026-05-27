@@ -238,11 +238,14 @@ class PyRateQuery:
             # parse potentially problematic columns explicitly as strings
             lab_df["lab_codeableconcept_code"] = lab_df["lab_codeableconcept_code"].astype(str)
             lab_df["lab_quantity_unit"] = lab_df["lab_quantity_unit"].astype(str)
+
             # join oBDS patient identifier from patient_df to join back to other dfs later
+            patient_df["patient_id_prefixed"] = "Patient/" + patient_df["patient_id"].astype(str)
+
             lab_df = lab_df.merge(
                 patient_df,
                 left_on="observation_patient_reference",
-                right_on="patient_id",
+                right_on="patient_id_prefixed",
                 how="left",
             )
             lab_df.to_csv(
@@ -252,6 +255,7 @@ class PyRateQuery:
             )
 
             logger.info("lab_df size: {}", lab_df.count())
+            logger.info(lab_df.show())
 
             self.post_process_values(
                 lab_df,
@@ -263,7 +267,7 @@ class PyRateQuery:
                     "lab_codeableconcept_code",
                 ],
             )
-            return lab_df
+            return lab_df, patient_df
         else:
             logger.info("Found no lab values to given patients.")
 

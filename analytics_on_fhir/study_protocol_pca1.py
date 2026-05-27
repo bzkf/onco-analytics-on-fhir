@@ -165,7 +165,7 @@ class StudyProtocolPCa1:
             suffix="c61_conditions_patients_death_gleason_met",
         )
 
-        self.extract_save_therapies(
+        """ self.extract_save_therapies(
             df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
             crypto_key,
         )
@@ -195,7 +195,7 @@ class StudyProtocolPCa1:
         self.extract_weitere_klassifikation(
             df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
             crypto_key,
-        )
+        ) """
 
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")
@@ -359,10 +359,10 @@ class StudyProtocolPCa1:
         )
 
         mii_labs_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
-            "condition_id", "asserted_date", "condition_patient_resource_id"
+            "condition_id", "asserted_date", "condition_patient_resource_id", "patid_pseudonym"
         ).join(
             mii_labs,
-            F.col("condition_patient_resource_id") == F.col("patient_list_obds"),
+            F.col("patid_pseudonym") == F.col("patient_list_obds"),
             "left",
         )
         save_final_df(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
