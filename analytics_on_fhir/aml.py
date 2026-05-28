@@ -52,6 +52,9 @@ DATA_DICTIONARY = {
         "patient_mrn": "Medical Record Number of the patient (Patient ID from Patient.identifier)",
         "birth_date": "Patient birth date",
         "gender": "Administrative gender of the patient",
+        "death_caused_by_tumor": "yes/no/unknown - whether the death was caused by the tumor (from OBDS deaths data)",
+        "cause_of_death": "Cause of death encoded as an ICD-10 code (from OBDS deaths data)",
+        "last_follow_up_datetime": "Date/time of the last recorded vital status of 'alive' for the patient (from OBDS vital status data)",
     },
     "aml_all_labs": {
         "observation_id": "Unique identifier of the Observation resource",
@@ -95,6 +98,17 @@ DATA_DICTIONARY = {
         + "with different dates are possible due to documentation errors.)",
         "cause_of_death": "Cause of death encoded as an ICD-10 code",
         "death_caused_by_tumor": "yes/no/unknown - whether the death was caused by the tumor.",
+    },
+    "df_obds_vitalstatus": {
+        "observation_id": "Unique identifier of the vital status Observation resource",
+        "meta_profile": "FHIR meta profile of the observation",
+        "observation_patient_reference": "FHIR reference to the patient (Patient/{id})",
+        "effective_dateTime": "Date of the vital status assessment",
+        "vitalstatus_system": "Coding system of the vital status value",
+        "vitalstatus_code": "Vital status code (e.g. 'L' for alive, 'T' for deceased)",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced in the observation",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
     },
     "df_obds_ecog_statuses": {
         "observation_id": "Unique identifier of the ECOG Observation resource",
