@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.31.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.31.0...v2.31.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* join from MII references back to oBDS - keep mapping from obds to mii ([#504](https://github.com/bzkf/onco-analytics-on-fhir/issues/504)) ([4086263](https://github.com/bzkf/onco-analytics-on-fhir/commit/408626352a3c3758936d0b058861257984b88562))
+
 ## [2.31.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.30.0...v2.31.0) (2026-05-27)
 
 

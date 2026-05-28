@@ -113,7 +113,7 @@ class AllObdsPatients:
         patient_list = pandas_df_clean["patid_pseudonym"].dropna()  # patid_pseudonym
         patient_list.drop_duplicates(inplace=True)
         mii_conditions_all_obds_pats_pandas = self.extract_mii_conditions(
-            patient_list, suffix="_2_mals", crypto_key=crypto_key
+            patient_list, suffix="_all_obds", crypto_key=crypto_key
         )
 
         # TRANSFORM TO PYSPARK - parse dates
@@ -141,12 +141,11 @@ class AllObdsPatients:
                     "yyyy-MM-dd",
                 ),
             )
-
         mii_conditions_all_obds_pats_asserted = df_all_obds_clean.select(
-            "condition_patient_resource_id", "asserted_date"
+            "condition_patient_resource_id", "asserted_date", "patid_pseudonym"
         ).join(
             mii_conditions_all_obds_pats,
-            F.col("condition_patient_reference") == F.col("condition_patient_resource_id"),
+            df_all_obds_clean["patid_pseudonym"] == mii_conditions_all_obds_pats["patient_mrn"],
             "left",
         )
         save_final_df(
