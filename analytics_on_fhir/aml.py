@@ -479,6 +479,7 @@ class AMLStudy:
         patient_df: pd.DataFrame,
         resource_type: str,
         extra_fhir_paths: list[tuple],
+        elements: list[str] | None = None,
     ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
         common_fhir_paths = [
             ("type", f"{resource_type}.resourceType"),
@@ -493,16 +494,20 @@ class AMLStudy:
         resource_chunks: list[pd.DataFrame] = []
         medication_chunks: list[pd.DataFrame] = []
 
+        request_params: dict = {
+            "_count": self.settings.fhir.page_count,
+            "_include": f"{resource_type}:medication",
+        }
+        if elements:
+            request_params["_elements"] = ",".join(elements)
+
         indices = list(range(len(patient_df)))
         for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
             chunk_df = patient_df.iloc[list(chunk_indices)]
             result = self.search.trade_rows_for_dataframe(
                 df=chunk_df,
                 resource_type=resource_type,
-                request_params={
-                    "_count": self.settings.fhir.page_count,
-                    "_include": f"{resource_type}:medication",
-                },
+                request_params=request_params,
                 df_constraints={"subject": "condition_patient_reference"},
                 with_ref=False,
                 fhir_paths=fhir_paths,
@@ -569,6 +574,14 @@ class AMLStudy:
                 ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
             ],
+            elements=[
+                "subject",
+                "intent",
+                "status",
+                "medicationReference",
+                "dosageInstruction",
+                "authoredOn",
+            ],
         )
 
         logger.info("Fetching MedicationStatement")
@@ -584,6 +597,14 @@ class AMLStudy:
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
             ],
+            elements=[
+                "subject",
+                "status",
+                "medicationReference",
+                "effectiveDateTime",
+                "effectivePeriod",
+                "dosage",
+            ],
         )
 
         logger.info("Fetching MedicationAdministration")
@@ -598,6 +619,14 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
+            ],
+            elements=[
+                "subject",
+                "status",
+                "medicationReference",
+                "effectiveDateTime",
+                "effectivePeriod",
+                "dosage",
             ],
         )
 
