@@ -141,9 +141,8 @@ class AllObdsPatients:
                     "yyyy-MM-dd",
                 ),
             )
-        # condition_df["subject_list"]
         mii_conditions_all_obds_pats_asserted = df_all_obds_clean.select(
-            "condition_patient_resource_id", "asserted_date"
+            "condition_patient_resource_id", "asserted_date", "patid_pseudonym"
         ).join(
             mii_conditions_all_obds_pats,
             df_all_obds_clean["patid_pseudonym"] == mii_conditions_all_obds_pats["patient_mrn"],
