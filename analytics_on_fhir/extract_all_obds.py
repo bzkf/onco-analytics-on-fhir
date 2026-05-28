@@ -113,7 +113,7 @@ class AllObdsPatients:
         patient_list = pandas_df_clean["patid_pseudonym"].dropna()  # patid_pseudonym
         patient_list.drop_duplicates(inplace=True)
         mii_conditions_all_obds_pats_pandas = self.extract_mii_conditions(
-            patient_list, suffix="all_obds", crypto_key=crypto_key
+            patient_list, suffix="_all_obds", crypto_key=crypto_key
         )
 
         # TRANSFORM TO PYSPARK - parse dates
