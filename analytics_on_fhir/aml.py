@@ -52,9 +52,11 @@ DATA_DICTIONARY = {
         "patient_mrn": "Medical Record Number of the patient (Patient ID from Patient.identifier)",
         "birth_date": "Patient birth date",
         "gender": "Administrative gender of the patient",
-        "death_caused_by_tumor": "yes/no/unknown - whether the death was caused by the tumor (from OBDS deaths data)",
+        "death_caused_by_tumor": "yes/no/unknown - whether the death was caused by the tumor (from "
+        + "OBDS deaths data)",
         "cause_of_death": "Cause of death encoded as an ICD-10 code (from OBDS deaths data)",
-        "last_follow_up_datetime": "Date/time of the last recorded vital status of 'alive' for the patient (from OBDS vital status data)",
+        "last_follow_up_datetime": "Date/time of the last recorded vital status of 'alive' for the "
+        + "patient (from OBDS vital status data)",
     },
     "aml_all_labs": {
         "observation_id": "Unique identifier of the Observation resource",
@@ -307,10 +309,10 @@ class AMLStudy:
             obds_deaths_df["death_dateTime"] = pd.to_datetime(
                 obds_deaths_df["death_dateTime"], errors="coerce"
             )
-            obds_deaths_df = obds_deaths_df[
-                obds_deaths_df["death_dateTime"].notna()
-            ].sort_values("death_dateTime").drop_duplicates(
-                subset=["patient_mrn"], keep="last"
+            obds_deaths_df = (
+                obds_deaths_df[obds_deaths_df["death_dateTime"].notna()]
+                .sort_values("death_dateTime")
+                .drop_duplicates(subset=["patient_mrn"], keep="last")
             )
             merged_df = merged_df.merge(
                 obds_deaths_df,
