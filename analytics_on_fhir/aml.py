@@ -307,6 +307,47 @@ class AMLStudy:
             )
             merged_df = merged_df.drop(columns=["death_dateTime"])
 
+        obds_vitalstatus_path = os.path.join(self.output_dir, "df_obds_vitalstatus.csv")
+        if os.path.exists(obds_vitalstatus_path):
+            logger.info("Joining obds vitalstatus data into patient table")
+            vitalstatus_df = pd.read_csv(
+                obds_vitalstatus_path,
+                sep=";",
+                dtype={"patient_mrn": str},
+                usecols=["patient_mrn", "effective_dateTime", "vitalstatus_code"],
+            )
+
+            deceased_vs_df = (
+                vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "T"]
+                .sort_values("effective_dateTime")
+                .drop_duplicates(subset=["patient_mrn"], keep="last")
+                .rename(columns={"effective_dateTime": "vs_death_dateTime"})[
+                    ["patient_mrn", "vs_death_dateTime"]
+                ]
+            )
+            if not deceased_vs_df.empty:
+                merged_df = merged_df.merge(deceased_vs_df, on="patient_mrn", how="left")
+                death_mask = merged_df["vs_death_dateTime"].notna()
+                merged_df.loc[death_mask, "deceased_dateTime"] = merged_df.loc[
+                    death_mask, "vs_death_dateTime"
+                ]
+                merged_df["deceased"] = (
+                    merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
+                )
+
+            follow_up_df = (
+                vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "L"]
+                .sort_values("effective_dateTime")
+                .drop_duplicates(subset=["patient_mrn"], keep="last")
+                .rename(columns={"effective_dateTime": "last_follow_up_datetime"})[
+                    ["patient_mrn", "last_follow_up_datetime"]
+                ]
+            )
+            if not follow_up_df.empty:
+                merged_df = merged_df.merge(follow_up_df, on="patient_mrn", how="left")
+            else:
+                merged_df["last_follow_up_datetime"] = pd.NaT
+
         merged_df.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
         logger.info(f"merged_df size: {merged_df.count()}. {merged_df.dtypes}")
