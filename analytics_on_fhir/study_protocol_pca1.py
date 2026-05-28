@@ -254,78 +254,12 @@ class StudyProtocolPCa1:
             deidentified=True,
         )
 
-        # DEV
-        # read csv here to pyspark
-        # import pandas as pd
-        # suffix = "c61_conditions_patients_death_gleason_met_clean"
-        # csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
-        # df_c61_conditions_patients_death_gleason_met_clean = (
-        #     self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
-        # )
-        # df_c61_conditions_patients_death_gleason_met_clean.show()
-
-        # 4) Nebendiagnosen: extract mii conditions + labs for c61 pats
+        # 4) Labor: extract mii labs for c61 pats
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
         df_list_c61 = pandas_df_pseudonyms_c61["patid_pseudonym"].drop_duplicates().dropna()
 
-        mii_conditions_pandas = self.extract_mii_conditions(
-            df_list_c61, suffix="", crypto_key=crypto_key
-        )
-        mii_conditions = self.spark.createDataFrame(mii_conditions_pandas)
-        mii_conditions = mii_conditions.withColumnRenamed("condition_id", "condition_id_mii")
-
-        if "diagnosis_onsetDateTime" in mii_conditions.columns:
-            mii_conditions = mii_conditions.withColumn(
-                "diagnosis_onsetDateTime",
-                F.to_date(
-                    F.substring(F.col("diagnosis_onsetDateTime"), 1, 10),
-                    "yyyy-MM-dd",
-                ),
-            )
-
-        if "diagnosis_recordedDate" in mii_conditions.columns:
-            mii_conditions = mii_conditions.withColumn(
-                "diagnosis_recordedDate",
-                F.to_date(
-                    F.substring(F.col("diagnosis_recordedDate"), 1, 10),
-                    "yyyy-MM-dd",
-                ),
-            )
-        mii_conditions_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
-            "condition_id", "asserted_date", "condition_patient_resource_id"
-        ).join(
-            mii_conditions,
-            F.col("condition_patient_resource_id") == F.col("condition_patient_reference"),
-            "left",
-        )
-        save_final_df(mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted")
-        save_final_df_parquet(
-            mii_conditions_asserted, self.settings, suffix="mii_conditions_asserted"
-        )
-        mii_conditions_asserted_deidentified = deidentify(
-            mii_conditions_asserted, IDENTIFYING_COLS, crypto_key
-        )
-        save_final_df(
-            mii_conditions_asserted_deidentified,
-            self.settings,
-            suffix="mii_conditions_asserted_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            mii_conditions_asserted_deidentified,
-            self.settings,
-            suffix="mii_conditions_asserted_deidentified",
-            deidentified=True,
-        )
-
         # labs
         mii_labs_pandas = self.extract_mii_labs(df_list_c61, suffix="", crypto_key=crypto_key)
-
-        # DEV
-        # read csv to pandas here
-        # suffix = "mii_labs"
-        # csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
-        # mii_labs_pandas = pd.read_csv(csv_path, sep=";")
 
         # debug schema equivalent
         print(mii_labs_pandas.dtypes)
@@ -335,42 +269,38 @@ class StudyProtocolPCa1:
         for field in mii_labs.schema.fields:
             print(field.name, field.dataType)
 
-        # DEV
-        # read csv here to pyspark
-        # suffix = "mii_labs"
-        # csv_path = os.path.join(self.output_dir, f"df_{suffix}.csv")
-        # # exchange sep to ; later here
-        # mii_labs = self.spark.read.option("header", "true").option("sep", ",").csv(csv_path)
-        # for field in mii_labs.schema.fields:
-        #     print(field.name, field.dataType)
+        mii_labs = mii_labs.replace(["NaN", "nan"], None)
 
-        # mii_labs = mii_labs.withColumn(
-        #     "lab_dateTime", F.to_date(F.col("lab_dateTime"), "yyyy-MM-dd'T'HH:mm:ssXXX")
-        # )
-
-        mii_labs = mii_labs.withColumn(
-            "lab_dateTime", F.expr("try_to_timestamp(lab_dateTime, \"yyyy-MM-dd'T'HH:mm:ssXXX\")")
-        )
-
-        # optional
-        mii_labs = mii_labs.withColumn("lab_dateTime", F.to_date("lab_dateTime"))
+        if "lab_dateTime" in mii_labs.columns:
+            mii_labs = mii_labs.withColumn(
+                "lab_dateTime",
+                F.expr(
+                    """
+                    CAST(
+                        try_to_timestamp(
+                            substring(lab_dateTime, 1, 10),
+                            'yyyy-MM-dd'
+                        )
+                        AS DATE
+                    )
+                    """
+                ),
+            )
+        if "patient_mrn" in mii_labs.columns:
+            mii_labs = mii_labs.withColumn("patient_mrn", F.col("patient_mrn").cast("string"))
 
         mii_labs_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
-            "condition_id", "asserted_date", "condition_patient_resource_id"
+            "condition_id", "asserted_date", "condition_patient_resource_id", "patid_pseudonym"
         ).join(
             mii_labs,
-            F.col("condition_patient_resource_id") == F.col("observation_patient_reference"),
+            df_c61_conditions_patients_death_gleason_met_clean["patid_pseudonym"]
+            == mii_labs["patient_mrn"],
             "left",
         )
-        save_final_df(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
+
         save_final_df_parquet(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
         mii_labs_asserted_deidentified = deidentify(mii_labs_asserted, IDENTIFYING_COLS, crypto_key)
-        save_final_df(
-            mii_labs_asserted_deidentified,
-            self.settings,
-            suffix="mii_labs_asserted_deidentified",
-            deidentified=True,
-        )
+
         save_final_df_parquet(
             mii_labs_asserted_deidentified,
             self.settings,
