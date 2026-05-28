@@ -354,9 +354,7 @@ class StudyProtocolPCa1:
 
         # optional
         mii_labs = mii_labs.withColumn("lab_dateTime", F.to_date("lab_dateTime"))
-        mii_labs = mii_labs.withColumn(
-            "patient_list_obds", F.col("patient_list_obds").cast("string")
-        )
+        mii_labs = mii_labs.withColumn("patient_mrn", F.col("patient_mrn").cast("string"))
 
         mii_labs_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
             "condition_id", "asserted_date", "condition_patient_resource_id", "patid_pseudonym"
