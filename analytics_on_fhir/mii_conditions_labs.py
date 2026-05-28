@@ -288,8 +288,8 @@ class PyRateQuery:
             )
             return lab_df
 
-    # else:
-    #    logger.info("Found no lab values to given patients.")
+        else:
+            logger.info("Found no lab values to given patients.")
 
     def post_process_values(self, df, name, columns):
 

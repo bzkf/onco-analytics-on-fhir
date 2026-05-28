@@ -269,15 +269,25 @@ class StudyProtocolPCa1:
         for field in mii_labs.schema.fields:
             print(field.name, field.dataType)
 
+        mii_labs = mii_labs.replace(["NaN", "nan"], None)
+
         if "lab_dateTime" in mii_labs.columns:
             mii_labs = mii_labs.withColumn(
                 "lab_dateTime",
-                F.to_date(
-                    F.substring(F.col("lab_dateTime"), 1, 10),
-                    "yyyy-MM-dd",
+                F.expr(
+                    """
+                    CAST(
+                        try_to_timestamp(
+                            substring(lab_dateTime, 1, 10),
+                            'yyyy-MM-dd'
+                        )
+                        AS DATE
+                    )
+                    """
                 ),
             )
-        mii_labs = mii_labs.withColumn("patient_mrn", F.col("patient_mrn").cast("string"))
+        if "patient_mrn" in mii_labs.columns:
+            mii_labs = mii_labs.withColumn("patient_mrn", F.col("patient_mrn").cast("string"))
 
         mii_labs_asserted = df_c61_conditions_patients_death_gleason_met_clean.select(
             "condition_id", "asserted_date", "condition_patient_resource_id", "patid_pseudonym"
