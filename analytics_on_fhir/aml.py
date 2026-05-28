@@ -338,6 +338,12 @@ class AMLStudy:
 
             deceased_vs_df = (
                 vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "T"]
+                .assign(
+                    effective_dateTime=lambda df: pd.to_datetime(
+                        df["effective_dateTime"], errors="coerce"
+                    )
+                )
+                .dropna(subset=["effective_dateTime"])
                 .sort_values("effective_dateTime")
                 .drop_duplicates(subset=["patient_mrn"], keep="last")
                 .rename(columns={"effective_dateTime": "vs_death_dateTime"})[
