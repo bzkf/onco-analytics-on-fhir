@@ -288,6 +288,10 @@ class AMLStudy:
         if "diagnosis_onsetDateTime" not in merged_df.columns:
             merged_df["diagnosis_onsetDateTime"] = pd.NaT
 
+        merged_df["deceased_dateTime"] = pd.to_datetime(
+            merged_df["deceased_dateTime"], format="ISO8601", errors="coerce"
+        )
+
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
@@ -307,7 +311,7 @@ class AMLStudy:
                 ],
             )
             obds_deaths_df["death_dateTime"] = pd.to_datetime(
-                obds_deaths_df["death_dateTime"], errors="coerce"
+                obds_deaths_df["death_dateTime"], format="ISO8601", errors="coerce"
             )
             obds_deaths_df = (
                 obds_deaths_df[obds_deaths_df["death_dateTime"].notna()]
@@ -319,6 +323,7 @@ class AMLStudy:
                 on="patient_mrn",
                 how="left",
             )
+
             death_mask = merged_df["death_dateTime"].notna()
             merged_df.loc[death_mask, "deceased_dateTime"] = merged_df.loc[
                 death_mask, "death_dateTime"
