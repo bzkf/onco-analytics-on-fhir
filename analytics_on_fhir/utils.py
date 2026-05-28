@@ -80,7 +80,7 @@ IDENTIFYING_COLS = [
     "observation_gleason_patient_resource_id",
     "observation_metastasis_resource_id",
     "observation_patient_reference",
-    "patient_mrn",
+    "patient_id",
     "patient_id_prefixed",
 ]
 
@@ -300,10 +300,12 @@ def deidentify(
         "condition_id_2",
         "condition_id_mii",
         "patient_resource_id",
+        "patid_pseudonym",
         "condition_patient_reference",
         "parent_tnm_observation_id",
         "uicc_observation_id",
         "has_member",
+        "patient_mrn",
     ]
     hash_udf = _make_hash_udf(crypto_key)
 
