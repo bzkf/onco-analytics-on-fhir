@@ -357,6 +357,12 @@ class AMLStudy:
 
             follow_up_df = (
                 vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "L"]
+                .assign(
+                    effective_dateTime=lambda df: pd.to_datetime(
+                        df["effective_dateTime"], errors="coerce"
+                    )
+                )
+                .dropna(subset=["effective_dateTime"])
                 .sort_values("effective_dateTime")
                 .drop_duplicates(subset=["patient_mrn"], keep="last")
                 .rename(columns={"effective_dateTime": "last_follow_up_datetime"})[
