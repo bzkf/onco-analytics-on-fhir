@@ -118,7 +118,6 @@ class PyRateQuery:
 
         if all_patients:
             patient_df = pd.concat(all_patients, ignore_index=True)
-            print(patient_df)
             patient_df.drop(columns=["patient_list_obds"], inplace=True)
 
             patient_df.to_csv(
