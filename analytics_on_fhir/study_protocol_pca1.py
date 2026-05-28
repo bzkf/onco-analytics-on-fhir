@@ -165,7 +165,7 @@ class StudyProtocolPCa1:
             suffix="c61_conditions_patients_death_gleason_met",
         )
 
-        """ self.extract_save_therapies(
+        self.extract_save_therapies(
             df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
             crypto_key,
         )
@@ -195,7 +195,7 @@ class StudyProtocolPCa1:
         self.extract_weitere_klassifikation(
             df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
             crypto_key,
-        ) """
+        )
 
     def run(self):
         logger.info("StudyProtocolPCa1 pipeline started")
