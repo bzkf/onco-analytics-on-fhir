@@ -206,6 +206,14 @@ class PyRateQuery:
     def extract_labs(self, patient_list, suffix, crypto_key):
         patient_df = self.extract_patients(patient_list, suffix, crypto_key)
 
+        if (
+            not isinstance(patient_df, pd.DataFrame)
+            or patient_df.empty
+            or "patient_id" not in patient_df.columns
+        ):
+            logger.info("Found no lab values to given patients.")
+            return
+
         all_labs = []
         for chunk in chunked(patient_df["patient_id"], self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
