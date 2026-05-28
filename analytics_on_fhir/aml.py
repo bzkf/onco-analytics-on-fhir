@@ -1371,6 +1371,10 @@ class AMLStudy:
             ],
             dtype={"patient_mrn": str},
         )
+        if "last_follow_up_datetime" in patients_with_diagnoses.columns:
+            patients_with_diagnoses["last_follow_up_datetime"] = pd.to_datetime(
+                patients_with_diagnoses["last_follow_up_datetime"], errors="coerce"
+            )
 
         patients_with_diagnoses["condition_id"] = patients_with_diagnoses["condition_id"].apply(
             lambda x: crypto_hash(x)
@@ -1393,6 +1397,8 @@ class AMLStudy:
             "diagnosis_recordedDate",
             "deceased_dateTime",
         ]
+        if "last_follow_up_datetime" in patients_with_diagnoses.columns:
+            columns_to_shift.append("last_follow_up_datetime")
         for column in columns_to_shift:
             patients_with_diagnoses[column] = patients_with_diagnoses[column] + pd.to_timedelta(
                 DAY_SHIFT, unit="D"
