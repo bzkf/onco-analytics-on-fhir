@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import os
 import secrets
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -352,6 +353,15 @@ class AMLStudy:
             "medication_ops_code",
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
         ),
+        (
+            "medication_ops_version",
+            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".version",
+        ),
+        (
+            "medication_ingredient_text",
+            "Medication.ingredient.itemCodeableConcept.text | "
+            + "Medication.ingredient.itemReference.display",
+        ),
         ("ingredient", "Medication.ingredient"),
     ]
 
@@ -507,13 +517,35 @@ class AMLStudy:
                 on="medication_atc_code",
                 how="left",
             )
-        if "medication_ops_code" in med_df.columns:
-            logger.info("Loading OPS mappings")
-            ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
-            med_df["medication_ops_display"] = med_df["medication_ops_code"].map(ops_mapping)
+
         logger.info("all_meds_df: {}", med_df.count())
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
+
+        for col in [
+            "medication_code_text",
+            "medication_atc_display",
+            "medication_ops_display",
+            "medication_pzn_display",
+            "medication_ingredient_text",
+        ]:
+            if col not in med_df.columns:
+                med_df[col] = None
+
+        med_df["text"] = (
+            med_df[
+                [
+                    "medication_atc_display",
+                    "medication_ops_display",
+                    "medication_code_text",
+                    "medication_ingredient_text",
+                    "medication_pzn_display",
+                ]
+            ]
+            .bfill(axis=1)
+            .iloc[:, 0]
+        )
+
         med_df.to_csv(os.path.join(self.output_dir, "aml_all_meds.csv"), index=False)
 
         req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
@@ -552,6 +584,10 @@ class AMLStudy:
                         "procedure_ops_code",
                         "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".code",
                     ),
+                    (
+                        "procedure_ops_version",
+                        "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".version",
+                    ),
                     ("timestamp", "performedDateTime | performedPeriod.start"),
                     ("procedure_status", "status"),
                 ],
@@ -568,6 +604,23 @@ class AMLStudy:
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
             filtered_df["procedure_ops_display"] = filtered_df["procedure_ops_code"].map(
                 ops_mapping
+            )
+
+            if "procedure_ops_version" not in filtered_df.columns:
+                filtered_df["procedure_ops_version"] = None
+
+            # Export unmapped OPS codes (distinct by version + code)
+            unmapped_ops = (
+                filtered_df[
+                    filtered_df["procedure_ops_display"].isna()
+                    & filtered_df["procedure_ops_code"].notna()
+                ][["procedure_ops_version", "procedure_ops_code"]]
+                .drop_duplicates()
+                .sort_values(["procedure_ops_version", "procedure_ops_code"])
+            )
+
+            unmapped_ops.to_csv(
+                os.path.join(self.output_dir, "aml_unmapped_procedure_ops_codes.csv"), index=False
             )
 
         patient_mrn_lookup = (
@@ -1376,28 +1429,30 @@ class AMLStudy:
 
         fhir_procedures.to_csv(de_identified_dir / "aml_fhir_procedures.csv", index=False)
 
+        unmapped_procedure_ops_codes_path = os.path.join(
+            self.output_dir, "aml_unmapped_procedure_ops_codes.csv"
+        )
+
+        if os.path.exists(unmapped_procedure_ops_codes_path):
+            shutil.copy2(
+                unmapped_procedure_ops_codes_path,
+                de_identified_dir / "aml_unmapped_procedure_ops_codes.csv",
+            )
+
         # SAP Medikation
-        sap_medication_path = os.path.join(self.output_dir, "sap_medikation_working_pseuded.csv")
-        if os.path.exists(sap_medication_path):
+        sap_medication_path = self.settings.aml.extra_medication_file
+        if sap_medication_path and os.path.exists(sap_medication_path):
             sap_medikation = (
                 pd.read_csv(
                     sap_medication_path,
                     sep=";",
-                    parse_dates=["AUFNAHME_DATUM", "ENTLASS_DATUM"],
                 )
-                .drop(columns=["FALL_ID", "TEILFALL_ID", "PATIENT_ID"])
-                .rename(columns={"Pseudonyme von PATIENT_ID": "patient_mrn"})
+                .drop(columns=["FALL_ID", "TEILFALL_ID"])
+                .rename(columns={"PATIENT_ID": "patient_mrn"})
             )
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
                 sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
-            )
-
-            sap_medikation["ENTLASS_DATUM"] = pd.to_datetime(
-                sap_medikation["ENTLASS_DATUM"], format="%Y-%m-%d", errors="coerce"
-            )
-            sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
-                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
 
             columns_to_hash = [
@@ -1407,7 +1462,7 @@ class AMLStudy:
             for column in columns_to_hash:
                 sap_medikation[column] = sap_medikation[column].apply(crypto_hash_nullable)
 
-            columns_to_shift = ["REZEPT_DATUM", "ENTLASS_DATUM", "AUFNAHME_DATUM"]
+            columns_to_shift = ["REZEPT_DATUM"]
             for column in columns_to_shift:
                 sap_medikation[column] = sap_medikation[column] + pd.to_timedelta(
                     DAY_SHIFT, unit="D"
