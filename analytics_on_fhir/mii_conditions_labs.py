@@ -279,7 +279,7 @@ class PyRateQuery:
                     "lab_codeableconcept_code",
                 ],
             )
-            return lab_df, patient_df
+            return lab_df
 
     # else:
     #    logger.info("Found no lab values to given patients.")
