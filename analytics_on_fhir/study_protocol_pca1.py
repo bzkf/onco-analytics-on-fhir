@@ -297,15 +297,10 @@ class StudyProtocolPCa1:
             == mii_labs["patient_mrn"],
             "left",
         )
-        save_final_df(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
+
         save_final_df_parquet(mii_labs_asserted, self.settings, suffix="mii_labs_asserted")
         mii_labs_asserted_deidentified = deidentify(mii_labs_asserted, IDENTIFYING_COLS, crypto_key)
-        save_final_df(
-            mii_labs_asserted_deidentified,
-            self.settings,
-            suffix="mii_labs_asserted_deidentified",
-            deidentified=True,
-        )
+
         save_final_df_parquet(
             mii_labs_asserted_deidentified,
             self.settings,
