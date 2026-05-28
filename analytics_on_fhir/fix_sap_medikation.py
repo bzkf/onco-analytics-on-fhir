@@ -13,7 +13,7 @@ def extract_column_raw(
 
     values = []
 
-    with open(csv_path, "r", encoding="utf-8", errors="replace") as f:
+    with open(csv_path, encoding="utf-8", errors="replace") as f:
         lines = f.readlines()
 
     # header
@@ -65,7 +65,7 @@ def add_column_from_pseudonymized(
 if __name__ == "__main__":
     add_column_from_pseudonymized(
         original_csv_path="./data/F_MED_REZEPTE_plausible_202604151635.csv",
-        pseudonymized_csv_path="./data/2026-05-26 F_MED_REZEPTE_plausible_202604151635 Pseudonymisiert gPAS.csv",
+        pseudonymized_csv_path="./data/F_MED_REZEPTE_plausible_Pseudonymisiert_gPAS.csv",
         column_to_add="Pseudonyme von PATIENT_ID",
         output_csv_path="./data/original_with_column.csv",
     )
