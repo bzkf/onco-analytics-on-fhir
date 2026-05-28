@@ -290,7 +290,12 @@ class AMLStudy:
                     "cause_of_death",
                 ],
             )
-            obds_deaths_df = obds_deaths_df.sort_values("death_dateTime").drop_duplicates(
+            obds_deaths_df["death_dateTime"] = pd.to_datetime(
+                obds_deaths_df["death_dateTime"], errors="coerce"
+            )
+            obds_deaths_df = obds_deaths_df[
+                obds_deaths_df["death_dateTime"].notna()
+            ].sort_values("death_dateTime").drop_duplicates(
                 subset=["patient_mrn"], keep="last"
             )
             merged_df = merged_df.merge(
