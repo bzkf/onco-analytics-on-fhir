@@ -339,6 +339,7 @@ class AMLStudy:
                 merged_df["deceased"] = (
                     merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
                 )
+                merged_df = merged_df.drop(columns=["vs_death_dateTime"])
 
             follow_up_df = (
                 vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "L"]
