@@ -18,6 +18,9 @@ from pyspark.sql import functions as F
 from settings import Settings
 from urllib3 import Retry
 from utils import save_final_df
+from views import (
+    vitalstatus_view,
+)
 
 pd.options.mode.string_storage = "pyarrow"
 pd.options.future.infer_string = True
@@ -272,6 +275,37 @@ class AMLStudy:
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
+
+        obds_deaths_path = os.path.join(self.output_dir, "df_obds_deaths.csv")
+        if os.path.exists(obds_deaths_path):
+            logger.info("Joining obds deaths data into patient table")
+            obds_deaths_df = pd.read_csv(
+                obds_deaths_path,
+                sep=";",
+                dtype={"patient_mrn": str},
+                usecols=[
+                    "patient_mrn",
+                    "death_dateTime",
+                    "death_caused_by_tumor",
+                    "cause_of_death",
+                ],
+            )
+            obds_deaths_df = obds_deaths_df.sort_values("death_dateTime").drop_duplicates(
+                subset=["patient_mrn"], keep="last"
+            )
+            merged_df = merged_df.merge(
+                obds_deaths_df,
+                on="patient_mrn",
+                how="left",
+            )
+            death_mask = merged_df["death_dateTime"].notna()
+            merged_df.loc[death_mask, "deceased_dateTime"] = merged_df.loc[
+                death_mask, "death_dateTime"
+            ]
+            merged_df["deceased"] = (
+                merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
+            )
+            merged_df = merged_df.drop(columns=["death_dateTime"])
 
         merged_df.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
@@ -1219,6 +1253,26 @@ class AMLStudy:
             filtered_weitere_klassifikationen,
             self.settings,
             suffix="obds_weitere_klassifikationen",
+        )
+
+        vitalstatus = vitalstatus_view(self.data)
+
+        vitalstatus = vitalstatus.join(
+            aml_patient_references,
+            vitalstatus.observation_patient_reference == conditions.condition_patient_reference,
+            "inner",
+        ).select(vitalstatus["*"])
+
+        vitalstatus = vitalstatus.join(
+            patients.select("patient_id", "patient_mrn"),
+            vitalstatus.observation_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        save_final_df(
+            vitalstatus,
+            self.settings,
+            suffix="obds_vitalstatus",
         )
 
     def de_identify(self):
