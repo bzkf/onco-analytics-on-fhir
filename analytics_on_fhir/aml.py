@@ -2,6 +2,7 @@ import csv
 import datetime
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import shutil
@@ -523,11 +524,24 @@ class AMLStudy:
                     fhir_paths=fhir_paths,
                 )
                 if len(result) > 0:
-                    result[resource_type].to_parquet(
+                    resource_chunk = result[resource_type]
+                    # Convert object columns (e.g. nested dosage) to JSON strings
+                    # so they can be serialized to Parquet
+                    for col in resource_chunk.columns:
+                        if resource_chunk[col].dtype == "object":
+                            resource_chunk[col] = resource_chunk[col].apply(
+                                lambda v: json.dumps(v) if isinstance(v, (dict, list)) else v
+                            )
+                    resource_chunk.to_parquet(
                         resource_dir / f"chunk_{chunk_counter}.parquet", index=False
                     )
                     # De-duplicate Medication resources per chunk to reduce memory and I/O
                     med_chunk = result["Medication"].drop_duplicates(subset=["medication_id"])
+                    for col in med_chunk.columns:
+                        if med_chunk[col].dtype == "object":
+                            med_chunk[col] = med_chunk[col].apply(
+                                lambda v: json.dumps(v) if isinstance(v, (dict, list)) else v
+                            )
                     med_chunk.to_parquet(
                         medication_dir / f"chunk_{chunk_counter}.parquet", index=False
                     )
