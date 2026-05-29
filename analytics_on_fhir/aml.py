@@ -533,8 +533,7 @@ class AMLStudy:
             medication_dir.mkdir()
 
             chunk_idx = 0
-            indices = list(range(len(patient_df)))
-            for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
+            for chunk_indices in chunked(range(len(patient_df)), self.settings.fhir.chunk_size):
                 chunk_df = patient_df.iloc[list(chunk_indices)]
                 result = self.search.trade_rows_for_dataframe(
                     df=chunk_df,
@@ -573,7 +572,7 @@ class AMLStudy:
             left_on="patient_reference",
             right_on="condition_patient_reference",
             how="left",
-        )
+        ).drop("condition_patient_reference", strict=False)
 
         logger.info(f"all_{resource_type}_df size: {len(resource_df)}.")
         return resource_df, medication_df
@@ -719,6 +718,13 @@ class AMLStudy:
             df for df in [med_req_df, med_statement_df, med_administration_df] if df is not None
         ]
         req_stat_admin_df = pl.concat(non_null_resources, how="diagonal")
+
+        # Ensure period_end exists so de_identify() can parse it as a date column even when
+        # only MedicationRequest data is present (which has no period_end field).
+        if "period_end" not in req_stat_admin_df.columns:
+            req_stat_admin_df = req_stat_admin_df.with_columns(
+                pl.lit(None, dtype=pl.String).alias("period_end")
+            )
 
         req_stat_admin_df.write_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv")
