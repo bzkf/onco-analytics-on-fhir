@@ -5,10 +5,12 @@ import hmac
 import os
 import secrets
 import shutil
+import tempfile
 import zipfile
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
@@ -370,7 +372,7 @@ class AMLStudy:
         patient_df: pd.DataFrame,
         resource_type: str,
         extra_fhir_paths: list[tuple],
-    ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
+    ) -> tuple[pl.DataFrame | None, pl.DataFrame | None]:
         common_fhir_paths = [
             ("type", f"{resource_type}.resourceType"),
             ("id", f"{resource_type}.id"),
@@ -381,37 +383,7 @@ class AMLStudy:
 
         fhir_paths = common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS
 
-        resource_chunks: list[pd.DataFrame] = []
-        medication_chunks: list[pd.DataFrame] = []
-
-        indices = list(range(len(patient_df)))
-        for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
-            chunk_df = patient_df.iloc[list(chunk_indices)]
-            result = self.search.trade_rows_for_dataframe(
-                df=chunk_df,
-                resource_type=resource_type,
-                request_params={
-                    "_count": self.settings.fhir.page_count,
-                    "_include": f"{resource_type}:medication",
-                },
-                df_constraints={"subject": "condition_patient_reference"},
-                with_ref=False,
-                fhir_paths=fhir_paths,
-            )
-            if len(result) > 0:
-                resource_chunks.append(result[resource_type])
-                medication_chunks.append(result["Medication"])
-
-        if not resource_chunks:
-            logger.info(f"Found no {resource_type}/Medication FHIR resources")
-            return None, None
-
-        resource_df = pd.concat(resource_chunks, ignore_index=True)
-        medication_df = pd.concat(medication_chunks, ignore_index=True)
-
-        # add the "Medication" prefix to the id so they match the medication_reference column
-        medication_df["medication_id"] = "Medication/" + medication_df["medication_id"].astype(str)
-
+        # Warn about conflicting MRNs and build a polars lookup table before the fetch loop
         mrn_per_ref = patient_df.groupby("condition_patient_reference")["patient_mrn"].nunique()
         conflicting = mrn_per_ref[mrn_per_ref > 1]
         if not conflicting.empty:
@@ -422,15 +394,69 @@ class AMLStudy:
                 conflicting.index.tolist(),
             )
         patient_mrn_lookup = (
-            patient_df[["condition_patient_reference", "patient_mrn"]]
-            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
-            .sort_values("patient_mrn")
-            .drop_duplicates(subset=["condition_patient_reference"], keep="first")
-            .set_index("condition_patient_reference")["patient_mrn"]
+            pl.from_pandas(
+                patient_df[["condition_patient_reference", "patient_mrn"]].astype(str)
+            )
+            .sort("patient_mrn")
+            .unique(subset=["condition_patient_reference"], keep="first")
         )
-        resource_df["patient_mrn"] = resource_df["patient_reference"].map(patient_mrn_lookup)
 
-        logger.info(f"all_{resource_type}_df size: {len(resource_df)}. {resource_df.dtypes}")
+        # Spill each fetched chunk to a temporary directory as Parquet files to avoid
+        # accumulating all chunks in RAM simultaneously.
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            resource_dir = tmp_path / "resource"
+            medication_dir = tmp_path / "medication"
+            resource_dir.mkdir()
+            medication_dir.mkdir()
+
+            chunk_idx = 0
+            indices = list(range(len(patient_df)))
+            for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
+                chunk_df = patient_df.iloc[list(chunk_indices)]
+                result = self.search.trade_rows_for_dataframe(
+                    df=chunk_df,
+                    resource_type=resource_type,
+                    request_params={
+                        "_count": self.settings.fhir.page_count,
+                        "_include": f"{resource_type}:medication",
+                    },
+                    df_constraints={"subject": "condition_patient_reference"},
+                    with_ref=False,
+                    fhir_paths=fhir_paths,
+                )
+                if len(result) > 0:
+                    pl.from_pandas(result[resource_type]).write_parquet(
+                        resource_dir / f"chunk_{chunk_idx}.parquet"
+                    )
+                    # Deduplicate Medication resources per-chunk: many patients share the
+                    # same Medication and deduplication here significantly reduces I/O and
+                    # memory usage across the full dataset.
+                    pl.from_pandas(result["Medication"]).unique(
+                        subset=["medication_id"]
+                    ).write_parquet(medication_dir / f"chunk_{chunk_idx}.parquet")
+                    chunk_idx += 1
+
+            if chunk_idx == 0:
+                logger.info(f"Found no {resource_type}/Medication FHIR resources")
+                return None, None
+
+            resource_df = pl.scan_parquet(resource_dir / "*.parquet").collect()
+            medication_df = pl.scan_parquet(medication_dir / "*.parquet").collect()
+
+        # add the "Medication/" prefix to the id so it matches the medication_reference column
+        medication_df = medication_df.with_columns(
+            ("Medication/" + pl.col("medication_id").cast(pl.String)).alias("medication_id")
+        ).unique(subset=["medication_id"])
+
+        resource_df = resource_df.join(
+            patient_mrn_lookup,
+            left_on="patient_reference",
+            right_on="condition_patient_reference",
+            how="left",
+        )
+
+        logger.info(f"all_{resource_type}_df size: {len(resource_df)}.")
         return resource_df, medication_df
 
     def load_ops_codes(self, filepath):
@@ -497,7 +523,10 @@ class AMLStudy:
             return
 
         logger.info("Combining medication data from different resource types")
-        med_df = pd.concat([med_df_1, med_df_2, med_df_3])
+        med_df = pl.concat(
+            [df for df in [med_df_1, med_df_2, med_df_3] if df is not None],
+            how="diagonal",
+        )
 
         if "medication_atc_code" in med_df.columns:
             logger.info("Mapping ATC codes to display values using Excel sheet")
@@ -507,33 +536,28 @@ class AMLStudy:
                 usecols=["ATC-Code", "ATC-Bedeutung"],
             )
             logger.info("Loaded ATC mapping with {} entries", len(atc_mapping_df))
-            med_df = med_df.merge(
-                atc_mapping_df.rename(
-                    columns={
-                        "ATC-Code": "medication_atc_code",
-                        "ATC-Bedeutung": "medication_atc_display",
-                    }
-                ),
-                on="medication_atc_code",
-                how="left",
+            atc_pl = pl.from_pandas(atc_mapping_df).rename(
+                {"ATC-Code": "medication_atc_code", "ATC-Bedeutung": "medication_atc_display"}
             )
+            med_df = med_df.join(atc_pl, on="medication_atc_code", how="left")
 
-        logger.info("all_meds_df: {}", med_df.count())
-        med_df.drop_duplicates(subset=["medication_id"], inplace=True)
-        logger.info("all_meds_df after removing duplicates: {}", med_df.count())
+        logger.info("all_meds_df: {}", len(med_df))
+        med_df = med_df.unique(subset=["medication_id"])
+        logger.info("all_meds_df after removing duplicates: {}", len(med_df))
 
-        for col in [
+        text_cols = [
             "medication_code_text",
             "medication_atc_display",
             "medication_ops_display",
             "medication_pzn_display",
             "medication_ingredient_text",
-        ]:
+        ]
+        for col in text_cols:
             if col not in med_df.columns:
-                med_df[col] = None
+                med_df = med_df.with_columns(pl.lit(None, dtype=pl.String).alias(col))
 
-        med_df["text"] = (
-            med_df[
+        med_df = med_df.with_columns(
+            pl.coalesce(
                 [
                     "medication_atc_display",
                     "medication_ops_display",
@@ -541,20 +565,18 @@ class AMLStudy:
                     "medication_ingredient_text",
                     "medication_pzn_display",
                 ]
-            ]
-            .bfill(axis=1)
-            .iloc[:, 0]
+            ).alias("text")
         )
 
-        med_df.to_csv(os.path.join(self.output_dir, "aml_all_meds.csv"), index=False)
+        med_df.write_csv(os.path.join(self.output_dir, "aml_all_meds.csv"))
 
-        req_stat_admin_df = pd.concat([med_req_df, med_statement_df, med_administration_df])
+        req_stat_admin_df = pl.concat(
+            [df for df in [med_req_df, med_statement_df, med_administration_df] if df is not None],
+            how="diagonal",
+        )
 
-        if "period_end" not in req_stat_admin_df.columns:
-            req_stat_admin_df["period_end"] = pd.NaT
-
-        req_stat_admin_df.to_csv(
-            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), index=False
+        req_stat_admin_df.write_csv(
+            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv")
         )
 
     def extract_procedures(self, patient_list):
