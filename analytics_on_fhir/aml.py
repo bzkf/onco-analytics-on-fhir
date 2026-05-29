@@ -18,6 +18,9 @@ from pyspark.sql import functions as F
 from settings import Settings
 from urllib3 import Retry
 from utils import save_final_df
+from views import (
+    vitalstatus_view,
+)
 
 pd.options.mode.string_storage = "pyarrow"
 pd.options.future.infer_string = True
@@ -49,6 +52,11 @@ DATA_DICTIONARY = {
         "patient_mrn": "Medical Record Number of the patient (Patient ID from Patient.identifier)",
         "birth_date": "Patient birth date",
         "gender": "Administrative gender of the patient",
+        "death_caused_by_tumor": "yes/no/unknown - whether the death was caused by the tumor (from "
+        + "OBDS deaths data)",
+        "cause_of_death": "Cause of death encoded as an ICD-10 code (from OBDS deaths data)",
+        "last_follow_up_datetime": "Date/time of the last recorded vital status of 'alive' for the "
+        + "patient (from OBDS vital status data)",
     },
     "aml_all_labs": {
         "observation_id": "Unique identifier of the Observation resource",
@@ -92,6 +100,17 @@ DATA_DICTIONARY = {
         + "with different dates are possible due to documentation errors.)",
         "cause_of_death": "Cause of death encoded as an ICD-10 code",
         "death_caused_by_tumor": "yes/no/unknown - whether the death was caused by the tumor.",
+    },
+    "df_obds_vitalstatus": {
+        "observation_id": "Unique identifier of the vital status Observation resource",
+        "meta_profile": "FHIR meta profile of the observation",
+        "observation_patient_reference": "FHIR reference to the patient (Patient/{id})",
+        "effective_dateTime": "Date of the vital status assessment",
+        "vitalstatus_system": "Coding system of the vital status value",
+        "vitalstatus_code": "Vital status code (e.g. 'L' for alive, 'T' for deceased)",
+        "patient_id": "The technical patient ID (Patient/{id}) referenced in the observation",
+        "patient_mrn": "Medical Record Number of the patient (Patient ID from referenced "
+        + "Patient.identifier)",
     },
     "df_obds_ecog_statuses": {
         "observation_id": "Unique identifier of the ECOG Observation resource",
@@ -269,9 +288,104 @@ class AMLStudy:
         if "diagnosis_onsetDateTime" not in merged_df.columns:
             merged_df["diagnosis_onsetDateTime"] = pd.NaT
 
+        merged_df["deceased_dateTime"] = pd.to_datetime(
+            merged_df["deceased_dateTime"], format="ISO8601", errors="coerce"
+        )
+
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
+
+        obds_deaths_path = os.path.join(self.output_dir, "df_obds_deaths.csv")
+        if os.path.exists(obds_deaths_path):
+            logger.info("Joining obds deaths data into patient table")
+            obds_deaths_df = pd.read_csv(
+                obds_deaths_path,
+                sep=";",
+                dtype={"patient_mrn": str},
+                usecols=[
+                    "patient_mrn",
+                    "death_dateTime",
+                    "death_caused_by_tumor",
+                    "cause_of_death",
+                ],
+            )
+            obds_deaths_df["death_dateTime"] = pd.to_datetime(
+                obds_deaths_df["death_dateTime"], format="ISO8601", errors="coerce"
+            )
+            obds_deaths_df = (
+                obds_deaths_df[obds_deaths_df["death_dateTime"].notna()]
+                .sort_values("death_dateTime")
+                .drop_duplicates(subset=["patient_mrn"], keep="last")
+            )
+            merged_df = merged_df.merge(
+                obds_deaths_df,
+                on="patient_mrn",
+                how="left",
+            )
+
+            death_mask = merged_df["death_dateTime"].notna()
+            merged_df.loc[death_mask, "deceased_dateTime"] = merged_df.loc[
+                death_mask, "death_dateTime"
+            ]
+            merged_df["deceased"] = (
+                merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
+            )
+            merged_df = merged_df.drop(columns=["death_dateTime"])
+
+        obds_vitalstatus_path = os.path.join(self.output_dir, "df_obds_vitalstatus.csv")
+        if os.path.exists(obds_vitalstatus_path):
+            logger.info("Joining obds vitalstatus data into patient table")
+            vitalstatus_df = pd.read_csv(
+                obds_vitalstatus_path,
+                sep=";",
+                dtype={"patient_mrn": str},
+                usecols=["patient_mrn", "effective_dateTime", "vitalstatus_code"],
+            )
+
+            deceased_vs_df = (
+                vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "T"]
+                .assign(
+                    effective_dateTime=lambda df: pd.to_datetime(
+                        df["effective_dateTime"], errors="coerce"
+                    )
+                )
+                .dropna(subset=["effective_dateTime"])
+                .sort_values("effective_dateTime")
+                .drop_duplicates(subset=["patient_mrn"], keep="last")
+                .rename(columns={"effective_dateTime": "vs_death_dateTime"})[
+                    ["patient_mrn", "vs_death_dateTime"]
+                ]
+            )
+            if not deceased_vs_df.empty:
+                merged_df = merged_df.merge(deceased_vs_df, on="patient_mrn", how="left")
+                death_mask = merged_df["vs_death_dateTime"].notna()
+                merged_df.loc[death_mask, "deceased_dateTime"] = merged_df.loc[
+                    death_mask, "vs_death_dateTime"
+                ]
+                merged_df["deceased"] = (
+                    merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
+                )
+                merged_df = merged_df.drop(columns=["vs_death_dateTime"])
+
+            follow_up_df = (
+                vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "L"]
+                .assign(
+                    effective_dateTime=lambda df: pd.to_datetime(
+                        df["effective_dateTime"], errors="coerce"
+                    )
+                )
+                .dropna(subset=["effective_dateTime"])
+                .sort_values("effective_dateTime")
+                .drop_duplicates(subset=["patient_mrn"], keep="last")
+                .rename(columns={"effective_dateTime": "last_follow_up_datetime"})[
+                    ["patient_mrn", "last_follow_up_datetime"]
+                ]
+            )
+            if not follow_up_df.empty:
+                merged_df = merged_df.merge(follow_up_df, on="patient_mrn", how="left")
+            else:
+                merged_df["last_follow_up_datetime"] = pd.NaT
 
         merged_df.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
@@ -370,6 +484,7 @@ class AMLStudy:
         patient_df: pd.DataFrame,
         resource_type: str,
         extra_fhir_paths: list[tuple],
+        elements: list[str] | None = None,
     ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
         common_fhir_paths = [
             ("type", f"{resource_type}.resourceType"),
@@ -384,16 +499,20 @@ class AMLStudy:
         resource_chunks: list[pd.DataFrame] = []
         medication_chunks: list[pd.DataFrame] = []
 
+        request_params: dict = {
+            "_count": self.settings.fhir.page_count,
+            "_include": f"{resource_type}:medication",
+        }
+        if elements:
+            request_params["_elements"] = ",".join(elements)
+
         indices = list(range(len(patient_df)))
         for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
             chunk_df = patient_df.iloc[list(chunk_indices)]
             result = self.search.trade_rows_for_dataframe(
                 df=chunk_df,
                 resource_type=resource_type,
-                request_params={
-                    "_count": self.settings.fhir.page_count,
-                    "_include": f"{resource_type}:medication",
-                },
+                request_params=request_params,
                 df_constraints={"subject": "condition_patient_reference"},
                 with_ref=False,
                 fhir_paths=fhir_paths,
@@ -460,6 +579,14 @@ class AMLStudy:
                 ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
             ],
+            elements=[
+                "subject",
+                "intent",
+                "status",
+                "medicationReference",
+                "dosageInstruction",
+                "authoredOn",
+            ],
         )
 
         logger.info("Fetching MedicationStatement")
@@ -475,6 +602,14 @@ class AMLStudy:
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
             ],
+            elements=[
+                "subject",
+                "status",
+                "medicationReference",
+                "effectiveDateTime",
+                "effectivePeriod",
+                "dosage",
+            ],
         )
 
         logger.info("Fetching MedicationAdministration")
@@ -489,6 +624,14 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
+            ],
+            elements=[
+                "subject",
+                "status",
+                "medicationReference",
+                "effectiveDateTime",
+                "effectivePeriod",
+                "dosage",
             ],
         )
 
@@ -1221,6 +1364,26 @@ class AMLStudy:
             suffix="obds_weitere_klassifikationen",
         )
 
+        vitalstatus = vitalstatus_view(self.data)
+
+        vitalstatus = vitalstatus.join(
+            aml_patient_references,
+            vitalstatus.observation_patient_reference == conditions.condition_patient_reference,
+            "inner",
+        ).select(vitalstatus["*"])
+
+        vitalstatus = vitalstatus.join(
+            patients.select("patient_id", "patient_mrn"),
+            vitalstatus.observation_patient_reference == patients.patient_id,
+            "left",
+        )
+
+        save_final_df(
+            vitalstatus,
+            self.settings,
+            suffix="obds_vitalstatus",
+        )
+
     def de_identify(self):
         CRYPTO_HASH_KEY = secrets.token_bytes(256)
         DAY_SHIFT = secrets.randbelow(201) - 100
@@ -1250,6 +1413,10 @@ class AMLStudy:
             ],
             dtype={"patient_mrn": str},
         )
+        if "last_follow_up_datetime" in patients_with_diagnoses.columns:
+            patients_with_diagnoses["last_follow_up_datetime"] = pd.to_datetime(
+                patients_with_diagnoses["last_follow_up_datetime"], errors="coerce"
+            )
 
         patients_with_diagnoses["condition_id"] = patients_with_diagnoses["condition_id"].apply(
             lambda x: crypto_hash(x)
@@ -1272,6 +1439,8 @@ class AMLStudy:
             "diagnosis_recordedDate",
             "deceased_dateTime",
         ]
+        if "last_follow_up_datetime" in patients_with_diagnoses.columns:
+            columns_to_shift.append("last_follow_up_datetime")
         for column in columns_to_shift:
             patients_with_diagnoses[column] = patients_with_diagnoses[column] + pd.to_timedelta(
                 DAY_SHIFT, unit="D"
@@ -1296,6 +1465,13 @@ class AMLStudy:
                 + "Setting default Retoure to 'FALSCH' for all records"
             )
             zenzy_df["Retoure"] = "FALSCH"
+
+        if "Applikationsart" not in zenzy_df.columns:
+            logger.warning(
+                "Applikationsart column not found in Zenzy input data. "
+                + "Setting default Applikationsart to 'NA' for all records"
+            )
+            zenzy_df["Applikationsart"] = pd.NA
 
         if "Zeit" not in zenzy_df.columns:
             logger.warning(
@@ -1442,17 +1618,17 @@ class AMLStudy:
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
         if sap_medication_path and os.path.exists(sap_medication_path):
-            sap_medikation = (
-                pd.read_csv(
-                    sap_medication_path,
-                    sep=";",
-                )
-                .drop(columns=["FALL_ID", "TEILFALL_ID"])
-                .rename(columns={"PATIENT_ID": "patient_mrn"})
-            )
+            sap_medikation = pd.read_csv(
+                sap_medication_path,
+                sep=";",
+            ).drop(columns=["FALL_ID", "TEILFALL_ID"])
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
                 sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
+            )
+
+            sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
+                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
 
             columns_to_hash = [
@@ -1462,7 +1638,7 @@ class AMLStudy:
             for column in columns_to_hash:
                 sap_medikation[column] = sap_medikation[column].apply(crypto_hash_nullable)
 
-            columns_to_shift = ["REZEPT_DATUM"]
+            columns_to_shift = ["REZEPT_DATUM", "AUFNAHME_DATUM"]
             for column in columns_to_shift:
                 sap_medikation[column] = sap_medikation[column] + pd.to_timedelta(
                     DAY_SHIFT, unit="D"
