@@ -570,10 +570,12 @@ class AMLStudy:
 
         med_df.write_csv(os.path.join(self.output_dir, "aml_all_meds.csv"))
 
-        req_stat_admin_df = pl.concat(
-            [df for df in [med_req_df, med_statement_df, med_administration_df] if df is not None],
-            how="diagonal",
-        )
+        # At least one resource DF is non-None (guaranteed by the early return above, since
+        # _fetch_medication_resource always returns resource and medication as a paired None/non-None).
+        non_null_resources = [
+            df for df in [med_req_df, med_statement_df, med_administration_df] if df is not None
+        ]
+        req_stat_admin_df = pl.concat(non_null_resources, how="diagonal")
 
         req_stat_admin_df.write_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv")
