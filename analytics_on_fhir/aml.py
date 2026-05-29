@@ -5,6 +5,7 @@ import hmac
 import os
 import secrets
 import shutil
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -496,9 +497,6 @@ class AMLStudy:
 
         fhir_paths = common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS
 
-        resource_chunks: list[pd.DataFrame] = []
-        medication_chunks: list[pd.DataFrame] = []
-
         request_params: dict = {
             "_count": self.settings.fhir.page_count,
             "_include": f"{resource_type}:medication",
@@ -506,27 +504,43 @@ class AMLStudy:
         if elements:
             request_params["_elements"] = ",".join(elements)
 
-        indices = list(range(len(patient_df)))
-        for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
-            chunk_df = patient_df.iloc[list(chunk_indices)]
-            result = self.search.trade_rows_for_dataframe(
-                df=chunk_df,
-                resource_type=resource_type,
-                request_params=request_params,
-                df_constraints={"subject": "condition_patient_reference"},
-                with_ref=False,
-                fhir_paths=fhir_paths,
-            )
-            if len(result) > 0:
-                resource_chunks.append(result[resource_type])
-                medication_chunks.append(result["Medication"])
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            resource_dir = Path(tmp_dir) / "resources"
+            medication_dir = Path(tmp_dir) / "medications"
+            resource_dir.mkdir()
+            medication_dir.mkdir()
 
-        if not resource_chunks:
-            logger.info(f"Found no {resource_type}/Medication FHIR resources")
-            return None, None
+            chunk_counter = 0
+            indices = list(range(len(patient_df)))
+            for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
+                chunk_df = patient_df.iloc[list(chunk_indices)]
+                result = self.search.trade_rows_for_dataframe(
+                    df=chunk_df,
+                    resource_type=resource_type,
+                    request_params=request_params,
+                    df_constraints={"subject": "condition_patient_reference"},
+                    with_ref=False,
+                    fhir_paths=fhir_paths,
+                )
+                if len(result) > 0:
+                    result[resource_type].to_parquet(
+                        resource_dir / f"chunk_{chunk_counter}.parquet", index=False
+                    )
+                    # De-duplicate Medication resources per chunk to reduce memory and I/O
+                    med_chunk = result["Medication"].drop_duplicates(subset=["medication_id"])
+                    med_chunk.to_parquet(
+                        medication_dir / f"chunk_{chunk_counter}.parquet", index=False
+                    )
+                    chunk_counter += 1
 
-        resource_df = pd.concat(resource_chunks, ignore_index=True)
-        medication_df = pd.concat(medication_chunks, ignore_index=True)
+            if chunk_counter == 0:
+                logger.info(f"Found no {resource_type}/Medication FHIR resources")
+                return None, None
+
+            resource_df = pd.read_parquet(resource_dir)
+            medication_df = pd.read_parquet(medication_dir)
+            # Final deduplication across all chunks
+            medication_df = medication_df.drop_duplicates(subset=["medication_id"])
 
         # add the "Medication" prefix to the id so they match the medication_reference column
         medication_df["medication_id"] = "Medication/" + medication_df["medication_id"].astype(str)
