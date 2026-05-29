@@ -513,7 +513,7 @@ class AMLStudy:
                 patient_df[["condition_patient_reference", "patient_mrn"]].astype(str)
             )
             .sort("patient_mrn")
-            .unique(subset=["condition_patient_reference"], keep="first")
+            .unique(subset=["condition_patient_reference"], keep="first", maintain_order=True)
         )
 
         request_params: dict = {
@@ -684,7 +684,7 @@ class AMLStudy:
             med_df = med_df.join(atc_pl, on="medication_atc_code", how="left")
 
         logger.info("all_meds_df: {}", len(med_df))
-        med_df = med_df.unique(subset=["medication_id"])
+        med_df = med_df.unique(subset=["medication_id"], keep="first", maintain_order=True)
         logger.info("all_meds_df after removing duplicates: {}", len(med_df))
 
         text_cols = [
