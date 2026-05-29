@@ -1441,6 +1441,19 @@ class AMLStudy:
             ],
             dtype={"patient_mrn": str},
         )
+        # Ensure date columns are datetime even when parse_dates fails
+        # (e.g. all-NA columns stay as string with pyarrow string storage)
+        date_cols = [
+            "diagnosis_onsetDateTime",
+            "diagnosis_recordedDate",
+            "deceased_dateTime",
+            "birth_date",
+        ]
+        for col in date_cols:
+            if col in patients_with_diagnoses.columns:
+                patients_with_diagnoses[col] = pd.to_datetime(
+                    patients_with_diagnoses[col], errors="coerce"
+                )
         if "last_follow_up_datetime" in patients_with_diagnoses.columns:
             patients_with_diagnoses["last_follow_up_datetime"] = pd.to_datetime(
                 patients_with_diagnoses["last_follow_up_datetime"], errors="coerce"
