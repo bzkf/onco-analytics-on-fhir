@@ -551,7 +551,7 @@ class AMLStudy:
                     # same Medication and deduplication here significantly reduces I/O and
                     # memory usage across the full dataset.
                     pl.from_pandas(result["Medication"]).unique(
-                        subset=["medication_id"]
+                        subset=["medication_id"], keep="first", maintain_order=True
                     ).write_parquet(medication_dir / f"chunk_{chunk_idx}.parquet")
                     chunk_idx += 1
 
@@ -565,7 +565,7 @@ class AMLStudy:
         # add the "Medication/" prefix to the id so it matches the medication_reference column
         medication_df = medication_df.with_columns(
             ("Medication/" + pl.col("medication_id").cast(pl.String)).alias("medication_id")
-        ).unique(subset=["medication_id"])
+        ).unique(subset=["medication_id"], keep="first", maintain_order=True)
 
         resource_df = resource_df.join(
             patient_mrn_lookup,
