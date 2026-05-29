@@ -2,6 +2,7 @@ import csv
 import datetime
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import shutil
@@ -498,6 +499,27 @@ class AMLStudy:
 
         fhir_paths = common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS
 
+        def _to_polars_compatible(df: pd.DataFrame) -> pl.DataFrame:
+            object_cols = df.select_dtypes(include=["object"]).columns
+            if len(object_cols) == 0:
+                return pl.from_pandas(df)
+
+            normalized_df = df.copy()
+            for col in object_cols:
+                has_nested_values = normalized_df[col].map(
+                    lambda v: isinstance(v, (list, tuple, dict))
+                ).any()
+                if has_nested_values:
+                    normalized_df[col] = normalized_df[col].map(
+                        lambda v: (
+                            json.dumps(v, ensure_ascii=False, sort_keys=True)
+                            if isinstance(v, (list, tuple, dict))
+                            else (None if pd.isna(v) else str(v))
+                        )
+                    )
+
+            return pl.from_pandas(normalized_df)
+
         # Warn about conflicting MRNs and build a polars lookup table before the fetch loop
         mrn_per_ref = patient_df.groupby("condition_patient_reference")["patient_mrn"].nunique()
         conflicting = mrn_per_ref[mrn_per_ref > 1]
@@ -544,13 +566,13 @@ class AMLStudy:
                     fhir_paths=fhir_paths,
                 )
                 if len(result) > 0:
-                    pl.from_pandas(result[resource_type]).write_parquet(
+                    _to_polars_compatible(result[resource_type]).write_parquet(
                         resource_dir / f"chunk_{chunk_idx}.parquet"
                     )
                     # Deduplicate Medication resources per-chunk: many patients share the
                     # same Medication and deduplication here significantly reduces I/O and
                     # memory usage across the full dataset.
-                    pl.from_pandas(result["Medication"]).unique(
+                    _to_polars_compatible(result["Medication"]).unique(
                         subset=["medication_id"], keep="first", maintain_order=True
                     ).write_parquet(medication_dir / f"chunk_{chunk_idx}.parquet")
                     chunk_idx += 1
