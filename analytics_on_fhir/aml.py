@@ -486,7 +486,6 @@ class AMLStudy:
         patient_df: pd.DataFrame,
         resource_type: str,
         extra_fhir_paths: list[tuple],
-        elements: list[str] | None = None,
     ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
         common_fhir_paths = [
             ("type", f"{resource_type}.resourceType"),
@@ -502,8 +501,6 @@ class AMLStudy:
             "_count": self.settings.fhir.page_count,
             "_include": f"{resource_type}:medication",
         }
-        if elements:
-            request_params["_elements"] = ",".join(elements)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             resource_dir = Path(tmp_dir) / "resources"
@@ -607,14 +604,6 @@ class AMLStudy:
                 ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
             ],
-            elements=[
-                "subject",
-                "intent",
-                "status",
-                "medicationReference",
-                "dosageInstruction",
-                "authoredOn",
-            ],
         )
 
         logger.info("Fetching MedicationStatement")
@@ -630,14 +619,6 @@ class AMLStudy:
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
             ],
-            elements=[
-                "subject",
-                "status",
-                "medicationReference",
-                "effectiveDateTime",
-                "effectivePeriod",
-                "dosage",
-            ],
         )
 
         logger.info("Fetching MedicationAdministration")
@@ -652,14 +633,6 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
-            ],
-            elements=[
-                "subject",
-                "status",
-                "medicationReference",
-                "effectiveDateTime",
-                "effectivePeriod",
-                "dosage",
             ],
         )
 
@@ -1027,7 +1000,7 @@ class AMLStudy:
                         },
                         {
                             "path": "effective.ofType(dateTime)",
-                            "name": "effective_dateTime",
+                            "name": "effective_date_time",
                         },
                         {
                             "path": "value.ofType(CodeableConcept).coding"
@@ -1340,7 +1313,7 @@ class AMLStudy:
                         },
                         {
                             "path": "effective.ofType(DateTime)",
-                            "name": "effective_date_time",
+                            "name": "effective_dateTime",
                         },
                         {
                             "path": "code.text",
@@ -1655,6 +1628,59 @@ class AMLStudy:
                 unmapped_procedure_ops_codes_path,
                 de_identified_dir / "aml_unmapped_procedure_ops_codes.csv",
             )
+
+        # weitere klassfikation
+        obds_weitere_klassifikationen = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_weitere_klassifikationen.csv"),
+            sep=",",
+            parse_dates=["effective_dateTime"],
+        )
+
+        columns_to_hash = [
+            "observation_id",
+            "observation_patient_reference",
+            "observation_condition_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[column].apply(
+                crypto_hash_nullable
+            )
+
+        columns_to_shift = ["effective_dateTime"]
+        for column in columns_to_shift:
+            obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[
+                column
+            ] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        obds_weitere_klassifikationen.to_csv(
+            de_identified_dir / "aml_obds_weitere_klassifikationen.csv", index=False
+        )
+
+        # ECOG
+        obds_ecog = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_ecog_statuses.csv"),
+            sep=",",
+            parse_dates=["effective_dateTime"],
+        )
+
+        columns_to_hash = [
+            "observation_id",
+            "observation_patient_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_ecog[column] = obds_ecog[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["effective_dateTime"]
+        for column in columns_to_shift:
+            obds_ecog[column] = obds_ecog[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        obds_ecog.to_csv(de_identified_dir / "aml_obds_ecog.csv", index=False)
 
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
