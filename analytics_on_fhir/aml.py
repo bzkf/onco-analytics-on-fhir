@@ -1633,7 +1633,9 @@ class AMLStudy:
         obds_weitere_klassifikationen = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_weitere_klassifikationen.csv"),
             sep=";",
-            parse_dates=["effective_dateTime"],
+        )
+        obds_weitere_klassifikationen["effective_dateTime"] = pd.to_datetime(
+            obds_weitere_klassifikationen["effective_dateTime"], errors="coerce"
         )
 
         columns_to_hash = [
@@ -1663,7 +1665,9 @@ class AMLStudy:
         obds_ecog = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_ecog_statuses.csv"),
             sep=";",
-            parse_dates=["effective_dateTime"],
+        )
+        obds_ecog["effective_dateTime"] = pd.to_datetime(
+            obds_ecog["effective_dateTime"], errors="coerce"
         )
 
         columns_to_hash = [
