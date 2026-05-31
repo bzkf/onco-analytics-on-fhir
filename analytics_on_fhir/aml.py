@@ -298,6 +298,8 @@ class AMLStudy:
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
 
+        existing_mrns = set(merged_df["patient_mrn"].dropna().unique())
+
         obds_deaths_path = os.path.join(self.output_dir, "df_obds_deaths.csv")
         if os.path.exists(obds_deaths_path):
             logger.info("Joining obds deaths data into patient table")
@@ -320,6 +322,7 @@ class AMLStudy:
                 .sort_values("death_dateTime")
                 .drop_duplicates(subset=["patient_mrn"], keep="last")
             )
+            obds_deaths_df = obds_deaths_df[obds_deaths_df["patient_mrn"].isin(existing_mrns)]
             merged_df = merged_df.merge(
                 obds_deaths_df,
                 on="patient_mrn",
@@ -359,6 +362,7 @@ class AMLStudy:
                     ["patient_mrn", "vs_death_dateTime"]
                 ]
             )
+            deceased_vs_df = deceased_vs_df[deceased_vs_df["patient_mrn"].isin(existing_mrns)]
             if not deceased_vs_df.empty:
                 merged_df = merged_df.merge(deceased_vs_df, on="patient_mrn", how="left")
                 death_mask = merged_df["vs_death_dateTime"].notna()
@@ -384,6 +388,7 @@ class AMLStudy:
                     ["patient_mrn", "last_follow_up_datetime"]
                 ]
             )
+            follow_up_df = follow_up_df[follow_up_df["patient_mrn"].isin(existing_mrns)]
             if not follow_up_df.empty:
                 merged_df = merged_df.merge(follow_up_df, on="patient_mrn", how="left")
             else:
