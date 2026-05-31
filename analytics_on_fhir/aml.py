@@ -1000,7 +1000,7 @@ class AMLStudy:
                         },
                         {
                             "path": "effective.ofType(dateTime)",
-                            "name": "effective_date_time",
+                            "name": "effective_dateTime",
                         },
                         {
                             "path": "value.ofType(CodeableConcept).coding"
@@ -1632,7 +1632,7 @@ class AMLStudy:
         # weitere klassfikation
         obds_weitere_klassifikationen = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_weitere_klassifikationen.csv"),
-            sep=",",
+            sep=";",
             parse_dates=["effective_dateTime"],
         )
 
@@ -1662,7 +1662,7 @@ class AMLStudy:
         # ECOG
         obds_ecog = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_ecog_statuses.csv"),
-            sep=",",
+            sep=";",
             parse_dates=["effective_dateTime"],
         )
 
