@@ -201,6 +201,7 @@ class AMLStudy:
             auth_url=settings.fhir.token_auth_url,
             refresh_url=settings.fhir.token_refresh_url,
             session=session,
+            token=settings.fhir.token,
         )
 
         if settings.fhir.base_url is None:
