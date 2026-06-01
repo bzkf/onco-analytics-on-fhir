@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+import urllib3
 from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
@@ -19,7 +20,6 @@ from more_itertools import chunked
 from pathling.datasource import DataSource
 from pyspark.sql import functions as F
 from settings import Settings
-import urllib3
 from urllib3 import Retry
 from utils import save_final_df
 from views import (
