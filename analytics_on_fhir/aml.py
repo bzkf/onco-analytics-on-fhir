@@ -1693,11 +1693,11 @@ class AMLStudy:
             ).drop(columns=["FALL_ID", "TEILFALL_ID"])
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
-                sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="raise"
+                sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
 
             sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
-                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="raise"
+                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
 
             columns_to_hash = [
