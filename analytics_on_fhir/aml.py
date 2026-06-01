@@ -175,6 +175,8 @@ class AMLStudy:
         os.environ["FHIR_USER"] = settings.fhir.user
         os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
+        logger.info(f"FHIR TLS verification is set to {settings.fhir.tls_verify}")
+
         session = requests.Session()
         session.verify = settings.fhir.tls_verify
 
