@@ -374,11 +374,13 @@ class AMLStudy:
                 )
                 merged_df = merged_df.drop(columns=["vs_death_dateTime"])
 
+            # coerce timestamp due to:
+            # OutOfBoundsDatetime: Out of bounds nanosecond timestamp: 9999-12-31
             follow_up_df = (
                 vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "L"]
                 .assign(
                     effective_dateTime=lambda df: pd.to_datetime(
-                        df["effective_dateTime"], errors="raise", format="ISO8601"
+                        df["effective_dateTime"], errors="coerce", format="ISO8601"
                     )
                 )
                 .dropna(subset=["effective_dateTime"])
