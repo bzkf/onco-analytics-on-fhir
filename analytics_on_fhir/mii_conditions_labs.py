@@ -42,8 +42,10 @@ class PyRateQuery:
         os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
         auth = Ahoy(
-            auth_type="BasicAuth",
+            auth_type=settings.fhir.auth_type,
             auth_method="env",
+            auth_url=settings.fhir.token_auth_url,
+            refresh_url=settings.fhir.token_refresh_url,
         )
 
         if settings.fhir.base_url is None:
