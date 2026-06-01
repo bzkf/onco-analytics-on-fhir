@@ -19,6 +19,7 @@ from more_itertools import chunked
 from pathling.datasource import DataSource
 from pyspark.sql import functions as F
 from settings import Settings
+import urllib3
 from urllib3 import Retry
 from utils import save_final_df
 from views import (
@@ -179,6 +180,20 @@ class AMLStudy:
 
         session = requests.Session()
         session.verify = settings.fhir.tls_verify
+
+        if not settings.fhir.tls_verify:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # fhir_pyrate's TokenAuth creates its own internal session that does
+            # not inherit verify=False from the session we pass in. Patching
+            # Session.__init__ ensures every session created afterwards
+            # (including the internal token session) also disables SSL verification.
+            _orig_session_init = requests.Session.__init__
+
+            def _patched_session_init(self, *args, **kwargs):
+                _orig_session_init(self, *args, **kwargs)
+                self.verify = False
+
+            requests.Session.__init__ = _patched_session_init
 
         auth = Ahoy(
             auth_type=settings.fhir.auth_type,
