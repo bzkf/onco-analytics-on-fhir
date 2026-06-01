@@ -291,7 +291,7 @@ class AMLStudy:
             merged_df["diagnosis_onsetDateTime"] = pd.NaT
 
         merged_df["deceased_dateTime"] = pd.to_datetime(
-            merged_df["deceased_dateTime"], format="ISO8601", errors="coerce"
+            merged_df["deceased_dateTime"], format="ISO8601", errors="raise"
         )
 
         merged_df["deceased"] = (
@@ -378,7 +378,7 @@ class AMLStudy:
                 vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "L"]
                 .assign(
                     effective_dateTime=lambda df: pd.to_datetime(
-                        df["effective_dateTime"], errors="coerce"
+                        df["effective_dateTime"], errors="raise", format="ISO8601"
                     )
                 )
                 .dropna(subset=["effective_dateTime"])
@@ -1411,12 +1411,6 @@ class AMLStudy:
 
         patients_with_diagnoses = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_patients.csv"),
-            parse_dates=[
-                "diagnosis_onsetDateTime",
-                "diagnosis_recordedDate",
-                "deceased_dateTime",
-                "birth_date",
-            ],
             dtype={"patient_mrn": str},
         )
         # Ensure date columns are datetime even when parse_dates fails
@@ -1426,16 +1420,13 @@ class AMLStudy:
             "diagnosis_recordedDate",
             "deceased_dateTime",
             "birth_date",
+            "last_follow_up_datetime",
         ]
         for col in date_cols:
             if col in patients_with_diagnoses.columns:
                 patients_with_diagnoses[col] = pd.to_datetime(
-                    patients_with_diagnoses[col], errors="coerce"
+                    patients_with_diagnoses[col], errors="raise", utc=True, format="ISO8601"
                 )
-        if "last_follow_up_datetime" in patients_with_diagnoses.columns:
-            patients_with_diagnoses["last_follow_up_datetime"] = pd.to_datetime(
-                patients_with_diagnoses["last_follow_up_datetime"], errors="coerce"
-            )
 
         patients_with_diagnoses["condition_id"] = patients_with_diagnoses["condition_id"].apply(
             lambda x: crypto_hash(x)
@@ -1640,7 +1631,7 @@ class AMLStudy:
             sep=";",
         )
         obds_weitere_klassifikationen["effective_dateTime"] = pd.to_datetime(
-            obds_weitere_klassifikationen["effective_dateTime"], errors="coerce"
+            obds_weitere_klassifikationen["effective_dateTime"], errors="raise", format="ISO8601"
         )
 
         columns_to_hash = [
@@ -1672,7 +1663,7 @@ class AMLStudy:
             sep=";",
         )
         obds_ecog["effective_dateTime"] = pd.to_datetime(
-            obds_ecog["effective_dateTime"], errors="coerce"
+            obds_ecog["effective_dateTime"], errors="raise", format="ISO8601"
         )
 
         columns_to_hash = [
@@ -1700,11 +1691,11 @@ class AMLStudy:
             ).drop(columns=["FALL_ID", "TEILFALL_ID"])
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
-                sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
+                sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="raise"
             )
 
             sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
-                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
+                sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="raise"
             )
 
             columns_to_hash = [
