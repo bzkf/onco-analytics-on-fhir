@@ -11,6 +11,7 @@ import zipfile
 from pathlib import Path
 
 import pandas as pd
+import requests
 from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
@@ -174,11 +175,15 @@ class AMLStudy:
         os.environ["FHIR_USER"] = settings.fhir.user
         os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
+        session = requests.Session()
+        session.verify = settings.fhir.tls_verify
+
         auth = Ahoy(
             auth_type=settings.fhir.auth_type,
             auth_method="env",
             auth_url=settings.fhir.token_auth_url,
             refresh_url=settings.fhir.token_refresh_url,
+            session=session,
         )
 
         if settings.fhir.base_url is None:
@@ -1461,100 +1466,101 @@ class AMLStudy:
         patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
 
         # Zenzy
-        zenzy_df = pd.read_csv(
-            self.settings.aml.csv_input_file,
-            sep=";",
-            dtype={"patient_mrn": str},
-        ).drop(columns=["Volumen (ml)"])
+        if os.path.exists(self.settings.aml.csv_input_file):
+            zenzy_df = pd.read_csv(
+                self.settings.aml.csv_input_file,
+                sep=";",
+                dtype={"patient_mrn": str},
+            ).drop(columns=["Volumen (ml)"])
 
-        zenzy_df = zenzy_df[
-            zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
-        ]
+            zenzy_df = zenzy_df[
+                zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
+            ]
 
-        if "Retoure" not in zenzy_df.columns:
-            logger.warning(
-                "Retoure column not found in Zenzy input data. "
-                + "Setting default Retoure to 'FALSCH' for all records"
+            if "Retoure" not in zenzy_df.columns:
+                logger.warning(
+                    "Retoure column not found in Zenzy input data. "
+                    + "Setting default Retoure to 'FALSCH' for all records"
+                )
+                zenzy_df["Retoure"] = "FALSCH"
+
+            if "Applikationsart" not in zenzy_df.columns:
+                logger.warning(
+                    "Applikationsart column not found in Zenzy input data. "
+                    + "Setting default Applikationsart to 'NA' for all records"
+                )
+                zenzy_df["Applikationsart"] = pd.NA
+
+            if "Zeit" not in zenzy_df.columns:
+                logger.warning(
+                    "Zeit column not found in Zenzy input data. "
+                    + "Setting default time to 08:00 for all records"
+                )
+                zenzy_df["Zeit"] = "08:00"
+
+            zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
+                zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
             )
-            zenzy_df["Retoure"] = "FALSCH"
 
-        if "Applikationsart" not in zenzy_df.columns:
-            logger.warning(
-                "Applikationsart column not found in Zenzy input data. "
-                + "Setting default Applikationsart to 'NA' for all records"
+            zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].dt.tz_localize(
+                "Europe/Berlin", ambiguous="NaT", nonexistent="shift_forward"
             )
-            zenzy_df["Applikationsart"] = pd.NA
 
-        if "Zeit" not in zenzy_df.columns:
-            logger.warning(
-                "Zeit column not found in Zenzy input data. "
-                + "Setting default time to 08:00 for all records"
+            zenzy_df["label"] = (
+                "Wirkstoff: "
+                + zenzy_df["Wirkstoff"].astype(str)
+                + " ("
+                + "Dosis: "
+                + zenzy_df["Dosis"].astype(str)
+                + ") "
+                + "Protokoll: "
+                + zenzy_df["Therapieprotokoll"].astype(str)
+                + " "
+                + "Applikationsart: "
+                + zenzy_df["Applikationsart"].astype(str)
+                + " "
+                + "Retoure?: "
+                + zenzy_df["Retoure"].astype(str)
             )
-            zenzy_df["Zeit"] = "08:00"
 
-        zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
-            zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
-        )
-
-        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].dt.tz_localize(
-            "Europe/Berlin", ambiguous="NaT", nonexistent="shift_forward"
-        )
-
-        zenzy_df["label"] = (
-            "Wirkstoff: "
-            + zenzy_df["Wirkstoff"].astype(str)
-            + " ("
-            + "Dosis: "
-            + zenzy_df["Dosis"].astype(str)
-            + ") "
-            + "Protokoll: "
-            + zenzy_df["Therapieprotokoll"].astype(str)
-            + " "
-            + "Applikationsart: "
-            + zenzy_df["Applikationsart"].astype(str)
-            + " "
-            + "Retoure?: "
-            + zenzy_df["Retoure"].astype(str)
-        )
-
-        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"] + pd.to_timedelta(
-            DAY_SHIFT, unit="D"
-        )
-
-        if "Herstellungs-ID" not in zenzy_df.columns:
-            logger.warning(
-                "Herstellungs-ID column not found in Zenzy input data. "
-                + "Setting default Herstellungs-ID for all records to the row index"
+            zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
             )
-            zenzy_df["Herstellungs-ID"] = zenzy_df.index
 
-        zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
+            if "Herstellungs-ID" not in zenzy_df.columns:
+                logger.warning(
+                    "Herstellungs-ID column not found in Zenzy input data. "
+                    + "Setting default Herstellungs-ID for all records to the row index"
+                )
+                zenzy_df["Herstellungs-ID"] = zenzy_df.index
 
-        zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
-            crypto_hash_nullable
-        )
+            zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
 
-        if "Datum" not in zenzy_df.columns:
-            zenzy_df["Datum"] = pd.NaT
-        if "Zeit" not in zenzy_df.columns:
-            zenzy_df["Zeit"] = pd.NaT
-        if "Herstellungsdatum" not in zenzy_df.columns:
-            zenzy_df["Herstellungsdatum"] = pd.NaT
-        if "Herstellungszeit" not in zenzy_df.columns:
-            zenzy_df["Herstellungszeit"] = pd.NaT
+            zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
+                crypto_hash_nullable
+            )
 
-        zenzy_df = zenzy_df.drop(
-            columns=[
-                self.settings.aml.csv_patient_column,
-                "Datum",
-                "Zeit",
-                "Herstellungsdatum",
-                "Herstellungszeit",
-            ],
-            inplace=False,
-        )
+            if "Datum" not in zenzy_df.columns:
+                zenzy_df["Datum"] = pd.NaT
+            if "Zeit" not in zenzy_df.columns:
+                zenzy_df["Zeit"] = pd.NaT
+            if "Herstellungsdatum" not in zenzy_df.columns:
+                zenzy_df["Herstellungsdatum"] = pd.NaT
+            if "Herstellungszeit" not in zenzy_df.columns:
+                zenzy_df["Herstellungszeit"] = pd.NaT
 
-        zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
+            zenzy_df = zenzy_df.drop(
+                columns=[
+                    self.settings.aml.csv_patient_column,
+                    "Datum",
+                    "Zeit",
+                    "Herstellungsdatum",
+                    "Herstellungszeit",
+                ],
+                inplace=False,
+            )
+
+            zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
 
         # FHIR Medikation Statements, Requests, Administrations
         fhir_medikation = pd.read_csv(

@@ -46,6 +46,7 @@ class FHIRServerSettings:
     token_auth_url: str | None = None
     token_refresh_url: str | None = None
     retries: int = 10
+    tls_verify: bool = True
 
 
 @ts.settings

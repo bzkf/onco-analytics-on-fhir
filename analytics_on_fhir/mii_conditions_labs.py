@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pandas as pd
+import requests
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
@@ -41,11 +42,15 @@ class PyRateQuery:
         os.environ["FHIR_USER"] = settings.fhir.user
         os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
+        session = requests.Session()
+        session.verify = settings.fhir.tls_verify
+
         auth = Ahoy(
             auth_type=settings.fhir.auth_type,
             auth_method="env",
             auth_url=settings.fhir.token_auth_url,
             refresh_url=settings.fhir.token_refresh_url,
+            session=session,
         )
 
         if settings.fhir.base_url is None:
