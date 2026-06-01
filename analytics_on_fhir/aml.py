@@ -1651,7 +1651,7 @@ class AMLStudy:
                 de_identified_dir / "aml_unmapped_procedure_ops_codes.csv",
             )
 
-        # weitere klassfikation
+        # weitere klassifikation
         obds_weitere_klassifikationen = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_weitere_klassifikationen.csv"),
             sep=";",
