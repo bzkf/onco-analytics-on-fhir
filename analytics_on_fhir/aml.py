@@ -1589,9 +1589,7 @@ class AMLStudy:
 
         # FHIR Medikation Statements, Requests, Administrations
         fhir_medikation = pd.read_csv(
-            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
-            sep=",",
-            parse_dates=["datetime", "period_end"],
+            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), sep=","
         )
 
         columns_to_hash = [
@@ -1604,9 +1602,16 @@ class AMLStudy:
         for column in columns_to_hash:
             fhir_medikation[column] = fhir_medikation[column].apply(crypto_hash_nullable)
 
-        columns_to_shift = ["datetime", "period_end"]
-        for column in columns_to_shift:
-            fhir_medikation[column] = fhir_medikation[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+        date_cols = [
+            "datetime",
+            "period_end",
+        ]
+        for col in date_cols:
+            if col in fhir_medikation.columns:
+                fhir_medikation[col] = pd.to_datetime(
+                    fhir_medikation[col], errors="raise", utc=True, format="ISO8601"
+                )
+                fhir_medikation[col] = fhir_medikation[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         fhir_medikation.to_csv(de_identified_dir / "aml_fhir_medication.csv", index=False)
 
@@ -1630,7 +1635,6 @@ class AMLStudy:
         fhir_procedures = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_procedures.csv"),
             sep=",",
-            parse_dates=["timestamp"],
         )
 
         columns_to_hash = [
@@ -1644,6 +1648,9 @@ class AMLStudy:
 
         columns_to_shift = ["timestamp"]
         for column in columns_to_shift:
+            fhir_procedures[column] = pd.to_datetime(
+                fhir_procedures[column], errors="raise", utc=True, format="ISO8601"
+            )
             fhir_procedures[column] = fhir_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         fhir_procedures.to_csv(de_identified_dir / "aml_fhir_procedures.csv", index=False)
