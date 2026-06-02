@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.31.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.31.0...v2.31.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* join from MII references back to oBDS - keep mapping from obds to mii ([#504](https://github.com/bzkf/onco-analytics-on-fhir/issues/504)) ([4086263](https://github.com/bzkf/onco-analytics-on-fhir/commit/408626352a3c3758936d0b058861257984b88562))
+
+## [2.31.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.30.0...v2.31.0) (2026-05-27)
+
+
+### Features
+
+* simplify medikation text dataframe ([#503](https://github.com/bzkf/onco-analytics-on-fhir/issues/503)) ([ca70bcc](https://github.com/bzkf/onco-analytics-on-fhir/commit/ca70bcca34a041096cb3f91ca7327aaa6ce8b3f3))
+
+
+### Miscellaneous Chores
+
+* **deps:** updated pseudonymizer image ([#499](https://github.com/bzkf/onco-analytics-on-fhir/issues/499)) ([edd1025](https://github.com/bzkf/onco-analytics-on-fhir/commit/edd1025432faf47b853b522bb75cbb35c540cd97))
+
+## [2.30.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.10...v2.30.0) (2026-05-26)
+
+
+### Features
+
+* adding procedure query ([#496](https://github.com/bzkf/onco-analytics-on-fhir/issues/496)) ([bf185de](https://github.com/bzkf/onco-analytics-on-fhir/commit/bf185de35f852f1b0e3feb30b97b1c7872e91227))
+* de-identify procedures ([#498](https://github.com/bzkf/onco-analytics-on-fhir/issues/498)) ([460c54d](https://github.com/bzkf/onco-analytics-on-fhir/commit/460c54d7909975ef99dcb6944117d7f7e092b0ef))
+
+
+### Bug Fixes
+
+* remove timestamp from date so it works everywhere ([#494](https://github.com/bzkf/onco-analytics-on-fhir/issues/494)) ([ba2c638](https://github.com/bzkf/onco-analytics-on-fhir/commit/ba2c6385748027acfd4bb2c1abfa8a4f6bbb0022))
+
 ## [2.29.10](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.29.9...v2.29.10) (2026-05-21)
 
 
