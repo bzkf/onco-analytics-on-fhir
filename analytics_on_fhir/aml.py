@@ -1614,7 +1614,7 @@ class AMLStudy:
         for col in date_cols:
             if col in fhir_medikation.columns:
                 fhir_medikation[col] = pd.to_datetime(
-                    fhir_medikation[col], errors="raise", utc=True, format="ISO8601"
+                    fhir_medikation[col], errors="coerce", utc=True, format="ISO8601"
                 )
                 fhir_medikation[col] = fhir_medikation[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
