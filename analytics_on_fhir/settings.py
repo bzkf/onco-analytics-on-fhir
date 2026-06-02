@@ -48,6 +48,7 @@ class FHIRServerSettings:
     token: str | None = None
     retries: int = 10
     tls_verify: bool = True
+    limit_patients: int | None = None
 
 
 @ts.settings

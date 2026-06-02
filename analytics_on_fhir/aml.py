@@ -426,6 +426,16 @@ class AMLStudy:
 
         patient_list = merged_df["condition_patient_reference"]
         patient_list.drop_duplicates(inplace=True)
+
+        # Limit patients if configured (useful for debugging/testing)
+        if self.settings.fhir.limit_patients is not None:
+            total_available = len(patient_list)
+            patient_list = patient_list.head(self.settings.fhir.limit_patients)
+            logger.info(
+                f"Limited patient list to {self.settings.fhir.limit_patients} patients "
+                f"(total available: {total_available})"
+            )
+
         self.extract_labs(patient_list=patient_list)
         self.extract_procedures(patient_list=patient_list)
 
