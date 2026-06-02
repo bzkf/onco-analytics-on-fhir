@@ -1489,7 +1489,7 @@ class AMLStudy:
                 self.settings.aml.csv_input_file,
                 sep=";",
                 dtype={"patient_mrn": str},
-            ).drop(columns=["Volumen (ml)"])
+            )
 
             zenzy_df = zenzy_df[
                 zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
@@ -1515,6 +1515,20 @@ class AMLStudy:
                     + "Setting default time to 08:00 for all records"
                 )
                 zenzy_df["Zeit"] = "08:00"
+
+            if "Therapieprotokoll" not in zenzy_df.columns:
+                logger.warning(
+                    "Therapieprotokoll column not found in Zenzy input data. "
+                    + "Setting default Therapieprotokoll to 'NA' for all records"
+                )
+                zenzy_df["Therapieprotokoll"] = pd.NA
+
+            if "Herstellungs-ID" not in zenzy_df.columns:
+                logger.warning(
+                    "Herstellungs-ID column not found in Zenzy input data. "
+                    + "Setting default Herstellungs-ID for all records to the row index"
+                )
+                zenzy_df["Herstellungs-ID"] = zenzy_df.index
 
             zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
                 zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
@@ -1544,13 +1558,6 @@ class AMLStudy:
             zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"] + pd.to_timedelta(
                 DAY_SHIFT, unit="D"
             )
-
-            if "Herstellungs-ID" not in zenzy_df.columns:
-                logger.warning(
-                    "Herstellungs-ID column not found in Zenzy input data. "
-                    + "Setting default Herstellungs-ID for all records to the row index"
-                )
-                zenzy_df["Herstellungs-ID"] = zenzy_df.index
 
             zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
 
