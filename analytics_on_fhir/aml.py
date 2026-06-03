@@ -1664,7 +1664,7 @@ class AMLStudy:
         columns_to_shift = ["timestamp"]
         for column in columns_to_shift:
             fhir_procedures[column] = pd.to_datetime(
-                fhir_procedures[column], errors="raise", utc=True, format="ISO8601"
+                fhir_procedures[column], errors="coerce", utc=True, format="ISO8601"
             )
             fhir_procedures[column] = fhir_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
