@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.32.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.31.1...v2.32.0) (2026-06-03)
+
+
+### Features
+
+* Integrate obds and vitalstatus death data ([#511](https://github.com/bzkf/onco-analytics-on-fhir/issues/511)) ([b93e9ec](https://github.com/bzkf/onco-analytics-on-fhir/commit/b93e9ec9db384e1768f14b9686b7d3122f588249))
+
+
+### Bug Fixes
+
+* add _elements parameter to medication resource fetches to prevent OOM ([b93e9ec](https://github.com/bzkf/onco-analytics-on-fhir/commit/b93e9ec9db384e1768f14b9686b7d3122f588249))
+* disk-spill medication fetching to prevent OOM ([#513](https://github.com/bzkf/onco-analytics-on-fhir/issues/513)) ([6ac9a26](https://github.com/bzkf/onco-analytics-on-fhir/commit/6ac9a26667bae8f6b7ba755bc7312bcc632590f4))
+* timestamp parsing and move summary stats to the end ([#507](https://github.com/bzkf/onco-analytics-on-fhir/issues/507)) ([77ab0db](https://github.com/bzkf/onco-analytics-on-fhir/commit/77ab0db499bc97c47bb1260d7c2c37cbe884966b))
+
 ## [2.31.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.31.0...v2.31.1) (2026-05-28)
 
 
