@@ -112,14 +112,14 @@ def aml_summary_statistics():
     )
 
     # ELN distribution
-    eln_klassifikation["effective_date_time"] = pd.to_datetime(
-        eln_klassifikation["effective_date_time"], utc=True, errors="coerce", format="ISO8601"
+    eln_klassifikation["effective_dateTime"] = pd.to_datetime(
+        eln_klassifikation["effective_dateTime"], utc=True, errors="coerce", format="ISO8601"
     )
     eln_filtered = eln_klassifikation[
         eln_klassifikation["code_text"].str.startswith("ELN", na=False)
     ].copy()
     eln_filtered = eln_filtered.sort_values(
-        by=["patient_mrn", "effective_date_time"], ascending=[True, False]
+        by=["patient_mrn", "effective_dateTime"], ascending=[True, False]
     )
     latest_eln = eln_filtered.drop_duplicates(subset="patient_mrn", keep="first")[
         ["patient_mrn", "value_code"]
