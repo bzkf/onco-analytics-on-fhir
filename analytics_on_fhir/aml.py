@@ -1465,7 +1465,7 @@ class AMLStudy:
         for col in date_cols:
             if col in patients_with_diagnoses.columns:
                 patients_with_diagnoses[col] = pd.to_datetime(
-                    patients_with_diagnoses[col], errors="raise", utc=True, format="ISO8601"
+                    patients_with_diagnoses[col], errors="coerce", utc=True, format="ISO8601"
                 )
 
         patients_with_diagnoses["condition_id"] = patients_with_diagnoses["condition_id"].apply(
