@@ -279,11 +279,12 @@ class PyRateQuery:
             if "lab_codeableconcept_code" not in lab_df.columns:
                 lab_df["lab_codeableconcept_code"] = None
             if "loinc_display" not in lab_df.columns:
-                lab_df["loinc_display"] = None
+                lab_df["loinc_display"] = "" # probably not great, but a workaround for now
 
             # parse potentially problematic columns explicitly as strings
             lab_df["lab_codeableconcept_code"] = lab_df["lab_codeableconcept_code"].astype(str)
             lab_df["lab_quantity_unit"] = lab_df["lab_quantity_unit"].astype(str)
+            lab_df["loinc_display"] = lab_df["loinc_display"].astype(str)
 
             # join oBDS patient identifier from patient_df to join back to other dfs later
             patient_df["patient_id_prefixed"] = "Patient/" + patient_df["patient_id"].astype(str)
