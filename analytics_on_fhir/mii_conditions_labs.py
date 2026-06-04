@@ -277,11 +277,9 @@ class PyRateQuery:
         if all_labs:
             lab_df = pd.concat(all_labs, ignore_index=True)
             if "lab_codeableconcept_code" not in lab_df.columns:
-                lab_df["lab_codeableconcept_code"] = pd.Series(
-                    pd.NA, index=lab_df.index, dtype="string"
-                )
+                lab_df["lab_codeableconcept_code"] = None
             if "loinc_display" not in lab_df.columns:
-                lab_df["loinc_display"] = pd.Series(pd.NA, index=lab_df.index, dtype="string")
+                lab_df["loinc_display"] = None
 
             # parse potentially problematic columns explicitly as strings
             lab_df["lab_codeableconcept_code"] = lab_df["lab_codeableconcept_code"].astype(str)
