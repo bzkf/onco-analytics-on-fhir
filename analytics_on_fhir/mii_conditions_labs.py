@@ -279,7 +279,7 @@ class PyRateQuery:
             if "lab_codeableconcept_code" not in lab_df.columns:
                 lab_df["lab_codeableconcept_code"] = None
             if "loinc_display" not in lab_df.columns:
-                lab_df["loinc_display"] = "" # probably not great, but a workaround for now
+                lab_df["loinc_display"] = ""  # probably not great, but a workaround for now
 
             # parse potentially problematic columns explicitly as strings
             lab_df["lab_codeableconcept_code"] = lab_df["lab_codeableconcept_code"].astype(str)
