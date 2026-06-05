@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.32.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.0...v2.32.1) (2026-06-05)
+
+
+### Bug Fixes
+
+* timestamp conversion and read patient_mrn always as a str ([#514](https://github.com/bzkf/onco-analytics-on-fhir/issues/514)) ([31323fc](https://github.com/bzkf/onco-analytics-on-fhir/commit/31323fc17950bafc72f7b85231b5525f3f85fc64))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump aiohttp from 3.13.5 to 3.14.0 ([#515](https://github.com/bzkf/onco-analytics-on-fhir/issues/515)) ([8020709](https://github.com/bzkf/onco-analytics-on-fhir/commit/802070919eb464f8847c6c2344641cfe6c7bf4c5))
+
 ## [2.32.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.31.1...v2.32.0) (2026-06-03)
 
 
