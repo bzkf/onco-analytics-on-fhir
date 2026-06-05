@@ -1503,7 +1503,7 @@ class AMLStudy:
             zenzy_df = pd.read_csv(
                 self.settings.aml.csv_input_file,
                 sep=";",
-                dtype={"patient_mrn": str},
+                dtype={"patient_mrn": str, self.settings.aml.csv_patient_column: str},
             )
 
             zenzy_df = zenzy_df[
@@ -1604,7 +1604,9 @@ class AMLStudy:
 
         # FHIR Medikation Statements, Requests, Administrations
         fhir_medikation = pd.read_csv(
-            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), sep=","
+            os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
+            sep=",",
+            dtype={"patient_mrn": str},
         )
 
         columns_to_hash = [
@@ -1650,6 +1652,7 @@ class AMLStudy:
         fhir_procedures = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_procedures.csv"),
             sep=",",
+            dtype={"patient_mrn": str},
         )
 
         columns_to_hash = [
@@ -1664,7 +1667,7 @@ class AMLStudy:
         columns_to_shift = ["timestamp"]
         for column in columns_to_shift:
             fhir_procedures[column] = pd.to_datetime(
-                fhir_procedures[column], errors="raise", utc=True, format="ISO8601"
+                fhir_procedures[column], errors="coerce", utc=True, format="ISO8601"
             )
             fhir_procedures[column] = fhir_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
@@ -1684,6 +1687,7 @@ class AMLStudy:
         obds_weitere_klassifikationen = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_weitere_klassifikationen.csv"),
             sep=";",
+            dtype={"patient_mrn": str},
         )
         obds_weitere_klassifikationen["effective_dateTime"] = pd.to_datetime(
             obds_weitere_klassifikationen["effective_dateTime"], errors="raise", format="ISO8601"
@@ -1716,6 +1720,7 @@ class AMLStudy:
         obds_ecog = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_ecog_statuses.csv"),
             sep=";",
+            dtype={"patient_mrn": str},
         )
         obds_ecog["effective_dateTime"] = pd.to_datetime(
             obds_ecog["effective_dateTime"], errors="raise", format="ISO8601"
@@ -1743,6 +1748,7 @@ class AMLStudy:
             sap_medikation = pd.read_csv(
                 sap_medication_path,
                 sep=";",
+                dtype={"patient_mrn": str},
             ).drop(columns=["FALL_ID", "TEILFALL_ID"])
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
