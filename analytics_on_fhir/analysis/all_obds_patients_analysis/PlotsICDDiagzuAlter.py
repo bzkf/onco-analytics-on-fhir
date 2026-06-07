@@ -1,8 +1,9 @@
-import matplotlib.pyplot as plt
 import os
 from pathlib import Path
-import pandas as pd
+
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 #TODO: Join Fullnames
 #TODO: Nebendiagnosen - TOP 20 Nebendiagnosen horizontal bar chart, Lorenzkurve (wieviel Patienten tragen wieviele Nebendiagnose-Events) oder log histogramm @Steven Böhner
@@ -193,7 +194,7 @@ def plot_population_pyramid_topn(
     ax.set_xticklabels([f"{abs(int(x)):,}" for x in xticks])
 
     ax.set(yticks=y, yticklabels=labels)
-    ax.set_xlabel("Number of Patients")
+    ax.set_xlabel("Number of Diagnoses")
 
     if show_title:
         ax.set_title(title)
@@ -286,4 +287,4 @@ if __name__ == "__main__":
         output_path=DIR_BUTTERFLY / "butterfly_overall.tiff",
     )
 
-    print("debug")
+    print("debug")    print("debug")
