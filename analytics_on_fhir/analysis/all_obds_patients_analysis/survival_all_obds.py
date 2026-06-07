@@ -423,13 +423,13 @@ display(
 
 # plot
 # gesamt km
-km_lifeline(
-    data=df_km,
-    event_col="event",
-    time_col="survival_time_months",
-    cat_col=None,
-    title=f"Overall Survival, diagnoses > {asserted_year}, {sites}",
-)
+# km_lifeline(
+#     data=df_km,
+#     event_col="event",
+#     time_col="survival_time_months",
+#     cat_col=None,
+#     title=f"Overall Survival, diagnoses > {asserted_year}, {sites}",
+# )
 
 # gender
 km_lifeline(
@@ -613,16 +613,16 @@ cat_names = [(stage, stage) for stage in sorted(df_km_tnm["m_tnm_clean"].dropna(
 
 print(cat_names)
 
-km_lifeline(
-    data=df_km_tnm,
-    event_col="event",
-    time_col="survival_time_months",
-    cat_col="m_tnm_clean",
-    cat_names=cat_names,
-    title=f"OS by Metastasis Stage (TNM-M), diagnosis > {asserted_year}, {sites}",
-    stat=True,
-    show_stat=True,
-)
+# km_lifeline(
+#     data=df_km_tnm,
+#     event_col="event",
+#     time_col="survival_time_months",
+#     cat_col="m_tnm_clean",
+#     cat_names=cat_names,
+#     title=f"OS by Metastasis Stage (TNM-M), diagnosis > {asserted_year}, {sites}",
+#     stat=True,
+#     show_stat=True,
+# )
 
 # group tnm m values to 3 digits
 df_km_tnm["m_tnm_grouped"] = df_km_tnm["m_tnm_clean"].str[:3]
