@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-#TODO: Join Fullnames
-#TODO: Nebendiagnosen - TOP 20 Nebendiagnosen horizontal bar chart, Lorenzkurve (wieviel Patienten tragen wieviele Nebendiagnose-Events) oder log histogramm @Steven Böhner
+# TODO: Join Fullnames
+# TODO: Nebendiagnosen - TOP 20 Nebendiagnosen horizontal bar chart, Lorenzkurve (wieviel Patienten tragen wieviele Nebendiagnose-Events) oder log histogramm @Steven Böhner
 
 
 def plot_population_pyramid_from_raw(
@@ -26,27 +26,17 @@ def plot_population_pyramid_from_raw(
         bins = list(range(0, 95, 5)) + [np.inf]
 
     labels = []
-    for i in range(len(bins)-1):
+    for i in range(len(bins) - 1):
         start = int(bins[i])
-        end = bins[i+1]
+        end = bins[i + 1]
         if np.isinf(end):
             labels.append(f"{start}+")
         else:
-            labels.append(f"{start}-{int(end-1)}")
+            labels.append(f"{start}-{int(end - 1)}")
 
-    data["age_group"] = pd.cut(
-        data[age_col],
-        bins=bins,
-        labels=labels,
-        right=False
-    )
+    data["age_group"] = pd.cut(data[age_col], bins=bins, labels=labels, right=False)
 
-    grouped = (
-        data
-        .groupby(["age_group", sex_col])
-        .size()
-        .unstack(fill_value=0)
-    )
+    grouped = data.groupby(["age_group", sex_col]).size().unstack(fill_value=0)
 
     for col in [male_label, female_label]:
         if col not in grouped.columns:
@@ -54,24 +44,22 @@ def plot_population_pyramid_from_raw(
 
     grouped = grouped.reindex(labels)
 
-    ages   = grouped.index.astype(str).values
+    ages = grouped.index.astype(str).values
     female = grouped[female_label].values
-    male   = grouped[male_label].values
+    male = grouped[male_label].values
 
     total_female = int(female.sum())
-    total_male   = int(male.sum())
+    total_male = int(male.sum())
 
     y = np.arange(len(ages))
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    ax.barh(y, -female, color="firebrick",
-            label=f"{female_label} (n={total_female:,})")
-    ax.barh(y, male,    color="steelblue",
-            label=f"{male_label} (n={total_male:,})")
+    ax.barh(y, -female, color="firebrick", label=f"{female_label} (n={total_female:,})")
+    ax.barh(y, male, color="steelblue", label=f"{male_label} (n={total_male:,})")
 
     ax.set(yticks=y, yticklabels=ages)
-    ax.set_xlabel("Number of Patients")
+    ax.set_xlabel("Number of Diagnoses")
 
     if show_title:
         ax.set_title(title)
@@ -113,42 +101,22 @@ def plot_population_pyramid_topn(
         bins = list(range(0, 95, 5)) + [np.inf]
 
     labels = [
-        f"{int(bins[i])}+" if np.isinf(bins[i+1])
-        else f"{int(bins[i])}-{int(bins[i+1]-1)}"
+        f"{int(bins[i])}+" if np.isinf(bins[i + 1]) else f"{int(bins[i])}-{int(bins[i + 1] - 1)}"
         for i in range(len(bins) - 1)
     ]
 
-    data["age_group"] = pd.cut(
-        data[age_col],
-        bins=bins,
-        labels=labels,
-        right=False
-    )
+    data["age_group"] = pd.cut(data[age_col], bins=bins, labels=labels, right=False)
 
     # ── sex counts (cond_id level, one row = one condition) ───────────────────
     n_female = int((data[sex_col] == female_label).sum())
-    n_male   = int((data[sex_col] == male_label).sum())
+    n_male = int((data[sex_col] == male_label).sum())
 
     # ── top-N diagnoses ───────────────────────────────────────────────────────
-    top_diag = (
-        data[diagnosis_col]
-        .value_counts()
-        .nlargest(top_n)
-        .index
-    )
+    top_diag = data[diagnosis_col].value_counts().nlargest(top_n).index
 
-    data["diag_group"] = np.where(
-        data[diagnosis_col].isin(top_diag),
-        data[diagnosis_col],
-        "Other"
-    )
+    data["diag_group"] = np.where(data[diagnosis_col].isin(top_diag), data[diagnosis_col], "Other")
 
-    grouped = (
-        data
-        .groupby(["age_group", sex_col, "diag_group"])
-        .size()
-        .reset_index(name="count")
-    )
+    grouped = data.groupby(["age_group", sex_col, "diag_group"]).size().reset_index(name="count")
 
     categories = list(top_diag) + ["Other"]
 
@@ -165,9 +133,8 @@ def plot_population_pyramid_topn(
 
     for sex, sign in [(female_label, -1), (male_label, 1)]:
         subset = grouped[grouped[sex_col] == sex]
-        pivot  = (
-            subset
-            .pivot(index="age_group", columns="diag_group", values="count")
+        pivot = (
+            subset.pivot(index="age_group", columns="diag_group", values="count")
             .fillna(0)
             .reindex(labels)
         )
@@ -175,7 +142,7 @@ def plot_population_pyramid_topn(
             if cat not in pivot.columns:
                 pivot[cat] = 0
         pivot = pivot[categories]
-        left  = np.zeros(len(labels))
+        left = np.zeros(len(labels))
 
         for i, cat in enumerate(categories):
             values = pivot[cat].values
@@ -203,18 +170,26 @@ def plot_population_pyramid_topn(
 
     # ── sex labels with cond_id counts ───────────────────────────────────────
     ax.text(
-        0.25, 0.98,
+        0.25,
+        0.98,
         f"{female_label.upper()}\n(n={n_female:,})",
         transform=ax.transAxes,
-        ha="center", va="top",
-        fontsize=11, fontweight="bold", color="black",
+        ha="center",
+        va="top",
+        fontsize=11,
+        fontweight="bold",
+        color="black",
     )
     ax.text(
-        0.75, 0.98,
+        0.75,
+        0.98,
         f"{male_label.upper()}\n(n={n_male:,})",
         transform=ax.transAxes,
-        ha="center", va="top",
-        fontsize=11, fontweight="bold", color="black",
+        ha="center",
+        va="top",
+        fontsize=11,
+        fontweight="bold",
+        color="black",
     )
 
     # ── legend ────────────────────────────────────────────────────────────────
@@ -236,21 +211,32 @@ def plot_population_pyramid_topn(
 
 if __name__ == "__main__":
     import matplotlib
+
     matplotlib.use("Agg")
 
     data_path = r"C:\Users\boehnesn1\Desktop\Projects\BZKF\Data\all_obds_patients_11.05.26\parquet"
 
-    df_tumore_gesamt = pd.read_parquet(os.path.join(data_path, "df_all_obds_clean_deidentified.parquet"))
-    df_tumore_gesamt = df_tumore_gesamt[~(df_tumore_gesamt["icd10_parent_code"].str.contains("D", na=False))]
+    df_tumore_gesamt = pd.read_parquet(
+        os.path.join(data_path, "df_all_obds_clean_deidentified.parquet")
+    )
     df_tumore_gesamt = df_tumore_gesamt[
-        ~df_tumore_gesamt[["icd10_parent_code"]].astype(str).apply(lambda s: s.str.contains("C44", na=False)).any(axis=1)
+        ~(df_tumore_gesamt["icd10_parent_code"].str.contains("D", na=False))
+    ]
+    df_tumore_gesamt = df_tumore_gesamt[
+        ~df_tumore_gesamt[["icd10_parent_code"]]
+        .astype(str)
+        .apply(lambda s: s.str.contains("C44", na=False))
+        .any(axis=1)
     ]
     icd_lookup_dwh = pd.read_parquet(
         r"C:\Users\boehnesn1\Desktop\Projects\BZKF\ZweitKarzinom\Resources\parquet_files_steven\DWH_ICD_CODE_MAPPING.parquet"
     )
     icd_lookup_dwh_reduced_base_code = icd_lookup_dwh[["ICD3_CODE", "ICD3_NAME"]].drop_duplicates()
     df_tumore_gesamt = df_tumore_gesamt.merge(
-        icd_lookup_dwh_reduced_base_code, left_on="icd10_parent_code", right_on="ICD3_CODE", how="left"
+        icd_lookup_dwh_reduced_base_code,
+        left_on="icd10_parent_code",
+        right_on="ICD3_CODE",
+        how="left",
     )
     # TODO: ändere auf entity_or_parent Top-20:
     # df_tumore_gesamt = df_tumore_gesamt[
@@ -259,7 +245,9 @@ if __name__ == "__main__":
     #     )
     # ]
 
-    PLOTS         = Path(r"C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified")
+    PLOTS = Path(
+        r"C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified"
+    )
     DIR_BUTTERFLY = PLOTS / "Butterfly"
     DIR_BUTTERFLY.mkdir(parents=True, exist_ok=True)
 
@@ -287,4 +275,4 @@ if __name__ == "__main__":
         output_path=DIR_BUTTERFLY / "butterfly_overall.tiff",
     )
 
-    print("debug")    print("debug")
+    print("debug")
