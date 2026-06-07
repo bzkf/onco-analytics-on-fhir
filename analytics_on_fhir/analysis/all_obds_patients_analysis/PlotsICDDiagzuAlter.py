@@ -114,6 +114,13 @@ def plot_population_pyramid_topn(
     # ── top-N diagnoses ───────────────────────────────────────────────────────
     top_diag = data[diagnosis_col].value_counts().nlargest(top_n).index
 
+    data_top20 = data[data[diagnosis_col].isin(top_diag)]
+
+    n_female_top20 = int((data_top20[sex_col] == female_label).sum())
+    n_male_top20 = int((data_top20[sex_col] == male_label).sum())
+
+    n_top20 = len(data_top20)
+
     data["diag_group"] = np.where(data[diagnosis_col].isin(top_diag), data[diagnosis_col], "Other")
 
     grouped = data.groupby(["age_group", sex_col, "diag_group"]).size().reset_index(name="count")
@@ -172,7 +179,7 @@ def plot_population_pyramid_topn(
     ax.text(
         0.25,
         0.98,
-        f"{female_label.upper()}\n(n={n_female:,})",
+        f"{female_label.upper()}\n(top {top_n}: n={n_female_top20:,})",
         transform=ax.transAxes,
         ha="center",
         va="top",
@@ -183,7 +190,7 @@ def plot_population_pyramid_topn(
     ax.text(
         0.75,
         0.98,
-        f"{male_label.upper()}\n(n={n_male:,})",
+        f"{male_label.upper()}\n(top {top_n}: n={n_male_top20:,})",
         transform=ax.transAxes,
         ha="center",
         va="top",
