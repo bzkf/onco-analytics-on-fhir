@@ -1,0 +1,598 @@
+C:\Users\boehnesn1\AppData\Local\Programs\Python\Python314\python.exe C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\main_sprechend.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DATEN LADEN – MASTER-TABELLE: TUMORKOHORTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [LOAD] Tumorkohorte (Roh):
+    Quelle: df_all_obds_clean_deidentified.parquet
+    Zeilen: 84,152  |  cond_ids: 84,152  |  Patienten: 73,791
+
+  [FILTER 1] Entferne D-Diagnosen (icd10_parent_code enthält 'D'):
+    Filter 'D-Diagnosen entfernt': 84,152 → 69,693 cond_ids  (82.8% verbleiben)
+
+  [FILTER 2] Entferne C44 (Bösartige Neubildungen der Haut):
+    Filter 'C44 entfernt': 69,693 → 69,693 cond_ids  (100.0% verbleiben)
+
+  [MERGE] ICD-Klartextnamen (DWH_ICD_CODE_MAPPING) → left join auf icd10_parent_code:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSCHNITT A  –  BUTTERFLY-PLOT  (Demographischer Alters-/Geschlechts-Baum)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Kohorte: df_tumore NACH D/C44-Filter, VOR Top-20-Filter
+  cond_ids: 69,693  |  Patienten: 62,094  |  Entitäten (entity_or_parent): 52
+
+  [PLOT] butterfly_overall.tiff  – Alters-/Geschlechtsverteilung, alle Entitäten
+  [PLOT] butterfly_topn.tiff  – Alters-/Geschlechtsverteilung, Top-20 Entitäten farbkodiert
+  ✓ Abschnitt A abgeschlossen  →  C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\Butterfly
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILTER 3  –  Top-20 Tumor-Entitäten (entity_or_parent)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Rationale: Fokus auf häufige Tumorentitäten mit ausreichender Fallzahl
+    Filter 'Top-20 Entitäten behalten': 69,693 → 61,366 cond_ids  (88.1% verbleiben)
+  ─ GRUNDKOHORTE (GK) festgelegt ─────────────────────────────────────
+  Master-DF: df_tumore  →  61,366 cond_ids  |  55,141 Patienten
+  Alle nachgelagerten DataFrames werden auf diese cond_ids gefiltert.
+  Top-20 Entitäten:
+    C50                                           n=11,502
+    C18-C21                                       n=9,338
+    C61                                           n=7,565
+    C82-C88                                       n=6,114
+    C43                                           n=6,063
+    C00-C14                                       n=4,739
+    C33-C34                                       n=3,715
+    C91-C95                                       n=2,055
+    C70-C72                                       n=1,791
+    C25                                           n=1,764
+    C64                                           n=1,753
+    C73                                           n=1,539
+    C81                                           n=1,436
+    C53                                           n=1,398
+    C54-C55                                       n=1,380
+    C67                                           n=1,322
+    C16                                           n=1,257
+    C22                                           n=1,179
+    C32                                           n=1,072
+    C56                                           n=998
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DATEN LADEN – SLAVE-TABELLEN: UICC, ECOG, THERAPIEN
+  (Alle auf GK gefiltert via cond_ids_gk / patient_resource_id_hash)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [LOAD] UICC-Staging – Quelle 1: df_uicc_tnm_deidentified.parquet
+    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk
+    weitere_klassifikation → UICC-Einträge: 21,902 Zeilen  |  cond_ids: 16,109
+    df_uicc_tnm: 100,472 Zeilen geladen  →  72,843 nach dropna  |  cond_ids: 33,908
+    NaN-UICC-Werte wurden als 'missing' kodiert.
+
+  [MERGE] UICC zusammenführen: df_uicc_tnm + weitere_klassifikation (UICC) → df_uicc_gk
+    df_uicc_gk: 94,745 Zeilen  |  cond_ids: 33,970
+    Davon bekannte UICC:  23,024 cond_ids  |  'missing': 30,726  |  kein Eintrag: 27,396
+
+  [LOAD] UICC-Staging – Quelle 2 (MUST-Tool, Brigitte): Result1_UICC_full.csv
+    Zeilen: 94,565  |  cond_ids: 56,048
+    Bekannte UICC: 63,688  |  NaN (kein Staging aus TNM ableitbar): 30,877
+    Hinweis: MUST-UICC hat keinen Zeitstempel → nur für Inventar/Verteilung nutzbar,
+    NICHT für zeitbasierte Merges (Sweep, nearest-date, ECOG×UICC-Proximity).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UICC QUELLENVERGLEICH: OBDS-Tabelle vs. MUST-Tool (Brigitte)
+  Ziel: Quantifizieren wieviele cond_ids durch das MUST-Tool
+  neu erschlossen werden bzw. welche Coverage verloren geht.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Gesamtkohorte GK aus Tumortabelle              :   61,366  cond_ids
+
+  OBDS-Table  – cond_ids mit UICC-Einträgen      :   33,970  (≥1 Zeile in df_uicc_gk)
+  OBDS-Table  – davon mit bekannter UICC          :   23,024
+  OBDS-Table  – davon nur 'missing' UICC          :   10,946
+  OBDS-Table  – ohne jeden UICC-Eintrag           :   27,396
+
+  MUST – cond_ids gesamt (GK-gefiltert)          :   56,048
+  MUST – davon mit bekannter UICC                 :   32,666
+  MUST – davon ohne UICC (NaN)                    :   23,382
+  MUST – nicht in MUST enthalten                  :    5,318  (GK-cond_ids, die im CSV fehlen)
+
+  Überschneidung GK ∩ MUST inkl. Missings        :   33,460  cond_ids
+  Nur in OBDS-Table (nicht in MUST)               :      510  cond_ids
+  Nur in MUST (nicht in GK)                       :   22,588  cond_ids
+
+  Neu bedeckt durch MUST                         :    9,960  cond_ids
+    (in OBDS-Table 'missing', im MUST-Tool bekannt)
+  Coverage verloren durch MUST                    :    1,263  cond_ids
+    (in OBDS-Table bekannt, im MUST-Tool missing)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [LOAD] ECOG-Leistungszustand: df_leistungszustand_ecog_karnofsky_deidentified.parquet
+    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk
+    GK-gefiltert: 108,268 Zeilen  →  105,161 nach dropna
+    cond_ids: 58,259  |  davon mit bekanntem ECOG (≠ U): 29,991
+
+  [LOAD] Therapien – alle drei Typen auf GK gefiltert (intention K & P):
+    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk
+    Ausgeschlossen: intention ≠ K (kurativ) und ≠ P (palliativ) (z.B. diagnostisch, unbekannt)
+    [LOAD] OP: df_ops_grouped_deidentified.parquet
+      → 4,332 Zeilen  |  cond_ids: 3,648
+    [LOAD] Radiotherapie: df_radiotherapies_joined_deidentified.parquet
+      → 13,936 Zeilen  |  cond_ids: 11,067
+    [LOAD] Systemtherapie: df_system_therapies_deidentified.parquet
+      → 26,841 Zeilen  |  cond_ids: 15,087
+
+  GK-Therapieübersicht (K+P):
+    OP:               4,332 Zeilen  |  3,648 cond_ids
+    Radiotherapie:   13,936 Zeilen  |  11,067 cond_ids
+    Systemtherapie:  26,841 Zeilen  |  15,087 cond_ids
+    cond_ids mit ≥1 Therapie: 21,762  |  ohne Therapieeintrag: 39,604
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSCHNITT B  –  NEBENDIAGNOSEN
+  Analyse auf Patienten-Level (patient_resource_id_hash), da Neben-
+  diagnosen keine condition_id tragen. Master: df_tumore (GK, Top-20).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Patienten-Universum GK: 55,141 eindeutige patient_resource_id_hash
+  (Patienten mit 0 Nebendiagnosen werden in Lorenz/Histogramm als x=0 eingeschlossen)
+
+  [LOAD] Nebendiagnosen: df_mii_conditions_all_obds_pats_asserted_deidentified.parquet
+    Roh: 4,590,895 Zeilen  →  3,313,933 nach Entfernen von C-Diagnosen
+    (C-Codes = Tumordiagnosen werden ausgeschlossen; D-Diagnosen bleiben)
+
+  [MAP] ICD-Hierarchie via icd10gm2026_hierarchy_fast_helper
+    Adds: icd_basecode, group_range/title, chapter_range/title
+
+  [FILTER] Auf GK-Patienten einschränken (patient_resource_id_hash ∈ all_patient_ids_gk):
+ACHTUNG Bevor Code Selektion durch Kerscher's Finest Selection List! da Zahlen nicht mit den Plots übereinstimmen!
+    Nebendiagnosen-Zeilen: 2,664,114  |  Patienten mit ≥1 Nebendiagnose: 49,920  |  Patienten ohne Nebendiagnose: 5,221
+
+  [EXPORT] ICD_NAME_NebenDiagnosen_value_counts.xlsx  (rohe Häufigkeiten)
+
+  [REPORT] run_nebendiagnosen_report startet …
+    Level: ICD_NAME, ICD_BASE_NAME, group_full, chapter_full
+    Modi: 'all' + 'unique'  |  Top-N: 20
+    Filter: standard (alle) + core_comorbidity (In_Core_Comorbidity_Analysis==Ja)
+
+=================================================================
+  Kohorte  : GK-Top20
+  Patienten (in Conditions): 49.920
+  Patienten (Universum)    : 55.141
+  Diagnose-Zeilen : 2.664.114
+  Ebenen          : ['Full ICD code', 'Base code (3-digit)', 'ICD group', 'ICD chapter']
+  Modi            : ['all', 'unique']
+=================================================================
+  README geschrieben → C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\Nebendiagnosen\README_Nebendiagnosen_Plots.md
+
+▶  Standard-Plots (alle Codes)
+
+─── [standard] Full ICD code  (ICD_NAME)  –  9.281 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+─── [standard] Base code (3-digit)  (ICD_BASE_NAME)  –  1.535 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+─── [standard] ICD group  (group_full)  –  217 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+─── [standard] ICD chapter  (chapter_full)  –  22 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+▶  Core-Comorbidity-Filter:
+   1.041.709 / 2.664.114 Zeilen behalten (39.1 %)
+
+─── [core_comorbidity] Full ICD code  (ICD_NAME)  –  4.573 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+─── [core_comorbidity] Base code (3-digit)  (ICD_BASE_NAME)  –  593 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+─── [core_comorbidity] ICD group  (group_full)  –  81 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+─── [core_comorbidity] ICD chapter  (chapter_full)  –  10 Kategorien ───
+  Zählweise: All events (incl. duplicates per patient)
+  Zählweise: Unique ICD codes per patient
+
+▶  Ebene-Verteilungsplots
+  [Ebene-Plot] Ebene_1_Analytische_Rolle / All events (incl. duplicates per patient)
+  [Ebene-Plot] Ebene_1_Analytische_Rolle / Unique ICD codes per patient
+  [Ebene-Plot] Ebene_2_Klinische_Domaene / All events (incl. duplicates per patient)
+  [Ebene-Plot] Ebene_2_Klinische_Domaene / Unique ICD codes per patient
+
+=================================================================
+  Report abgeschlossen.
+=================================================================
+Speichern im Nebendiagnose Unterordner im Plotordner
+  ✓ Abschnitt B abgeschlossen  →  C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\Nebendiagnosen
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre, alle Therapien K+P)
+  Master: df_tumore  |  61,366 cond_ids  |  55,141 Patienten
+  Therapien: OP 4,332  Zeilen | Radio 13,936 Zeilen | System 26,841 Zeilen
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  df_alle_gk: 45,109 Therapiezeilen gesamt (alle Typen)
+
+  [PLOT] Altersverteilung je Therapietyp → age_dist_5yr.tiff / age_dist_10yr.tiff
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\age_dist_5yr.tiff
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\age_dist_10yr.tiff
+  [PLOT] Bias-Analyse Diagnosejahr vs. rel. Therapiestart → bias_op/system/radio.tiff
+    Zeigt: Zusammenhang zwischen Diagnosejahr und Zeitabstand Diagnose→Therapie
+    Detektiert Meldebias (ältere Jahre: lückenhafte Therapiedokumentation)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\bias_op.tiff
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\bias_system.tiff
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\bias_radio.tiff
+  [PLOT] UICC/ECOG Inventar → uicc_ecog_inventory.tiff + uicc_ecog_inventory_must.tiff
+    Zeigt: Bestand und Staging-Verteilung vor Zeitfilter
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\uicc_ecog_inventory.tiff
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\uicc_ecog_inventory_must.tiff
+  [PLOT] Lorenz-Kurve Therapieverteilung → lorenz.tiff
+    Zeigt: Wie ungleich sind Therapien auf cond_ids verteilt?
+  [PLOT] Log-Histogramm Therapieverteilung → log_histo.tiff
+    Zeigt: Häufigkeitsverteilung der Therapieanzahl pro cond_id (log-skaliert)
+
+  [PLOT] ECOG × UICC Zeitliche Nähe (keine Toleranz + 3M-Cutoff):
+    Inputs: df_ecog_gk (105,161 Zeilen) × df_uicc_gk (94,745 Zeilen)
+    Methode: nearest-date-Merge (direction=nearest) pro cond_id
+    Zeigt: Zeitabstand zwischen ECOG-Messung und UICC-Datum
+    → ecog_uicc_dist_no_tolerance.tiff + ecog_uicc_bubble_no_tolerance.tiff
+    → ecog_uicc_dist_3months.tiff + ecog_uicc_bubble_3months.tiff
+============================================================
+ECOG × UICC PROXIMITY MERGE
+============================================================
+  ECOG rows    :  105,161  (dropped 0 NaN)
+  UICC rows    :  72,843  (dropped 21,902 NaN)
+  Max tolerance:  no limit
+  Matched pairs          : 33,890  (32.2%)
+  Unique cond_ids matched: 33,890
+  Unmatched ECOG rows    : 71,271
+  Median abs diff        : 0.00 months
+============================================================
+Plot 1 saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\ecog_uicc_dist_no_tolerance.tiff
+Plot 2 saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\ecog_uicc_bubble_no_tolerance.tiff
+============================================================
+ECOG × UICC PROXIMITY MERGE
+============================================================
+  ECOG rows    :  105,161  (dropped 0 NaN)
+  UICC rows    :  72,843  (dropped 21,902 NaN)
+  Max tolerance:  3.0 months
+  Matched pairs          : 33,328  (31.7%)
+  Unique cond_ids matched: 33,328
+  Unmatched ECOG rows    : 71,833
+  Median abs diff        : 0.00 months
+============================================================
+Plot 1 saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\ecog_uicc_dist_3months.tiff
+Plot 2 saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\ecog_uicc_bubble_3months.tiff
+
+  [MERGE] Nearest-date-Merge: 6 Therapie-Staging-Paare (GK, alle Jahre)
+    Methode: merge_asof (direction=backward, tolerance=None) pro cond_id
+    Für jede Therapie wird das zeitlich nächste zurückliegende ECOG/UICC gesucht.
+    df_uicc_must hat kein Datum → Merges nur mit GK-OBDS-UICC.
+    HINWEIS: Resultierende DFs (df_se, df_su, …) werden nach 2017-Filter
+    auf cond_ids_17 eingeschränkt → Basis für 3M-Cutoff (Abschnitt E).
+  Matched   : 25,662  (95.6%)
+  Unmatched : 1,179  (4.4%)
+count    25662.000000
+mean         5.381561
+std         20.223744
+min          0.000000
+25%          0.710000
+50%          1.580000
+75%          3.480000
+max        483.450000
+Plot gespeichert unter: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\delta_system_ecog.tiff
+  Matched   : 18,647  (69.5%)
+  Unmatched : 8,194  (30.5%)
+count    18647.000000
+mean        10.400279
+std         30.164970
+min          0.000000
+25%          0.830000
+50%          1.640000
+75%          6.810000
+max        535.450000
+Plot gespeichert unter: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\delta_system_uicc.tiff
+  Matched   : 13,630  (97.8%)
+  Unmatched : 306  (2.2%)
+count    13630.000000
+mean         6.153015
+std         18.948000
+min          0.000000
+25%          1.260000
+50%          2.450000
+75%          4.520000
+max        398.520000
+Plot gespeichert unter: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\delta_radio_ecog.tiff
+  Matched   : 10,743  (77.1%)
+  Unmatched : 3,193  (22.9%)
+count    10743.000000
+mean        13.637425
+std         31.477882
+min          0.000000
+25%          1.770000
+50%          2.740000
+75%          8.195000
+max        382.840000
+Plot gespeichert unter: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\delta_radio_uicc.tiff
+  Matched   : 4,289  (99.0%)
+  Unmatched : 43  (1.0%)
+count    4289.000000
+mean        2.502786
+std        11.317551
+min         0.000000
+25%         0.000000
+50%         0.810000
+75%         1.810000
+max       272.970000
+Plot gespeichert unter: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\delta_op_ecog.tiff
+  Matched   : 3,685  (85.1%)
+  Unmatched : 647  (14.9%)
+count    3685.000000
+mean        3.099227
+std        15.481446
+min         0.000000
+25%         0.000000
+50%         0.000000
+75%         0.000000
+max       332.710000
+Plot gespeichert unter: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\delta_op_uicc.tiff
+
+  [PLOT] Scatter-Plots Therapiepaar → scatter_[typ]_[staging].tiff
+    Zeigt: Streuen ECOG/UICC-Datum und Therapiedatum gemeinsam?
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\scatter_system_ecog
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\scatter_system_uicc
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\scatter_radio_ecog
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\scatter_radio_uicc
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\scatter_op_ecog
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\scatter_op_uicc
+  [PLOT] Panel-Plot alle 6 Merge-Histogramme → panel_months_diff.tiff
+Panel gespeichert: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK\panel_months_diff.tiff
+  ✓ Abschnitt C abgeschlossen  →  C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\01_GK
+
+  Merge-Ergebnisse GK (alle Jahre) – Überblick:
+    System × ECOG:  26,841 Therapien →  25,662 gematcht (95.6%)  |   1,179 unmatched
+    System × UICC:  26,841 Therapien →  18,647 gematcht (69.5%)  |   8,194 unmatched
+    Radio  × ECOG:  13,936 Therapien →  13,630 gematcht (97.8%)  |     306 unmatched
+    Radio  × UICC:  13,936 Therapien →  10,743 gematcht (77.1%)  |   3,193 unmatched
+    OP     × ECOG:   4,332 Therapien →   4,289 gematcht (99.0%)  |      43 unmatched
+    OP     × UICC:   4,332 Therapien →   3,685 gematcht (85.1%)  |     647 unmatched
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILTER 4  –  Jahresschnitt asserted_year >= 2017
+  Rationale: Vor 2017 inkonsistente Meldepflicht → Completeness-Bias.
+  Alle nachgelagerten DataFrames werden auf diesen Schnitt reduziert.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Filter 'asserted_year >= 2017': 61,366 → 34,770 cond_ids  (56.7% verbleiben)
+  Patienten nach 2017-Filter: 32,585
+
+  Slave-DataFrames auf cond_ids_17 einschränken:
+    df_ops_17:       3,724 Zeilen  |  cond_ids: 3,148
+    df_radio_17:    11,357 Zeilen  |  cond_ids: 9,373
+    df_system_17:   21,034 Zeilen  |  cond_ids: 11,993
+    df_ecog_17:     70,164 Zeilen  |  cond_ids: 34,631
+    df_uicc_17:     61,403 Zeilen  |  cond_ids: 26,264
+
+  Merge-Ergebnisse aus GK auf cond_ids_17 einschränken
+  (df_se→df_se_17 etc. – diese sind die Basis für den 3M-Cutoff in Abschnitt E):
+    System × ECOG:  20,886 Zeilen verbleiben
+    System × UICC:  16,225 Zeilen verbleiben
+    Radio  × ECOG:  11,287 Zeilen verbleiben
+    Radio  × UICC:   9,530 Zeilen verbleiben
+    OP     × ECOG:   3,709 Zeilen verbleiben
+    OP     × UICC:   3,233 Zeilen verbleiben
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSCHNITT D  –  GK_17  (alle Therapien, asserted_year >= 2017)
+  Kohorte: df_tumore_17  |  34,770 cond_ids  |  32,585 Patienten
+  Fokus: Zeitlicher Abstand Diagnose → Therapie + ECOG/UICC-Matching-Problemraum
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  df_alle_17: 36,115 Therapiezeilen gesamt
+
+  [PLOT] Violin-Plots Therapiezeitpunkte relativ zur Diagnose → violin_*.tiff
+    Zeigt: Verteilung des Zeitabstands Erstdiagnose → Therapiestart (Monate)
+    Negative Werte = Therapie vor formaler Diagnose (Datenkurationsproblem)
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\violin_alle_therapien.tiff
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\violin_op.tiff
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\violin_radio.tiff
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\violin_system.tiff
+
+  [PLOT] Dropout-Kurven (Cutoff-Sweep 0–12 Monate) → dropout_*.tiff
+    Zeigt: Wieviele cond_ids haben eine Therapie innerhalb von X Monaten nach Diagnose?
+    Highlight: 3 Monate (gewählter Cutoff)
+  Highlight month=3  →  2,265 cond_ids  (81.5%)
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\dropout_op.tiff
+  Highlight month=3  →  3,451 cond_ids  (44.6%)
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\dropout_radio.tiff
+  Highlight month=3  →  5,547 cond_ids  (59.4%)
+Plot gespeichert als: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\dropout_system.tiff
+
+  [PLOT] Toleranz-Sweeps 0–12 Monate (6 Paare) → sweep_*.tiff + sweep_panel.tiff
+    Inputs: df_*_17 Therapien × df_ecog_17 / df_uicc_17
+    Zeigt: Match-Rate (%) bei zunehmendem Toleranzfenster zwischen Therapie und Staging
+    Methode: Für jede Toleranz → merge_asof + Anteil gematchter cond_ids
+    df_uicc_must hat kein Datum → Sweeps nur mit GK-OBDS-UICC.
+============================================================
+PRE-MERGE CLEANUP
+============================================================
+  Therapy rows  :    21,034  →    21,034  (dropped 0 NaN in 'months_between_asserted_therapy_start_date')
+  Therapy cond  :    11,993  →    11,993  (0 cond_ids lost)
+  LZ rows       :    70,164  →    70,164  (dropped 0 NaN in 'months_between_asserted_effective_dateTime')
+============================================================
+Merging (no tolerance)...
+  Merge result  :  21,034 rows total
+  With LZ match :  20,886  (99.3%)
+  No LZ match   :  148  (0.7%)
+============================================================
+Sweeping 13 tolerances...
+Sweep done.
+============================================================
+  Highlight tol=3  →  10,283 cond_ids  (85.7%)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\sweep_system_ecog.tiff
+============================================================
+PRE-MERGE CLEANUP
+============================================================
+  Therapy rows  :    21,034  →    21,034  (dropped 0 NaN in 'months_between_asserted_therapy_start_date')
+  Therapy cond  :    11,993  →    11,993  (0 cond_ids lost)
+  LZ rows       :    61,403  →    61,403  (dropped 0 NaN in 'months_between_asserted_uicc_tnm_date')
+============================================================
+Merging (no tolerance)...
+  Merge result  :  21,034 rows total
+  With LZ match :  16,225  (77.1%)
+  No LZ match   :  4,809  (22.9%)
+============================================================
+Sweeping 13 tolerances...
+Sweep done.
+============================================================
+  Highlight tol=3  →  7,991 cond_ids  (66.6%)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\sweep_system_uicc.tiff
+============================================================
+PRE-MERGE CLEANUP
+============================================================
+  Therapy rows  :    11,357  →    11,357  (dropped 0 NaN in 'months_between_asserted_therapy_start_date')
+  Therapy cond  :     9,373  →     9,373  (0 cond_ids lost)
+  LZ rows       :    70,164  →    70,164  (dropped 0 NaN in 'months_between_asserted_effective_dateTime')
+============================================================
+Merging (no tolerance)...
+  Merge result  :  11,357 rows total
+  With LZ match :  11,287  (99.4%)
+  No LZ match   :  70  (0.6%)
+============================================================
+Sweeping 13 tolerances...
+Sweep done.
+============================================================
+  Highlight tol=3  →  5,481 cond_ids  (58.5%)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\sweep_radio_ecog.tiff
+============================================================
+PRE-MERGE CLEANUP
+============================================================
+  Therapy rows  :    11,357  →    11,357  (dropped 0 NaN in 'months_between_asserted_therapy_start_date')
+  Therapy cond  :     9,373  →     9,373  (0 cond_ids lost)
+  LZ rows       :    61,403  →    61,403  (dropped 0 NaN in 'months_between_asserted_uicc_tnm_date')
+============================================================
+Merging (no tolerance)...
+  Merge result  :  11,357 rows total
+  With LZ match :  9,530  (83.9%)
+  No LZ match   :  1,827  (16.1%)
+============================================================
+Sweeping 13 tolerances...
+Sweep done.
+============================================================
+  Highlight tol=3  →  5,155 cond_ids  (55.0%)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\sweep_radio_uicc.tiff
+============================================================
+PRE-MERGE CLEANUP
+============================================================
+  Therapy rows  :     3,724  →     3,724  (dropped 0 NaN in 'months_between_asserted_therapy_start_date')
+  Therapy cond  :     3,148  →     3,148  (0 cond_ids lost)
+  LZ rows       :    70,164  →    70,164  (dropped 0 NaN in 'months_between_asserted_effective_dateTime')
+============================================================
+Merging (no tolerance)...
+  Merge result  :  3,724 rows total
+  With LZ match :  3,709  (99.6%)
+  No LZ match   :  15  (0.4%)
+============================================================
+Sweeping 13 tolerances...
+Sweep done.
+============================================================
+  Highlight tol=3  →  2,780 cond_ids  (88.3%)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\sweep_op_ecog.tiff
+============================================================
+PRE-MERGE CLEANUP
+============================================================
+  Therapy rows  :     3,724  →     3,724  (dropped 0 NaN in 'months_between_asserted_therapy_start_date')
+  Therapy cond  :     3,148  →     3,148  (0 cond_ids lost)
+  LZ rows       :    61,403  →    61,403  (dropped 0 NaN in 'months_between_asserted_uicc_tnm_date')
+============================================================
+Merging (no tolerance)...
+  Merge result  :  3,724 rows total
+  With LZ match :  3,233  (86.8%)
+  No LZ match   :  491  (13.2%)
+============================================================
+Sweeping 13 tolerances...
+Sweep done.
+============================================================
+  Highlight tol=3  →  2,608 cond_ids  (82.8%)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\sweep_op_uicc.tiff
+Panel saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\sweep_panel.tiff
+  ✓ Abschnitt D abgeschlossen  →  C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILTER 5  +  ABSCHNITT E  –  3M-Cutoff  (months_diff ≤ 3.0)
+  Rationale: Nur Therapie-Staging-Paare mit ≤ 3 Monaten Zeitabstand gelten
+  als klinisch valides Staging für die jeweilige Therapie.
+  WICHTIG: Die THERAPIEN selbst werden NICHT gefiltert.
+  Nur die Therapie-Staging-PAARE werden eingeschränkt.
+  Basis: df_*_17 (Merge-Ergebnisse GK, eingeschränkt auf cond_ids_17)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  3M-Cutoff Ergebnis – verbleibende Therapie-Staging-Paare:
+    System × ECOG:  20,886 →  15,544 Paare  (74.4% verbleiben)
+    System × UICC:  16,225 →  10,822 Paare  (66.7% verbleiben)
+    Radio  × ECOG:  11,287 →   6,662 Paare  (59.0% verbleiben)
+    Radio  × UICC:   9,530 →   5,464 Paare  (57.3% verbleiben)
+    OP     × ECOG:   3,709 →   3,227 Paare  (87.0% verbleiben)
+    OP     × UICC:   3,233 →   2,958 Paare  (91.5% verbleiben)
+
+  [PLOT] UICC-Staging-Verteilung je Therapietyp (OBDS-Labels) → uicc_distribution.tiff
+    Inputs: df_ou/su/ru_3m (3M-gefilterte Paare, UICC-Label aus OBDS-Tabelle)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\uicc_distribution.tiff
+  [PLOT] UICC-Staging-Verteilung (MUST-Labels) → uicc_distribution_must.tiff
+    Selber cond_id-Satz wie oben, UICC-Label aus Brigittes MUST-Tool überschrieben.
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\uicc_distribution_must.tiff
+  [PLOT] ECOG-Performance-Verteilung je Therapietyp → ecog_distribution.tiff
+    Inputs: df_oe/se/re_3m (3M-gefilterte Paare)
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\ecog_distribution.tiff
+  [PLOT] Altersverteilung nach 3M-Match → age_dist_5yr.tiff / age_dist_10yr.tiff
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\age_dist_5yr.tiff
+Plot saved to: C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\age_dist_10yr.tiff
+  [PLOT] Violin-Plots Therapiezeitpunkte (3M-Match) → violin_*.tiff
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\violin_alle_therapien.tiff
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\violin_op.tiff
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\violin_radio.tiff
+
+Plot gespeichert unter:
+C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M\violin_system.tiff
+  ✓ Abschnitt E abgeschlossen  →  C:\Users\boehnesn1\Desktop\Projects\BZKF\2ndPaper_refactored\Plots2ndPaper_simplified\02_GK_17\3M
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PIPELINE-ZUSAMMENFASSUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Eingabe:    Alle OBDS-Karzinom-cond_ids                 84,152
+  Filter 1:   D-Diagnosen entfernt                        69,693
+  Filter 2:   C44 entfernt                                69,693
+  Filter 3:   Top-20 Entitäten → GRUNDKOHORTE (GK)        61,366
+  Filter 4:   asserted_year >= 2017 → GK_17               34,770
+  Filter 5:   3M-Cutoff ECOG/UICC zu Therapie
+    System × ECOG valide Paare:                           15,544
+    System × UICC valide Paare:                           10,822
+    Radio  × ECOG valide Paare:                            6,662
+    Radio  × UICC valide Paare:                            5,464
+    OP     × ECOG valide Paare:                            3,227
+    OP     × UICC valide Paare:                            2,958
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Pipeline vollständig abgeschlossen.
+
+Process finished with exit code 0
