@@ -197,3 +197,10 @@ analytics_on_fhir/spark-checkpoints/
 analytics_on_fhir/data/
 
 .env
+
+analytics_on_fhir/pca_csvs*
+*.crc
+*.png
+
+*.parquet
+part-*
