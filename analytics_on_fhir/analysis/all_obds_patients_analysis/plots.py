@@ -839,7 +839,9 @@ def plot_uicc_ecog_inventory(
             ax_uicc.text(
                 val + uicc_max_val * 0.004,
                 i,
-                f"{val:,}  ({100 * val / uicc_total:.1f}%)" if uicc_total else f"{val:,} (0.0%)",
+                f"{val:,}  ({100 * val / uicc_total:.1f}%)"
+                if uicc_total
+                else f"{val:,} (0.0%)",  # TO DO - division by zero - warum ist uicc_total leer
                 va="center",
                 ha="left",
                 fontsize=8.5,
