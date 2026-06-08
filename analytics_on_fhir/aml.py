@@ -1749,15 +1749,29 @@ class AMLStudy:
                 sap_medication_path,
                 sep=";",
                 dtype={"patient_mrn": str},
-            ).drop(columns=["FALL_ID", "TEILFALL_ID"])
+            ).drop(columns=["FALL_ID", "TEILFALL_ID"], errors="ignore")
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
                 sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
 
+            if "AUFNAHME_DATUM" not in sap_medikation.columns:
+                logger.warning(
+                    "AUFNAHME_DATUM column not found in SAP medication data. "
+                    + "Setting default AUFNAHME_DATUM to 'NA' for all records"
+                )
+                sap_medikation["AUFNAHME_DATUM"] = pd.NaT
+
             sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
                 sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
+
+            if "REZEPT_ID" not in sap_medikation.columns:
+                logger.warning(
+                    "REZEPT_ID column not found in SAP medication data. "
+                    + "Setting default REZEPT_ID for all records to the row index"
+                )
+                sap_medikation["REZEPT_ID"] = sap_medikation.index
 
             columns_to_hash = [
                 "REZEPT_ID",
