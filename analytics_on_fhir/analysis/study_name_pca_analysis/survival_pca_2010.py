@@ -278,11 +278,23 @@ df_join["is_deceased"].isna().sum()
 df_join["vitalstatus_code"].isna().mean()
 df_join["vitalstatus_code"].isna().sum()
 
-# remove NA events
+# check unknown events
+df_join.head()
 unknown_event_mask = df_join["event"].isna()
+# year distribution of excluded patients
+unknown_year_dist = (
+    df_join.loc[unknown_event_mask, "asserted_year"].value_counts(dropna=False).sort_index()
+)
+
+print(unknown_year_dist)
+unknown_year_dist.sum()
+unknown_year_dist.head()
+
+# remove NA events
 report["Excluded: unknown event status"] = unknown_event_mask.sum()
 df_join = df_join.loc[~unknown_event_mask].copy()
 df_join["event"] = df_join["event"].astype(int)
+
 
 # combine death and followup time for final survival time
 df_join["survival_time_months"] = np.where(
