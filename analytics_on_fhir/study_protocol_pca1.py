@@ -255,8 +255,17 @@ class StudyProtocolPCa1:
         )
 
         # 4) Labor: extract mii labs for c61 pats
+        df_c61_conditions_patients_death_gleason_met_clean = (
+            df_c61_conditions_patients_death_gleason_met_clean.withColumn(
+                "patid_pseudonym", F.col("patid_pseudonym").cast("string")
+            )
+        )
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
-        df_list_c61 = pandas_df_pseudonyms_c61["patid_pseudonym"].drop_duplicates().dropna()
+        df_list_c61 = (
+            pandas_df_pseudonyms_c61["patid_pseudonym"].dropna().astype(str).drop_duplicates()
+        )
+
+        logger.info("First 10 patids: %s", df_list_c61[:10])
 
         # labs
         mii_labs_pandas = self.extract_mii_labs(df_list_c61, suffix="", crypto_key=crypto_key)
