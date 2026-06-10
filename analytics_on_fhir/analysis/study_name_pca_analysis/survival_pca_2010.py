@@ -9,16 +9,17 @@ from analytics_on_fhir.analysis.utils.survival_utils import km_lifeline, plot_su
 
 report = {}
 
-sites = "UKER, TUM, UKA, LMU"
+sites = "UKER, TUM, UKA, LMU, UKW"
 # sites = "UKER"
 # sites = "TUM"
 # sites = "UKA"
 # sites = "LMU"
+# sites = "UKW"
 
 asserted_year = 2010
 
 # COHORT or control for labs
-cohort_or_control = "cohort"
+cohort_or_control = "control"
 
 obds_paths = []
 vital_paths = []
