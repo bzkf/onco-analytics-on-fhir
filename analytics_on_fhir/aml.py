@@ -2,13 +2,17 @@ import csv
 import datetime
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import shutil
+import tempfile
 import zipfile
 from pathlib import Path
 
 import pandas as pd
+import requests
+import urllib3
 from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
@@ -172,11 +176,32 @@ class AMLStudy:
         os.environ["FHIR_USER"] = settings.fhir.user
         os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
+        logger.info(f"FHIR TLS verification is set to {settings.fhir.tls_verify}")
+
+        session = requests.Session()
+        session.verify = settings.fhir.tls_verify
+
+        if not settings.fhir.tls_verify:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # fhir_pyrate's TokenAuth creates its own internal session that does
+            # not inherit verify=False from the session we pass in. Patching
+            # Session.__init__ ensures every session created afterwards
+            # (including the internal token session) also disables SSL verification.
+            _orig_session_init = requests.Session.__init__
+
+            def _patched_session_init(self, *args, **kwargs):
+                _orig_session_init(self, *args, **kwargs)
+                self.verify = False
+
+            requests.Session.__init__ = _patched_session_init
+
         auth = Ahoy(
             auth_type=settings.fhir.auth_type,
             auth_method="env",
             auth_url=settings.fhir.token_auth_url,
             refresh_url=settings.fhir.token_refresh_url,
+            session=session,
+            token=settings.fhir.token,
         )
 
         if settings.fhir.base_url is None:
@@ -289,12 +314,14 @@ class AMLStudy:
             merged_df["diagnosis_onsetDateTime"] = pd.NaT
 
         merged_df["deceased_dateTime"] = pd.to_datetime(
-            merged_df["deceased_dateTime"], format="ISO8601", errors="coerce"
+            merged_df["deceased_dateTime"], format="ISO8601", errors="raise"
         )
 
         merged_df["deceased"] = (
             merged_df["deceased_boolean"] | merged_df["deceased_dateTime"].notna()
         )
+
+        existing_mrns = set(merged_df["patient_mrn"].dropna().unique())
 
         obds_deaths_path = os.path.join(self.output_dir, "df_obds_deaths.csv")
         if os.path.exists(obds_deaths_path):
@@ -318,6 +345,7 @@ class AMLStudy:
                 .sort_values("death_dateTime")
                 .drop_duplicates(subset=["patient_mrn"], keep="last")
             )
+            obds_deaths_df = obds_deaths_df[obds_deaths_df["patient_mrn"].isin(existing_mrns)]
             merged_df = merged_df.merge(
                 obds_deaths_df,
                 on="patient_mrn",
@@ -357,6 +385,7 @@ class AMLStudy:
                     ["patient_mrn", "vs_death_dateTime"]
                 ]
             )
+            deceased_vs_df = deceased_vs_df[deceased_vs_df["patient_mrn"].isin(existing_mrns)]
             if not deceased_vs_df.empty:
                 merged_df = merged_df.merge(deceased_vs_df, on="patient_mrn", how="left")
                 death_mask = merged_df["vs_death_dateTime"].notna()
@@ -368,11 +397,13 @@ class AMLStudy:
                 )
                 merged_df = merged_df.drop(columns=["vs_death_dateTime"])
 
+            # coerce timestamp due to:
+            # OutOfBoundsDatetime: Out of bounds nanosecond timestamp: 9999-12-31
             follow_up_df = (
                 vitalstatus_df[vitalstatus_df["vitalstatus_code"] == "L"]
                 .assign(
                     effective_dateTime=lambda df: pd.to_datetime(
-                        df["effective_dateTime"], errors="coerce"
+                        df["effective_dateTime"], errors="coerce", format="ISO8601"
                     )
                 )
                 .dropna(subset=["effective_dateTime"])
@@ -382,6 +413,7 @@ class AMLStudy:
                     ["patient_mrn", "last_follow_up_datetime"]
                 ]
             )
+            follow_up_df = follow_up_df[follow_up_df["patient_mrn"].isin(existing_mrns)]
             if not follow_up_df.empty:
                 merged_df = merged_df.merge(follow_up_df, on="patient_mrn", how="left")
             else:
@@ -394,6 +426,16 @@ class AMLStudy:
 
         patient_list = merged_df["condition_patient_reference"]
         patient_list.drop_duplicates(inplace=True)
+
+        # Limit patients if configured (useful for debugging/testing)
+        if self.settings.fhir.limit_patients is not None:
+            total_available = len(patient_list)
+            patient_list = patient_list.head(self.settings.fhir.limit_patients)
+            logger.info(
+                f"Limited patient list to {self.settings.fhir.limit_patients} patients "
+                f"(total available: {total_available})"
+            )
+
         self.extract_labs(patient_list=patient_list)
         self.extract_procedures(patient_list=patient_list)
 
@@ -437,8 +479,13 @@ class AMLStudy:
             all_labs.append(lab_df_chunk)
 
         lab_df = pd.concat(all_labs, ignore_index=True)
+
         if "lab_codeableconcept_code" not in lab_df.columns:
-            lab_df["lab_codeableconcept_code"] = None
+            lab_df["lab_codeableconcept_code"] = pd.NA
+
+        if "loinc_display" not in lab_df.columns:
+            lab_df["loinc_display"] = pd.NA
+
         lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
 
         logger.info(f"all_labs_df size: {lab_df.count()}. {lab_df.dtypes}")
@@ -484,7 +531,6 @@ class AMLStudy:
         patient_df: pd.DataFrame,
         resource_type: str,
         extra_fhir_paths: list[tuple],
-        elements: list[str] | None = None,
     ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
         common_fhir_paths = [
             ("type", f"{resource_type}.resourceType"),
@@ -496,37 +542,61 @@ class AMLStudy:
 
         fhir_paths = common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS
 
-        resource_chunks: list[pd.DataFrame] = []
-        medication_chunks: list[pd.DataFrame] = []
-
         request_params: dict = {
             "_count": self.settings.fhir.page_count,
             "_include": f"{resource_type}:medication",
         }
-        if elements:
-            request_params["_elements"] = ",".join(elements)
 
-        indices = list(range(len(patient_df)))
-        for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
-            chunk_df = patient_df.iloc[list(chunk_indices)]
-            result = self.search.trade_rows_for_dataframe(
-                df=chunk_df,
-                resource_type=resource_type,
-                request_params=request_params,
-                df_constraints={"subject": "condition_patient_reference"},
-                with_ref=False,
-                fhir_paths=fhir_paths,
-            )
-            if len(result) > 0:
-                resource_chunks.append(result[resource_type])
-                medication_chunks.append(result["Medication"])
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            resource_dir = Path(tmp_dir) / "resources"
+            medication_dir = Path(tmp_dir) / "medications"
+            resource_dir.mkdir()
+            medication_dir.mkdir()
 
-        if not resource_chunks:
-            logger.info(f"Found no {resource_type}/Medication FHIR resources")
-            return None, None
+            chunk_counter = 0
+            indices = list(range(len(patient_df)))
+            for chunk_indices in chunked(indices, self.settings.fhir.chunk_size):
+                chunk_df = patient_df.iloc[list(chunk_indices)]
+                result = self.search.trade_rows_for_dataframe(
+                    df=chunk_df,
+                    resource_type=resource_type,
+                    request_params=request_params,
+                    df_constraints={"subject": "condition_patient_reference"},
+                    with_ref=False,
+                    fhir_paths=fhir_paths,
+                )
+                if len(result) > 0:
+                    resource_chunk = result[resource_type]
+                    # Convert object columns (e.g. nested dosage) to JSON strings
+                    # so they can be serialized to Parquet
+                    for col in resource_chunk.columns:
+                        if resource_chunk[col].dtype == "object":
+                            resource_chunk[col] = resource_chunk[col].apply(
+                                lambda v: json.dumps(v) if isinstance(v, (dict, list)) else v
+                            )
+                    resource_chunk.to_parquet(
+                        resource_dir / f"chunk_{chunk_counter}.parquet", index=False
+                    )
+                    # De-duplicate Medication resources per chunk to reduce memory and I/O
+                    med_chunk = result["Medication"].drop_duplicates(subset=["medication_id"])
+                    for col in med_chunk.columns:
+                        if med_chunk[col].dtype == "object":
+                            med_chunk[col] = med_chunk[col].apply(
+                                lambda v: json.dumps(v) if isinstance(v, (dict, list)) else v
+                            )
+                    med_chunk.to_parquet(
+                        medication_dir / f"chunk_{chunk_counter}.parquet", index=False
+                    )
+                    chunk_counter += 1
 
-        resource_df = pd.concat(resource_chunks, ignore_index=True)
-        medication_df = pd.concat(medication_chunks, ignore_index=True)
+            if chunk_counter == 0:
+                logger.info(f"Found no {resource_type}/Medication FHIR resources")
+                return None, None
+
+            resource_df = pd.read_parquet(resource_dir)
+            medication_df = pd.read_parquet(medication_dir)
+            # Final deduplication across all chunks
+            medication_df = medication_df.drop_duplicates(subset=["medication_id"])
 
         # add the "Medication" prefix to the id so they match the medication_reference column
         medication_df["medication_id"] = "Medication/" + medication_df["medication_id"].astype(str)
@@ -579,14 +649,6 @@ class AMLStudy:
                 ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
             ],
-            elements=[
-                "subject",
-                "intent",
-                "status",
-                "medicationReference",
-                "dosageInstruction",
-                "authoredOn",
-            ],
         )
 
         logger.info("Fetching MedicationStatement")
@@ -602,14 +664,6 @@ class AMLStudy:
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
             ],
-            elements=[
-                "subject",
-                "status",
-                "medicationReference",
-                "effectiveDateTime",
-                "effectivePeriod",
-                "dosage",
-            ],
         )
 
         logger.info("Fetching MedicationAdministration")
@@ -624,14 +678,6 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
-            ],
-            elements=[
-                "subject",
-                "status",
-                "medicationReference",
-                "effectiveDateTime",
-                "effectivePeriod",
-                "dosage",
             ],
         )
 
@@ -1312,7 +1358,7 @@ class AMLStudy:
                         },
                         {
                             "path": "effective.ofType(DateTime)",
-                            "name": "effective_date_time",
+                            "name": "effective_dateTime",
                         },
                         {
                             "path": "code.text",
@@ -1405,18 +1451,22 @@ class AMLStudy:
 
         patients_with_diagnoses = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_patients.csv"),
-            parse_dates=[
-                "diagnosis_onsetDateTime",
-                "diagnosis_recordedDate",
-                "deceased_dateTime",
-                "birth_date",
-            ],
             dtype={"patient_mrn": str},
         )
-        if "last_follow_up_datetime" in patients_with_diagnoses.columns:
-            patients_with_diagnoses["last_follow_up_datetime"] = pd.to_datetime(
-                patients_with_diagnoses["last_follow_up_datetime"], errors="coerce"
-            )
+        # Ensure date columns are datetime even when parse_dates fails
+        # (e.g. all-NA columns stay as string with pyarrow string storage)
+        date_cols = [
+            "diagnosis_onsetDateTime",
+            "diagnosis_recordedDate",
+            "deceased_dateTime",
+            "birth_date",
+            "last_follow_up_datetime",
+        ]
+        for col in date_cols:
+            if col in patients_with_diagnoses.columns:
+                patients_with_diagnoses[col] = pd.to_datetime(
+                    patients_with_diagnoses[col], errors="coerce", utc=True, format="ISO8601"
+                )
 
         patients_with_diagnoses["condition_id"] = patients_with_diagnoses["condition_id"].apply(
             lambda x: crypto_hash(x)
@@ -1449,106 +1499,114 @@ class AMLStudy:
         patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
 
         # Zenzy
-        zenzy_df = pd.read_csv(
-            self.settings.aml.csv_input_file,
-            sep=";",
-            dtype={"patient_mrn": str},
-        ).drop(columns=["Volumen (ml)"])
-
-        zenzy_df = zenzy_df[
-            zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
-        ]
-
-        if "Retoure" not in zenzy_df.columns:
-            logger.warning(
-                "Retoure column not found in Zenzy input data. "
-                + "Setting default Retoure to 'FALSCH' for all records"
+        if os.path.exists(self.settings.aml.csv_input_file):
+            zenzy_df = pd.read_csv(
+                self.settings.aml.csv_input_file,
+                sep=";",
+                dtype={"patient_mrn": str, self.settings.aml.csv_patient_column: str},
             )
-            zenzy_df["Retoure"] = "FALSCH"
 
-        if "Applikationsart" not in zenzy_df.columns:
-            logger.warning(
-                "Applikationsart column not found in Zenzy input data. "
-                + "Setting default Applikationsart to 'NA' for all records"
+            zenzy_df = zenzy_df[
+                zenzy_df[self.settings.aml.csv_patient_column] != "*** VALUE NOT FOUND ***"
+            ]
+
+            if "Retoure" not in zenzy_df.columns:
+                logger.warning(
+                    "Retoure column not found in Zenzy input data. "
+                    + "Setting default Retoure to 'FALSCH' for all records"
+                )
+                zenzy_df["Retoure"] = "FALSCH"
+
+            if "Applikationsart" not in zenzy_df.columns:
+                logger.warning(
+                    "Applikationsart column not found in Zenzy input data. "
+                    + "Setting default Applikationsart to 'NA' for all records"
+                )
+                zenzy_df["Applikationsart"] = pd.NA
+
+            if "Zeit" not in zenzy_df.columns:
+                logger.warning(
+                    "Zeit column not found in Zenzy input data. "
+                    + "Setting default time to 08:00 for all records"
+                )
+                zenzy_df["Zeit"] = "08:00"
+
+            if "Therapieprotokoll" not in zenzy_df.columns:
+                logger.warning(
+                    "Therapieprotokoll column not found in Zenzy input data. "
+                    + "Setting default Therapieprotokoll to 'NA' for all records"
+                )
+                zenzy_df["Therapieprotokoll"] = pd.NA
+
+            if "Herstellungs-ID" not in zenzy_df.columns:
+                logger.warning(
+                    "Herstellungs-ID column not found in Zenzy input data. "
+                    + "Setting default Herstellungs-ID for all records to the row index"
+                )
+                zenzy_df["Herstellungs-ID"] = zenzy_df.index
+
+            zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
+                zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
             )
-            zenzy_df["Applikationsart"] = pd.NA
 
-        if "Zeit" not in zenzy_df.columns:
-            logger.warning(
-                "Zeit column not found in Zenzy input data. "
-                + "Setting default time to 08:00 for all records"
+            zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].dt.tz_localize(
+                "Europe/Berlin", ambiguous="NaT", nonexistent="shift_forward"
             )
-            zenzy_df["Zeit"] = "08:00"
 
-        zenzy_df["Applikationszeitpunkt"] = pd.to_datetime(
-            zenzy_df["Datum"] + " " + zenzy_df["Zeit"], format="%d.%m.%Y %H:%M", errors="raise"
-        )
-
-        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"].dt.tz_localize(
-            "Europe/Berlin", ambiguous="NaT", nonexistent="shift_forward"
-        )
-
-        zenzy_df["label"] = (
-            "Wirkstoff: "
-            + zenzy_df["Wirkstoff"].astype(str)
-            + " ("
-            + "Dosis: "
-            + zenzy_df["Dosis"].astype(str)
-            + ") "
-            + "Protokoll: "
-            + zenzy_df["Therapieprotokoll"].astype(str)
-            + " "
-            + "Applikationsart: "
-            + zenzy_df["Applikationsart"].astype(str)
-            + " "
-            + "Retoure?: "
-            + zenzy_df["Retoure"].astype(str)
-        )
-
-        zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"] + pd.to_timedelta(
-            DAY_SHIFT, unit="D"
-        )
-
-        if "Herstellungs-ID" not in zenzy_df.columns:
-            logger.warning(
-                "Herstellungs-ID column not found in Zenzy input data. "
-                + "Setting default Herstellungs-ID for all records to the row index"
+            zenzy_df["label"] = (
+                "Wirkstoff: "
+                + zenzy_df["Wirkstoff"].astype(str)
+                + " ("
+                + "Dosis: "
+                + zenzy_df["Dosis"].astype(str)
+                + ") "
+                + "Protokoll: "
+                + zenzy_df["Therapieprotokoll"].astype(str)
+                + " "
+                + "Applikationsart: "
+                + zenzy_df["Applikationsart"].astype(str)
+                + " "
+                + "Retoure?: "
+                + zenzy_df["Retoure"].astype(str)
             )
-            zenzy_df["Herstellungs-ID"] = zenzy_df.index
 
-        zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
+            zenzy_df["Applikationszeitpunkt"] = zenzy_df["Applikationszeitpunkt"] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
+            )
 
-        zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
-            crypto_hash_nullable
-        )
+            zenzy_df["Herstellungs-ID"] = zenzy_df["Herstellungs-ID"].apply(crypto_hash_nullable)
 
-        if "Datum" not in zenzy_df.columns:
-            zenzy_df["Datum"] = pd.NaT
-        if "Zeit" not in zenzy_df.columns:
-            zenzy_df["Zeit"] = pd.NaT
-        if "Herstellungsdatum" not in zenzy_df.columns:
-            zenzy_df["Herstellungsdatum"] = pd.NaT
-        if "Herstellungszeit" not in zenzy_df.columns:
-            zenzy_df["Herstellungszeit"] = pd.NaT
+            zenzy_df["patient_mrn"] = zenzy_df[self.settings.aml.csv_patient_column].apply(
+                crypto_hash_nullable
+            )
 
-        zenzy_df = zenzy_df.drop(
-            columns=[
-                self.settings.aml.csv_patient_column,
-                "Datum",
-                "Zeit",
-                "Herstellungsdatum",
-                "Herstellungszeit",
-            ],
-            inplace=False,
-        )
+            if "Datum" not in zenzy_df.columns:
+                zenzy_df["Datum"] = pd.NaT
+            if "Zeit" not in zenzy_df.columns:
+                zenzy_df["Zeit"] = pd.NaT
+            if "Herstellungsdatum" not in zenzy_df.columns:
+                zenzy_df["Herstellungsdatum"] = pd.NaT
+            if "Herstellungszeit" not in zenzy_df.columns:
+                zenzy_df["Herstellungszeit"] = pd.NaT
 
-        zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
+            zenzy_df = zenzy_df.drop(
+                columns=[
+                    self.settings.aml.csv_patient_column,
+                    "Datum",
+                    "Zeit",
+                    "Herstellungsdatum",
+                    "Herstellungszeit",
+                ],
+                inplace=False,
+            )
+
+            zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
 
         # FHIR Medikation Statements, Requests, Administrations
         fhir_medikation = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
             sep=",",
-            parse_dates=["datetime", "period_end"],
+            dtype={"patient_mrn": str},
         )
 
         columns_to_hash = [
@@ -1561,9 +1619,16 @@ class AMLStudy:
         for column in columns_to_hash:
             fhir_medikation[column] = fhir_medikation[column].apply(crypto_hash_nullable)
 
-        columns_to_shift = ["datetime", "period_end"]
-        for column in columns_to_shift:
-            fhir_medikation[column] = fhir_medikation[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+        date_cols = [
+            "datetime",
+            "period_end",
+        ]
+        for col in date_cols:
+            if col in fhir_medikation.columns:
+                fhir_medikation[col] = pd.to_datetime(
+                    fhir_medikation[col], errors="coerce", utc=True, format="ISO8601"
+                )
+                fhir_medikation[col] = fhir_medikation[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         fhir_medikation.to_csv(de_identified_dir / "aml_fhir_medication.csv", index=False)
 
@@ -1587,7 +1652,7 @@ class AMLStudy:
         fhir_procedures = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_procedures.csv"),
             sep=",",
-            parse_dates=["timestamp"],
+            dtype={"patient_mrn": str},
         )
 
         columns_to_hash = [
@@ -1601,6 +1666,9 @@ class AMLStudy:
 
         columns_to_shift = ["timestamp"]
         for column in columns_to_shift:
+            fhir_procedures[column] = pd.to_datetime(
+                fhir_procedures[column], errors="coerce", utc=True, format="ISO8601"
+            )
             fhir_procedures[column] = fhir_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         fhir_procedures.to_csv(de_identified_dir / "aml_fhir_procedures.csv", index=False)
@@ -1615,21 +1683,95 @@ class AMLStudy:
                 de_identified_dir / "aml_unmapped_procedure_ops_codes.csv",
             )
 
+        # weitere klassifikation
+        obds_weitere_klassifikationen = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_weitere_klassifikationen.csv"),
+            sep=";",
+            dtype={"patient_mrn": str},
+        )
+        obds_weitere_klassifikationen["effective_dateTime"] = pd.to_datetime(
+            obds_weitere_klassifikationen["effective_dateTime"], errors="raise", format="ISO8601"
+        )
+
+        columns_to_hash = [
+            "observation_id",
+            "observation_patient_reference",
+            "observation_condition_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[column].apply(
+                crypto_hash_nullable
+            )
+
+        columns_to_shift = ["effective_dateTime"]
+        for column in columns_to_shift:
+            obds_weitere_klassifikationen[column] = obds_weitere_klassifikationen[
+                column
+            ] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        obds_weitere_klassifikationen.to_csv(
+            de_identified_dir / "aml_obds_weitere_klassifikationen.csv", index=False
+        )
+
+        # ECOG
+        obds_ecog = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_ecog_statuses.csv"),
+            sep=";",
+            dtype={"patient_mrn": str},
+        )
+        obds_ecog["effective_dateTime"] = pd.to_datetime(
+            obds_ecog["effective_dateTime"], errors="raise", format="ISO8601"
+        )
+
+        columns_to_hash = [
+            "observation_id",
+            "observation_patient_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_ecog[column] = obds_ecog[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["effective_dateTime"]
+        for column in columns_to_shift:
+            obds_ecog[column] = obds_ecog[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        obds_ecog.to_csv(de_identified_dir / "aml_obds_ecog.csv", index=False)
+
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
         if sap_medication_path and os.path.exists(sap_medication_path):
             sap_medikation = pd.read_csv(
                 sap_medication_path,
                 sep=";",
-            ).drop(columns=["FALL_ID", "TEILFALL_ID"])
+                dtype={"patient_mrn": str},
+            ).drop(columns=["FALL_ID", "TEILFALL_ID"], errors="ignore")
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
                 sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
 
+            if "AUFNAHME_DATUM" not in sap_medikation.columns:
+                logger.warning(
+                    "AUFNAHME_DATUM column not found in SAP medication data. "
+                    + "Setting default AUFNAHME_DATUM to 'NA' for all records"
+                )
+                sap_medikation["AUFNAHME_DATUM"] = pd.NaT
+
             sap_medikation["AUFNAHME_DATUM"] = pd.to_datetime(
                 sap_medikation["AUFNAHME_DATUM"], format="%Y-%m-%d", errors="coerce"
             )
+
+            if "REZEPT_ID" not in sap_medikation.columns:
+                logger.warning(
+                    "REZEPT_ID column not found in SAP medication data. "
+                    + "Setting default REZEPT_ID for all records to the row index"
+                )
+                sap_medikation["REZEPT_ID"] = sap_medikation.index
 
             columns_to_hash = [
                 "REZEPT_ID",

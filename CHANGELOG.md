@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.32.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.1...v2.32.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* handle optional columns ([#517](https://github.com/bzkf/onco-analytics-on-fhir/issues/517)) ([2346199](https://github.com/bzkf/onco-analytics-on-fhir/commit/2346199561242109d1fa30097e2c16de16a5fb45))
+
+## [2.32.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.0...v2.32.1) (2026-06-05)
+
+
+### Bug Fixes
+
+* timestamp conversion and read patient_mrn always as a str ([#514](https://github.com/bzkf/onco-analytics-on-fhir/issues/514)) ([31323fc](https://github.com/bzkf/onco-analytics-on-fhir/commit/31323fc17950bafc72f7b85231b5525f3f85fc64))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump aiohttp from 3.13.5 to 3.14.0 ([#515](https://github.com/bzkf/onco-analytics-on-fhir/issues/515)) ([8020709](https://github.com/bzkf/onco-analytics-on-fhir/commit/802070919eb464f8847c6c2344641cfe6c7bf4c5))
+
+## [2.32.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.31.1...v2.32.0) (2026-06-03)
+
+
+### Features
+
+* Integrate obds and vitalstatus death data ([#511](https://github.com/bzkf/onco-analytics-on-fhir/issues/511)) ([b93e9ec](https://github.com/bzkf/onco-analytics-on-fhir/commit/b93e9ec9db384e1768f14b9686b7d3122f588249))
+
+
+### Bug Fixes
+
+* add _elements parameter to medication resource fetches to prevent OOM ([b93e9ec](https://github.com/bzkf/onco-analytics-on-fhir/commit/b93e9ec9db384e1768f14b9686b7d3122f588249))
+* disk-spill medication fetching to prevent OOM ([#513](https://github.com/bzkf/onco-analytics-on-fhir/issues/513)) ([6ac9a26](https://github.com/bzkf/onco-analytics-on-fhir/commit/6ac9a26667bae8f6b7ba755bc7312bcc632590f4))
+* timestamp parsing and move summary stats to the end ([#507](https://github.com/bzkf/onco-analytics-on-fhir/issues/507)) ([77ab0db](https://github.com/bzkf/onco-analytics-on-fhir/commit/77ab0db499bc97c47bb1260d7c2c37cbe884966b))
+
 ## [2.31.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.31.0...v2.31.1) (2026-05-28)
 
 

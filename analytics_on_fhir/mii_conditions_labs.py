@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 
 import pandas as pd
+import requests
+import urllib3
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
@@ -41,9 +43,30 @@ class PyRateQuery:
         os.environ["FHIR_USER"] = settings.fhir.user
         os.environ["FHIR_PASSWORD"] = settings.fhir.password
 
+        session = requests.Session()
+        session.verify = settings.fhir.tls_verify
+
+        if not settings.fhir.tls_verify:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # fhir_pyrate's TokenAuth creates its own internal session that does
+            # not inherit verify=False from the session we pass in. Patching
+            # Session.__init__ ensures every session created afterwards
+            # (including the internal token session) also disables SSL verification.
+            _orig_session_init = requests.Session.__init__
+
+            def _patched_session_init(self, *args, **kwargs):
+                _orig_session_init(self, *args, **kwargs)
+                self.verify = False
+
+            requests.Session.__init__ = _patched_session_init
+
         auth = Ahoy(
-            auth_type="BasicAuth",
+            auth_type=settings.fhir.auth_type,
             auth_method="env",
+            auth_url=settings.fhir.token_auth_url,
+            refresh_url=settings.fhir.token_refresh_url,
+            session=session,
+            token=settings.fhir.token,
         )
 
         if settings.fhir.base_url is None:
@@ -255,9 +278,13 @@ class PyRateQuery:
             lab_df = pd.concat(all_labs, ignore_index=True)
             if "lab_codeableconcept_code" not in lab_df.columns:
                 lab_df["lab_codeableconcept_code"] = None
+            if "loinc_display" not in lab_df.columns:
+                lab_df["loinc_display"] = ""  # probably not great, but a workaround for now
+
             # parse potentially problematic columns explicitly as strings
             lab_df["lab_codeableconcept_code"] = lab_df["lab_codeableconcept_code"].astype(str)
             lab_df["lab_quantity_unit"] = lab_df["lab_quantity_unit"].astype(str)
+            lab_df["loinc_display"] = lab_df["loinc_display"].astype(str)
 
             # join oBDS patient identifier from patient_df to join back to other dfs later
             patient_df["patient_id_prefixed"] = "Patient/" + patient_df["patient_id"].astype(str)
