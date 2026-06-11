@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.32.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.2...v2.32.3) (2026-06-11)
+
+
+### Bug Fixes
+
+* cast and log patient..identifier ([#519](https://github.com/bzkf/onco-analytics-on-fhir/issues/519)) ([babad0f](https://github.com/bzkf/onco-analytics-on-fhir/commit/babad0f1d2720fe33943c684819d85c4257981eb))
+* Fix pca again ([#522](https://github.com/bzkf/onco-analytics-on-fhir/issues/522)) ([44ab36a](https://github.com/bzkf/onco-analytics-on-fhir/commit/44ab36ab7de7bdd15e2b65a313a22888954e0f70))
+
 ## [2.32.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.1...v2.32.2) (2026-06-08)
 
 
