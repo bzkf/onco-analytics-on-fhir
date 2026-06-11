@@ -273,7 +273,14 @@ class StudyProtocolPCa1:
         # debug schema equivalent
         print(mii_labs_pandas.dtypes)
         mii_labs_pandas = mii_labs_pandas.replace(["NaN", "nan"], None)
+        print(mii_labs_pandas["lab_dateTime"].dropna().map(type).value_counts())
+
         mii_labs_pandas = normalize_array_columns(mii_labs_pandas)
+
+        for col in mii_labs_pandas.columns:
+            if mii_labs_pandas[col].apply(lambda x: isinstance(x, dict)).any():
+                print("DICT STILL PRESENT:", col)
+
         mii_labs = self.spark.createDataFrame(mii_labs_pandas)
         for field in mii_labs.schema.fields:
             print(field.name, field.dataType)
