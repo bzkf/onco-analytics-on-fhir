@@ -758,7 +758,6 @@ class AMLStudy:
                 df=chunk_df,
                 resource_type="Procedure",
                 request_params={
-                    # "category": "http://snomed.info/sct|18629005",
                     "_count": self.settings.fhir.page_count,
                     "_elements": "subject,performed,code,status",
                 },
@@ -786,23 +785,24 @@ class AMLStudy:
 
         procedure_df = pd.concat(all_procedures, ignore_index=True)
         if "procedure_ops_code" in procedure_df.columns:
-            filtered_df = procedure_df[
-                procedure_df["procedure_ops_code"].str.startswith("6", na=False)
-            ]
             logger.info("Loading OPS mappings")
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
-            filtered_df["procedure_ops_display"] = filtered_df["procedure_ops_code"].map(
+            procedure_df["procedure_ops_display"] = procedure_df["procedure_ops_code"].map(
                 ops_mapping
             )
 
-            if "procedure_ops_version" not in filtered_df.columns:
-                filtered_df["procedure_ops_version"] = None
+            if "procedure_ops_version" not in procedure_df.columns:
+                procedure_df["procedure_ops_version"] = None
+
+            procedure_df["procedure_ops_version"] = procedure_df["procedure_ops_code"].apply(
+                lambda x: json.dumps(x, sort_keys=True) if isinstance(x, dict) else x
+            )
 
             # Export unmapped OPS codes (distinct by version + code)
             unmapped_ops = (
-                filtered_df[
-                    filtered_df["procedure_ops_display"].isna()
-                    & filtered_df["procedure_ops_code"].notna()
+                procedure_df[
+                    procedure_df["procedure_ops_display"].isna()
+                    & procedure_df["procedure_ops_code"].notna()
                 ][["procedure_ops_version", "procedure_ops_code"]]
                 .drop_duplicates()
                 .sort_values(["procedure_ops_version", "procedure_ops_code"])
@@ -820,13 +820,13 @@ class AMLStudy:
             .set_index("condition_patient_reference")["patient_mrn"]
         )
 
-        filtered_df["patient_mrn"] = filtered_df["procedure_patient_reference"].map(
+        procedure_df["patient_mrn"] = procedure_df["procedure_patient_reference"].map(
             patient_mrn_lookup
         )
 
-        filtered_df.to_csv(os.path.join(self.output_dir, "aml_all_procedures.csv"), index=False)
+        procedure_df.to_csv(os.path.join(self.output_dir, "aml_all_procedures.csv"), index=False)
 
-        logger.info(f"all_procedures_df size: {filtered_df.count()}. {filtered_df.dtypes}")
+        logger.info(f"all_procedures_df size: {procedure_df.count()}. {procedure_df.dtypes}")
 
     def join_with_drug_data(self):
         zenzy_patient_ids = (
