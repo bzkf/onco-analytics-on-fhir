@@ -82,13 +82,22 @@ def _log_filter(label: str, n_before: int, n_after: int, unit: str = "cond_ids")
 # ══════════════════════════════════════════════════════════════════════════════
 
 # read in all data
+# BASE_DIR = Path(
+#     "/home/coder/git/onco-analytics-on-fhir/"
+#     "analytics_on_fhir/analysis/all_obds_patients_analysis/"
+#     "all_obds_data_allsites"
+# )
+
+
 BASE_DIR = Path(
-    "/home/coder/git/onco-analytics-on-fhir/"
-    "analytics_on_fhir/analysis/all_obds_patients_analysis/"
-    "all_obds_data_allsites"
+    #r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\onco-analytics-on-fhir\analytics_on_fhir\analysis\all_obds_patients_analysis\all_obds_data_allsites"
+    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\all_obds_data_allsites"
 )
 
+
 SITES = "UKER, TUM, UKA, LMU, UKR, UKW"
+#SITES = "UKER"
+
 asserted_year = 1970
 
 FILES = {
@@ -101,7 +110,10 @@ FILES = {
     "radiotherapies_joined": "df_radiotherapies_joined_deidentified.parquet",
     "systemtherapies": "df_system_therapies_deidentified.parquet",
 }
+
+#site_list = [s.strip() for s in SITES.split(",")]
 site_list = [s.strip().lower() for s in SITES.split(",")]
+
 
 paths = {
     name: [BASE_DIR / site / "parquet" / filename for site in site_list]
@@ -114,10 +126,10 @@ for dataset_name, dataset_paths in paths.items():
     tmp_dfs = []
 
     for path in dataset_paths:
+        #df = pd.read_parquet(path, engine="pyarrow")
         df = pd.read_parquet(path)
 
-        df["site"] = path.parts[-3]  # uker, tum, ...
-
+        #print("\nFILE:", path)
         tmp_dfs.append(df)
 
     dfs[dataset_name] = pd.concat(
@@ -142,10 +154,10 @@ df_obds.shape[0]
 
 
 DATA = Path(
-    "/home/coder/git/onco-analytics-on-fhir/analytics_on_fhir/analysis/all_obds_patients_analysis/"
+    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\resources"
 )
 PLOTS = Path(
-    "/home/coder/git/onco-analytics-on-fhir/analytics_on_fhir/analysis/all_obds_patients_analysis/plots"
+    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\plots"
 )  # TODO:Ändern
 
 # Namensschema:
@@ -743,6 +755,7 @@ for df_t, name in [(df_ops_gk, "op"), (df_system_gk, "system"), (df_radio_gk, "r
 # ── Plot 3: UICC/ECOG Inventar  (GK-OBDS + MUST) ─────────────────────────────
 print(f"  [PLOT] UICC/ECOG Inventar → uicc_ecog_inventory.tiff + uicc_ecog_inventory_must.tiff")
 print(f"    Zeigt: Bestand und Staging-Verteilung vor Zeitfilter")
+#df_uicc_gk["uicc_tnm"].value_counts().sum()
 plot_uicc_inventory_comparison(
     df_uicc_gk=df_uicc_gk,
     df_uicc_must=df_uicc_must,
