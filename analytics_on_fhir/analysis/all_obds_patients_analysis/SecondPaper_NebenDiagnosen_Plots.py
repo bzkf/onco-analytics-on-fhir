@@ -752,6 +752,10 @@ def run_nebendiagnosen_report(
     icd_code_col_in_mapping: str = "ICD_Code",
     all_patient_ids: Optional[pd.Index | pd.Series] = None,
     show_title: bool = True,
+    # ── Survival-Export (Comorbidity-Burden) ──────────────────────────────────
+    patient_to_cond_ids: Optional[pd.DataFrame] = None,
+    survival_top_n: int = 20,
+    survival_xlsx_name: str = "nebendiagnosen_dataframes.xlsx",
 ) -> dict:
     """
     Master report runner.
@@ -847,10 +851,24 @@ def run_nebendiagnosen_report(
         df_core  = df[df[icd_code_col_in_df].isin(core_codes)].copy()
         n_core   = len(df_core)
         n_kept_pct = 100 * n_core / n_total_rows if n_total_rows else 0
+        # "not relevant" = Zeilen, die durch den klinischen Filter herausfallen
+        n_not_relevant = n_total_rows - n_core
+        n_core_patients = df_core[patient_col].nunique()
+        n_not_relevant_pct = 100 * n_not_relevant / n_total_rows if n_total_rows else 0
+        # 2-3 Beispiel-ICDs, die herausfallen (häufigste "not relevant")
+        _df_not_rel = df[~df[icd_code_col_in_df].isin(core_codes)]
+        _examples = (
+            _df_not_rel[icd_code_col_in_df].value_counts().head(3).index.tolist()
+            if len(_df_not_rel) else []
+        )
         print(
-            f"\n▶  Core-Comorbidity-Filter:\n"
+            f"\n▶  Core-Comorbidity-Filter (klinisch sinnvolle Nebendiagnosen):\n"
             f"   {_fmt(n_core)} / {_fmt(n_total_rows)} Zeilen behalten "
-            f"({n_kept_pct:.1f} %)"
+            f"({n_kept_pct:.1f} %)\n"
+            f"   'not relevant' (herausgefiltert): {_fmt(n_not_relevant)} Zeilen "
+            f"({n_not_relevant_pct:.1f} %)\n"
+            f"   Beispiel-ICDs die herausfallen: {', '.join(map(str, _examples)) if _examples else '–'}\n"
+            f"   Patienten mit ≥1 klinisch relevanter Nebendiagnose: {_fmt(n_core_patients)}"
         )
 
         results["core_comorbidity"] = {}
@@ -884,6 +902,72 @@ def run_nebendiagnosen_report(
             show=show,
         )
         results["ebene_distribution"] = ebene_results
+
+    # ── D) DataFrame-Export für Survival-Analyse (Comorbidity-Burden) ─────────
+    # Schreibt eine Excel mit:
+    #   • 4 Reiter: aggregierte Top-Listen je Ebene (mode='unique', core_comorbidity)
+    #     → das sind die DataFrames, die hinter den Plots stehen
+    #   • 1 Reiter: Roh-Verknüpfung Patient → Nebendiagnose → oBDS-cond_id
+    #     → Grundlage für Überlebenskurve nach Comorbidity-Burden
+    if output_dir and icd_nebendiagnosen_einteilung is not None:
+        print(f"\n▶  DataFrame-Export (Survival / Comorbidity-Burden)")
+        _xlsx_path = Path(output_dir) / survival_xlsx_name
+        try:
+            with pd.ExcelWriter(_xlsx_path, engine="openpyxl") as _writer:
+                # core_comorbidity gefiltertes df (wie in Block B)
+                _core_codes = set(
+                    icd_nebendiagnosen_einteilung.loc[
+                        icd_nebendiagnosen_einteilung["In_Core_Comorbidity_Analysis"] == "Ja",
+                        icd_code_col_in_mapping,
+                    ]
+                )
+                _df_core = df[df[icd_code_col_in_df].isin(_core_codes)].copy()
+
+                # ── 4 aggregierte Reiter: je Ebene, mode='unique', core_comorbidity ──
+                _sheet_map = {
+                    "ICD_NAME": "Full_ICD_unique_core",
+                    "ICD_BASE_NAME": "Base3_unique_core",
+                    "group_full": "Group_unique_core",
+                    "chapter_full": "Chapter_unique_core",
+                }
+                for _lvl in level_configs:
+                    _sheet = _sheet_map.get(_lvl.name, f"{_lvl.name[:25]}_unique_core")
+                    _agg = _prepare_counts(_df_core, patient_col, _lvl, "unique")
+                    _agg = _agg.rename(columns={_lvl.column: _lvl.display_name, "count": "n_patients"})
+                    _agg.to_excel(_writer, sheet_name=_sheet[:31], index=False)
+                    print(f"    Reiter '{_sheet[:31]}': {len(_agg):,} Kategorien (unique, core)")
+
+                # ── Roh-Verknüpfung Patient → Nebendiagnose → oBDS-cond_id ──────
+                # Top-N Nebendiagnosen (Full ICD code, unique, core) als Stratifizierer
+                _top_level = level_configs[0]  # ICD_NAME = Full ICD code
+                _top_codes = (
+                    _prepare_counts(_df_core, patient_col, _top_level, "unique")
+                    .head(survival_top_n)[_top_level.column]
+                    .astype(str)
+                    .tolist()
+                )
+                _link = _df_core[_df_core[_top_level.column].astype(str).isin(_top_codes)].copy()
+                # auf relevante Spalten reduzieren (ohne Duplikate)
+                _keep_cols = []
+                for c in [patient_col, icd_code_col_in_df, _top_level.column,
+                          "ICD_NAME", "ICD_BASE_NAME"]:
+                    if c in _link.columns and c not in _keep_cols:
+                        _keep_cols.append(c)
+                _link = _link[_keep_cols].drop_duplicates()
+
+                if patient_to_cond_ids is not None:
+                    # patient_to_cond_ids: DataFrame mit [patient_col, 'condition_id_hash']
+                    _link = _link.merge(patient_to_cond_ids, on=patient_col, how="left")
+                    print(f"    oBDS-cond_id-Bezug ergänzt (über {patient_col})")
+                else:
+                    print(f"    ⚠ Kein patient_to_cond_ids übergeben → Reiter ohne oBDS-cond_id-Bezug")
+
+                _link.to_excel(_writer, sheet_name="Survival_Top20_Linkage", index=False)
+                print(f"    Reiter 'Survival_Top20_Linkage': {len(_link):,} Zeilen "
+                      f"(Top-{survival_top_n} ND × Patient × cond_id)")
+            print(f"    [EXPORT] → {_xlsx_path}")
+        except Exception as _e:
+            print(f"    ⚠ Export fehlgeschlagen: {_e}")
 
     print(f"\n{'=' * 65}\n  Report abgeschlossen.\n{'=' * 65}")
     return results

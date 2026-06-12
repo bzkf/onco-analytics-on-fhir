@@ -47,25 +47,64 @@ UICC_MAPPING = {
     "0is": "0",
     "I": "I",
     "IA": "I",
+    "IA1": "I",
     "IA2": "I",
     "IA3": "I",
     "IB": "I",
+    "IB1": "I",
     "IB2": "I",
+    "IC": "I",
     "II": "II",
     "IIA": "II",
+    "IIA1": "II",
+    "IIA2": "II",
     "IIB": "II",
     "IIC": "II",
     "III": "III",
     "IIIA": "III",
     "IIIB": "III",
     "IIIC": "III",
+    "IIIC1": "III",
+    "IIIC2": "III",
+    "IIID": "III",
     "IV": "IV",
     "IVA": "IV",
+    "IVA1": "IV",
     "IVB": "IV",
     "IVC": "IV",
 }
 UICC_ORDER = ["missing", "0", "I", "II", "III", "IV"]
 ECOG_ORDER = ["0", "1", "2", "3", "4"]
+
+
+def map_uicc_to_main_stage(val):
+    """Mappt eine beliebige UICC-(Sub-)Stufe auf die Hauptstufe 0/I/II/III/IV.
+    Unbekanntes/U/X/leer → 'missing'. Zentrale Funktion für ALLE Plots."""
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return "missing"
+    s = str(val).strip().upper()
+    if s in ("", "MISSING", "U", "UNKNOWN", "X", "NAN"):
+        return "missing"
+    if s in UICC_MAPPING:
+        return UICC_MAPPING[s]
+    if s.startswith("0"):
+        return "0"
+    for prefix in ("IV", "III", "II", "I"):
+        if s.startswith(prefix):
+            return prefix
+    return "missing"
+
+
+def map_ecog_value(val):
+    """Normalisiert ECOG auf 0–4; alles andere → 'U'."""
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return "U"
+    s = str(val).strip().upper()
+    if s in ("0", "1", "2", "3", "4"):
+        return s
+    return "U"
+
+
 UICC_GROUPS = {
     "0": {
         "substages": ["0", "0a", "0is"],
@@ -100,6 +139,67 @@ UICC_GROUPS = {
 }
 UICC_GROUP_ORDER = ["missing", "0", "I", "II", "III", "IV"]
 _DEFAULT_COLORS = ["#4C78A8", "#F58518", "#54A24B", "#B279A2", "#E45756", "#72B7B2"]
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GLOBALE PLOT-KONFIGURATION  (JMIR-Anforderungen, global umschaltbar)
+# ══════════════════════════════════════════════════════════════════════════════
+# JMIR verlangt: hochauflösende PNG/JPG mit minimaler Kompression, Hochformat,
+# große, gut lesbare Schrift. Kein hartes DPI vorgeschrieben; De-facto-Standard
+# für medizinische Journals: 300 DPI / ≥1200 px Breite.
+# Diese Werte sind zentral und werden von allen Plot-Funktionen genutzt.
+PLOT_CONFIG = {
+    # Ausgabe
+    "dpi": 300,                      # JMIR: hochauflösend (≥300)
+    "save_format": "tiff",           # tiff/png/jpg – verlustarm
+    # Schriftgrößen (größer als Matplotlib-Default für bessere Lesbarkeit)
+    "font_family": "DejaVu Sans",
+    "fontsize_base": 14,             # Achsen-Ticks, Text
+    "fontsize_axis_label": 16,       # Achsenbeschriftung
+    "fontsize_subplot_title": 16,    # Subplot-Titel (bleiben erhalten)
+    "fontsize_legend": 13,
+    "fontsize_bar_label": 12,        # Zahlen an/neben Balken
+    # Farbskala – tab20b für ALLES (überschreibt semantische Stage-Farben)
+    "colormap": "tab20b",
+    # Globale Schalter
+    "show_titles": False,            # plt.title/Plottitel global aus (außer Subplot-Titel)
+    "show_legend": True,             # Legenden anzeigen (einzeln überschreibbar)
+    "show_bar_numbers": False,       # Zahlen über Balken global aus (Punkt 6/8)
+}
+
+
+def apply_plot_config(cfg: dict | None = None) -> dict:
+    """Wendet die globale Konfiguration auf matplotlib rcParams an und gibt
+    die effektive Konfiguration zurück. Druckt die verwendeten Optionen aus,
+    damit sie mit Kollegen geteilt werden können."""
+    c = dict(PLOT_CONFIG)
+    if cfg:
+        c.update(cfg)
+    plt.rcParams.update({
+        "figure.dpi": c["dpi"],
+        "savefig.dpi": c["dpi"],
+        "font.family": c["font_family"],
+        "font.size": c["fontsize_base"],
+        "axes.titlesize": c["fontsize_subplot_title"],
+        "axes.labelsize": c["fontsize_axis_label"],
+        "xtick.labelsize": c["fontsize_base"],
+        "ytick.labelsize": c["fontsize_base"],
+        "legend.fontsize": c["fontsize_legend"],
+    })
+    print("  [PLOT-CONFIG] Verwendete Optionen (zum Teilen mit Kollegen):")
+    for k, v in c.items():
+        print(f"      {k:<22}: {v}")
+    return c
+
+
+def tab20b_colors(n: int) -> list:
+    """Liefert n Farben aus der globalen Farbskala (tab20b)."""
+    cmap = cm.get_cmap(PLOT_CONFIG["colormap"])
+    if n <= 0:
+        return []
+    # tab20b hat 20 diskrete Farben; bei mehr → linspace
+    if n <= getattr(cmap, "N", 20):
+        return [cmap(i / max(getattr(cmap, "N", 20) - 1, 1)) for i in range(n)]
+    return [cmap(v) for v in np.linspace(0, 1, n)]
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PRIVATE HILFSFUNKTIONEN
@@ -139,18 +239,28 @@ def _build_grouped_bar(
     title: str,
     save_path: str | None,
     dpi: int,
+    show_bar_numbers: bool | None = None,
+    relative: bool = False,
 ) -> plt.Figure:
-    """Gemeinsame Rendering-Logik für UICC- und ECOG-Grouped-Bar-Charts."""
+    """Gemeinsame Rendering-Logik für UICC- und ECOG-Grouped-Bar-Charts.
+    Balken sind mittig über den Ticks ausgerichtet (Punkt 9). Zahlen über den
+    Balken optional (global via PLOT_CONFIG['show_bar_numbers'])."""
+    if show_bar_numbers is None:
+        show_bar_numbers = PLOT_CONFIG["show_bar_numbers"]
     therapy_totals = agg.groupby("therapy")["count"].sum().to_dict()
     x_positions = np.arange(len(category_order))
     n = len(therapies)
-    width = 0.8 / n
-    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
-    fig, ax = plt.subplots(figsize=(14, 6))
+    # Balkenbreite + zentrierte Offsets: garantiert mittige Ausrichtung über Ticks
+    group_width = 0.8
+    width = group_width / max(n, 1)
+    offsets = (np.arange(n) - (n - 1) / 2) * width
+    fig, ax = plt.subplots(figsize=(14, 7))
     for offset, therapy in zip(offsets, therapies):
         sub = agg[agg["therapy"] == therapy].set_index("category").reindex(category_order).fillna(0)
-        counts = sub["count"].values
+        counts = sub["count"].values.astype(float)
         total = int(therapy_totals.get(therapy, 0))
+        if relative and total > 0:
+            counts = 100.0 * counts / total
         bars = ax.bar(
             x_positions + offset,
             counts,
@@ -159,27 +269,34 @@ def _build_grouped_bar(
             alpha=0.9,
             label=f"{therapy} (n={total:,})",
         )
-        for bar in bars:
-            height = bar.get_height()
-            if height > 0:
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    height + 0.3,
-                    f"{int(height)}",
-                    ha="center",
-                    fontsize=7,
-                )
+        if show_bar_numbers:
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        height,
+                        f"{height:.0f}" if not relative else f"{height:.1f}%",
+                        ha="center", va="bottom",
+                        fontsize=PLOT_CONFIG["fontsize_bar_label"],
+                    )
     ax.set_xticks(x_positions)
     ax.set_xticklabels(category_order, rotation=0, ha="center")
-    ax.set_xlabel(xlabel, fontsize=11)
-    ax.set_ylabel("Number of Condition IDs", fontsize=11)
-    if title:
-        ax.set_title(title, fontsize=15, fontweight="bold", pad=15)
-    ax.legend(frameon=False, title="Therapy", title_fontsize=10)
-    ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+    ax.set_xlabel(xlabel, fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    ax.set_ylabel("Share within therapy (%)" if relative else "Number of Condition IDs",
+                  fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    # Plottitel nur wenn global erlaubt UND ein Titel übergeben wurde
+    if title and PLOT_CONFIG["show_titles"]:
+        ax.set_title(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15)
+    if PLOT_CONFIG["show_legend"]:
+        ax.legend(frameon=False, title="Therapy", title_fontsize=PLOT_CONFIG["fontsize_legend"])
+    if not relative:
+        ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
     ax.grid(axis="y", linestyle="--", alpha=0.3)
     ax.set_axisbelow(True)
     ax.spines[["top", "right"]].set_visible(False)
+    # x-Limits eng setzen: erster/letzter Balken nicht am Rand abgeschnitten
+    ax.set_xlim(-0.5, len(category_order) - 0.5)
     fig.tight_layout()
     if save_path:
         path = Path(save_path)
@@ -218,12 +335,18 @@ def plot_age_distribution_grouped_bar(
     save_path   : Speicherpfad; wenn None → plt.show()
     dpi         : Auflösung beim Speichern
     """
-    color_map = {
-        therapy: (colors or {}).get(therapy, _DEFAULT_COLORS[i % len(_DEFAULT_COLORS)])
-        for i, therapy in enumerate(dataframes.keys())
-    }
-    bins = list(range(0, 105, age_bracket))
-    labels = [f"{b}–{b + age_bracket - 1}" for b in bins[:-1]]
+    therapies = list(dataframes.keys())
+    color_map = {t: c for t, c in zip(therapies, tab20b_colors(len(therapies)))}
+    if colors:
+        color_map.update(colors)
+    # Erstes Bracket hardcoded 18-20, danach age_bracket-Schritte (Punkt 11)
+    bins = [18, 21] + list(range(21 + (age_bracket - 1), 105, age_bracket))
+    if bins[-1] < 105:
+        bins.append(105)
+    labels = []
+    for i in range(len(bins) - 1):
+        lo, hi = bins[i], bins[i + 1] - 1
+        labels.append(f"{lo}–{hi}")
     rows = []
     for therapy, df in dataframes.items():
         if age_column not in df.columns:
@@ -239,12 +362,13 @@ def plot_age_distribution_grouped_bar(
         counts["therapy"] = therapy
         rows.append(counts)
     agg = pd.concat(rows, ignore_index=True)
-    therapies = list(dataframes.keys())
     x_positions = np.arange(len(labels))
     n = len(therapies)
-    width = 0.8 / n
-    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
-    fig, ax = plt.subplots(figsize=(14, 6))
+    group_width = 0.8
+    width = group_width / max(n, 1)
+    offsets = (np.arange(n) - (n - 1) / 2) * width
+    show_bar_numbers = PLOT_CONFIG["show_bar_numbers"]
+    fig, ax = plt.subplots(figsize=(14, 7))
     for offset, therapy in zip(offsets, therapies):
         sub = agg[agg["therapy"] == therapy].set_index("age_bracket").reindex(labels).fillna(0)
         counts = sub["count"].values
@@ -256,28 +380,27 @@ def plot_age_distribution_grouped_bar(
             alpha=0.9,
             label=therapy,
         )
-        for bar in bars:
-            height = bar.get_height()
-            if height > 0:
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    height + 0.3,
-                    f"{int(height)}",
-                    ha="center",
-                    fontsize=7,
-                )
+        if show_bar_numbers:
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(bar.get_x() + bar.get_width() / 2, height,
+                            f"{int(height)}", ha="center", va="bottom",
+                            fontsize=PLOT_CONFIG["fontsize_bar_label"])
     ax.set_xticks(x_positions)
     ax.set_xticklabels(labels, rotation=45, ha="right")
-    ax.set_xlabel("Age Group", fontsize=11)
-    ax.set_ylabel("Number of Condition IDs", fontsize=11)
-    if title is not False:
+    ax.set_xlabel("Age Group", fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    ax.set_ylabel("Number of Condition IDs", fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    if title is not False and PLOT_CONFIG["show_titles"]:
         chart_title = title or f"Age Distribution by Therapy Type ({age_bracket}-Year Groups)"
-        ax.set_title(chart_title, fontsize=15, fontweight="bold", pad=15)
-    ax.legend(frameon=False)
+        ax.set_title(chart_title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15)
+    if PLOT_CONFIG["show_legend"]:
+        ax.legend(frameon=False)
     ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
     ax.grid(axis="y", linestyle="--", alpha=0.3)
     ax.set_axisbelow(True)
     ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xlim(-0.5, len(labels) - 0.5)
     fig.tight_layout()
     if save_path:
         path = Path(save_path)
@@ -337,7 +460,8 @@ def plot_therapy_times(
         horizontalalignment="right",
         bbox=dict(boxstyle="round", facecolor="white", alpha=0.85),
     )
-    ax.set_title(title, fontsize=14, weight="bold")
+    if title and PLOT_CONFIG["show_titles"]:
+        ax.set_title(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], weight="bold")
     ax.set_ylabel("Relativer Therapiezeitpunkt")
     ax.legend()
     plt.tight_layout()
@@ -383,8 +507,8 @@ def plot_therapy_bias_analysis(
         gridspec_kw={"height_ratios": [1, 2]},
     )
     fig.subplots_adjust(hspace=0.35)
-    if title:
-        fig.suptitle(title, fontsize=11, fontweight="bold", y=1.01)
+    if title and PLOT_CONFIG["show_titles"]:
+        fig.suptitle(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01)
     # – Subplot 1: Case Count ─────────────────────────────────────────────────
     axes[0].plot(all_years, cases_all_line, linestyle="-", color="steelblue")
     axes[0].plot(
@@ -582,7 +706,8 @@ def plot_lorenz_curve(
     )
     ax.set_xlabel("Kumulativer Anteil der cond_id (aufsteigend sortiert)", fontsize=10)
     ax.set_ylabel("Kumulativer Anteil der Therapien", fontsize=10)
-    ax.set_title("Lorenz-Kurve – Therapien pro cond_id", fontsize=13, fontweight="bold", pad=14)
+    if PLOT_CONFIG["show_titles"]:
+        ax.set_title("Lorenz-Kurve – Therapien pro cond_id", fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=14)
     ax.text(
         0.5,
         -0.12,
@@ -619,16 +744,28 @@ def plot_log_histogram(
     n_patients_from: Optional[int] = None,
     title: Optional[str] = "Distribution of Therapies per cond_id",
     font_family: str = "DejaVu Sans",
+    max_therapies: Optional[int] = 40,
 ) -> None:
     """
     Log-skaliertes Histogramm der Therapien pro cond_id.
     Optional aufgeteilt nach Jahr (vor/ab year_cutoff).
+
+    max_therapies : cond_ids mit mehr als so vielen Therapien werden als
+                    Ausreißer entfernt (Punkt 6, default 40). Anzahl wird
+                    im sprechenden Printout ausgegeben.
     """
     plt.rcParams["font.family"] = font_family
     counts = _therapy_counts_per_cond(df, cond_col, n_total_patients)
     if counts.empty:
         print("[WARNING] No data for histogram")
         return
+    # ── Ausreißer entfernen (Punkt 6) ────────────────────────────────────────
+    if max_therapies is not None:
+        n_outliers = int((counts > max_therapies).sum())
+        if n_outliers > 0:
+            print(f"    [log_histo] {n_outliers} Ausreißer-cond_ids mit > {max_therapies} "
+                  f"Therapien entfernt (max war {int(counts.max())}).")
+        counts = counts[counts <= max_therapies]
     n_with_therapy = df[cond_col].nunique()
     use_year_split = (year_col is not None) and (year_cutoff is not None)
     if use_year_split:
@@ -636,6 +773,9 @@ def plot_log_histogram(
         df_from = df[df[year_col] >= year_cutoff]
         counts_before = _therapy_counts_per_cond(df_before, cond_col, n_patients_before)
         counts_from = _therapy_counts_per_cond(df_from, cond_col, n_patients_from)
+        if max_therapies is not None:
+            counts_before = counts_before[counts_before <= max_therapies]
+            counts_from = counts_from[counts_from <= max_therapies]
         fig, (ax_before, ax_from) = plt.subplots(2, 1, figsize=(10, 9), sharex=True)
         subplots = [
             (
@@ -677,20 +817,7 @@ def plot_log_histogram(
             linewidth=0.6,
             rwidth=0.98,
         )
-        for patch in patches:
-            height = patch.get_height()
-            if height == 0:
-                continue
-            ax.text(
-                patch.get_x() + patch.get_width() / 2,
-                height * 1.15,
-                f"{int(height):,}",
-                ha="center",
-                va="bottom",
-                fontsize=8,
-                color="#333333",
-                rotation_mode="anchor",
-            )
+        # Zahlen über den Balken entfernt (Punkt 6)
         ax.set_yscale("log")
         ax.set_ylabel("Count cond_id (log scale)", fontsize=10)
         if use_year_split:
@@ -715,8 +842,8 @@ def plot_log_histogram(
     bottom_ax = subplots[-1][0]
     bottom_ax.set_xlabel("Therapies per cond_id", fontsize=10)
     bottom_ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
-    if title:
-        fig.suptitle(title, fontsize=13, fontweight="bold", y=1.01)
+    if title and PLOT_CONFIG["show_titles"]:
+        fig.suptitle(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01)
     footer_kwargs = dict(ha="center", va="top", fontsize=8, color="black", style="italic")
     if use_year_split:
         n_with_before = df_before[cond_col].nunique()
@@ -762,6 +889,7 @@ def plot_log_histogram(
 def plot_uicc_ecog_inventory(
     df_uicc,
     df_ecog,
+    df_uicc_must=None,
     uicc_col: str = "uicc_tnm",
     ecog_col: str = "ecog_performance_status",
     cond_col: str = "cond_id",
@@ -771,219 +899,141 @@ def plot_uicc_ecog_inventory(
     output_path: Optional[Path] = None,
     show: bool = True,
     font_family: str = "DejaVu Sans",
+    show_legend: bool | None = None,
+    show_substages: bool = False,
+    label_obds: str = "before MUST",
+    label_must: str = "after MUST",
 ) -> None:
     """
-    Zwei-Panel-Plot: UICC-Stage-Verteilung (gestackte Horizontal-Balken)
-    und ECOG-Verteilung nebeneinander.
+    Zwei-Panel-Plot: UICC-Stage-Verteilung (links) + ECOG-Verteilung (rechts).
+
+    UICC-Panel (Punkt 5):
+      • Alle Sub-Stufen werden auf die Hauptstufe (0/I/II/III/IV) gemappt.
+      • Wird df_uicc_must übergeben, bekommt jede Stage ZWEI Balken:
+        vor MUST (oBDS) und nach MUST. Balkenbreite halbiert + kleiner Abstand.
+      • Gesamtzahl der Stage steht NEBEN dem Balken (für MUST-Balken mit
+        Zusatz 'after MUST'). Das ist der Fix für den alten Bug, der nur die
+        letzte Sub-Stufe statt der Stage-Summe angezeigt hat.
+      • Legende optional (default aus, da Zahlen am Balken stehen).
+      • Sub-Stufen-Unterteilung optional (show_substages, default aus).
     """
+    if show_legend is None:
+        show_legend = PLOT_CONFIG["show_legend"]
     plt.rcParams["font.family"] = font_family
-    group_colors = {
-        main: _generate_colors(cfg["cmap"], len(cfg["substages"]), cfg["cmap_range"])
-        for main, cfg in UICC_GROUPS.items()
-    }
 
-    def _value_counts(series):
-        return (
-            series.astype(str)
-            .str.strip()
-            .value_counts(dropna=False)
-            .rename(index={"nan": "missing", "unknown": "missing"})
-        )
+    stages = ["missing", "0", "I", "II", "III", "IV"]
+    stage_labels = ["Missing" if s == "missing" else f"Stage {s}" for s in stages]
 
-    # ── UICC ──────────────────────────────────────────────────────────────────
-    uicc_vc = _value_counts(df_uicc[uicc_col])
-    uicc_total = int(uicc_vc.sum())
-    uicc_data = {
-        main: {sub: int(uicc_vc.get(sub, 0)) for sub in cfg["substages"]}
-        for main, cfg in UICC_GROUPS.items()
-    }
-    uicc_unknown = int(uicc_vc.get("missing", 0))
-    uicc_n_known = sum(sum(uicc_data[m].values()) for m in UICC_GROUP_ORDER if m != "missing")
-    n_uicc_cond_with_known = df_uicc[df_uicc[uicc_col].astype(str).str.strip().ne("missing")][
-        cond_col
-    ].nunique()
-    max_known_bar = max(sum(uicc_data[m].values()) for m in UICC_GROUP_ORDER if m != "missing")
-    uicc_max_val = max(uicc_unknown, max_known_bar)
-    # ── ECOG ──────────────────────────────────────────────────────────────────
+    def _main_counts(df):
+        """Hauptstufen-Zählung (cond_id-Zeilen) als dict stage→count."""
+        mapped = df[uicc_col].map(map_uicc_to_main_stage)
+        vc = mapped.value_counts()
+        return {s: int(vc.get(s, 0)) for s in stages}
+
+    uicc_obds = _main_counts(df_uicc)
+    uicc_obds_total = sum(uicc_obds.values())
+    has_must = df_uicc_must is not None
+    if has_must:
+        uicc_must = _main_counts(df_uicc_must)
+        uicc_must_total = sum(uicc_must.values())
+
+    # ── ECOG (unverändert, Hauptlogik) ──────────────────────────────────────
     ECOG_ORDER_INV = ["U", "0", "1", "2", "3", "4"]
-    ECOG_COLORS = {
-        "U": "#b0b0b0",
-        "0": "#08519c",
-        "1": "#3182bd",
-        "2": "#f5a623",
-        "3": "#e07b39",
-        "4": "#c0392b",
-    }
-    ecog_vc = _value_counts(df_ecog[ecog_col])
-    ecog_total = int(ecog_vc.sum())
-    ecog_labels = [v for v in ECOG_ORDER_INV if str(v) in ecog_vc.index]
+    ecog_mapped = df_ecog[ecog_col].map(map_ecog_value)
+    ecog_vc = ecog_mapped.value_counts()
+    ecog_labels = [v for v in ECOG_ORDER_INV if ecog_vc.get(v, 0) > 0]
     ecog_vals = [int(ecog_vc.get(v, 0)) for v in ecog_labels]
-    ecog_colors = [ECOG_COLORS.get(str(v), "#b0b0b0") for v in ecog_labels]
+    ecog_total = int(sum(ecog_vals))
+    ecog_cols = tab20b_colors(len(ecog_labels))
     ecog_n_known = sum(v for l, v in zip(ecog_labels, ecog_vals) if l != "U")
-    n_ecog_cond_with_known = df_ecog[df_ecog[ecog_col].astype(str).str.strip().ne("U")][
-        cond_col
-    ].nunique()
     ecog_max = max(ecog_vals) if ecog_vals else 1
-    # ── Figure ────────────────────────────────────────────────────────────────
+
+    # ── Figure: schmaleres wspace (Punkt 5: Whitespace verkleinern) ─────────
     fig, (ax_uicc, ax_ecog) = plt.subplots(
-        1,
-        2,
-        figsize=(22, 8),
-        gridspec_kw={"width_ratios": [3, 1], "wspace": 0.35},
+        1, 2, figsize=(20, 8),
+        gridspec_kw={"width_ratios": [3, 1], "wspace": 0.18},
     )
-    # UICC gestackte Balken
-    for i, main in enumerate(UICC_GROUP_ORDER):
-        if main == "missing":
-            val = uicc_unknown
-            ax_uicc.barh(i, val, color="#b0b0b0", edgecolor="white", linewidth=0.6, height=0.65)
-            ax_uicc.text(
-                val + uicc_max_val * 0.004,
-                i,
-                f"{val:,}  ({100 * val / uicc_total:.1f}%)"
-                if uicc_total
-                else f"{val:,} (0.0%)",  # TO DO - division by zero - warum ist uicc_total leer
-                va="center",
-                ha="left",
-                fontsize=8.5,
-                color="#888888",
-            )
-        else:
-            cfg = UICC_GROUPS[main]
-            colors = group_colors[main]
-            left = 0
-            for sub, color in zip(cfg["substages"], colors):
-                val = uicc_data[main][sub]
-                if val == 0:
-                    continue
-                ax_uicc.barh(
-                    i, val, left=left, color=color, edgecolor="white", linewidth=0.6, height=0.65
-                )
-                left += val
-            row_total = sum(uicc_data[main].values())
-            ax_uicc.text(
-                left + uicc_max_val * 0.004,
-                i,
-                f"{val:,}  ({100 * val / uicc_total:.1f}%)" if uicc_total else f"{val:,} (0.0%)",
-                va="center",
-                ha="left",
-                fontsize=8.5,
-                color="#333333",
-            )
-    ax_uicc.axhline(0.5, color="#aaaaaa", linewidth=1.0, linestyle="--")
-    ax_uicc.set_yticks(range(len(UICC_GROUP_ORDER)))
-    ax_uicc.set_yticklabels(
-        ["Missing" if m == "missing" else f"Stage {m}" for m in UICC_GROUP_ORDER],
-        fontsize=10,
-        fontweight="bold",
-    )
-    x_legend_start = max_known_bar * 1.18
-    xlim_total = max(uicc_max_val * 1.15, x_legend_start * 3.0)
-    ax_uicc.set_xlim(0, xlim_total)
-    ax_uicc.set_ylim(-0.5, len(UICC_GROUP_ORDER) - 0.5)
+
+    y = np.arange(len(stages))
+    tab = tab20b_colors(4)
+    color_obds, color_must = tab[0], tab[2]
+
+    if has_must:
+        # zwei Balken je Stage: Breite halbiert, kleiner Abstand
+        bar_h = 0.34
+        gap = 0.04
+        obds_vals = [uicc_obds[s] for s in stages]
+        must_vals = [uicc_must[s] for s in stages]
+        uicc_max_val = max(max(obds_vals), max(must_vals), 1)
+        ax_uicc.barh(y + (bar_h/2 + gap/2), obds_vals, height=bar_h,
+                     color=color_obds, edgecolor="white", linewidth=0.6, label=label_obds)
+        ax_uicc.barh(y - (bar_h/2 + gap/2), must_vals, height=bar_h,
+                     color=color_must, edgecolor="white", linewidth=0.6, label=label_must)
+        # Gesamtzahl je Stage NEBEN dem Balken
+        for yi, s in zip(y, stages):
+            vo, vm = uicc_obds[s], uicc_must[s]
+            ax_uicc.text(vo + uicc_max_val*0.004, yi + (bar_h/2 + gap/2),
+                         f"{vo:,}", va="center", ha="left",
+                         fontsize=PLOT_CONFIG["fontsize_bar_label"], color="#333333")
+            ax_uicc.text(vm + uicc_max_val*0.004, yi - (bar_h/2 + gap/2),
+                         f"{vm:,}, {label_must}", va="center", ha="left",
+                         fontsize=PLOT_CONFIG["fontsize_bar_label"], color="#333333")
+    else:
+        bar_h = 0.6
+        obds_vals = [uicc_obds[s] for s in stages]
+        uicc_max_val = max(max(obds_vals), 1)
+        ax_uicc.barh(y, obds_vals, height=bar_h,
+                     color=color_obds, edgecolor="white", linewidth=0.6, label=label_obds)
+        for yi, s in zip(y, stages):
+            vo = uicc_obds[s]
+            ax_uicc.text(vo + uicc_max_val*0.004, yi, f"{vo:,}", va="center", ha="left",
+                         fontsize=PLOT_CONFIG["fontsize_bar_label"], color="#333333")
+
+    ax_uicc.set_yticks(y)
+    ax_uicc.set_yticklabels(stage_labels, fontsize=PLOT_CONFIG["fontsize_base"], fontweight="bold")
+    ax_uicc.set_xlim(0, uicc_max_val * 1.18)
+    ax_uicc.set_ylim(-0.6, len(stages) - 0.4)
     ax_uicc.spines[["top", "right", "bottom"]].set_visible(False)
     ax_uicc.xaxis.set_visible(False)
     ax_uicc.tick_params(left=False)
-    for i in range(0, len(UICC_GROUP_ORDER), 2):
-        ax_uicc.axhspan(i - 0.45, i + 0.45, color="#f7f7f7", zorder=0)
     ax_uicc.set_title(
-        f"UICC Stage Distribution\n"
-        f"rows = {uicc_total:,}  |  known entries = {uicc_n_known:,}  |  "
-        f"cond_ids with known UICC = {n_uicc_cond_with_known:,}",
-        fontsize=10,
-        fontweight="bold",
-        pad=10,
+        f"UICC Stage Distribution\nrows oBDS = {uicc_obds_total:,}"
+        + (f"  |  rows MUST = {uicc_must_total:,}" if has_must else ""),
+        fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=10,
     )
-    # Legende UICC
-    known_groups = ["0", "I", "II", "III", "IV"]
-    max_subs = max(len(UICC_GROUPS[m]["substages"]) for m in UICC_GROUPS)
-    rows_per_col = max_subs + 1
-    legend_patches = []
-    for main in known_groups:
-        cfg = UICC_GROUPS[main]
-        colors = group_colors[main]
-        main_total = sum(uicc_data[main].values())
-        legend_patches.append(
-            mpatches.Patch(
-                color=cfg["header_color"], label=f"$\\bf{{Stage\\ {main}}}$  –  {main_total:,}"
-            )
-        )
-        for sub, color in zip(cfg["substages"], colors):
-            val = uicc_data[main][sub]
-            legend_patches.append(mpatches.Patch(color=color, label=f"{sub:<7} {val:,}"))
-        for _ in range(rows_per_col - 1 - len(cfg["substages"])):
-            legend_patches.append(mpatches.Patch(color="none", label=""))
-    leg_anchor_x = x_legend_start * 1.05
-    leg_anchor_y = (1 + len(UICC_GROUP_ORDER) - 1) / 2 + 0.7
-    leg = ax_uicc.legend(
-        handles=legend_patches,
-        ncol=len(known_groups),
-        loc="center left",
-        bbox_to_anchor=(leg_anchor_x, leg_anchor_y),
-        bbox_transform=ax_uicc.transData,
-        framealpha=0.95,
-        edgecolor="#cccccc",
-        fontsize=8.5,
-        title="Sub-stage composition  •  n cond_ids",
-        title_fontsize=9.5,
-        handlelength=1.1,
-        handleheight=1.1,
-        borderpad=0.9,
-        labelspacing=0.45,
-        columnspacing=2.5,
-    )
-    for handle, text in zip(leg.legend_handles, leg.get_texts()):
-        if text.get_text() == "":
-            handle.set_visible(False)
-            text.set_visible(False)
-    # ECOG Balken
-    bars = ax_ecog.barh(
-        range(len(ecog_labels)),
-        ecog_vals,
-        color=ecog_colors,
-        edgecolor="white",
-        linewidth=0.6,
-        height=0.60,
-    )
+    if show_legend and has_must:
+        ax_uicc.legend(frameon=False, fontsize=PLOT_CONFIG["fontsize_legend"], loc="lower right")
+
+    # ── ECOG Balken ──────────────────────────────────────────────────────────
+    bars = ax_ecog.barh(range(len(ecog_labels)), ecog_vals, color=ecog_cols,
+                        edgecolor="white", linewidth=0.6, height=0.6)
     for bar, val, lbl in zip(bars, ecog_vals, ecog_labels):
-        ax_ecog.text(
-            bar.get_width() + ecog_max * 0.012,
-            bar.get_y() + bar.get_height() / 2,
-            f"{val:,}  ({100 * val / ecog_total:.1f}%)",
-            va="center",
-            ha="left",
-            fontsize=8.5,
-            color="#888888" if lbl == "U" else "#333333",
-        )
+        ax_ecog.text(bar.get_width() + ecog_max*0.012, bar.get_y() + bar.get_height()/2,
+                     f"{val:,}  ({100*val/ecog_total:.1f}%)" if ecog_total else f"{val:,}",
+                     va="center", ha="left", fontsize=PLOT_CONFIG["fontsize_bar_label"],
+                     color="#888888" if lbl == "U" else "#333333")
     ax_ecog.set_yticks(range(len(ecog_labels)))
-    ax_ecog.set_yticklabels(
-        ["Unknown" if l == "U" else f"ECOG {l}" for l in ecog_labels],
-        fontsize=10,
-        fontweight="bold",
-    )
+    ax_ecog.set_yticklabels(["Unknown" if l == "U" else f"ECOG {l}" for l in ecog_labels],
+                            fontsize=PLOT_CONFIG["fontsize_base"], fontweight="bold")
     ax_ecog.set_xlim(0, ecog_max * 1.55)
     ax_ecog.spines[["top", "right", "bottom"]].set_visible(False)
     ax_ecog.xaxis.set_visible(False)
     ax_ecog.tick_params(left=False)
-    ax_ecog.axhline(0.5, color="#aaaaaa", linewidth=1.0, linestyle="--")
-    for i in range(0, len(ecog_labels), 2):
-        ax_ecog.axhspan(i - 0.45, i + 0.45, color="#f7f7f7", zorder=0)
     ax_ecog.set_title(
-        f"ECOG Performance Status\n"
-        f"rows = {ecog_total:,}  |  known entries = {ecog_n_known:,}  |  "
-        f"cond_ids with known ECOG = {n_ecog_cond_with_known:,}",
-        fontsize=10,
-        fontweight="bold",
-        pad=10,
+        f"ECOG Performance Status\nrows = {ecog_total:,}  |  known = {ecog_n_known:,}",
+        fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=10,
     )
-    if title:
+
+    # Plot-Suptitel nur wenn global erlaubt
+    if title and PLOT_CONFIG["show_titles"]:
         sup = f"{cohort_name} – {title}" if cohort_name else title
         if n_total_cond_ids:
             sup += f"\n(Cohort: {n_total_cond_ids:,} cond_ids total)"
-        fig.suptitle(sup, fontsize=13, fontweight="bold", y=1.01)
+        fig.suptitle(sup, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01)
     fig.tight_layout()
     if output_path:
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output_path, dpi=300, bbox_inches="tight")
+        fig.savefig(output_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
         print(f"Plot saved to: {output_path}")
     if show:
         plt.show()
@@ -996,36 +1046,56 @@ def plot_uicc_distribution_grouped_bar(
     title: str = None,
     colors: dict = None,
     save_path: str = None,
-    dpi: int = 300,
+    dpi: int = None,
+    exclude_missing: bool = True,
+    exclude_zero: bool = True,
+    relative: bool = True,
 ) -> plt.Figure:
     """
     Gruppiertes Balkendiagramm der UICC-Stage-Verteilung pro Therapietyp.
-    Granulare Sub-Stufen (IA, IIB, …) werden auf kanonische Stufen reduziert.
+    Alle Sub-Stufen werden auf die Hauptstufe (0/I/II/III/IV) gemappt.
+
+    exclude_missing : 'missing'/Unknown ausschließen (default True)
+    exclude_zero    : Stage '0' ausschließen (default True)
+    relative        : Anteil je Therapie in % statt absoluter Zahlen.
+                      n bezieht sich auf das, was nach Ausschluss übrig bleibt.
     """
-    color_map = {
-        therapy: (colors or {}).get(therapy, _DEFAULT_COLORS[i % len(_DEFAULT_COLORS)])
-        for i, therapy in enumerate(dataframes.keys())
-    }
+    if dpi is None:
+        dpi = PLOT_CONFIG["dpi"]
+    therapies = list(dataframes.keys())
+    color_map = {t: c for t, c in zip(therapies, tab20b_colors(len(therapies)))}
+    if colors:
+        color_map.update(colors)
+
+    order = [s for s in UICC_ORDER]
+    if exclude_missing and "missing" in order:
+        order.remove("missing")
+    if exclude_zero and "0" in order:
+        order.remove("0")
+
     rows = []
     for therapy, df in dataframes.items():
         if uicc_column not in df.columns:
             raise ValueError(f"Spalte '{uicc_column}' nicht in '{therapy}'.")
-        raw = df[uicc_column].astype(str).str.strip()
-        mapped = raw.map(lambda v: UICC_MAPPING.get(v, "missing"))
-        counts = mapped.value_counts().reindex(UICC_ORDER, fill_value=0).reset_index()
+        mapped = df[uicc_column].map(map_uicc_to_main_stage)
+        mapped = mapped[mapped.isin(order)]  # nur behaltene Stufen → n schrumpft
+        counts = mapped.value_counts().reindex(order, fill_value=0).reset_index()
         counts.columns = ["category", "count"]
         counts["therapy"] = therapy
         rows.append(counts)
+        print(f"    [UICC-Dist] {therapy}: n={int(counts['count'].sum()):,} "
+              f"(nach Ausschluss missing={exclude_missing}, 0={exclude_zero})")
     agg = pd.concat(rows, ignore_index=True)
     return _build_grouped_bar(
         agg=agg,
-        category_order=UICC_ORDER,
-        therapies=list(dataframes.keys()),
+        category_order=order,
+        therapies=therapies,
         color_map=color_map,
         xlabel="UICC Stage",
         title=title,
         save_path=save_path,
         dpi=dpi,
+        relative=relative,
     )
 
 
@@ -1035,41 +1105,129 @@ def plot_ecog_distribution_grouped_bar(
     title: str = None,
     colors: dict = None,
     save_path: str = None,
-    dpi: int = 300,
+    dpi: int = None,
+    exclude_unknown: bool = True,
+    relative: bool = True,
 ) -> plt.Figure:
     """
     Gruppiertes Balkendiagramm der ECOG-Verteilung pro Therapietyp.
-    Bekannte ECOG-Werte (0–4) zuerst, dann unbekannte.
+    Werte werden auf 0–4 normalisiert; 'U'/Unknown optional ausgeschlossen.
+
+    exclude_unknown : U/Unknown ausschließen (default True)
+    relative        : Anteil je Therapie in % (n nach Ausschluss).
     """
-    color_map = {
-        therapy: (colors or {}).get(therapy, _DEFAULT_COLORS[i % len(_DEFAULT_COLORS)])
-        for i, therapy in enumerate(dataframes.keys())
-    }
+    if dpi is None:
+        dpi = PLOT_CONFIG["dpi"]
+    therapies = list(dataframes.keys())
+    color_map = {t: c for t, c in zip(therapies, tab20b_colors(len(therapies)))}
+    if colors:
+        color_map.update(colors)
+
+    order = list(ECOG_ORDER)
+    if not exclude_unknown:
+        order = order + ["U"]
+
     rows = []
-    all_values = set()
     for therapy, df in dataframes.items():
         if ecog_column not in df.columns:
             raise ValueError(f"Spalte '{ecog_column}' nicht in '{therapy}'.")
-        raw = df[ecog_column].astype(str).str.strip()
-        all_values.update(raw.unique())
-        counts = raw.value_counts().reset_index()
+        mapped = df[ecog_column].map(map_ecog_value)
+        mapped = mapped[mapped.isin(order)]
+        counts = mapped.value_counts().reindex(order, fill_value=0).reset_index()
         counts.columns = ["category", "count"]
         counts["therapy"] = therapy
         rows.append(counts)
-    known = sorted([v for v in all_values if v in ECOG_ORDER], key=lambda x: int(x))
-    unknown = sorted([v for v in all_values if v not in ECOG_ORDER])
-    category_order = known + unknown
+        print(f"    [ECOG-Dist] {therapy}: n={int(counts['count'].sum()):,} "
+              f"(nach Ausschluss U={exclude_unknown})")
     agg = pd.concat(rows, ignore_index=True)
     return _build_grouped_bar(
         agg=agg,
-        category_order=category_order,
-        therapies=list(dataframes.keys()),
+        category_order=order,
+        therapies=therapies,
         color_map=color_map,
         xlabel="ECOG Performance Status",
         title=title,
         save_path=save_path,
         dpi=dpi,
+        relative=relative,
     )
+
+
+def plot_gender_stage_grouped_bar(
+    crosstab: pd.DataFrame,
+    xlabel: str = "Stage",
+    title: str = None,
+    save_path: str = None,
+    dpi: int = None,
+    relative: bool = True,
+    genders: list | None = None,
+) -> plt.Figure:
+    """
+    Gruppierte Balken-„Tabelle": Stages auf der X-Achse, je Geschlecht ein Balken
+    (Punkt 9). Erwartet eine Crosstab (Index = Geschlecht, Spalten = Stages).
+
+    relative : Anteil je Geschlecht in % (Zeilen-%), default True.
+    genders  : Reihenfolge/Auswahl der Geschlechter (z.B. ['female','male']).
+               'unknown' wird – falls vorhanden – standardmäßig entfernt.
+    """
+    if dpi is None:
+        dpi = PLOT_CONFIG["dpi"]
+    ct = crosstab.copy()
+    # 'unknown' raus (Entscheidung: "Ja werf raus")
+    ct = ct.drop(index=[g for g in ct.index if str(g).lower() in ("unknown", "u", "nan")],
+                 errors="ignore")
+    if genders is None:
+        genders = [g for g in ["female", "male"] if g in ct.index]
+        genders += [g for g in ct.index if g not in genders]
+    genders = [g for g in genders if g in ct.index]
+
+    stages = list(ct.columns)
+    x = np.arange(len(stages))
+    n = len(genders)
+    group_width = 0.8
+    width = group_width / max(n, 1)
+    offsets = (np.arange(n) - (n - 1) / 2) * width
+    colors = {g: c for g, c in zip(genders, tab20b_colors(max(n, 1)))}
+    show_bar_numbers = PLOT_CONFIG["show_bar_numbers"]
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    for offset, g in zip(offsets, genders):
+        vals = ct.loc[g, stages].values.astype(float)
+        total = vals.sum()
+        if relative and total > 0:
+            vals = 100.0 * vals / total
+        bars = ax.bar(x + offset, vals, width=width, color=colors[g], alpha=0.9,
+                      label=f"{g} (n={int(ct.loc[g, stages].sum()):,})")
+        if show_bar_numbers:
+            for bar in bars:
+                h = bar.get_height()
+                if h > 0:
+                    ax.text(bar.get_x() + bar.get_width() / 2, h,
+                            f"{h:.1f}%" if relative else f"{h:.0f}",
+                            ha="center", va="bottom", fontsize=PLOT_CONFIG["fontsize_bar_label"])
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(s) for s in stages])
+    ax.set_xlabel(xlabel, fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    ax.set_ylabel("Share within gender (%)" if relative else "Count",
+                  fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    if title and PLOT_CONFIG["show_titles"]:
+        ax.set_title(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15)
+    if PLOT_CONFIG["show_legend"]:
+        ax.legend(frameon=False, title="Gender", title_fontsize=PLOT_CONFIG["fontsize_legend"])
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.set_axisbelow(True)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xlim(-0.5, len(stages) - 0.5)
+    fig.tight_layout()
+    if save_path:
+        path = Path(save_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
+        print(f"Plot saved to: {path.resolve()}")
+    else:
+        plt.show()
+    plt.close()
+    return fig
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1128,9 +1286,11 @@ def plot_merge_panel(
                 fontfamily="monospace",
                 bbox=dict(boxstyle="round,pad=0.35", facecolor="white", edgecolor="#cccccc"),
             )
-    fig.suptitle(
-        "Time Delta: Nearest Staging before Therapy", fontsize=12, fontweight="bold", y=1.01
-    )
+    if PLOT_CONFIG["show_titles"]:
+        fig.suptitle(
+            "Time Delta: Nearest Staging before Therapy",
+            fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01
+        )
     fig.tight_layout()
     if save_path is not None:
         full_path = Path(save_path) / file_name
@@ -1214,9 +1374,11 @@ def plot_sweep_panel(
         if col == 0:
             ax.set_ylabel("Matched cond_ids (%)", fontsize=8)
         ax.tick_params(labelsize=8)
-    fig.suptitle(
-        "Tolerance Sweep — Match Rate by Therapy × Staging", fontsize=11, fontweight="bold", y=1.01
-    )
+    if PLOT_CONFIG["show_titles"]:
+        fig.suptitle(
+            "Tolerance Sweep — Match Rate by Therapy × Staging",
+            fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01
+        )
     if save_plot:
         save_path = Path(save_dir)
         save_path.mkdir(parents=True, exist_ok=True)
