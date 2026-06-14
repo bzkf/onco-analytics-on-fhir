@@ -1840,7 +1840,7 @@ class AMLStudy:
         # de-identify the other lab data
         lab_data = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_labs.csv"),
-            sep=";",
+            sep=",",
             dtype={"patient_mrn": str},
         )
         lab_data["lab_dateTime"] = pd.to_datetime(
