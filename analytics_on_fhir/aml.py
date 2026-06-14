@@ -581,6 +581,8 @@ class AMLStudy:
                 )
                 if len(result) > 0:
                     resource_chunk = result[resource_type]
+                    resource_chunk = resource_chunk.drop_duplicates(subset=["type", "id"])
+
                     # Convert object columns (e.g. nested dosage) to JSON strings
                     # so they can be serialized to Parquet
                     for col in resource_chunk.columns:
@@ -591,6 +593,7 @@ class AMLStudy:
                     resource_chunk.to_parquet(
                         resource_dir / f"chunk_{chunk_counter}.parquet", index=False
                     )
+
                     # De-duplicate Medication resources per chunk to reduce memory and I/O
                     med_chunk = result["Medication"].drop_duplicates(subset=["medication_id"])
                     for col in med_chunk.columns:
@@ -608,9 +611,14 @@ class AMLStudy:
                 return None, None
 
             resource_df = pd.read_parquet(resource_dir)
+            # Final deduplication across all chunks
+            resource_df = resource_df.drop_duplicates(subset=["type", "id"])
+
             medication_df = pd.read_parquet(medication_dir)
             # Final deduplication across all chunks
             medication_df = medication_df.drop_duplicates(subset=["medication_id"])
+
+        resource_df = resource_df.drop_duplicates(subset=["type", "id"])
 
         # add the "Medication" prefix to the id so they match the medication_reference column
         medication_df["medication_id"] = "Medication/" + medication_df["medication_id"].astype(str)
