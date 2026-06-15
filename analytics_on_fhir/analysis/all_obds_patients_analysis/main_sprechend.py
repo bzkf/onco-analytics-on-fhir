@@ -533,8 +533,7 @@ df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
 # mit _obds / _must. Der Vergleichsplot zeigt die Differenz.
 def _prep_uicc_time(df, label):
     out = (
-        df.replace({"uicc_tnm": {"missing": np.nan}})
-        .dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"])
+        df.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"])
         .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
         .loc[:, lambda d: ~d.columns.duplicated()]
     )
