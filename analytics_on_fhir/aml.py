@@ -1812,7 +1812,7 @@ class AMLStudy:
             ).drop(columns=["FALL_ID", "TEILFALL_ID"], errors="ignore")
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
-                sap_medikation["REZEPT_DATUM"], format="%Y-%m-%d", errors="coerce"
+                sap_medikation["REZEPT_DATUM"], format="mixed", dayfirst=True, errors="coerce"
             )
 
             if "AUFNAHME_DATUM" not in sap_medikation.columns:
