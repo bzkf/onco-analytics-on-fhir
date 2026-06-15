@@ -440,6 +440,7 @@ class AMLStudy:
         self.extract_procedures(patient_list=patient_list)
 
     def extract_labs(self, patient_list):
+        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
         all_labs = []
 
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
@@ -465,7 +466,10 @@ class AMLStudy:
                         "loinc_display",
                         "code.coding.where(system='http://loinc.org').display",
                     ),
-                    ("lab_dateTime", "effectiveDateTime[0]"),
+                    (
+                        "lab_dateTime",
+                        "effectiveDateTime[0] | effectivePeriod.start | effectiveInstant | issued",
+                    ),
                     ("lab_quantity_value", "valueQuantity.value"),
                     ("lab_quantity_unit", "valueQuantity.code"),
                     (
@@ -485,6 +489,16 @@ class AMLStudy:
 
         if "loinc_display" not in lab_df.columns:
             lab_df["loinc_display"] = pd.NA
+
+        patient_mrn_lookup = (
+            patient_df[["condition_patient_reference", "patient_mrn"]]
+            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+            .sort_values("patient_mrn")
+            .drop_duplicates(subset=["condition_patient_reference"], keep="first")
+            .set_index("condition_patient_reference")["patient_mrn"]
+        )
+
+        lab_df["patient_mrn"] = lab_df["observation_patient_reference"].map(patient_mrn_lookup)
 
         lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
 
@@ -567,6 +581,8 @@ class AMLStudy:
                 )
                 if len(result) > 0:
                     resource_chunk = result[resource_type]
+                    resource_chunk = resource_chunk.drop_duplicates(subset=["type", "id"])
+
                     # Convert object columns (e.g. nested dosage) to JSON strings
                     # so they can be serialized to Parquet
                     for col in resource_chunk.columns:
@@ -577,6 +593,7 @@ class AMLStudy:
                     resource_chunk.to_parquet(
                         resource_dir / f"chunk_{chunk_counter}.parquet", index=False
                     )
+
                     # De-duplicate Medication resources per chunk to reduce memory and I/O
                     med_chunk = result["Medication"].drop_duplicates(subset=["medication_id"])
                     for col in med_chunk.columns:
@@ -594,9 +611,14 @@ class AMLStudy:
                 return None, None
 
             resource_df = pd.read_parquet(resource_dir)
+            # Final deduplication across all chunks
+            resource_df = resource_df.drop_duplicates(subset=["type", "id"])
+
             medication_df = pd.read_parquet(medication_dir)
             # Final deduplication across all chunks
             medication_df = medication_df.drop_duplicates(subset=["medication_id"])
+
+        resource_df = resource_df.drop_duplicates(subset=["type", "id"])
 
         # add the "Medication" prefix to the id so they match the medication_reference column
         medication_df["medication_id"] = "Medication/" + medication_df["medication_id"].astype(str)
@@ -1499,7 +1521,9 @@ class AMLStudy:
         patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
 
         # Zenzy
-        if os.path.exists(self.settings.aml.csv_input_file):
+        if os.path.exists(
+            self.settings.aml.csv_input_file
+        ) or self.settings.aml.csv_input_file.startswith("s3://"):
             zenzy_df = pd.read_csv(
                 self.settings.aml.csv_input_file,
                 sep=";",
@@ -1598,6 +1622,14 @@ class AMLStudy:
                     "Herstellungszeit",
                 ],
                 inplace=False,
+            )
+
+            # drop the default column raw pat id column if still present
+            # happens if during pseudonymization, both columns remained
+            zenzy_df = zenzy_df.drop(
+                columns=["KIS-Patienten-ID"],
+                inplace=False,
+                errors="ignore",
             )
 
             zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
@@ -1742,6 +1774,34 @@ class AMLStudy:
 
         obds_ecog.to_csv(de_identified_dir / "aml_obds_ecog.csv", index=False)
 
+        # Progress
+        obds_progressions = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_progressions.csv"),
+            sep=";",
+            dtype={"patient_mrn": str},
+        )
+        obds_progressions["effective_dateTime"] = pd.to_datetime(
+            obds_progressions["effective_dateTime"], errors="raise", format="ISO8601"
+        )
+
+        columns_to_hash = [
+            "observation_id",
+            "observation_patient_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_progressions[column] = obds_progressions[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["effective_dateTime"]
+        for column in columns_to_shift:
+            obds_progressions[column] = obds_progressions[column] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
+            )
+
+        obds_progressions.to_csv(de_identified_dir / "aml_obds_progressions.csv", index=False)
+
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
         if sap_medication_path and os.path.exists(sap_medication_path):
@@ -1787,6 +1847,32 @@ class AMLStudy:
                 )
 
             sap_medikation.to_csv(de_identified_dir / "aml_sap_medication.csv", index=False)
+
+        # Lab data
+        # simply copy the summary counts
+        lab_counts_path = os.path.join(self.output_dir, "aml_labs_counts.csv")
+        shutil.copy2(lab_counts_path, de_identified_dir / "aml_labs_counts.csv")
+
+        # de-identify the other lab data
+        lab_data = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_labs.csv"),
+            sep=",",
+            dtype={"patient_mrn": str},
+        )
+        lab_data["lab_dateTime"] = pd.to_datetime(
+            lab_data["lab_dateTime"], errors="raise", format="ISO8601"
+        )
+
+        columns_to_hash = ["observation_id", "observation_patient_reference", "patient_mrn"]
+
+        for column in columns_to_hash:
+            lab_data[column] = lab_data[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["lab_dateTime"]
+        for column in columns_to_shift:
+            lab_data[column] = lab_data[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        lab_data.to_csv(de_identified_dir / "aml_all_labs.csv", index=False)
 
         date_prefix = datetime.datetime.now().strftime("%Y-%m-%d")
         zip_path = (
