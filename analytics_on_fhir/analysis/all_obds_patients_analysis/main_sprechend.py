@@ -527,88 +527,8 @@ print("━" * 70)
 
 df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
 
-# ── Zeit-aufbereitete Varianten BEIDER Quellen (parallel) ────────────────────
-# Beide Quellen werden identisch aufbereitet: dropna auf (uicc, cond_id, Zeit) + sort.
-# Sie laufen anschließend PARALLEL durch alle UICC-Analysen, gekennzeichnet
-# mit _obds / _must. Der Vergleichsplot zeigt die Differenz.
-def _prep_uicc_time(df, label):
-    out = (
-        df.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"])
-        .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
-        .loc[:, lambda d: ~d.columns.duplicated()]
-    )
-    print(f"    df_uicc_{label}_time: {len(out):,} Zeilen  |  cond_ids: {out['condition_id_hash'].nunique():,}")
-    return out
-
-print(f"\n  [PREP] Beide UICC-Quellen für zeitbasierte Merges aufbereitet (dropna + sort):")
-df_uicc_gk = _prep_uicc_time(df_uicc_gk, "obds")
-df_uicc_must = _prep_uicc_time(df_uicc_must, "must")
-
 # Parallel-Quellenliste: über diese wird jede UICC-Analyse doppelt gefahren.
-UICC_SOURCES = [
-    ("obds", df_uicc_gk),
-    ("must", df_uicc_must),
-]
-print(f"    → Parallelbetrieb: beide Quellen laufen durch alle UICC-Plots/Merges (_obds / _must).")
 
-# HINWEIS zur Rollenverteilung der UICC-Quellen:
-#   • oBDS (df_uicc_gk = df_uicc_tnm + weitere_klassifikation) und MUST (df_uicc_must)
-#     sind ZWEI EIGENSTÄNDIGE, vollständige Quellen.
-#   • Beide laufen parallel durch alle Analysen, gekennzeichnet _obds / _must.
-#   • Der Vergleichsplot plot_uicc_inventory_comparison zeigt die Differenz.
-# Es wird NICHT konkateniert (MUST mischt sich nicht mit oBDS).
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# [DEBUG] UICC-QUELLENVERGLEICH: oBDS vs. MUST  (Kopf-an-Kopf, zeitbasiert)
-# Antwortet auf: Warum matcht MUST beim zeitbasierten Merge schlechter als oBDS?
-# Bei Bedarf auskommentieren – rein diagnostisch, verändert keine Daten.
-# ══════════════════════════════════════════════════════════════════════════════
-print("\n" + "═" * 70)
-print("[DEBUG] UICC-QUELLENVERGLEICH  oBDS vs. MUST  (zeitbasiertes Matching)")
-print("═" * 70)
-
-def _uicc_diag(df, name, time_col="months_between_asserted_uicc_tnm_date",
-               uicc_col="uicc_tnm", cond_col="condition_id_hash"):
-    n_rows = len(df)
-    n_cond = df[cond_col].nunique()
-    known_mask = df[uicc_col].notna() & df[uicc_col].astype(str).str.strip().str.lower().ne("missing")
-    n_known_rows = int(known_mask.sum())
-    n_known_cond = df.loc[known_mask, cond_col].nunique()
-    has_time = df[time_col].notna() if time_col in df.columns else pd.Series(False, index=df.index)
-    n_time_rows = int(has_time.sum())
-    n_time_cond = df.loc[has_time, cond_col].nunique()
-    rows_per_cond = n_rows / n_cond if n_cond else 0
-    print(f"\n  {name}:")
-    print(f"    Zeilen gesamt:            {n_rows:>9,}  |  cond_ids: {n_cond:>9,}")
-    print(f"    Ø Zeilen pro cond_id:     {rows_per_cond:>9.2f}   (Verlaufstiefe → mehr = besseres asof-Matching)")
-    print(f"    bekannte UICC:            {n_known_rows:>9,}  |  cond_ids: {n_known_cond:>9,}")
-    if time_col in df.columns:
-        print(f"    MIT Zeitstempel:          {n_time_rows:>9,}  |  cond_ids: {n_time_cond:>9,}")
-        if n_cond:
-            print(f"    OHNE Zeitstempel (cond):  {n_cond - n_time_cond:>9,}  ({100*(n_cond-n_time_cond)/n_cond:.1f}% der cond_ids)")
-    else:
-        print(f"    Spalte '{time_col}' NICHT vorhanden!")
-    return set(df.loc[has_time, cond_col].unique()) if time_col in df.columns else set()
-
-
-_obds_time_ids = _uicc_diag(df_uicc_gk, "oBDS df_uicc_gk (im Vergleichsplot genutzt)")
-_must_time_ids = _uicc_diag(df_uicc_must, "MUST df_uicc_must (roh, GK-gefiltert)")
-
-print(f"\n  ── Zeitstempel-fähige cond_ids (Schnittmengen) ──")
-print(f"    oBDS mit Zeitstempel:           {len(_obds_time_ids):>9,}")
-print(f"    MUST mit Zeitstempel:           {len(_must_time_ids):>9,}")
-print(f"    In BEIDEN:                      {len(_obds_time_ids & _must_time_ids):>9,}")
-print(f"    NUR oBDS (MUST fehlt Zeit):     {len(_obds_time_ids - _must_time_ids):>9,}")
-print(f"    NUR MUST (oBDS fehlt Zeit):     {len(_must_time_ids - _obds_time_ids):>9,}")
-
-print(f"\n  ── Zeitstempel-Wertebereich (months_between_asserted_uicc_tnm_date) ──")
-for _name, _df in [("oBDS", df_uicc_gk), ("MUST", df_uicc_must)]:
-    _col = "months_between_asserted_uicc_tnm_date"
-    if _col in _df.columns:
-        _s = pd.to_numeric(_df[_col], errors="coerce").dropna()
-        if len(_s):
-            print(f"    {_name:<6}: min={_s.min():.1f}  median={_s.median():.1f}  max={_s.max():.1f}  |  n={len(_s):,}")
 
 
 print("═" * 70)
@@ -638,112 +558,6 @@ print(
     f"    cond_ids: {df_ecog_gk['condition_id_hash'].nunique():,}  |  davon mit bekanntem ECOG (≠ U): {_ecog_known:,}"
 )
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# GESCHLECHTERVERGLEICH: UICC- und ECOG-Verteilung nach Geschlecht
-# Forschungsfrage: Werden Männer mit höhergradigem UICC diagnostiziert?
-# Betrachtung NUR zur Erstdiagnose (erste condition_id pro Patient).
-# UICC/ECOG werden auf die Hauptstufe gemappt (IB1 → I, etc.).
-# Ergebnis wird als DataFrame (Excel) rausgeschrieben.
-# UICC-Quelle: MUST (Standard). ECOG: df_ecog_gk.
-# ══════════════════════════════════════════════════════════════════════════════
-print("\n" + "━" * 70)
-print("GESCHLECHTERVERGLEICH  –  UICC & ECOG nach Geschlecht (Erstdiagnose)")
-print("  Forschungsfrage: Werden Männer höhergradig (UICC/ECOG) diagnostiziert?")
-print("  Ebene: erste condition_id pro Patient | UICC auf Hauptstufe gemappt")
-print("━" * 70)
-
-# ── Hauptstufen-Mapping UICC: alles platt auf 0 / I / II / III / IV ───────────
-def _uicc_to_main_stage(val):
-    """Mappt UICC-Substufen auf die römische Hauptstufe (IB1→I, IIIA→III …)."""
-    if pd.isna(val):
-        return "missing"
-    s = str(val).strip().upper()
-    if s in ("", "MISSING", "U", "UNKNOWN", "X"):
-        return "missing"
-    # 0-Stufen (0, 0a, 0is) → "0"
-    if s.startswith("0"):
-        return "0"
-    # römische Hauptzahl am Anfang extrahieren (IV vor III vor II vor I)
-    for prefix in ("IV", "III", "II", "I"):
-        if s.startswith(prefix):
-            return prefix
-    return "missing"
-
-# ── Erstdiagnose je Patient bestimmen (erste condition_id pro patient) ────────
-# df_tumore ist nach cond_id sortiert; "erste" = früheste verfügbare Diagnose.
-# Wir mappen jede cond_id → (patient, gender) und wählen pro Patient die erste cond_id.
-_tumore_first = (
-    df_tumore.sort_values(["patient_resource_id_hash", "condition_id_hash"])
-    .drop_duplicates("patient_resource_id_hash", keep="first")
-)
-_first_cond_ids = set(_tumore_first["condition_id_hash"])
-_gender_map = _tumore_first.set_index("condition_id_hash")["gender"]
-print(f"  Erstdiagnosen (1 cond_id je Patient): {len(_first_cond_ids):,}")
-
-def _gender_stage_crosstab(df_stage, stage_col, label, mapper=None, drop_values=None):
-    """
-    Kreuztabelle Geschlecht × Stage, NUR Erstdiagnosen, optional gemappt.
-    Gibt (ct_abs, ct_pct, tidy_df) zurück.
-    """
-    tmp = df_stage.dropna(subset=[stage_col, "condition_id_hash"]).copy()
-    # nur Erstdiagnose-cond_ids
-    tmp = tmp[tmp["condition_id_hash"].isin(_first_cond_ids)]
-    # ein Eintrag pro cond_id (erster nach Sortierung = frühester Messwert)
-    tmp = tmp.drop_duplicates("condition_id_hash")
-    tmp["gender"] = tmp["condition_id_hash"].map(_gender_map)
-    # Stage ggf. auf Hauptstufe mappen
-    if mapper is not None:
-        tmp["_stage"] = tmp[stage_col].map(mapper)
-    else:
-        tmp["_stage"] = tmp[stage_col].astype(str)
-    # unerwünschte Werte (missing/U) raus
-    if drop_values is not None:
-        tmp = tmp[~tmp["_stage"].astype(str).isin(drop_values)]
-    ct = pd.crosstab(tmp["gender"], tmp["_stage"])
-    ct_pct = ct.div(ct.sum(axis=1), axis=0) * 100
-    print(f"\n  {label} × Geschlecht (Erstdiagnose, cond_id-Ebene):")
-    print(f"    {'Geschlecht':<10}" + "".join(f"{str(c):>9}" for c in ct.columns) + f"{'Summe':>9}")
-    for g, row in ct.iterrows():
-        print(f"    {str(g):<10}" + "".join(f"{int(v):>9,}" for v in row.values) + f"{int(row.sum()):>9,}")
-    print(f"    --- Zeilen-% (Verteilung je Geschlecht über Stages) ---")
-    for g, row in ct_pct.iterrows():
-        print(f"    {str(g):<10}" + "".join(f"{v:>8.1f}%" for v in row.values))
-    # tidy long-form für DataFrame-Export
-    tidy = ct.reset_index().melt(id_vars="gender", var_name="stage", value_name="n")
-    tidy["pct_within_gender"] = (
-        ct_pct.reset_index().melt(id_vars="gender", var_name="stage", value_name="pct")["pct"].values
-    )
-    tidy.insert(0, "analysis", label)
-    return ct, ct_pct, tidy
-
-# UICC × Geschlecht  – PARALLEL für beide Quellen, auf Hauptstufe gemappt
-_tidy_uicc_list = []
-ct_uicc_gender_by_src, ct_uicc_gender_pct_by_src = {}, {}
-for _src_label, _src_df in [("obds", df_uicc_gk), ("must", df_uicc_must)]:
-    _ct, _ct_pct, _tidy = _gender_stage_crosstab(
-        _src_df, "uicc_tnm", f"UICC ({_src_label}, Hauptstufe)",
-        mapper=_uicc_to_main_stage, drop_values={"missing"},
-    )
-    ct_uicc_gender_by_src[_src_label] = _ct
-    ct_uicc_gender_pct_by_src[_src_label] = _ct_pct
-    _tidy_uicc_list.append(_tidy)
-# ECOG × Geschlecht  – bekannte Werte (0–4), 'U' raus (einmal)
-ct_ecog_gender, ct_ecog_gender_pct, _tidy_ecog = _gender_stage_crosstab(
-    df_ecog_gk, "ecog_performance_status", "ECOG",
-    mapper=lambda v: "missing" if str(v).strip().upper() in ("U", "", "UNKNOWN", "X") else str(v).strip(),
-    drop_values={"missing"},
-)
-
-# ── Als DataFrame rausschreiben (beide UICC-Quellen + ECOG) ──────────────────
-DIR_GK.mkdir(parents=True, exist_ok=True)
-_gender_out = pd.concat(_tidy_uicc_list + [_tidy_ecog], ignore_index=True)
-_gender_xlsx = DIR_GK / "geschlechtervergleich_uicc_ecog_erstdiagnose.xlsx"
-_gender_out.to_excel(_gender_xlsx, index=False)
-print(f"\n  [EXPORT] Geschlechtervergleich (oBDS + MUST + ECOG) → {_gender_xlsx}")
-print("━" * 70)
-
-
 # ── Therapien  (nur K & P Intention; gefiltert auf GK) ───────────────────────
 print(f"\n  [LOAD] Therapien – alle drei Typen auf GK gefiltert (intention K & P):")
 print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
@@ -760,7 +574,6 @@ def _load_therapy(df, dropna_cols: list) -> pd.DataFrame:
     df = df[df["condition_id_hash"].isin(cond_ids_gk)]
     df = df.replace("", "unknown")
     _n_before_kp = len(df)
-    #TODO: hier die gesamtzahl eingeben.
     df = df[df["therapy_intention"].isin(["K", "P"])]
     return df
 
@@ -810,289 +623,302 @@ print(
     f"ohne Therapieeintrag: {_n3_cond - len(_cond_any_therapy):,}"
 )
 
+#TODO: Bugfixing unbedingt wieder einfügen!
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ABSCHNITT B  –  NEBENDIAGNOSEN
-# Grundkohorte: patient_resource_id_hash aus df_tumore (Top-20 Entitäten).
-# Patienten-Level (nicht cond_id-Level), da Nebendiagnosen keine condition_id haben.
-# ══════════════════════════════════════════════════════════════════════════════
+# # ══════════════════════════════════════════════════════════════════════════════
+# # ABSCHNITT B  –  NEBENDIAGNOSEN
+# # Grundkohorte: patient_resource_id_hash aus df_tumore (Top-20 Entitäten).
+# # Patienten-Level (nicht cond_id-Level), da Nebendiagnosen keine condition_id haben.
+# # ══════════════════════════════════════════════════════════════════════════════
+#
+# DIR_NEBENDIAG.mkdir(parents=True, exist_ok=True)
+#
+# print("\n" + "━" * 70)
+# print("ABSCHNITT B  –  NEBENDIAGNOSEN")
+# print("  Analyse auf Patienten-Level (patient_resource_id_hash), da Neben-")
+# print("  diagnosen keine condition_id tragen. Master: df_tumore (GK, Top-20).")
+# print("━" * 70)
+#
+# # ── Ressourcenpfade ───────────────────────────────────────────────────────────
+# ICD_MAPPING_PATH = os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet")
+#
+# ICD_HIERARCHY_CSV = os.path.join(DATA, "icd10gm2026_basecode_lookup.csv")
+# NEBENDIAG_EXCEL = os.path.join(DATA, "Nebendiagnosen_Zuordnung_Ebenen_Domaenen_v1.xlsx")
+#
+# # ── Join-Konfiguration (EINSTELLBAR, STANDORTABHÄNGIG) ───────────────────────
+# # Der Patienten-Join Nebendiagnosen ↔ Tumore läuft je Standort über
+# # UNTERSCHIEDLICHE Spalten:
+# #   • UKER:        Nebendiag. 'condition_patient_reference_hash' ↔ Tumore 'patient_resource_id_hash'
+# #   • alle anderen:Nebendiag. 'patient_mrn_hash'                 ↔ Tumore 'patid_pseudonym_hash'
+# # Die Befüllung beider Spalten ist je Tabelle identisch; entscheidend ist nur,
+# # WELCHE Spalte je Standort den Match liefert.
+# # Pro Standort als (Nebendiag.-Spalte, Tumor-Spalte) konfigurierbar:
+# JOIN_COLS_BY_SITE = {
+#     "uker": ("condition_patient_reference_hash", "patient_resource_id_hash"),
+#     "tum":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+#     "uka":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+#     "lmu":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+#     "ukr":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+#     "ukw":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+# }
+# # Fallback für Standorte, die oben nicht gelistet sind:
+# JOIN_COLS_DEFAULT = ("patient_mrn_hash", "patid_pseudonym_hash")
+# TOP_N_NEBEN = 20
+#
+# # ── Einheitlichen Join-Key je Seite bauen (standortabhängig befüllt) ─────────
+# # Idee: Auf beiden Tabellen wird EINE neue Spalte '_join_key' erzeugt, die je
+# # Zeile aus der für den Standort korrekten Quellspalte stammt. Danach kann
+# # klassisch über '_join_key' verglichen/gefiltert werden.
+# def _build_join_key(df, side: str) -> pd.Series:
+#     """side='neben' → erste Tupelspalte, side='tumore' → zweite Tupelspalte.
+#     Baut den Join-Key vektorisiert: pro Standort wird die korrekte Quellspalte
+#     übernommen. Effizient auch bei mehreren Mio. Zeilen."""
+#     idx = 0 if side == "neben" else 1
+#     if "site" not in df.columns:
+#         raise KeyError("Spalte 'site' fehlt – wird für den standortabhängigen Join benötigt.")
+#     site_lower = df["site"].astype(str).str.lower()
+#     key = pd.Series(pd.NA, index=df.index, dtype="object")
+#     for _site in site_lower.unique():
+#         col = JOIN_COLS_BY_SITE.get(_site, JOIN_COLS_DEFAULT)[idx]
+#         mask = site_lower == _site
+#         if col in df.columns:
+#             key.loc[mask] = df.loc[mask, col].values
+#         else:
+#             print(f"    ⚠ Standort {_site.upper()}: Spalte '{col}' fehlt ({side}) – keine Keys gesetzt.")
+#     return key
+#
+# # ── ICD-Mapping & Hierarchie laden ───────────────────────────────────────────
+# _icd_lookup_neben = pd.read_parquet(ICD_MAPPING_PATH)
+# _icd_dict = _icd_lookup_neben.set_index("ICD_CODE")["ICD_NAME"].to_dict()
+# _icd_dict_base = _icd_lookup_neben.set_index("ICD3_CODE")["ICD3_NAME"].to_dict()
+#
+# lookup_df_icd = icd10gm2026_hierarchy_fast_helper.load_icd_hierarchy_lookup(ICD_HIERARCHY_CSV)
+#
+# # ── Nebendiagnosen-Einteilung laden ──────────────────────────────────────────
+# icd_nebendiagnosen_einteilung = pd.read_excel(NEBENDIAG_EXCEL, sheet_name="Code_Zuordnung")
+#
+# # ── Vollständiges Patienten-Universum der GK (vor Nebendiagnosen-Filter) ──────
+# # Wird für Log-Histogramm und Lorenz-Kurve benötigt, damit Patienten mit
+# # 0 Nebendiagnosen korrekt als Balken bei x=0 erscheinen.
+# # Tumor-seitigen Join-Key standortabhängig bauen.
+# df_tumore = df_tumore.copy()
+# df_tumore["_join_key"] = _build_join_key(df_tumore, side="tumore")
+# all_patient_ids_gk = pd.Index(df_tumore["_join_key"].dropna().unique())
+# print(
+#     f"\n  Patienten-Universum GK: {len(all_patient_ids_gk):,} eindeutige Join-Keys (standortabhängig)"
+# )
+# print(f"  (Patienten mit 0 Nebendiagnosen werden in Lorenz/Histogramm als x=0 eingeschlossen)")
+#
+# # ── Nebendiagnosen laden & C-Diagnosen entfernen ─────────────────────────────
+# print(f"\n  [LOAD] Nebendiagnosen: df_mii_conditions_all_obds_pats_asserted_deidentified.parquet")
+# df_conditions_raw = df_mii_conditions
+# _n_cond_raw = len(df_conditions_raw)
+# # C-Codes = Tumordiagnosen → raus; D-Codes bleiben als Nebendiagnosen
+# df_conditions_raw = df_conditions_raw[~df_conditions_raw["icd_code"].str.contains("C", na=False)]
+# print(
+#     f"    Roh: {_n_cond_raw:,} Zeilen  →  {len(df_conditions_raw):,} nach Entfernen von C-Diagnosen"
+# )
+# print(f"    (C-Codes = Tumordiagnosen werden ausgeschlossen; D-Diagnosen bleiben)")
+#
+# # ── ICD-Hierarchie mappen ─────────────────────────────────────────────────────
+# print(f"\n  [MAP] ICD-Hierarchie via icd10gm2026_hierarchy_fast_helper")
+# print(f"    Adds: icd_basecode, group_range/title, chapter_range/title")
+# df_conditions_mapped = icd10gm2026_hierarchy_fast_helper.map_icd_dataframe_fast(
+#     df=df_conditions_raw,
+#     lookup_df=lookup_df_icd,
+#     code_col="icd_code",
+# )
+# df_conditions_mapped["icd_basecode"] = df_conditions_mapped["icd_code"].apply(
+#     lambda x: x.split(".")[0] if pd.notna(x) else x
+# )
+# df_conditions_mapped["ICD_NAME"] = df_conditions_mapped["icd_code"].map(_icd_dict)
+# df_conditions_mapped["ICD_BASE_NAME"] = df_conditions_mapped["icd_basecode"].map(_icd_dict_base)
+# df_conditions_mapped["group_full"] = (
+#     df_conditions_mapped["group_range"] + ": " + df_conditions_mapped["group_title"]
+# )
+# df_conditions_mapped["chapter_full"] = (
+#     df_conditions_mapped["chapter_range"] + ": " + df_conditions_mapped["chapter_title"]
+# )
+#
+# # ── Standortabhängigen Join-Key auf Nebendiagnosen-Seite bauen ───────────────
+# df_conditions_mapped["_join_key"] = _build_join_key(df_conditions_mapped, side="neben")
+#
+# # ── Join-Diagnostik: matchen die IDs pro Standort? ───────────────────────────
+# print(f"\n  [DIAGNOSE] Standortabhängiger Join-Test (Nebendiag. ↔ Tumore):")
+# _gk_ids_all = set(all_patient_ids_gk)
+# _neben_ids_all = set(df_conditions_mapped["_join_key"].dropna().unique())
+# _matched_ids = _neben_ids_all & _gk_ids_all
+# print(f"    Eindeutige Join-Keys Nebendiagnosen: {len(_neben_ids_all):,}")
+# print(f"    Eindeutige Join-Keys GK-Tumore:      {len(_gk_ids_all):,}")
+# print(f"    Schnittmenge (matchen):              {len(_matched_ids):,}")
+# if len(_neben_ids_all) > 0:
+#     print(f"    Match-Rate (Nebendiag.-Seite): {100 * len(_matched_ids) / len(_neben_ids_all):.1f}%")
+# if "site" in df_conditions_mapped.columns:
+#     print(f"    Match pro Standort (mit jeweils standortspezifischen Spalten):")
+#     for _site, _grp in df_conditions_mapped.groupby("site"):
+#         _ncol, _tcol = JOIN_COLS_BY_SITE.get(str(_site).lower(), JOIN_COLS_DEFAULT)
+#         _site_ids = set(_grp["_join_key"].dropna().unique())
+#         _site_match = _site_ids & _gk_ids_all
+#         _pct = 100 * len(_site_match) / len(_site_ids) if _site_ids else 0
+#         _flag = "  ⚠ AUFFÄLLIG WENIG" if _pct < 50 else ""
+#         print(f"      {str(_site).upper():<6} [{_ncol} ↔ {_tcol}]")
+#         print(f"             {len(_grp):>9,} Zeilen  |  IDs: {len(_site_ids):>8,}  |  match: {len(_site_match):>8,} ({_pct:.1f}%){_flag}")
+#
+# # Auf Patienten der GK einschränken (über den standortabhängigen Join-Key)
+# df_conditions_mapped = df_conditions_mapped[
+#     df_conditions_mapped["_join_key"].isin(all_patient_ids_gk)
+# ]
+# _n_with_neben = df_conditions_mapped["_join_key"].nunique()
+# _n_without = len(all_patient_ids_gk) - _n_with_neben
+#
+# print(
+#     f"\n  [FILTER] Auf GK-Patienten einschränken (_join_key ∈ all_patient_ids_gk):"
+# )
+# print(
+#     f"    Nebendiagnosen-Zeilen: {len(df_conditions_mapped):,}  |  "
+#     f"Patienten mit ≥1 Nebendiagnose: {_n_with_neben:,}  |  "
+#     f"Patienten ohne Nebendiagnose: {_n_without:,}"
+# )
+# print(
+#     f"    HINWEIS: Dies sind die Zahlen VOR der klinischen Filterung (Kerscher-Liste /"
+# )
+# print(
+#     f"    icd_nebendiagnosen_einteilung). Die klinisch gefilterten Zahlen werden in der"
+# )
+# print(
+#     f"    Plot-Methode run_nebendiagnosen_report ermittelt und dort zusätzlich ausgegeben."
+# )
+#
+# print(f"\n  [EXPORT] ICD_NAME_NebenDiagnosen_value_counts.xlsx  (rohe Häufigkeiten)")
+# # ── Rohe Value Counts exportieren ─────────────────────────────────────────────
+# df_conditions_mapped["ICD_NAME"].value_counts().to_excel(
+#     DIR_NEBENDIAG / "ICD_NAME_NebenDiagnosen_value_counts.xlsx"
+# )
+#
+# # ── Level-Konfiguration ───────────────────────────────────────────────────────
+# level_configs_neben = [
+#     LevelConfig("ICD_NAME", "ICD_NAME", "Full ICD code"),
+#     LevelConfig("ICD_BASE_NAME", "ICD_BASE_NAME", "Base code (3-digit)"),
+#     LevelConfig("group_full", "group_full", "ICD group"),
+#     LevelConfig("chapter_full", "chapter_full", "ICD chapter"),
+# ]
+#
+# # ── Report starten ────────────────────────────────────────────────────────────
+# print(f"\n  [REPORT] run_nebendiagnosen_report startet …")
+# print(f"    Level: ICD_NAME, ICD_BASE_NAME, group_full, chapter_full")
+# print(f"    Modi: 'all' + 'unique'  |  Top-N: {TOP_N_NEBEN}")
+# print(f"    Filter: standard (alle) + core_comorbidity (In_Core_Comorbidity_Analysis==Ja)")
+# results_neben = run_nebendiagnosen_report(
+#     df=df_conditions_mapped,
+#     patient_col="_join_key",
+#     level_configs=level_configs_neben,
+#     cohort_name="GK-Top20",
+#     modes=["all", "unique"],
+#     top_n=TOP_N_NEBEN,
+#     output_dir=DIR_NEBENDIAG,
+#     show=False,
+#     show_title=False,
+#     icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung,
+#     icd_code_col_in_df="icd_code",
+#     icd_code_col_in_mapping="ICD_Code",
+#     all_patient_ids=all_patient_ids_gk,
+# )
+# print("Speichern im Nebendiagnose Unterordner im Plotordner")
+# print(f"  ✓ Abschnitt B abgeschlossen  →  {DIR_NEBENDIAG}")
+#
+#
+# # ══════════════════════════════════════════════════════════════════════════════
+# # ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre)
+# # Plots: Überblick über die Kohorte vor jeglichem zeitlichem Filter.
+# # ══════════════════════════════════════════════════════════════════════════════
+#
+# DIR_GK.mkdir(parents=True, exist_ok=True)
+#
+# print("\n" + "━" * 70)
+# print("ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre, alle Therapien K+P)")
+# print(f"  Master: df_tumore  |  {_n3_cond:,} cond_ids  |  {_n3_pat:,} Patienten")
+# print(
+#     f"  Therapien: OP {len(df_ops_gk):,}  Zeilen | Radio {len(df_radio_gk):,} Zeilen | System {len(df_system_gk):,} Zeilen"
+# )
+# print("━" * 70)
+#
+# df_alle_gk = pd.concat(
+#     [df_radio_gk[_TCOLS], df_system_gk[_TCOLS], df_ops_gk[_TCOLS]],
+#     ignore_index=True,
+# )
+# print(f"\n  df_alle_gk: {len(df_alle_gk):,} Therapiezeilen gesamt (alle Typen)")
+#
+# # ── Plot 1: Altersverteilung  (5-Jahres- und 10-Jahres-Gruppen) ──────────────
+# print(f"\n  [PLOT] Altersverteilung je Therapietyp → age_dist_5yr.tiff / age_dist_10yr.tiff")
+# for bracket, fname in [(5, "age_dist_5yr.tiff"), (10, "age_dist_10yr.tiff")]:
+#     plot_age_distribution_grouped_bar(
+#         dataframes={
+#             "Surgical Procedure": df_ops_gk,
+#             "Systemic Therapy": df_system_gk,
+#             "Radiation Therapy": df_radio_gk,
+#         },
+#         age_column="age_at_diagnosis",
+#         age_bracket=bracket,
+#         title=False,
+#         save_path=str(DIR_GK / fname),
+#     )
+#
+# # ── Plot 2: Bias-Analyse  (Diagnosejahr vs. rel. Therapiestart) ──────────────
+# print(f"  [PLOT] Bias-Analyse Diagnosejahr vs. rel. Therapiestart → bias_op/system/radio.tiff")
+# print(f"    Zeigt: Zusammenhang zwischen Diagnosejahr und Zeitabstand Diagnose→Therapie")
+# print(f"    Detektiert Meldebias (ältere Jahre: lückenhafte Therapiedokumentation)")
+# for df_t, name in [(df_ops_gk, "op"), (df_system_gk, "system"), (df_radio_gk, "radio")]:
+#     plot_therapy_bias_analysis(
+#         df_t,
+#         relative_col="months_between_asserted_therapy_start_date",
+#         diagnosis_year_col="asserted_year",
+#         figsize=(10, 4),
+#         save_path=str(DIR_GK / f"bias_{name}.tiff"),
+#     )
+#
+# # ── Plot 3: UICC/ECOG Inventar  (GK-OBDS + MUST) ─────────────────────────────
+# print(f"  [PLOT] UICC/ECOG Inventar → uicc_ecog_inventory.tiff + uicc_ecog_inventory_must.tiff")
+# print(f"    Zeigt: Bestand und Staging-Verteilung vor Zeitfilter")
+# #df_uicc_gk["uicc_tnm"].value_counts().sum()
+# plot_uicc_inventory_comparison(
+#     df_uicc_gk=df_uicc_gk,
+#     df_uicc_must=df_uicc_must,
+#     df_ecog=df_ecog_gk,
+#     n_total=cond_ids_gk.nunique(),
+#     out_dir=DIR_GK,
+# )
+#
+# # ── Plot 4: Lorenz-Kurve + Log-Histogramm  (alle Therapien konkateniert) ──────
+# print(f"  [PLOT] Lorenz-Kurve Therapieverteilung → lorenz.tiff")
+# print(f"    Zeigt: Wie ungleich sind Therapien auf cond_ids verteilt?")
+# plot_lorenz_curve(
+#     df_alle_gk,
+#     n_total_patients=cond_ids_gk.nunique(),
+#     cond_col="condition_id_hash",
+#     output_path=DIR_GK / "lorenz.tiff",
+# )
+# print(f"  [PLOT] Log-Histogramm Therapieverteilung → log_histo.tiff")
+# print(f"    Zeigt: Häufigkeitsverteilung der Therapieanzahl pro cond_id (log-skaliert)")
+# plot_log_histogram(
+#     df_alle_gk,
+#     n_total_patients=cond_ids_gk.nunique(),
+#     cond_col="condition_id_hash",
+#     output_path=DIR_GK / "log_histo.tiff",
+# )
 
-DIR_NEBENDIAG.mkdir(parents=True, exist_ok=True)
 
-print("\n" + "━" * 70)
-print("ABSCHNITT B  –  NEBENDIAGNOSEN")
-print("  Analyse auf Patienten-Level (patient_resource_id_hash), da Neben-")
-print("  diagnosen keine condition_id tragen. Master: df_tumore (GK, Top-20).")
-print("━" * 70)
-
-# ── Ressourcenpfade ───────────────────────────────────────────────────────────
-ICD_MAPPING_PATH = os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet")
-
-ICD_HIERARCHY_CSV = os.path.join(DATA, "icd10gm2026_basecode_lookup.csv")
-NEBENDIAG_EXCEL = os.path.join(DATA, "Nebendiagnosen_Zuordnung_Ebenen_Domaenen_v1.xlsx")
-
-# ── Join-Konfiguration (EINSTELLBAR, STANDORTABHÄNGIG) ───────────────────────
-# Der Patienten-Join Nebendiagnosen ↔ Tumore läuft je Standort über
-# UNTERSCHIEDLICHE Spalten:
-#   • UKER:        Nebendiag. 'condition_patient_reference_hash' ↔ Tumore 'patient_resource_id_hash'
-#   • alle anderen:Nebendiag. 'patient_mrn_hash'                 ↔ Tumore 'patid_pseudonym_hash'
-# Die Befüllung beider Spalten ist je Tabelle identisch; entscheidend ist nur,
-# WELCHE Spalte je Standort den Match liefert.
-# Pro Standort als (Nebendiag.-Spalte, Tumor-Spalte) konfigurierbar:
-JOIN_COLS_BY_SITE = {
-    "uker": ("condition_patient_reference_hash", "patient_resource_id_hash"),
-    "tum":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "uka":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "lmu":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "ukr":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "ukw":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-}
-# Fallback für Standorte, die oben nicht gelistet sind:
-JOIN_COLS_DEFAULT = ("patient_mrn_hash", "patid_pseudonym_hash")
-TOP_N_NEBEN = 20
-
-# ── Einheitlichen Join-Key je Seite bauen (standortabhängig befüllt) ─────────
-# Idee: Auf beiden Tabellen wird EINE neue Spalte '_join_key' erzeugt, die je
-# Zeile aus der für den Standort korrekten Quellspalte stammt. Danach kann
-# klassisch über '_join_key' verglichen/gefiltert werden.
-def _build_join_key(df, side: str) -> pd.Series:
-    """side='neben' → erste Tupelspalte, side='tumore' → zweite Tupelspalte.
-    Baut den Join-Key vektorisiert: pro Standort wird die korrekte Quellspalte
-    übernommen. Effizient auch bei mehreren Mio. Zeilen."""
-    idx = 0 if side == "neben" else 1
-    if "site" not in df.columns:
-        raise KeyError("Spalte 'site' fehlt – wird für den standortabhängigen Join benötigt.")
-    site_lower = df["site"].astype(str).str.lower()
-    key = pd.Series(pd.NA, index=df.index, dtype="object")
-    for _site in site_lower.unique():
-        col = JOIN_COLS_BY_SITE.get(_site, JOIN_COLS_DEFAULT)[idx]
-        mask = site_lower == _site
-        if col in df.columns:
-            key.loc[mask] = df.loc[mask, col].values
-        else:
-            print(f"    ⚠ Standort {_site.upper()}: Spalte '{col}' fehlt ({side}) – keine Keys gesetzt.")
-    return key
-
-# ── ICD-Mapping & Hierarchie laden ───────────────────────────────────────────
-_icd_lookup_neben = pd.read_parquet(ICD_MAPPING_PATH)
-_icd_dict = _icd_lookup_neben.set_index("ICD_CODE")["ICD_NAME"].to_dict()
-_icd_dict_base = _icd_lookup_neben.set_index("ICD3_CODE")["ICD3_NAME"].to_dict()
-
-lookup_df_icd = icd10gm2026_hierarchy_fast_helper.load_icd_hierarchy_lookup(ICD_HIERARCHY_CSV)
-
-# ── Nebendiagnosen-Einteilung laden ──────────────────────────────────────────
-icd_nebendiagnosen_einteilung = pd.read_excel(NEBENDIAG_EXCEL, sheet_name="Code_Zuordnung")
-
-# ── Vollständiges Patienten-Universum der GK (vor Nebendiagnosen-Filter) ──────
-# Wird für Log-Histogramm und Lorenz-Kurve benötigt, damit Patienten mit
-# 0 Nebendiagnosen korrekt als Balken bei x=0 erscheinen.
-# Tumor-seitigen Join-Key standortabhängig bauen.
-df_tumore = df_tumore.copy()
-df_tumore["_join_key"] = _build_join_key(df_tumore, side="tumore")
-all_patient_ids_gk = pd.Index(df_tumore["_join_key"].dropna().unique())
-print(
-    f"\n  Patienten-Universum GK: {len(all_patient_ids_gk):,} eindeutige Join-Keys (standortabhängig)"
-)
-print(f"  (Patienten mit 0 Nebendiagnosen werden in Lorenz/Histogramm als x=0 eingeschlossen)")
-
-# ── Nebendiagnosen laden & C-Diagnosen entfernen ─────────────────────────────
-print(f"\n  [LOAD] Nebendiagnosen: df_mii_conditions_all_obds_pats_asserted_deidentified.parquet")
-df_conditions_raw = df_mii_conditions
-_n_cond_raw = len(df_conditions_raw)
-# C-Codes = Tumordiagnosen → raus; D-Codes bleiben als Nebendiagnosen
-df_conditions_raw = df_conditions_raw[~df_conditions_raw["icd_code"].str.contains("C", na=False)]
-print(
-    f"    Roh: {_n_cond_raw:,} Zeilen  →  {len(df_conditions_raw):,} nach Entfernen von C-Diagnosen"
-)
-print(f"    (C-Codes = Tumordiagnosen werden ausgeschlossen; D-Diagnosen bleiben)")
-
-# ── ICD-Hierarchie mappen ─────────────────────────────────────────────────────
-print(f"\n  [MAP] ICD-Hierarchie via icd10gm2026_hierarchy_fast_helper")
-print(f"    Adds: icd_basecode, group_range/title, chapter_range/title")
-df_conditions_mapped = icd10gm2026_hierarchy_fast_helper.map_icd_dataframe_fast(
-    df=df_conditions_raw,
-    lookup_df=lookup_df_icd,
-    code_col="icd_code",
-)
-df_conditions_mapped["icd_basecode"] = df_conditions_mapped["icd_code"].apply(
-    lambda x: x.split(".")[0] if pd.notna(x) else x
-)
-df_conditions_mapped["ICD_NAME"] = df_conditions_mapped["icd_code"].map(_icd_dict)
-df_conditions_mapped["ICD_BASE_NAME"] = df_conditions_mapped["icd_basecode"].map(_icd_dict_base)
-df_conditions_mapped["group_full"] = (
-    df_conditions_mapped["group_range"] + ": " + df_conditions_mapped["group_title"]
-)
-df_conditions_mapped["chapter_full"] = (
-    df_conditions_mapped["chapter_range"] + ": " + df_conditions_mapped["chapter_title"]
-)
-
-# ── Standortabhängigen Join-Key auf Nebendiagnosen-Seite bauen ───────────────
-df_conditions_mapped["_join_key"] = _build_join_key(df_conditions_mapped, side="neben")
-
-# ── Join-Diagnostik: matchen die IDs pro Standort? ───────────────────────────
-print(f"\n  [DIAGNOSE] Standortabhängiger Join-Test (Nebendiag. ↔ Tumore):")
-_gk_ids_all = set(all_patient_ids_gk)
-_neben_ids_all = set(df_conditions_mapped["_join_key"].dropna().unique())
-_matched_ids = _neben_ids_all & _gk_ids_all
-print(f"    Eindeutige Join-Keys Nebendiagnosen: {len(_neben_ids_all):,}")
-print(f"    Eindeutige Join-Keys GK-Tumore:      {len(_gk_ids_all):,}")
-print(f"    Schnittmenge (matchen):              {len(_matched_ids):,}")
-if len(_neben_ids_all) > 0:
-    print(f"    Match-Rate (Nebendiag.-Seite): {100 * len(_matched_ids) / len(_neben_ids_all):.1f}%")
-if "site" in df_conditions_mapped.columns:
-    print(f"    Match pro Standort (mit jeweils standortspezifischen Spalten):")
-    for _site, _grp in df_conditions_mapped.groupby("site"):
-        _ncol, _tcol = JOIN_COLS_BY_SITE.get(str(_site).lower(), JOIN_COLS_DEFAULT)
-        _site_ids = set(_grp["_join_key"].dropna().unique())
-        _site_match = _site_ids & _gk_ids_all
-        _pct = 100 * len(_site_match) / len(_site_ids) if _site_ids else 0
-        _flag = "  ⚠ AUFFÄLLIG WENIG" if _pct < 50 else ""
-        print(f"      {str(_site).upper():<6} [{_ncol} ↔ {_tcol}]")
-        print(f"             {len(_grp):>9,} Zeilen  |  IDs: {len(_site_ids):>8,}  |  match: {len(_site_match):>8,} ({_pct:.1f}%){_flag}")
-
-# Auf Patienten der GK einschränken (über den standortabhängigen Join-Key)
-df_conditions_mapped = df_conditions_mapped[
-    df_conditions_mapped["_join_key"].isin(all_patient_ids_gk)
-]
-_n_with_neben = df_conditions_mapped["_join_key"].nunique()
-_n_without = len(all_patient_ids_gk) - _n_with_neben
-
-print(
-    f"\n  [FILTER] Auf GK-Patienten einschränken (_join_key ∈ all_patient_ids_gk):"
-)
-print(
-    f"    Nebendiagnosen-Zeilen: {len(df_conditions_mapped):,}  |  "
-    f"Patienten mit ≥1 Nebendiagnose: {_n_with_neben:,}  |  "
-    f"Patienten ohne Nebendiagnose: {_n_without:,}"
-)
-print(
-    f"    HINWEIS: Dies sind die Zahlen VOR der klinischen Filterung (Kerscher-Liste /"
-)
-print(
-    f"    icd_nebendiagnosen_einteilung). Die klinisch gefilterten Zahlen werden in der"
-)
-print(
-    f"    Plot-Methode run_nebendiagnosen_report ermittelt und dort zusätzlich ausgegeben."
-)
-
-print(f"\n  [EXPORT] ICD_NAME_NebenDiagnosen_value_counts.xlsx  (rohe Häufigkeiten)")
-# ── Rohe Value Counts exportieren ─────────────────────────────────────────────
-df_conditions_mapped["ICD_NAME"].value_counts().to_excel(
-    DIR_NEBENDIAG / "ICD_NAME_NebenDiagnosen_value_counts.xlsx"
-)
-
-# ── Level-Konfiguration ───────────────────────────────────────────────────────
-level_configs_neben = [
-    LevelConfig("ICD_NAME", "ICD_NAME", "Full ICD code"),
-    LevelConfig("ICD_BASE_NAME", "ICD_BASE_NAME", "Base code (3-digit)"),
-    LevelConfig("group_full", "group_full", "ICD group"),
-    LevelConfig("chapter_full", "chapter_full", "ICD chapter"),
-]
-
-# ── Report starten ────────────────────────────────────────────────────────────
-print(f"\n  [REPORT] run_nebendiagnosen_report startet …")
-print(f"    Level: ICD_NAME, ICD_BASE_NAME, group_full, chapter_full")
-print(f"    Modi: 'all' + 'unique'  |  Top-N: {TOP_N_NEBEN}")
-print(f"    Filter: standard (alle) + core_comorbidity (In_Core_Comorbidity_Analysis==Ja)")
-results_neben = run_nebendiagnosen_report(
-    df=df_conditions_mapped,
-    patient_col="_join_key",
-    level_configs=level_configs_neben,
-    cohort_name="GK-Top20",
-    modes=["all", "unique"],
-    top_n=TOP_N_NEBEN,
-    output_dir=DIR_NEBENDIAG,
-    show=False,
-    show_title=False,
-    icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung,
-    icd_code_col_in_df="icd_code",
-    icd_code_col_in_mapping="ICD_Code",
-    all_patient_ids=all_patient_ids_gk,
-)
-print("Speichern im Nebendiagnose Unterordner im Plotordner")
-print(f"  ✓ Abschnitt B abgeschlossen  →  {DIR_NEBENDIAG}")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre)
-# Plots: Überblick über die Kohorte vor jeglichem zeitlichem Filter.
-# ══════════════════════════════════════════════════════════════════════════════
-
-DIR_GK.mkdir(parents=True, exist_ok=True)
-
-print("\n" + "━" * 70)
-print("ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre, alle Therapien K+P)")
-print(f"  Master: df_tumore  |  {_n3_cond:,} cond_ids  |  {_n3_pat:,} Patienten")
-print(
-    f"  Therapien: OP {len(df_ops_gk):,}  Zeilen | Radio {len(df_radio_gk):,} Zeilen | System {len(df_system_gk):,} Zeilen"
-)
-print("━" * 70)
-
-df_alle_gk = pd.concat(
-    [df_radio_gk[_TCOLS], df_system_gk[_TCOLS], df_ops_gk[_TCOLS]],
-    ignore_index=True,
-)
-print(f"\n  df_alle_gk: {len(df_alle_gk):,} Therapiezeilen gesamt (alle Typen)")
-
-# ── Plot 1: Altersverteilung  (5-Jahres- und 10-Jahres-Gruppen) ──────────────
-print(f"\n  [PLOT] Altersverteilung je Therapietyp → age_dist_5yr.tiff / age_dist_10yr.tiff")
-for bracket, fname in [(5, "age_dist_5yr.tiff"), (10, "age_dist_10yr.tiff")]:
-    plot_age_distribution_grouped_bar(
-        dataframes={
-            "Surgical Procedure": df_ops_gk,
-            "Systemic Therapy": df_system_gk,
-            "Radiation Therapy": df_radio_gk,
-        },
-        age_column="age_at_diagnosis",
-        age_bracket=bracket,
-        title=False,
-        save_path=str(DIR_GK / fname),
-    )
-
-# ── Plot 2: Bias-Analyse  (Diagnosejahr vs. rel. Therapiestart) ──────────────
-print(f"  [PLOT] Bias-Analyse Diagnosejahr vs. rel. Therapiestart → bias_op/system/radio.tiff")
-print(f"    Zeigt: Zusammenhang zwischen Diagnosejahr und Zeitabstand Diagnose→Therapie")
-print(f"    Detektiert Meldebias (ältere Jahre: lückenhafte Therapiedokumentation)")
-for df_t, name in [(df_ops_gk, "op"), (df_system_gk, "system"), (df_radio_gk, "radio")]:
-    plot_therapy_bias_analysis(
-        df_t,
-        relative_col="months_between_asserted_therapy_start_date",
-        diagnosis_year_col="asserted_year",
-        figsize=(10, 4),
-        save_path=str(DIR_GK / f"bias_{name}.tiff"),
-    )
-
-# ── Plot 3: UICC/ECOG Inventar  (GK-OBDS + MUST) ─────────────────────────────
-print(f"  [PLOT] UICC/ECOG Inventar → uicc_ecog_inventory.tiff + uicc_ecog_inventory_must.tiff")
-print(f"    Zeigt: Bestand und Staging-Verteilung vor Zeitfilter")
-#df_uicc_gk["uicc_tnm"].value_counts().sum()
-plot_uicc_inventory_comparison(
-    df_uicc_gk=df_uicc_gk,
-    df_uicc_must=df_uicc_must,
-    df_ecog=df_ecog_gk,
-    n_total=cond_ids_gk.nunique(),
-    out_dir=DIR_GK,
-)
-
-# ── Plot 4: Lorenz-Kurve + Log-Histogramm  (alle Therapien konkateniert) ──────
-print(f"  [PLOT] Lorenz-Kurve Therapieverteilung → lorenz.tiff")
-print(f"    Zeigt: Wie ungleich sind Therapien auf cond_ids verteilt?")
-plot_lorenz_curve(
-    df_alle_gk,
-    n_total_patients=cond_ids_gk.nunique(),
-    cond_col="condition_id_hash",
-    output_path=DIR_GK / "lorenz.tiff",
-)
-print(f"  [PLOT] Log-Histogramm Therapieverteilung → log_histo.tiff")
-print(f"    Zeigt: Häufigkeitsverteilung der Therapieanzahl pro cond_id (log-skaliert)")
-plot_log_histogram(
-    df_alle_gk,
-    n_total_patients=cond_ids_gk.nunique(),
-    cond_col="condition_id_hash",
-    output_path=DIR_GK / "log_histo.tiff",
-)
 
 # ── Plot 5: ECOG × UICC Nähe – PARALLEL für beide Quellen (oBDS + MUST) ──────
+print("FILTERUNG: Entferne Unkowns("U") und missing für ECOG und UICC")
+df_uicc_must = df_uicc_must[~(df_uicc_must["uicc_tnm"] == "missing")]
+df_uicc_gk = df_uicc_gk[~(df_uicc_gk["uicc_tnm"] == "missing")]
+df_ecog_gk = df_ecog_gk[~(df_ecog_gk["ecog_performance_status"] == "U")]
+
+UICC_SOURCES = [
+    ("obds", df_uicc_gk),
+    ("must", df_uicc_must),
+]
+
 print(f"\n  [PLOT] ECOG × UICC Zeitliche Nähe (keine Toleranz + 3M-Cutoff):")
 print(f"    Methode: nearest-date-Merge (direction=nearest) pro cond_id")
 print(f"    Läuft PARALLEL für beide UICC-Quellen (Dateien mit _obds / _must Suffix).")
