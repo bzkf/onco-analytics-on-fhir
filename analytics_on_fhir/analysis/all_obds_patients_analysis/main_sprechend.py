@@ -167,12 +167,6 @@ df_radiotherapies_joined = dfs["radiotherapies_joined"]
 df_systemtherapies = dfs["systemtherapies"]
 df_must_uicc_all = dfs["must_uicc"]
 
-df_obds = df_obds[~df_obds["icd10_code"].str.startswith(("C44", "D"), na=False)]
-print(df_obds.shape[0])
-df_obds = df_obds[df_obds["asserted_year"] >= asserted_year]
-print(df_obds.shape[0])
-df_obds.shape[0]
-
 
 DATA = Path(
     r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\resources"
@@ -271,18 +265,14 @@ print(f"    Zeilen: {_n0_rows:,}  |  cond_ids: {_n0_cond:,}  |  Patienten: {_n0_
 
 # ── Filter 1: D-Diagnosen entfernen (gutartige Neubildungen) ──────────────────
 print("\n  [FILTER 1] Entferne D-Diagnosen (icd10_parent_code enthält 'D'):")
-df_tumore = df_tumore[~df_tumore["icd10_parent_code"].str.contains("D", na=False)]
+df_tumore = df_tumore[~df_tumore["icd10_parent_code"].str.startswith("D", na=False)]
 _n1_cond = df_tumore["condition_id_hash"].nunique()
 _log_filter("D-Diagnosen entfernt", _n0_cond, _n1_cond)
 
 # ── Filter 2: C44 entfernen (Hauttumoren – keine systemische Relevanz) ────────
 print("\n  [FILTER 2] Entferne C44 (Bösartige Neubildungen der Haut):")
-df_tumore = df_tumore[
-    ~df_tumore[["icd10_parent_code"]]
-    .astype(str)
-    .apply(lambda s: s.str.contains("C44", na=False))
-    .any(axis=1)
-]
+df_tumore = df_tumore[~df_tumore["icd10_parent_code"].str.startswith("C44", na=False)]
+
 _n2_cond = df_tumore["condition_id_hash"].nunique()
 _log_filter("C44 entfernt", _n1_cond, _n2_cond)
 
@@ -302,9 +292,9 @@ print("\n  [MERGE] ICD-Klartextnamen (DWH_ICD_CODE_MAPPING) → left join auf ic
 _icd_lookup = pd.read_parquet(os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet"))[
     ["ICD3_CODE", "ICD3_NAME"]
 ].drop_duplicates()
-df_tumore = df_tumore.merge(
-    _icd_lookup, left_on="icd10_parent_code", right_on="ICD3_CODE", how="left"
-)
+# df_tumore = df_tumore.merge(
+#     _icd_lookup, left_on="icd10_parent_code", right_on="ICD3_CODE", how="left"
+# )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ABSCHNITT A  –  BUTTERFLY-PLOT  (Demographischer Alters-/Geschlechts-Baum)
@@ -403,6 +393,12 @@ _wk_uicc = (
     )
     .loc[:, lambda d: ~d.columns.duplicated()]
 )
+_wk_uicc = (
+    _wk_uicc.dropna(
+        subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+    )
+)
+
 _wk_with_time = _wk_uicc["months_between_asserted_uicc_tnm_date"].notna().sum() if "months_between_asserted_uicc_tnm_date" in _wk_uicc.columns else 0
 print(
     f"    weitere_klassifikation → UICC-Einträge: {len(_wk_uicc):,} Zeilen  |  cond_ids: {_wk_uicc['condition_id_hash'].nunique():,}"
@@ -459,6 +455,10 @@ df_uicc_must = (
     })
     .pipe(lambda d: d[d["condition_id_hash"].isin(cond_ids_gk)])
     .reset_index(drop=True)
+)
+df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
+df_uicc_must = df_uicc_must.dropna(
+    subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
 )
 _must_known = df_uicc_must["uicc_tnm"].notna().sum()
 _must_miss = df_uicc_must["uicc_tnm"].isna().sum()
@@ -541,13 +541,13 @@ def _prep_uicc_time(df, label):
     return out
 
 print(f"\n  [PREP] Beide UICC-Quellen für zeitbasierte Merges aufbereitet (dropna + sort):")
-df_uicc_obds_time = _prep_uicc_time(df_uicc_gk, "obds")
-df_uicc_must_time = _prep_uicc_time(df_uicc_must, "must")
+df_uicc_gk = _prep_uicc_time(df_uicc_gk, "obds")
+df_uicc_must = _prep_uicc_time(df_uicc_must, "must")
 
 # Parallel-Quellenliste: über diese wird jede UICC-Analyse doppelt gefahren.
 UICC_SOURCES = [
-    ("obds", df_uicc_obds_time),
-    ("must", df_uicc_must_time),
+    ("obds", df_uicc_gk),
+    ("must", df_uicc_must),
 ]
 print(f"    → Parallelbetrieb: beide Quellen laufen durch alle UICC-Plots/Merges (_obds / _must).")
 
@@ -591,14 +591,9 @@ def _uicc_diag(df, name, time_col="months_between_asserted_uicc_tnm_date",
         print(f"    Spalte '{time_col}' NICHT vorhanden!")
     return set(df.loc[has_time, cond_col].unique()) if time_col in df.columns else set()
 
-_obds_full = pd.concat([
-    df_uicc_tnm[df_uicc_tnm["condition_id_hash"].isin(cond_ids_gk)],
-    _wk_uicc,
-], ignore_index=True, sort=False)
-_obds_time_ids = _uicc_diag(_obds_full, "oBDS (df_uicc_tnm + weitere_klassifikation, roh)")
-_ = _uicc_diag(df_uicc_gk, "oBDS df_uicc_gk (im Vergleichsplot genutzt)")
-_ = _uicc_diag(df_uicc_must, "MUST df_uicc_must (roh, GK-gefiltert)")
-_must_time_ids = _uicc_diag(df_uicc_must_time, "MUST df_uicc_must_time (im Merge genutzt)")
+
+_obds_time_ids = _uicc_diag(df_uicc_gk, "oBDS df_uicc_gk (im Vergleichsplot genutzt)")
+_must_time_ids = _uicc_diag(df_uicc_must, "MUST df_uicc_must (roh, GK-gefiltert)")
 
 print(f"\n  ── Zeitstempel-fähige cond_ids (Schnittmengen) ──")
 print(f"    oBDS mit Zeitstempel:           {len(_obds_time_ids):>9,}")
@@ -608,18 +603,14 @@ print(f"    NUR oBDS (MUST fehlt Zeit):     {len(_obds_time_ids - _must_time_ids
 print(f"    NUR MUST (oBDS fehlt Zeit):     {len(_must_time_ids - _obds_time_ids):>9,}")
 
 print(f"\n  ── Zeitstempel-Wertebereich (months_between_asserted_uicc_tnm_date) ──")
-for _name, _df in [("oBDS", df_uicc_gk), ("MUST", df_uicc_must_time)]:
+for _name, _df in [("oBDS", df_uicc_gk), ("MUST", df_uicc_must)]:
     _col = "months_between_asserted_uicc_tnm_date"
     if _col in _df.columns:
         _s = pd.to_numeric(_df[_col], errors="coerce").dropna()
         if len(_s):
             print(f"    {_name:<6}: min={_s.min():.1f}  median={_s.median():.1f}  max={_s.max():.1f}  |  n={len(_s):,}")
 
-print(f"\n  ── dtype Zeitstempel ──")
-for _name, _df in [("oBDS df_uicc_gk", df_uicc_gk), ("MUST df_uicc_must_time", df_uicc_must_time)]:
-    _col = "months_between_asserted_uicc_tnm_date"
-    if _col in _df.columns:
-        print(f"    {_name:<24}: {_df[_col].dtype}")
+
 print("═" * 70)
 
 
@@ -769,6 +760,7 @@ def _load_therapy(df, dropna_cols: list) -> pd.DataFrame:
     df = df[df["condition_id_hash"].isin(cond_ids_gk)]
     df = df.replace("", "unknown")
     _n_before_kp = len(df)
+    #TODO: hier die gesamtzahl eingeben.
     df = df[df["therapy_intention"].isin(["K", "P"])]
     return df
 
@@ -1248,12 +1240,13 @@ for label, df_m, s in _overview:
 # ══════════════════════════════════════════════════════════════════════════════
 
 print("\n" + "━" * 70)
+print("UNGEFILTERT!!!!!!!!!!!!!!!!WAR AUF 2017, dirty hack um diesen Auszuschalten!!!!!!!!!!")
 print("FILTER 4  –  Jahresschnitt asserted_year >= 2017")
 print("  Rationale: Vor 2017 inkonsistente Meldepflicht → Completeness-Bias.")
 print("  Alle nachgelagerten DataFrames werden auf diesen Schnitt reduziert.")
 print("━" * 70)
 
-df_tumore_17 = df_tumore[df_tumore["asserted_year"] >= 2017]
+df_tumore_17 = df_tumore[df_tumore["asserted_year"] >= 1900]  #TODO: war auf 2017, dirty hack um diesen Auszuschalten
 cond_ids_17 = df_tumore_17["condition_id_hash"]
 _log_filter("asserted_year >= 2017", _n3_cond, cond_ids_17.nunique())
 print(f"  Patienten nach 2017-Filter: {df_tumore_17['patient_resource_id_hash'].nunique():,}")
