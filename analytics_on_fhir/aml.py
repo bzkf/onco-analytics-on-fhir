@@ -1624,6 +1624,14 @@ class AMLStudy:
                 inplace=False,
             )
 
+            # drop the default column raw pat id column if still present
+            # happens if during pseudonymization, both columns remained
+            zenzy_df = zenzy_df.drop(
+                columns=["KIS-Patienten-ID"],
+                inplace=False,
+                errors="ignore",
+            )
+
             zenzy_df.to_csv(de_identified_dir / "aml_zenzy.csv", index=False)
 
         # FHIR Medikation Statements, Requests, Administrations
