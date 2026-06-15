@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.33.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.3...v2.33.0) (2026-06-15)
+
+
+### Features
+
+* include progress, labs and summary stats in de-id output ([#523](https://github.com/bzkf/onco-analytics-on-fhir/issues/523)) ([cf853ac](https://github.com/bzkf/onco-analytics-on-fhir/commit/cf853ac6e2414830ffa74431c089cea07a89ec3c))
+
+
+### Bug Fixes
+
+* handle mixed timestamps ([#520](https://github.com/bzkf/onco-analytics-on-fhir/issues/520)) ([8835a9b](https://github.com/bzkf/onco-analytics-on-fhir/commit/8835a9b22ba3c08876d046cd58eb182838f394a2))
+* include all procedures in aml ([#524](https://github.com/bzkf/onco-analytics-on-fhir/issues/524)) ([f17c132](https://github.com/bzkf/onco-analytics-on-fhir/commit/f17c132a06dcff039b8cce4aa570580857a023c1))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump tornado from 6.5.5 to 6.5.6 ([#526](https://github.com/bzkf/onco-analytics-on-fhir/issues/526)) ([589c3a1](https://github.com/bzkf/onco-analytics-on-fhir/commit/589c3a1cfae47314cd90fee7609709c54426ac5c))
+
 ## [2.32.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.2...v2.32.3) (2026-06-11)
 
 
