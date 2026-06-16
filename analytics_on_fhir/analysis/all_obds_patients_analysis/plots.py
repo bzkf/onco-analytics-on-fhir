@@ -38,168 +38,25 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# ══════════════════════════════════════════════════════════════════════════════
-# GETEILTE KONSTANTEN
-# ══════════════════════════════════════════════════════════════════════════════
-UICC_MAPPING = {
-    "0": "0",
-    "0a": "0",
-    "0is": "0",
-    "I": "I",
-    "IA": "I",
-    "IA1": "I",
-    "IA2": "I",
-    "IA3": "I",
-    "IB": "I",
-    "IB1": "I",
-    "IB2": "I",
-    "IC": "I",
-    "II": "II",
-    "IIA": "II",
-    "IIA1": "II",
-    "IIA2": "II",
-    "IIB": "II",
-    "IIC": "II",
-    "III": "III",
-    "IIIA": "III",
-    "IIIB": "III",
-    "IIIC": "III",
-    "IIIC1": "III",
-    "IIIC2": "III",
-    "IIID": "III",
-    "IV": "IV",
-    "IVA": "IV",
-    "IVA1": "IV",
-    "IVB": "IV",
-    "IVC": "IV",
-}
-UICC_ORDER = ["missing", "0", "I", "II", "III", "IV"]
-ECOG_ORDER = ["0", "1", "2", "3", "4"]
-
-
-def map_uicc_to_main_stage(val):
-    """Mappt eine beliebige UICC-(Sub-)Stufe auf die Hauptstufe 0/I/II/III/IV.
-    Unbekanntes/U/X/leer → 'missing'. Zentrale Funktion für ALLE Plots."""
-    if val is None or (isinstance(val, float) and np.isnan(val)):
-        return "missing"
-    s = str(val).strip().upper()
-    if s in ("", "MISSING", "U", "UNKNOWN", "X", "NAN"):
-        return "missing"
-    if s in UICC_MAPPING:
-        return UICC_MAPPING[s]
-    if s.startswith("0"):
-        return "0"
-    for prefix in ("IV", "III", "II", "I"):
-        if s.startswith(prefix):
-            return prefix
-    return "missing"
-
-
-def map_ecog_value(val):
-    """Normalisiert ECOG auf 0–4; alles andere → 'U'."""
-    if val is None or (isinstance(val, float) and np.isnan(val)):
-        return "U"
-    s = str(val).strip().upper()
-    if s in ("0", "1", "2", "3", "4"):
-        return s
-    return "U"
-
-
-UICC_GROUPS = {
-    "0": {
-        "substages": ["0", "0a", "0is"],
-        "cmap": "Greys",
-        "cmap_range": (0.4, 0.75),
-        "header_color": "#555555",
-    },
-    "I": {
-        "substages": ["I", "IA", "IA1", "IA2", "IA3", "IB", "IB1", "IB2", "IC"],
-        "cmap": "Blues",
-        "cmap_range": (0.35, 0.90),
-        "header_color": "#08519c",
-    },
-    "II": {
-        "substages": ["II", "IIA", "IIA1", "IIA2", "IIB", "IIC"],
-        "cmap": "Greens",
-        "cmap_range": (0.35, 0.90),
-        "header_color": "#006d2c",
-    },
-    "III": {
-        "substages": ["III", "IIIA", "IIIB", "IIIC", "IIIC1"],
-        "cmap": "Oranges",
-        "cmap_range": (0.35, 0.90),
-        "header_color": "#a63603",
-    },
-    "IV": {
-        "substages": ["IV", "IVA", "IVB", "IVC"],
-        "cmap": "Purples",
-        "cmap_range": (0.35, 0.90),
-        "header_color": "#54278f",
-    },
-}
-UICC_GROUP_ORDER = ["missing", "0", "I", "II", "III", "IV"]
-_DEFAULT_COLORS = ["#4C78A8", "#F58518", "#54A24B", "#B279A2", "#E45756", "#72B7B2"]
+# ── Zentrale Konfiguration aus plot_config.py ─────────────────────────────────
+from plot_config import (
+    PLOT_CONFIG,
+    UICC_MAPPING,
+    UICC_ORDER,
+    ECOG_ORDER,
+    UICC_GROUPS,
+    UICC_GROUP_ORDER,
+    tab20b_colors,
+    map_uicc_to_main_stage,
+    map_ecog_value,
+    apply_plot_config,
+)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# GLOBALE PLOT-KONFIGURATION  (JMIR-Anforderungen, global umschaltbar)
+# GETEILTE KONSTANTEN – jetzt aus plot_config.py importiert (siehe oben)
 # ══════════════════════════════════════════════════════════════════════════════
-# JMIR verlangt: hochauflösende PNG/JPG mit minimaler Kompression, Hochformat,
-# große, gut lesbare Schrift. Kein hartes DPI vorgeschrieben; De-facto-Standard
-# für medizinische Journals: 300 DPI / ≥1200 px Breite.
-# Diese Werte sind zentral und werden von allen Plot-Funktionen genutzt.
-PLOT_CONFIG = {
-    # Ausgabe
-    "dpi": 300,                      # JMIR: hochauflösend (≥300)
-    "save_format": "tiff",           # tiff/png/jpg – verlustarm
-    # Schriftgrößen (größer als Matplotlib-Default für bessere Lesbarkeit)
-    "font_family": "DejaVu Sans",
-    "fontsize_base": 14,             # Achsen-Ticks, Text
-    "fontsize_axis_label": 16,       # Achsenbeschriftung
-    "fontsize_subplot_title": 16,    # Subplot-Titel (bleiben erhalten)
-    "fontsize_legend": 13,
-    "fontsize_bar_label": 12,        # Zahlen an/neben Balken
-    # Farbskala – tab20b für ALLES (überschreibt semantische Stage-Farben)
-    "colormap": "tab20b",
-    # Globale Schalter
-    "show_titles": False,            # plt.title/Plottitel global aus (außer Subplot-Titel)
-    "show_legend": True,             # Legenden anzeigen (einzeln überschreibbar)
-    "show_bar_numbers": False,       # Zahlen über Balken global aus (Punkt 6/8)
-}
-
-
-def apply_plot_config(cfg: dict | None = None) -> dict:
-    """Wendet die globale Konfiguration auf matplotlib rcParams an und gibt
-    die effektive Konfiguration zurück. Druckt die verwendeten Optionen aus,
-    damit sie mit Kollegen geteilt werden können."""
-    c = dict(PLOT_CONFIG)
-    if cfg:
-        c.update(cfg)
-    plt.rcParams.update({
-        "figure.dpi": c["dpi"],
-        "savefig.dpi": c["dpi"],
-        "font.family": c["font_family"],
-        "font.size": c["fontsize_base"],
-        "axes.titlesize": c["fontsize_subplot_title"],
-        "axes.labelsize": c["fontsize_axis_label"],
-        "xtick.labelsize": c["fontsize_base"],
-        "ytick.labelsize": c["fontsize_base"],
-        "legend.fontsize": c["fontsize_legend"],
-    })
-    print("  [PLOT-CONFIG] Verwendete Optionen (zum Teilen mit Kollegen):")
-    for k, v in c.items():
-        print(f"      {k:<22}: {v}")
-    return c
-
-
-def tab20b_colors(n: int) -> list:
-    """Liefert n Farben aus der globalen Farbskala (tab20b)."""
-    cmap = cm.get_cmap(PLOT_CONFIG["colormap"])
-    if n <= 0:
-        return []
-    # tab20b hat 20 diskrete Farben; bei mehr → linspace
-    if n <= getattr(cmap, "N", 20):
-        return [cmap(i / max(getattr(cmap, "N", 20) - 1, 1)) for i in range(n)]
-    return [cmap(v) for v in np.linspace(0, 1, n)]
+# Hinweis: map_uicc_to_main_stage und map_ecog_value werden aus plot_config.py
+# importiert (siehe Import-Block oben) und NICHT hier neu definiert.
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PRIVATE HILFSFUNKTIONEN
@@ -455,7 +312,7 @@ def plot_therapy_times(
         0.02,
         stats_text,
         transform=ax.transAxes,
-        fontsize=10,
+        fontsize=PLOT_CONFIG["fontsize_annotation"],
         verticalalignment="bottom",
         horizontalalignment="right",
         bbox=dict(boxstyle="round", facecolor="white", alpha=0.85),
@@ -522,11 +379,11 @@ def plot_therapy_bias_analysis(
     axes[0].set_title(
         f"Number of {therapy_type or 'Therapy'} Records per First Diagnosis Year"
         f"{therapy_label}  n = {total_cases:,} records",
-        fontsize=8,
+        fontsize=PLOT_CONFIG["fontsize_annotation_small"],
         fontweight="bold",
         pad=3,
     )
-    axes[0].set_ylabel("Count", fontsize=8)
+    axes[0].set_ylabel("Count", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
     axes[0].yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
     axes[0].tick_params(labelsize=7)
     axes[0].spines[["top", "right"]].set_visible(False)
@@ -546,12 +403,12 @@ def plot_therapy_bias_analysis(
     )
     axes[1].set_title(
         "Distribution of the rel. Time Interval between First Diagnosis Year and Therapy Date in Months (Boxplot)",
-        fontsize=8,
+        fontsize=PLOT_CONFIG["fontsize_annotation_small"],
         fontweight="bold",
         pad=3,
     )
-    axes[1].set_xlabel("First Diagnosis Year", fontsize=8)
-    axes[1].set_ylabel("Months", fontsize=8)
+    axes[1].set_xlabel("First Diagnosis Year", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
+    axes[1].set_ylabel("Months", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
     axes[1].yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
     axes[1].tick_params(labelsize=7)
     axes[1].spines[["top", "right"]].set_visible(False)
@@ -560,13 +417,13 @@ def plot_therapy_bias_analysis(
     tick_years = [y for y in all_years if (y - year_min) % tick_step == 0]
     axes[1].set_xlim(year_min - 0.5, year_max + 0.5)
     axes[1].set_xticks(tick_years)
-    axes[1].set_xticklabels([str(y) for y in tick_years], rotation=90, fontsize=7)
+    axes[1].set_xticklabels([str(y) for y in tick_years], rotation=90, fontsize=PLOT_CONFIG["fontsize_annotation_tiny"])
     fig.tight_layout(pad=0.4, h_pad=0.5)
     if save_path is not None:
         directory = os.path.dirname(save_path)
         if directory:
             os.makedirs(directory, exist_ok=True)
-        fig.savefig(save_path, dpi=300, bbox_inches=None)
+        fig.savefig(save_path, dpi=PLOT_CONFIG["dpi"], bbox_inches=None)
         print(f"Plot saved to: {save_path}")
     plt.show()
     plt.close(fig)
@@ -591,17 +448,18 @@ def plot_dropout_curve(
     n_total = result_df["patients_remaining"].max()
     pct_vals = result_df["patients_remaining"] / n_total * 100
     fig, ax = plt.subplots(figsize=(10, 6))
+    primary_color = tab20b_colors(1)[0]
     ax.plot(
         result_df["cutoff_month"],
         pct_vals,
         marker="o",
         markersize=4,
-        color="#2e6fba",
+        color=primary_color,
         linewidth=1.8,
         zorder=2,
     )
-    ax.set_xlabel("Therapy Start Date - Date of Diagnosis (Month)", fontsize=10)
-    ax.set_ylabel("Number of cond_ids (%)", fontsize=10)
+    ax.set_xlabel("Therapy Start Date - Date of Diagnosis (Month)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_ylabel("Number of cond_ids (%)", fontsize=PLOT_CONFIG["fontsize_annotation"])
     ax.set_xlim(0, result_df["cutoff_month"].max() + 0.5)
     ax.set_ylim(0, 105)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:.0f}%"))
@@ -648,7 +506,7 @@ def plot_dropout_curve(
         transform=ax.transAxes,
         ha="center",
         va="top",
-        fontsize=7.5,
+        fontsize=PLOT_CONFIG["fontsize_annotation_tiny"],
         color="black",
         style="italic",
     )
@@ -690,22 +548,23 @@ def plot_lorenz_curve(
     cum_pop = np.linspace(0, 1, len(cum_vals))
     gini = _gini(values)
     fig, ax = plt.subplots(figsize=(7, 6.5))
-    ax.plot(cum_pop, cum_vals, color="#2e6fba", linewidth=2.2, label="Lorenz-Kurve")
-    ax.fill_between(cum_pop, cum_vals, cum_pop, alpha=0.12, color="#2e6fba")
+    primary_color = tab20b_colors(1)[0]
+    ax.plot(cum_pop, cum_vals, color=primary_color, linewidth=2.2, label="Lorenz-Kurve")
+    ax.fill_between(cum_pop, cum_vals, cum_pop, alpha=0.12, color=primary_color)
     ax.plot(
-        [0, 1], [0, 1], linestyle="--", color="#888888", linewidth=1.2, label="Gleichverteilung"
+        [0, 1], [0, 1], linestyle="--", color="#999999", linewidth=1.2, label="Gleichverteilung"
     )
     ax.text(
         0.05,
         0.93,
         f"Gini = {gini:.3f}",
         transform=ax.transAxes,
-        fontsize=11,
+        fontsize=PLOT_CONFIG["fontsize_annotation_large"],
         fontweight="bold",
-        color="#2e6fba",
+        color=primary_color,
     )
-    ax.set_xlabel("Kumulativer Anteil der cond_id (aufsteigend sortiert)", fontsize=10)
-    ax.set_ylabel("Kumulativer Anteil der Therapien", fontsize=10)
+    ax.set_xlabel("Kumulativer Anteil der cond_id (aufsteigend sortiert)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_ylabel("Kumulativer Anteil der Therapien", fontsize=PLOT_CONFIG["fontsize_annotation"])
     if PLOT_CONFIG["show_titles"]:
         ax.set_title("Lorenz-Kurve – Therapien pro cond_id", fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=14)
     ax.text(
@@ -715,16 +574,16 @@ def plot_lorenz_curve(
         transform=ax.transAxes,
         ha="center",
         va="top",
-        fontsize=7.5,
+        fontsize=PLOT_CONFIG["fontsize_annotation_tiny"],
         color="#555555",
         style="italic",
     )
-    ax.legend(fontsize=9)
+    ax.legend(fontsize=PLOT_CONFIG["fontsize_legend"])
     ax.spines[["top", "right"]].set_visible(False)
     if output_path:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output_path, dpi=300, bbox_inches="tight")
+        fig.savefig(output_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
     if show:
         plt.show()
     plt.close(fig)
@@ -777,20 +636,22 @@ def plot_log_histogram(
             counts_before = counts_before[counts_before <= max_therapies]
             counts_from = counts_from[counts_from <= max_therapies]
         fig, (ax_before, ax_from) = plt.subplots(2, 1, figsize=(10, 9), sharex=True)
+        hist_colors = tab20b_colors(2)  # Zwei Farben für Before/From
         subplots = [
             (
                 ax_before,
                 counts_before,
                 f"Before {year_cutoff}",
-                "#2e6fba",
+                hist_colors[0],
                 df_before,
                 n_patients_before,
             ),
-            (ax_from, counts_from, f"From {year_cutoff}", "#e07b39", df_from, n_patients_from),
+            (ax_from, counts_from, f"From {year_cutoff}", hist_colors[1], df_from, n_patients_from),
         ]
     else:
         fig, ax = plt.subplots(figsize=(10, 5))
-        subplots = [(ax, counts, "", "#2e6fba", df, n_total_patients)]
+        hist_color = tab20b_colors(1)[0]
+        subplots = [(ax, counts, "", hist_color, df, n_total_patients)]
     bin_edges = np.linspace(counts.min(), counts.max(), bins + 1)
     for entry in subplots:
         ax, subset, label, color, df_sub, n_pat_sub = entry
@@ -802,12 +663,12 @@ def plot_log_histogram(
                 transform=ax.transAxes,
                 ha="center",
                 va="center",
-                fontsize=11,
+                fontsize=PLOT_CONFIG["fontsize_annotation_large"],
                 color="#888888",
             )
-            ax.set_ylabel("Count cond_id (log scale)", fontsize=10)
+            ax.set_ylabel("Count cond_id (log scale)", fontsize=PLOT_CONFIG["fontsize_annotation"])
             if use_year_split:
-                ax.set_title(label, fontsize=11, fontweight="bold", pad=8)
+                ax.set_title(label, fontsize=PLOT_CONFIG["fontsize_annotation_large"], fontweight="bold", pad=8)
             continue
         _, _, patches = ax.hist(
             subset,
@@ -819,9 +680,9 @@ def plot_log_histogram(
         )
         # Zahlen über den Balken entfernt (Punkt 6)
         ax.set_yscale("log")
-        ax.set_ylabel("Count cond_id (log scale)", fontsize=10)
+        ax.set_ylabel("Count cond_id (log scale)", fontsize=PLOT_CONFIG["fontsize_annotation"])
         if use_year_split:
-            ax.set_title(label, fontsize=11, fontweight="bold", pad=8)
+            ax.set_title(label, fontsize=PLOT_CONFIG["fontsize_annotation_large"], fontweight="bold", pad=8)
         stats = (
             f"Median={subset.median():.0f}  Mean={subset.mean():.1f}  "
             f"P90={subset.quantile(0.90):.0f}  Max={subset.max():.0f}"
@@ -833,18 +694,18 @@ def plot_log_histogram(
             transform=ax.transAxes,
             ha="right",
             va="top",
-            fontsize=8.5,
+            fontsize=PLOT_CONFIG["fontsize_annotation_small"],
             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#cccccc"),
         )
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(axis="y", linestyle="--", alpha=0.35)
     bottom_ax = subplots[-1][0]
-    bottom_ax.set_xlabel("Therapies per cond_id", fontsize=10)
+    bottom_ax.set_xlabel("Therapies per cond_id", fontsize=PLOT_CONFIG["fontsize_annotation"])
     bottom_ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
     if title and PLOT_CONFIG["show_titles"]:
         fig.suptitle(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01)
-    footer_kwargs = dict(ha="center", va="top", fontsize=8, color="black", style="italic")
+    footer_kwargs = dict(ha="center", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_small"], color="black", style="italic")
     if use_year_split:
         n_with_before = df_before[cond_col].nunique()
         n_with_from = df_from[cond_col].nunique()
@@ -875,7 +736,7 @@ def plot_log_histogram(
         )
     fig.tight_layout()
     if output_path:
-        fig.savefig(output_path, dpi=300, bbox_inches="tight")
+        fig.savefig(output_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
     if show:
         plt.show()
     plt.close(fig)
@@ -1252,6 +1113,7 @@ def plot_merge_panel(
     plt.rcParams["font.family"] = font_family
     fig, axes = plt.subplots(3, 2, figsize=(12, 10))
     fig.subplots_adjust(hspace=0.60, wspace=0.30)
+    hist_color = tab20b_colors(1)[0]
     for idx, entry in enumerate(panel_entries):
         row = idx // 2
         col = idx % 2
@@ -1259,18 +1121,18 @@ def plot_merge_panel(
         data = entry["df"]["months_diff"].dropna()
         stats = entry.get("stats", {})
         staging_label = entry.get("staging_label", "Staging")
-        ax.hist(data, bins=bins, color="#2e6fba", edgecolor="white", linewidth=0.4)
+        ax.hist(data, bins=bins, color=hist_color, edgecolor="white", linewidth=0.4)
         if log_y:
             ax.set_yscale("log")
-        ax.set_title(entry["title"], fontsize=9, fontweight="bold", pad=5)
+        ax.set_title(entry["title"], fontsize=PLOT_CONFIG["fontsize_legend"], fontweight="bold", pad=5)
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(axis="y", linestyle="--", alpha=0.35)
         ax.tick_params(labelsize=8)
         if row == 2:
-            ax.set_xlabel("Delta (Months)", fontsize=8)
+            ax.set_xlabel("Delta (Months)", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
         if col == 0:
-            ax.set_ylabel("Count (log)" if log_y else "Count", fontsize=8)
+            ax.set_ylabel("Count (log)" if log_y else "Count", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
         if stats:
             ax.text(
                 0.98,
@@ -1282,7 +1144,7 @@ def plot_merge_panel(
                 transform=ax.transAxes,
                 ha="right",
                 va="top",
-                fontsize=7,
+                fontsize=PLOT_CONFIG["fontsize_annotation_tiny"],
                 fontfamily="monospace",
                 bbox=dict(boxstyle="round,pad=0.35", facecolor="white", edgecolor="#cccccc"),
             )
@@ -1368,11 +1230,11 @@ def plot_sweep_panel(
                 )
                 ax.scatter(hl, hl_y, color="red", s=50, zorder=5)
         n_str = f"  (n={n_total:,})" if n_total else ""
-        ax.set_title(f"{therapy}  ×  {pair}{n_str}", fontsize=9, fontweight="bold", pad=5)
+        ax.set_title(f"{therapy}  ×  {pair}{n_str}", fontsize=PLOT_CONFIG["fontsize_legend"], fontweight="bold", pad=5)
         if row == 2:
-            ax.set_xlabel("Tolerance (months)", fontsize=8)
+            ax.set_xlabel("Tolerance (months)", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
         if col == 0:
-            ax.set_ylabel("Matched cond_ids (%)", fontsize=8)
+            ax.set_ylabel("Matched cond_ids (%)", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
         ax.tick_params(labelsize=8)
     if PLOT_CONFIG["show_titles"]:
         fig.suptitle(

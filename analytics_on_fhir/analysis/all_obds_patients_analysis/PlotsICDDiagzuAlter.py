@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# Globale Plot-Konfiguration aus plots.py (JMIR-Fontsizes, tab20b, Toggles)
+# ── Zentrale Konfiguration aus plot_config.py ─────────────────────────────────
 try:
-    from plots import PLOT_CONFIG, tab20b_colors
-except Exception:  # Standalone-Fallback
+    from plot_config import PLOT_CONFIG, tab20b_colors
+except ImportError:
+    # Fallback falls plot_config.py nicht erreichbar ist
     PLOT_CONFIG = {
         "dpi": 300, "fontsize_base": 14, "fontsize_axis_label": 16,
         "fontsize_subplot_title": 16, "fontsize_legend": 13,
@@ -188,10 +189,10 @@ def plot_population_pyramid_topn(
         ax.set_title(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"])
 
     ax.axvline(0, color="black", linewidth=1)
-    ax.text(0.25, 0.98, f"{female_label.upper()}\n(top {top_n}: n={n_female_top:,})",
+    ax.text(0.20, 0.98, f"{female_label.upper()}\n(n={n_female_top:,})",
             transform=ax.transAxes, ha="center", va="top",
             fontsize=PLOT_CONFIG["fontsize_base"], fontweight="bold", color="black")
-    ax.text(0.75, 0.98, f"{male_label.upper()}\n(top {top_n}: n={n_male_top:,})",
+    ax.text(0.70, 0.98, f"{male_label.upper()}\n(n={n_male_top:,})",
             transform=ax.transAxes, ha="center", va="top",
             fontsize=PLOT_CONFIG["fontsize_base"], fontweight="bold", color="black")
 

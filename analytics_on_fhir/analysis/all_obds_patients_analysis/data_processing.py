@@ -29,6 +29,9 @@ import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
+# ── Zentrale Konfiguration aus plot_config.py ─────────────────────────────────
+from plot_config import PLOT_CONFIG, tab20b_colors
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # A – THERAPIEANALYSE
@@ -230,18 +233,18 @@ def merge_with_nearest_date_matching(
     if plot:
         data = df_merged["months_diff"].dropna()
         fig, ax = plt.subplots(figsize=(10, 5))
-        ax.hist(data, bins=30, color="#2e6fba", edgecolor="white", linewidth=0.4)
+        ax.hist(data, bins=30, color=tab20b_colors(1)[0], edgecolor="white", linewidth=0.4)
         if log_y:
             ax.set_yscale("log")
-        ax.set_xlabel("Delta (Months)", fontsize=10)
-        ax.set_ylabel("Count" if not log_y else "Count (log scale)", fontsize=10)
+        ax.set_xlabel("Delta (Months)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+        ax.set_ylabel("Count" if not log_y else "Count (log scale)", fontsize=PLOT_CONFIG["fontsize_annotation"])
         ax.yaxis.set_major_formatter(
             mticker.FuncFormatter(lambda x, _: f"{int(x):,}")
         )
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(axis="y", linestyle="--", alpha=0.35)
         if plot_title:
-            ax.set_title(plot_title, fontsize=13, fontweight="bold", pad=10)
+            ax.set_title(plot_title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=10)
         ax.text(
             0.98, 0.97,
             f"Therapy in  :  {stats['n_therapy']:>8,}\n"
@@ -249,7 +252,7 @@ def merge_with_nearest_date_matching(
             f"Matched     :  {stats['n_matched']:>8,}\n"
             f"Unmatched   :  {stats['n_unmatched']:>8,}",
             transform=ax.transAxes,
-            ha="right", va="top", fontsize=8.5,
+            ha="right", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_small"],
             fontfamily="monospace",
             bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="#cccccc"),
         )
@@ -257,7 +260,7 @@ def merge_with_nearest_date_matching(
         if save_path is not None:
             Path(save_path).mkdir(parents=True, exist_ok=True)
             full_path = Path(save_path) / save_name
-            fig.savefig(full_path, dpi=300, bbox_inches="tight")
+            fig.savefig(full_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
             print(f"Plot gespeichert unter: {full_path.resolve()}")
         plt.show()
         plt.close(fig)
@@ -277,7 +280,7 @@ def sweep_tolerance_fast(
     save_plot: bool           = False,
     save_dir: str             = "plots",
     file_name: str            = "tolerance_sweep.png",
-    dpi: int                  = 300,
+    dpi: int | None           = None,
     title: Optional[str]      = "",
     font_family: str          = "DejaVu Sans",
     highlight_tolerance: Optional[int] = None,
@@ -292,6 +295,8 @@ def sweep_tolerance_fast(
     -------
     pd.DataFrame mit Spalten: tolerance, n_cond_ids, pct_cond_ids
     """
+    if dpi is None:
+        dpi = PLOT_CONFIG["dpi"]
     plt.rcParams["font.family"] = font_family
 
     # ── Ausgangszahlen ────────────────────────────────────────────────────────
@@ -374,10 +379,10 @@ def sweep_tolerance_fast(
     ax.plot(
         df_sweep["tolerance"], df_sweep["pct_cond_ids"],
         marker="o", markersize=4,
-        color="#2e6fba", linewidth=1.8, zorder=2,
+        color=tab20b_colors(1)[0], linewidth=1.8, zorder=2,
     )
-    ax.set_xlabel("Tolerance (months)", fontsize=10)
-    ax.set_ylabel("Matched cond_ids (%)", fontsize=10)
+    ax.set_xlabel("Tolerance (months)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_ylabel("Matched cond_ids (%)", fontsize=PLOT_CONFIG["fontsize_annotation"])
     ax.set_ylim(0, 105)
     ax.set_xlim(0, max(tolerances) + 0.5)
     ax.yaxis.set_major_formatter(
@@ -406,10 +411,10 @@ def sweep_tolerance_fast(
     ax.text(
         0.5, -0.10, f"Total therapy rows: {n_therapies_clean:,}",
         transform=ax.transAxes,
-        ha="center", va="top", fontsize=7.5, color="black", style="italic",
+        ha="center", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_tiny"], color="black", style="italic",
     )
     if title:
-        ax.set_title(title, fontsize=13, fontweight="bold", pad=10)
+        ax.set_title(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=10)
 
     fig.tight_layout()
 
@@ -438,7 +443,7 @@ def merge_and_plot_ecog_uicc_proximity(
     save_path: Optional[str]  = None,
     file_name_dist: str  = "ecog_uicc_distribution.tiff",
     file_name_bubble: str = "ecog_uicc_bubble.tiff",
-    dpi: int             = 300,
+    dpi: int | None      = None,
     font_family: str     = "DejaVu Sans",
 ) -> pd.DataFrame:
     """
@@ -450,6 +455,8 @@ def merge_and_plot_ecog_uicc_proximity(
     -------
     pd.DataFrame – bestes ECOG-UICC-Paar pro cond_id
     """
+    if dpi is None:
+        dpi = PLOT_CONFIG["dpi"]
     plt.rcParams["font.family"] = font_family
 
     # ── UICC-Konstanten (lokal, da nur für diesen Plot benötigt) ─────────────
@@ -533,15 +540,15 @@ def merge_and_plot_ecog_uicc_proximity(
     )
 
     ax_hist.hist(
-        df_best["_abs_diff"], bins=bins, color="#2e6fba",
+        df_best["_abs_diff"], bins=bins, color=tab20b_colors(1)[0],
         edgecolor="white", linewidth=0.4,
     )
     ax_hist.set_yscale("log")
-    ax_hist.set_xlabel("Absolute Time Difference (Months)", fontsize=10)
-    ax_hist.set_ylabel("Count (log scale)", fontsize=10)
+    ax_hist.set_xlabel("Absolute Time Difference (Months)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax_hist.set_ylabel("Count (log scale)", fontsize=PLOT_CONFIG["fontsize_annotation"])
     ax_hist.set_title(
         f"ECOG × UICC — Time Difference Distribution\n(nearest pair per cond_id, {tol_label})",
-        fontsize=10, fontweight="bold", pad=8,
+        fontsize=PLOT_CONFIG["fontsize_annotation"], fontweight="bold", pad=8,
     )
     ax_hist.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
     ax_hist.spines[["top", "right"]].set_visible(False)
@@ -554,37 +561,37 @@ def merge_and_plot_ecog_uicc_proximity(
         f"Unmatched      : {n_unmatched:>7,}\n"
         f"Unique cond_ids: {n_cond_ids:>7,}",
         transform=ax_hist.transAxes,
-        ha="right", va="top", fontsize=8, fontfamily="monospace",
+        ha="right", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_small"], fontfamily="monospace",
         bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="#cccccc"),
     )
 
     ax_scatter.scatter(
         df_best[ecog_time_col], df_best[uicc_time_col],
-        alpha=0.35, s=8, color="#e07b39", linewidths=0,
+        alpha=0.35, s=8, color=tab20b_colors(2)[1], linewidths=0,
     )
     lim_min = min(df_best[ecog_time_col].min(), df_best[uicc_time_col].min())
     lim_max = max(df_best[ecog_time_col].max(), df_best[uicc_time_col].max())
     ax_scatter.plot(
         [lim_min, lim_max], [lim_min, lim_max],
-        color="#aaaaaa", linestyle="--", linewidth=1.0, label="ECOG = UICC",
+        color="#999999", linestyle="--", linewidth=1.0, label="ECOG = UICC",
     )
-    ax_scatter.set_xlabel("ECOG Date (months since diagnosis)", fontsize=10)
-    ax_scatter.set_ylabel("UICC Date (months since diagnosis)", fontsize=10)
+    ax_scatter.set_xlabel("ECOG Date (months since diagnosis)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax_scatter.set_ylabel("UICC Date (months since diagnosis)", fontsize=PLOT_CONFIG["fontsize_annotation"])
     ax_scatter.set_title(
         f"ECOG × UICC — Timing Scatter\n(nearest pair per cond_id, {tol_label})",
-        fontsize=10, fontweight="bold", pad=8,
+        fontsize=PLOT_CONFIG["fontsize_annotation"], fontweight="bold", pad=8,
     )
     ax_scatter.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
     ax_scatter.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
     ax_scatter.spines[["top", "right"]].set_visible(False)
     ax_scatter.grid(axis="both", linestyle="--", alpha=0.25)
-    ax_scatter.legend(fontsize=8, framealpha=0.85)
+    ax_scatter.legend(fontsize=PLOT_CONFIG["fontsize_annotation_small"], framealpha=0.85)
 
     fig1.text(
         0.5, -0.03,
         f"ECOG in = {n_ecog:,}  |  UICC in = {n_uicc:,}  |  "
         f"Matched = {n_matched:,}  |  {tol_label}",
-        ha="center", fontsize=7.5, color="black", style="italic",
+        ha="center", fontsize=PLOT_CONFIG["fontsize_annotation_tiny"], color="black", style="italic",
     )
     fig1.tight_layout()
 
@@ -630,23 +637,23 @@ def merge_and_plot_ecog_uicc_proximity(
         alpha=0.80, edgecolors="#444444", linewidths=0.5, zorder=3,
     )
     for xi, yi, c in zip(x_vals, y_vals, counts):
-        ax.text(xi, yi, f"{int(c):,}", ha="center", va="center", fontsize=8,
+        ax.text(xi, yi, f"{int(c):,}", ha="center", va="center", fontsize=PLOT_CONFIG["fontsize_annotation_small"],
                 color="white" if c / max_count > 0.35 else "#222222", fontweight="bold")
 
     ax.set_xticks(range(len(uicc_present)))
     ax.set_xticklabels(
-        ["Missing" if u in ("unknown", "missing") else f"Stage {u}" for u in uicc_present], fontsize=10
+        ["Missing" if u in ("unknown", "missing") else f"Stage {u}" for u in uicc_present], fontsize=PLOT_CONFIG["fontsize_annotation"]
     )
     ax.set_yticks(range(len(ecog_present)))
     ax.set_yticklabels(
-        ["Unknown" if e == "U" else f"ECOG {e}" for e in ecog_present], fontsize=10
+        ["Unknown" if e == "U" else f"ECOG {e}" for e in ecog_present], fontsize=PLOT_CONFIG["fontsize_annotation"]
     )
-    ax.set_xlabel("UICC Stage", fontsize=10)
-    ax.set_ylabel("ECOG Performance Status", fontsize=10)
+    ax.set_xlabel("UICC Stage", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_ylabel("ECOG Performance Status", fontsize=PLOT_CONFIG["fontsize_annotation"])
     ax.set_title(
         f"ECOG × UICC — Category Co-occurrence\n"
         f"(nearest pair per cond_id, {tol_label}  |  n = {len(df_plot_filtered):,} pairs)",
-        fontsize=10, fontweight="bold", pad=10,
+        fontsize=PLOT_CONFIG["fontsize_annotation"], fontweight="bold", pad=10,
     )
     ax.set_xlim(-0.7, len(uicc_present) - 0.3)
     ax.set_ylim(-0.7, len(ecog_present) - 0.3)
@@ -675,7 +682,7 @@ def merge_and_plot_ecog_uicc_proximity(
 
     ax.legend(
         handles=legend_handles,
-        title="Sub-stage  (n)", title_fontsize=8.5, fontsize=7,
+        title="Sub-stage  (n)", title_fontsize=PLOT_CONFIG["fontsize_annotation_small"], fontsize=PLOT_CONFIG["fontsize_annotation_tiny"],
         loc="upper left", bbox_to_anchor=(1.02, 1.0),
         framealpha=0.95, edgecolor="#cccccc",
         handlelength=1.0, labelspacing=0.8,

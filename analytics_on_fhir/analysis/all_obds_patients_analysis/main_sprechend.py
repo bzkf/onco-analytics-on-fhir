@@ -94,6 +94,12 @@ BASE_DIR = Path(
     r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\all_obds_data_allsites"
 )
 
+DATA = Path(
+    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\resources"
+)
+PLOTS = Path(
+    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\plots"
+)
 
 SITES = "UKER, TUM, UKA, LMU, UKR, UKW"
 #SITES = "UKER"
@@ -168,12 +174,6 @@ df_systemtherapies = dfs["systemtherapies"]
 df_must_uicc_all = dfs["must_uicc"]
 
 
-DATA = Path(
-    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\resources"
-)
-PLOTS = Path(
-    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\plots"
-)  # TODO:Ändern
 
 # Namensschema:
 #   01_GK     = Grundkohorte  (Top-20 Entitäten, kein D/C44, nur K&P)  – alle Jahre
@@ -323,7 +323,7 @@ plot_population_pyramid_from_raw(
     sex_col="gender",
     title="Butterfly Plot\nAlter bei Diagnose, aller C Diagnosen\nGesamt Population UKer",
     show_title=False,
-    output_path=DIR_BUTTERFLY / "butterfly_overall.tiff",
+    output_path=DIR_BUTTERFLY / "butterfly_overall.png",
 )
 
 print(
@@ -341,7 +341,7 @@ plot_population_pyramid_topn(
         "Aufgeteilt nach TOP 20 meist vorkommende C-ICD-Diagnosen"
     ),
     show_title=False,
-    output_path=DIR_BUTTERFLY / "butterfly_topn.tiff",
+    output_path=DIR_BUTTERFLY / "butterfly_topn.png",
 )
 
 print(f"  ✓ Abschnitt A abgeschlossen  →  {DIR_BUTTERFLY}")

@@ -41,6 +41,9 @@ import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
+# ── Zentrale Konfiguration aus plot_config.py ─────────────────────────────────
+from plot_config import PLOT_CONFIG, tab20b_colors
+
 # ── typing ────────────────────────────────────────────────────────────────────
 
 Mode = Literal["all", "unique"]
@@ -86,7 +89,7 @@ def _savefig(
     fig.tight_layout()
     if output_dir and fname:
         output_dir.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output_dir / fname, dpi=150, bbox_inches="tight")
+        fig.savefig(output_dir / fname, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
     if show:
         plt.show()
     else:
@@ -211,7 +214,7 @@ def plot_top_bar(
     bars = ax.barh(
         list(range(n_shown)),
         top["count"].values[::-1],
-        color="#2e6fba", edgecolor="white", linewidth=0.4,
+        color=tab20b_colors(1)[0], edgecolor="white", linewidth=0.4,
     )
 
     for bar, val in zip(bars, top["count"].values[::-1]):
@@ -219,23 +222,23 @@ def plot_top_bar(
             bar.get_width() + counts["count"].max() * 0.005,
             bar.get_y() + bar.get_height() / 2,
             _fmt(val),
-            va="center", ha="left", fontsize=8, color="#333333",
+            va="center", ha="left", fontsize=PLOT_CONFIG["fontsize_annotation_small"], color="#333333",
         )
 
     ax.set_yticks(list(range(n_shown)))
-    ax.set_yticklabels(top["label"].values[::-1], fontsize=9)
-    ax.set_xlabel(xlabel, fontsize=10)
-    ax.set_ylabel(level.display_name, fontsize=10)
+    ax.set_yticklabels(top["label"].values[::-1], fontsize=PLOT_CONFIG["fontsize_legend"])
+    ax.set_xlabel(xlabel, fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_ylabel(level.display_name, fontsize=PLOT_CONFIG["fontsize_annotation"])
     if show_title:
         ax.set_title(
             f"{title_pfx} most frequent categories – {level.display_name}",
-            fontsize=13, fontweight="bold", pad=14,
+            fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=14,
         )
     ax.text(
         0.5, -0.10,
         _context_line(cohort_name, n_patients, n_rows, level, n_cats, mode),
         transform=ax.transAxes,
-        ha="center", va="top", fontsize=7.5, color="#555555", style="italic",
+        ha="center", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_tiny"], color="#555555", style="italic",
     )
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: _fmt(x)))
     ax.spines[["top", "right"]].set_visible(False)
@@ -301,24 +304,24 @@ def plot_lorenz_curve(
     n_cats     = df[level.column].nunique()
 
     fig, ax = plt.subplots(figsize=(7, 6.5))
-    ax.plot(cum_pop, cum_vals, color="#2e6fba", linewidth=2.2, label="Lorenz curve")
-    ax.fill_between(cum_pop, cum_vals, cum_pop, alpha=0.12, color="#2e6fba")
+    ax.plot(cum_pop, cum_vals, color=tab20b_colors(1)[0], linewidth=2.2, label="Lorenz curve")
+    ax.fill_between(cum_pop, cum_vals, cum_pop, alpha=0.12, color=tab20b_colors(1)[0])
     ax.plot([0, 1], [0, 1], linestyle="--", color="#888888", linewidth=1.2, label="Perfect equality")
     ax.text(
         0.05, 0.93, f"Gini = {gini:.3f}",
-        transform=ax.transAxes, fontsize=11, fontweight="bold", color="#2e6fba",
+        transform=ax.transAxes, fontsize=PLOT_CONFIG["fontsize_annotation_large"], fontweight="bold", color=tab20b_colors(1)[0],
     )
-    ax.set_xlabel("Cumulative share of patients (sorted ascending)", fontsize=10)
-    ax.set_ylabel("Cumulative share of diagnosis events", fontsize=10)
+    ax.set_xlabel("Cumulative share of patients (sorted ascending)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_ylabel("Cumulative share of diagnosis events", fontsize=PLOT_CONFIG["fontsize_annotation"])
     if show_title:
-        ax.set_title(f"Lorenz Curve – {level.display_name}", fontsize=13, fontweight="bold", pad=14)
+        ax.set_title(f"Lorenz Curve – {level.display_name}", fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=14)
     ax.text(
         0.5, -0.12,
         _context_line(cohort_name, n_patients, n_rows, level, n_cats, mode),
         transform=ax.transAxes,
-        ha="center", va="top", fontsize=7.5, color="#555555", style="italic",
+        ha="center", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_tiny"], color="#555555", style="italic",
     )
-    ax.legend(fontsize=9)
+    ax.legend(fontsize=PLOT_CONFIG["fontsize_legend"])
     ax.spines[["top", "right"]].set_visible(False)
 
     sfx = f"_{fname_suffix}" if fname_suffix else ""
@@ -369,14 +372,14 @@ def plot_log_histogram(
     )
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.hist(series, bins=bins, color="#2e6fba", edgecolor="white", linewidth=0.3)
+    ax.hist(series, bins=bins, color=tab20b_colors(1)[0], edgecolor="white", linewidth=0.3)
     ax.set_yscale("log")
-    ax.set_xlabel(xlabel, fontsize=10)
-    ax.set_ylabel("No. of patients (log scale)", fontsize=10)
+    ax.set_xlabel(xlabel, fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_ylabel("No. of patients (log scale)", fontsize=PLOT_CONFIG["fontsize_annotation"])
     if show_title:
         ax.set_title(
             f"Distribution of diagnosis events per patient – {level.display_name}",
-            fontsize=13, fontweight="bold", pad=14,
+            fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=14,
         )
 
     # ── stat box ─────────────────────────────────────────────────────────────
@@ -406,14 +409,14 @@ def plot_log_histogram(
     ax.text(
         0.98, 0.97, stat_txt,
         transform=ax.transAxes,
-        ha="right", va="top", fontsize=8.5,
+        ha="right", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_small"],
         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#cccccc"),
     )
     ax.text(
         0.5, -0.12,
         _context_line(cohort_name, n_patients, n_rows, level, n_cats, mode),
         transform=ax.transAxes,
-        ha="center", va="top", fontsize=7.5, color="#555555", style="italic",
+        ha="center", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_tiny"], color="#555555", style="italic",
     )
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: _fmt(x)))
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: _fmt(x)))
