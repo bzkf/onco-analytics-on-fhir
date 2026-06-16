@@ -650,215 +650,215 @@ print(
 # Patienten-Level (nicht cond_id-Level), da Nebendiagnosen keine condition_id haben.
 # ══════════════════════════════════════════════════════════════════════════════
 
-# DIR_NEBENDIAG.mkdir(parents=True, exist_ok=True)
-#
-# print("\n" + "━" * 70)
-# print("ABSCHNITT B  –  NEBENDIAGNOSEN")
-# print("  Analyse auf Patienten-Level (patient_resource_id_hash), da Neben-")
-# print("  diagnosen keine condition_id tragen. Master: df_tumore (GK, Top-20).")
-# print("━" * 70)
-#
-# # ── Ressourcenpfade ───────────────────────────────────────────────────────────
-# ICD_MAPPING_PATH = os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet")
-#
-# ICD_HIERARCHY_CSV = os.path.join(DATA, "icd10gm2026_basecode_lookup.csv")
-# NEBENDIAG_EXCEL = os.path.join(DATA, "Nebendiagnosen_Zuordnung_Ebenen_Domaenen_v1.xlsx")
-#
-# # ── Join-Konfiguration (EINSTELLBAR, STANDORTABHÄNGIG) ───────────────────────
-# # Der Patienten-Join Nebendiagnosen ↔ Tumore läuft je Standort über
-# # UNTERSCHIEDLICHE Spalten:
-# #   • UKER:        Nebendiag. 'condition_patient_reference_hash' ↔ Tumore 'patient_resource_id_hash'
-# #   • alle anderen:Nebendiag. 'patient_mrn_hash'                 ↔ Tumore 'patid_pseudonym_hash'
-# # Die Befüllung beider Spalten ist je Tabelle identisch; entscheidend ist nur,
-# # WELCHE Spalte je Standort den Match liefert.
-# # Pro Standort als (Nebendiag.-Spalte, Tumor-Spalte) konfigurierbar:
-# JOIN_COLS_BY_SITE = {
-#     "uker": ("condition_patient_reference_hash", "patient_resource_id_hash"),
-#     "tum":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-#     "uka":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-#     "lmu":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-#     "ukr":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-#     "ukw":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-# }
-# # Fallback für Standorte, die oben nicht gelistet sind:
-# JOIN_COLS_DEFAULT = ("patient_mrn_hash", "patid_pseudonym_hash")
-# TOP_N_NEBEN = 20
-#
-# # ── Einheitlichen Join-Key je Seite bauen (standortabhängig befüllt) ─────────
-# # Idee: Auf beiden Tabellen wird EINE neue Spalte '_join_key' erzeugt, die je
-# # Zeile aus der für den Standort korrekten Quellspalte stammt. Danach kann
-# # klassisch über '_join_key' verglichen/gefiltert werden.
-# def _build_join_key(df, side: str) -> pd.Series:
-#     """side='neben' → erste Tupelspalte, side='tumore' → zweite Tupelspalte.
-#     Baut den Join-Key vektorisiert: pro Standort wird die korrekte Quellspalte
-#     übernommen. Effizient auch bei mehreren Mio. Zeilen."""
-#     idx = 0 if side == "neben" else 1
-#     if "site" not in df.columns:
-#         raise KeyError("Spalte 'site' fehlt – wird für den standortabhängigen Join benötigt.")
-#     site_lower = df["site"].astype(str).str.lower()
-#     key = pd.Series(pd.NA, index=df.index, dtype="object")
-#     for _site in site_lower.unique():
-#         col = JOIN_COLS_BY_SITE.get(_site, JOIN_COLS_DEFAULT)[idx]
-#         mask = site_lower == _site
-#         if col in df.columns:
-#             key.loc[mask] = df.loc[mask, col].values
-#         else:
-#             print(f"    ⚠ Standort {_site.upper()}: Spalte '{col}' fehlt ({side}) – keine Keys gesetzt.")
-#     return key
-#
-# # ── ICD-Mapping & Hierarchie laden ───────────────────────────────────────────
-# _icd_lookup_neben = pd.read_parquet(ICD_MAPPING_PATH)
-# _icd_dict = _icd_lookup_neben.set_index("ICD_CODE")["ICD_NAME"].to_dict()
-# _icd_dict_base = _icd_lookup_neben.set_index("ICD3_CODE")["ICD3_NAME"].to_dict()
-#
-# lookup_df_icd = icd10gm2026_hierarchy_fast_helper.load_icd_hierarchy_lookup(ICD_HIERARCHY_CSV)
-#
-# # ── Nebendiagnosen-Einteilung laden ──────────────────────────────────────────
-# icd_nebendiagnosen_einteilung = pd.read_excel(NEBENDIAG_EXCEL, sheet_name="Code_Zuordnung")
-#
-# # ── Vollständiges Patienten-Universum der GK (vor Nebendiagnosen-Filter) ──────
-# # Wird für Log-Histogramm und Lorenz-Kurve benötigt, damit Patienten mit
-# # 0 Nebendiagnosen korrekt als Balken bei x=0 erscheinen.
-# # Tumor-seitigen Join-Key standortabhängig bauen.
-# df_tumore = df_tumore.copy()
-# df_tumore["_join_key"] = _build_join_key(df_tumore, side="tumore")
-# all_patient_ids_gk = pd.Index(df_tumore["_join_key"].dropna().unique())
-# print(
-#     f"\n  Patienten-Universum GK: {len(all_patient_ids_gk):,} eindeutige Join-Keys (standortabhängig)"
-# )
-# print(f"  (Patienten mit 0 Nebendiagnosen werden in Lorenz/Histogramm als x=0 eingeschlossen)")
-#
-# # ── Nebendiagnosen laden & C-Diagnosen entfernen ─────────────────────────────
-# print(f"\n  [LOAD] Nebendiagnosen: df_mii_conditions_all_obds_pats_asserted_deidentified.parquet")
-# df_conditions_raw = df_mii_conditions
-# _n_cond_raw = len(df_conditions_raw)
-# # C-Codes = Tumordiagnosen → raus; D-Codes bleiben als Nebendiagnosen
-# df_conditions_raw = df_conditions_raw[~df_conditions_raw["icd_code"].str.contains("C", na=False)]
-# print(
-#     f"    Roh: {_n_cond_raw:,} Zeilen  →  {len(df_conditions_raw):,} nach Entfernen von C-Diagnosen"
-# )
-# print(f"    (C-Codes = Tumordiagnosen werden ausgeschlossen; D-Diagnosen bleiben)")
-#
-# # ── ICD-Hierarchie mappen ─────────────────────────────────────────────────────
-# print(f"\n  [MAP] ICD-Hierarchie via icd10gm2026_hierarchy_fast_helper")
-# print(f"    Adds: icd_basecode, group_range/title, chapter_range/title")
-# df_conditions_mapped = icd10gm2026_hierarchy_fast_helper.map_icd_dataframe_fast(
-#     df=df_conditions_raw,
-#     lookup_df=lookup_df_icd,
-#     code_col="icd_code",
-# )
-# df_conditions_mapped["icd_basecode"] = df_conditions_mapped["icd_code"].apply(
-#     lambda x: x.split(".")[0] if pd.notna(x) else x
-# )
-# df_conditions_mapped["ICD_NAME"] = df_conditions_mapped["icd_code"].map(_icd_dict)
-# df_conditions_mapped["ICD_BASE_NAME"] = df_conditions_mapped["icd_basecode"].map(_icd_dict_base)
-# df_conditions_mapped["group_full"] = (
-#     df_conditions_mapped["group_range"] + ": " + df_conditions_mapped["group_title"]
-# )
-# df_conditions_mapped["chapter_full"] = (
-#     df_conditions_mapped["chapter_range"] + ": " + df_conditions_mapped["chapter_title"]
-# )
-#
-# # ── Standortabhängigen Join-Key auf Nebendiagnosen-Seite bauen ───────────────
-# df_conditions_mapped["_join_key"] = _build_join_key(df_conditions_mapped, side="neben")
-#
-# # ── Join-Diagnostik: matchen die IDs pro Standort? ───────────────────────────
-# print(f"\n  [DIAGNOSE] Standortabhängiger Join-Test (Nebendiag. ↔ Tumore):")
-# _gk_ids_all = set(all_patient_ids_gk)
-# _neben_ids_all = set(df_conditions_mapped["_join_key"].dropna().unique())
-# _matched_ids = _neben_ids_all & _gk_ids_all
-# print(f"    Eindeutige Join-Keys Nebendiagnosen: {len(_neben_ids_all):,}")
-# print(f"    Eindeutige Join-Keys GK-Tumore:      {len(_gk_ids_all):,}")
-# print(f"    Schnittmenge (matchen):              {len(_matched_ids):,}")
-# if len(_neben_ids_all) > 0:
-#     print(f"    Match-Rate (Nebendiag.-Seite): {100 * len(_matched_ids) / len(_neben_ids_all):.1f}%")
-# if "site" in df_conditions_mapped.columns:
-#     print(f"    Match pro Standort (mit jeweils standortspezifischen Spalten):")
-#     for _site, _grp in df_conditions_mapped.groupby("site"):
-#         _ncol, _tcol = JOIN_COLS_BY_SITE.get(str(_site).lower(), JOIN_COLS_DEFAULT)
-#         _site_ids = set(_grp["_join_key"].dropna().unique())
-#         _site_match = _site_ids & _gk_ids_all
-#         _pct = 100 * len(_site_match) / len(_site_ids) if _site_ids else 0
-#         _flag = "  ⚠ AUFFÄLLIG WENIG" if _pct < 50 else ""
-#         print(f"      {str(_site).upper():<6} [{_ncol} ↔ {_tcol}]")
-#         print(f"             {len(_grp):>9,} Zeilen  |  IDs: {len(_site_ids):>8,}  |  match: {len(_site_match):>8,} ({_pct:.1f}%){_flag}")
-#
-# # Auf Patienten der GK einschränken (über den standortabhängigen Join-Key)
-# df_conditions_mapped = df_conditions_mapped[
-#     df_conditions_mapped["_join_key"].isin(all_patient_ids_gk)
-# ]
-# _n_with_neben = df_conditions_mapped["_join_key"].nunique()
-# _n_without = len(all_patient_ids_gk) - _n_with_neben
-#
-# print(
-#     f"\n  [FILTER] Auf GK-Patienten einschränken (_join_key ∈ all_patient_ids_gk):"
-# )
-# print(
-#     f"    Nebendiagnosen-Zeilen: {len(df_conditions_mapped):,}  |  "
-#     f"Patienten mit ≥1 Nebendiagnose: {_n_with_neben:,}  |  "
-#     f"Patienten ohne Nebendiagnose: {_n_without:,}"
-# )
-# print(
-#     f"    HINWEIS: Dies sind die Zahlen VOR der klinischen Filterung (Kerscher-Liste /"
-# )
-# print(
-#     f"    icd_nebendiagnosen_einteilung). Die klinisch gefilterten Zahlen werden in der"
-# )
-# print(
-#     f"    Plot-Methode run_nebendiagnosen_report ermittelt und dort zusätzlich ausgegeben."
-# )
-#
-# print(f"\n  [EXPORT] ICD_NAME_NebenDiagnosen_value_counts.xlsx  (rohe Häufigkeiten)")
-# # ── Rohe Value Counts exportieren ─────────────────────────────────────────────
-# df_conditions_mapped["ICD_NAME"].value_counts().to_excel(
-#     DIR_NEBENDIAG / "ICD_NAME_NebenDiagnosen_value_counts.xlsx"
-# )
-#
-# # ── Level-Konfiguration ───────────────────────────────────────────────────────
-#
-# #TODO Geändert wegen deutscher Namen. Mappingtable muss geändert/übersetzt werden oder ein Mappingtable von außen hinzugefügt werden
-# # level_configs_neben = [
-# #     LevelConfig("ICD_NAME", "ICD_NAME", "Full ICD code"),
-# #     LevelConfig("ICD_BASE_NAME", "ICD_BASE_NAME", "Base code (3-digit)"),
-# #     LevelConfig("group_full", "group_full", "ICD group"),
-# #     LevelConfig("chapter_full", "chapter_full", "ICD chapter"),
-# # ]
-#
+DIR_NEBENDIAG.mkdir(parents=True, exist_ok=True)
+
+print("\n" + "━" * 70)
+print("ABSCHNITT B  –  NEBENDIAGNOSEN")
+print("  Analyse auf Patienten-Level (patient_resource_id_hash), da Neben-")
+print("  diagnosen keine condition_id tragen. Master: df_tumore (GK, Top-20).")
+print("━" * 70)
+
+# ── Ressourcenpfade ───────────────────────────────────────────────────────────
+ICD_MAPPING_PATH = os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet")
+
+ICD_HIERARCHY_CSV = os.path.join(DATA, "icd10gm2026_basecode_lookup.csv")
+NEBENDIAG_EXCEL = os.path.join(DATA, "Nebendiagnosen_Zuordnung_Ebenen_Domaenen_v1.xlsx")
+
+# ── Join-Konfiguration (EINSTELLBAR, STANDORTABHÄNGIG) ───────────────────────
+# Der Patienten-Join Nebendiagnosen ↔ Tumore läuft je Standort über
+# UNTERSCHIEDLICHE Spalten:
+#   • UKER:        Nebendiag. 'condition_patient_reference_hash' ↔ Tumore 'patient_resource_id_hash'
+#   • alle anderen:Nebendiag. 'patient_mrn_hash'                 ↔ Tumore 'patid_pseudonym_hash'
+# Die Befüllung beider Spalten ist je Tabelle identisch; entscheidend ist nur,
+# WELCHE Spalte je Standort den Match liefert.
+# Pro Standort als (Nebendiag.-Spalte, Tumor-Spalte) konfigurierbar:
+JOIN_COLS_BY_SITE = {
+    "uker": ("condition_patient_reference_hash", "patient_resource_id_hash"),
+    "tum":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+    "uka":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+    "lmu":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+    "ukr":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+    "ukw":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+}
+# Fallback für Standorte, die oben nicht gelistet sind:
+JOIN_COLS_DEFAULT = ("patient_mrn_hash", "patid_pseudonym_hash")
+TOP_N_NEBEN = 20
+
+# ── Einheitlichen Join-Key je Seite bauen (standortabhängig befüllt) ─────────
+# Idee: Auf beiden Tabellen wird EINE neue Spalte '_join_key' erzeugt, die je
+# Zeile aus der für den Standort korrekten Quellspalte stammt. Danach kann
+# klassisch über '_join_key' verglichen/gefiltert werden.
+def _build_join_key(df, side: str) -> pd.Series:
+    """side='neben' → erste Tupelspalte, side='tumore' → zweite Tupelspalte.
+    Baut den Join-Key vektorisiert: pro Standort wird die korrekte Quellspalte
+    übernommen. Effizient auch bei mehreren Mio. Zeilen."""
+    idx = 0 if side == "neben" else 1
+    if "site" not in df.columns:
+        raise KeyError("Spalte 'site' fehlt – wird für den standortabhängigen Join benötigt.")
+    site_lower = df["site"].astype(str).str.lower()
+    key = pd.Series(pd.NA, index=df.index, dtype="object")
+    for _site in site_lower.unique():
+        col = JOIN_COLS_BY_SITE.get(_site, JOIN_COLS_DEFAULT)[idx]
+        mask = site_lower == _site
+        if col in df.columns:
+            key.loc[mask] = df.loc[mask, col].values
+        else:
+            print(f"    ⚠ Standort {_site.upper()}: Spalte '{col}' fehlt ({side}) – keine Keys gesetzt.")
+    return key
+
+# ── ICD-Mapping & Hierarchie laden ───────────────────────────────────────────
+_icd_lookup_neben = pd.read_parquet(ICD_MAPPING_PATH)
+_icd_dict = _icd_lookup_neben.set_index("ICD_CODE")["ICD_NAME"].to_dict()
+_icd_dict_base = _icd_lookup_neben.set_index("ICD3_CODE")["ICD3_NAME"].to_dict()
+
+lookup_df_icd = icd10gm2026_hierarchy_fast_helper.load_icd_hierarchy_lookup(ICD_HIERARCHY_CSV)
+
+# ── Nebendiagnosen-Einteilung laden ──────────────────────────────────────────
+icd_nebendiagnosen_einteilung = pd.read_excel(NEBENDIAG_EXCEL, sheet_name="Code_Zuordnung")
+
+# ── Vollständiges Patienten-Universum der GK (vor Nebendiagnosen-Filter) ──────
+# Wird für Log-Histogramm und Lorenz-Kurve benötigt, damit Patienten mit
+# 0 Nebendiagnosen korrekt als Balken bei x=0 erscheinen.
+# Tumor-seitigen Join-Key standortabhängig bauen.
+df_tumore = df_tumore.copy()
+df_tumore["_join_key"] = _build_join_key(df_tumore, side="tumore")
+all_patient_ids_gk = pd.Index(df_tumore["_join_key"].dropna().unique())
+print(
+    f"\n  Patienten-Universum GK: {len(all_patient_ids_gk):,} eindeutige Join-Keys (standortabhängig)"
+)
+print(f"  (Patienten mit 0 Nebendiagnosen werden in Lorenz/Histogramm als x=0 eingeschlossen)")
+
+# ── Nebendiagnosen laden & C-Diagnosen entfernen ─────────────────────────────
+print(f"\n  [LOAD] Nebendiagnosen: df_mii_conditions_all_obds_pats_asserted_deidentified.parquet")
+df_conditions_raw = df_mii_conditions
+_n_cond_raw = len(df_conditions_raw)
+# C-Codes = Tumordiagnosen → raus; D-Codes bleiben als Nebendiagnosen
+df_conditions_raw = df_conditions_raw[~df_conditions_raw["icd_code"].str.contains("C", na=False)]
+print(
+    f"    Roh: {_n_cond_raw:,} Zeilen  →  {len(df_conditions_raw):,} nach Entfernen von C-Diagnosen"
+)
+print(f"    (C-Codes = Tumordiagnosen werden ausgeschlossen; D-Diagnosen bleiben)")
+
+# ── ICD-Hierarchie mappen ─────────────────────────────────────────────────────
+print(f"\n  [MAP] ICD-Hierarchie via icd10gm2026_hierarchy_fast_helper")
+print(f"    Adds: icd_basecode, group_range/title, chapter_range/title")
+df_conditions_mapped = icd10gm2026_hierarchy_fast_helper.map_icd_dataframe_fast(
+    df=df_conditions_raw,
+    lookup_df=lookup_df_icd,
+    code_col="icd_code",
+)
+df_conditions_mapped["icd_basecode"] = df_conditions_mapped["icd_code"].apply(
+    lambda x: x.split(".")[0] if pd.notna(x) else x
+)
+df_conditions_mapped["ICD_NAME"] = df_conditions_mapped["icd_code"].map(_icd_dict)
+df_conditions_mapped["ICD_BASE_NAME"] = df_conditions_mapped["icd_basecode"].map(_icd_dict_base)
+df_conditions_mapped["group_full"] = (
+    df_conditions_mapped["group_range"] + ": " + df_conditions_mapped["group_title"]
+)
+df_conditions_mapped["chapter_full"] = (
+    df_conditions_mapped["chapter_range"] + ": " + df_conditions_mapped["chapter_title"]
+)
+
+# ── Standortabhängigen Join-Key auf Nebendiagnosen-Seite bauen ───────────────
+df_conditions_mapped["_join_key"] = _build_join_key(df_conditions_mapped, side="neben")
+
+# ── Join-Diagnostik: matchen die IDs pro Standort? ───────────────────────────
+print(f"\n  [DIAGNOSE] Standortabhängiger Join-Test (Nebendiag. ↔ Tumore):")
+_gk_ids_all = set(all_patient_ids_gk)
+_neben_ids_all = set(df_conditions_mapped["_join_key"].dropna().unique())
+_matched_ids = _neben_ids_all & _gk_ids_all
+print(f"    Eindeutige Join-Keys Nebendiagnosen: {len(_neben_ids_all):,}")
+print(f"    Eindeutige Join-Keys GK-Tumore:      {len(_gk_ids_all):,}")
+print(f"    Schnittmenge (matchen):              {len(_matched_ids):,}")
+if len(_neben_ids_all) > 0:
+    print(f"    Match-Rate (Nebendiag.-Seite): {100 * len(_matched_ids) / len(_neben_ids_all):.1f}%")
+if "site" in df_conditions_mapped.columns:
+    print(f"    Match pro Standort (mit jeweils standortspezifischen Spalten):")
+    for _site, _grp in df_conditions_mapped.groupby("site"):
+        _ncol, _tcol = JOIN_COLS_BY_SITE.get(str(_site).lower(), JOIN_COLS_DEFAULT)
+        _site_ids = set(_grp["_join_key"].dropna().unique())
+        _site_match = _site_ids & _gk_ids_all
+        _pct = 100 * len(_site_match) / len(_site_ids) if _site_ids else 0
+        _flag = "  ⚠ AUFFÄLLIG WENIG" if _pct < 50 else ""
+        print(f"      {str(_site).upper():<6} [{_ncol} ↔ {_tcol}]")
+        print(f"             {len(_grp):>9,} Zeilen  |  IDs: {len(_site_ids):>8,}  |  match: {len(_site_match):>8,} ({_pct:.1f}%){_flag}")
+
+# Auf Patienten der GK einschränken (über den standortabhängigen Join-Key)
+df_conditions_mapped = df_conditions_mapped[
+    df_conditions_mapped["_join_key"].isin(all_patient_ids_gk)
+]
+_n_with_neben = df_conditions_mapped["_join_key"].nunique()
+_n_without = len(all_patient_ids_gk) - _n_with_neben
+
+print(
+    f"\n  [FILTER] Auf GK-Patienten einschränken (_join_key ∈ all_patient_ids_gk):"
+)
+print(
+    f"    Nebendiagnosen-Zeilen: {len(df_conditions_mapped):,}  |  "
+    f"Patienten mit ≥1 Nebendiagnose: {_n_with_neben:,}  |  "
+    f"Patienten ohne Nebendiagnose: {_n_without:,}"
+)
+print(
+    f"    HINWEIS: Dies sind die Zahlen VOR der klinischen Filterung (Kerscher-Liste /"
+)
+print(
+    f"    icd_nebendiagnosen_einteilung). Die klinisch gefilterten Zahlen werden in der"
+)
+print(
+    f"    Plot-Methode run_nebendiagnosen_report ermittelt und dort zusätzlich ausgegeben."
+)
+
+print(f"\n  [EXPORT] ICD_NAME_NebenDiagnosen_value_counts.xlsx  (rohe Häufigkeiten)")
+# ── Rohe Value Counts exportieren ─────────────────────────────────────────────
+df_conditions_mapped["ICD_NAME"].value_counts().to_excel(
+    DIR_NEBENDIAG / "ICD_NAME_NebenDiagnosen_value_counts.xlsx"
+)
+
+# ── Level-Konfiguration ───────────────────────────────────────────────────────
+
+#TODO Geändert wegen deutscher Namen. Mappingtable muss geändert/übersetzt werden oder ein Mappingtable von außen hinzugefügt werden
 # level_configs_neben = [
-#     LevelConfig("icd_code", "icd_code", "Full ICD code"),
-#     LevelConfig("base_code", "base_code", "ICD Base code (3-digit)"),
-#     LevelConfig("group_range", "group_range", "ICD group"),
-#     LevelConfig("chapter_range", "chapter_range", "ICD chapter"),
+#     LevelConfig("ICD_NAME", "ICD_NAME", "Full ICD code"),
+#     LevelConfig("ICD_BASE_NAME", "ICD_BASE_NAME", "Base code (3-digit)"),
+#     LevelConfig("group_full", "group_full", "ICD group"),
+#     LevelConfig("chapter_full", "chapter_full", "ICD chapter"),
 # ]
-#
-# #── Report starten ────────────────────────────────────────────────────────────
-# print(f"\n  [REPORT] run_nebendiagnosen_report startet …")
-# print(f"    Level: ICD_NAME, ICD_BASE_NAME, group_full, chapter_full")
-# print(f"    Modi: 'all' + 'unique'  |  Top-N: {TOP_N_NEBEN}")
-# print(f"    Filter: standard (alle) + core_comorbidity (In_Core_Comorbidity_Analysis==Ja)")
-# results_neben = run_nebendiagnosen_report(
-#     df=df_conditions_mapped,
-#     patient_col="_join_key",
-#     level_configs=level_configs_neben,
-#     cohort_name="Top20 Cohort",
-#     modes=["all", "unique"],
-#     top_n=TOP_N_NEBEN,
-#     output_dir=DIR_NEBENDIAG,
-#     show=False,
-#     show_title=False,
-#     icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung,
-#     icd_code_col_in_df="icd_code",
-#     icd_code_col_in_mapping="ICD_Code",
-#     all_patient_ids=all_patient_ids_gk,
-# )
-# print("Speichern im Nebendiagnose Unterordner im Plotordner")
-# print(f"  ✓ Abschnitt B abgeschlossen  →  {DIR_NEBENDIAG}")
+
+level_configs_neben = [
+    LevelConfig("icd_code", "icd_code", "Full ICD code"),
+    LevelConfig("base_code", "base_code", "ICD Base code (3-digit)"),
+    LevelConfig("group_range", "group_range", "ICD group"),
+    LevelConfig("chapter_range", "chapter_range", "ICD chapter"),
+]
+
+#── Report starten ────────────────────────────────────────────────────────────
+print(f"\n  [REPORT] run_nebendiagnosen_report startet …")
+print(f"    Level: ICD_NAME, ICD_BASE_NAME, group_full, chapter_full")
+print(f"    Modi: 'all' + 'unique'  |  Top-N: {TOP_N_NEBEN}")
+print(f"    Filter: standard (alle) + core_comorbidity (In_Core_Comorbidity_Analysis==Ja)")
+results_neben = run_nebendiagnosen_report(
+    df=df_conditions_mapped,
+    patient_col="_join_key",
+    level_configs=level_configs_neben,
+    cohort_name="Top20 Cohort",
+    modes=["all", "unique"],
+    top_n=TOP_N_NEBEN,
+    output_dir=DIR_NEBENDIAG,
+    show=False,
+    show_title=False,
+    icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung,
+    icd_code_col_in_df="icd_code",
+    icd_code_col_in_mapping="ICD_Code",
+    all_patient_ids=all_patient_ids_gk,
+)
+print("Speichern im Nebendiagnose Unterordner im Plotordner")
+print(f"  ✓ Abschnitt B abgeschlossen  →  {DIR_NEBENDIAG}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre)
-# Plots: Überblick über die Kohorte vor jeglichem zeitlichem Filter.
-# ══════════════════════════════════════════════════════════════════════════════
+#══════════════════════════════════════════════════════════════════════════════
+#ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre)
+#Plots: Überblick über die Kohorte vor jeglichem zeitlichem Filter.
+#══════════════════════════════════════════════════════════════════════════════
 
 DIR_GK.mkdir(parents=True, exist_ok=True)
 

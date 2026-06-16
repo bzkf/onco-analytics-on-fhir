@@ -171,6 +171,8 @@ def _build_grouped_bar(
         ax.legend(frameon=False, title="Therapy", title_fontsize=PLOT_CONFIG["fontsize_legend"])
     if not relative:
         ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+
+    ax.set_ylim(0,100)
     ax.grid(axis="y", linestyle="--", alpha=0.3)
     ax.set_axisbelow(True)
     ax.spines[["top", "right"]].set_visible(False)
@@ -1013,6 +1015,8 @@ def plot_uicc_distribution_grouped_bar(
     exclude_zero: bool = True,
     relative: bool = True,
     totals: dict | None = None,
+    color_offset: int = 4,
+    color_shade: int = 1,
 ) -> plt.Figure:
     """
     Gruppiertes Balkendiagramm der UICC-Stage-Verteilung pro Therapietyp.
@@ -1027,11 +1031,18 @@ def plot_uicc_distribution_grouped_bar(
                       100% = ALLE Therapien (nicht nur die gematchten); die
                       Balken zeigen den Anteil mit nutzbarer UICC, die Legende
                       'matched / total (coverage%)'. Default None → altes Verhalten.
+    color_offset    : Schrittweite innerhalb der tab20b-Palette zwischen den
+                      Therapiegruppen (siehe plot_age_distribution_grouped_bar).
+    color_shade     : Welche der 4 Schattierungen pro Familie genutzt wird.
     """
     if dpi is None:
         dpi = PLOT_CONFIG["dpi"]
     therapies = list(dataframes.keys())
-    color_map = {t: c for t, c in zip(therapies, tab20b_colors(len(therapies)))}
+    tab20b = plt.get_cmap("tab20b").colors
+    color_map = {
+        t: tab20b[(i * color_offset + color_shade) % len(tab20b)]
+        for i, t in enumerate(therapies)
+    }
     if colors:
         color_map.update(colors)
 
@@ -1084,6 +1095,8 @@ def plot_ecog_distribution_grouped_bar(
     exclude_unknown: bool = True,
     relative: bool = True,
     totals: dict | None = None,
+    color_offset: int = 4,
+    color_shade: int = 1,
 ) -> plt.Figure:
     """
     Gruppiertes Balkendiagramm der ECOG-Verteilung pro Therapietyp.
@@ -1096,11 +1109,18 @@ def plot_ecog_distribution_grouped_bar(
                       100% = ALLE Therapien (nicht nur die gematchten); die
                       Balken zeigen den Anteil mit nutzbarem ECOG, die Legende
                       'matched / total (coverage%)'. Default None → altes Verhalten.
+    color_offset    : Schrittweite innerhalb der tab20b-Palette zwischen den
+                      Therapiegruppen (siehe plot_age_distribution_grouped_bar).
+    color_shade     : Welche der 4 Schattierungen pro Familie genutzt wird.
     """
     if dpi is None:
         dpi = PLOT_CONFIG["dpi"]
     therapies = list(dataframes.keys())
-    color_map = {t: c for t, c in zip(therapies, tab20b_colors(len(therapies)))}
+    tab20b = plt.get_cmap("tab20b").colors
+    color_map = {
+        t: tab20b[(i * color_offset + color_shade) % len(tab20b)]
+        for i, t in enumerate(therapies)
+    }
     if colors:
         color_map.update(colors)
 
