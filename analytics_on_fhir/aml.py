@@ -806,18 +806,22 @@ class AMLStudy:
             all_procedures.append(procedure_df_chunk)
 
         procedure_df = pd.concat(all_procedures, ignore_index=True)
+
+        if "procedure_ops_version" not in procedure_df.columns:
+            procedure_df["procedure_ops_version"] = None
+        else:
+            procedure_df["procedure_ops_version"] = procedure_df["procedure_ops_version"].apply(
+                lambda x: json.dumps(x, sort_keys=True) if isinstance(x, dict) else x
+            )
+
         if "procedure_ops_code" in procedure_df.columns:
+            procedure_df["procedure_ops_code"] = procedure_df["procedure_ops_code"].apply(
+                lambda x: json.dumps(x, sort_keys=True) if isinstance(x, dict) else x
+            )
             logger.info("Loading OPS mappings")
             ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
             procedure_df["procedure_ops_display"] = procedure_df["procedure_ops_code"].map(
                 ops_mapping
-            )
-
-            if "procedure_ops_version" not in procedure_df.columns:
-                procedure_df["procedure_ops_version"] = None
-
-            procedure_df["procedure_ops_version"] = procedure_df["procedure_ops_code"].apply(
-                lambda x: json.dumps(x, sort_keys=True) if isinstance(x, dict) else x
             )
 
             # Export unmapped OPS codes (distinct by version + code)
