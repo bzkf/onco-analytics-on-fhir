@@ -98,13 +98,25 @@ def _build_grouped_bar(
     dpi: int,
     show_bar_numbers: bool | None = None,
     relative: bool = False,
+    totals: dict | None = None,
 ) -> plt.Figure:
     """Gemeinsame Rendering-Logik für UICC- und ECOG-Grouped-Bar-Charts.
     Balken sind mittig über den Ticks ausgerichtet (Punkt 9). Zahlen über den
-    Balken optional (global via PLOT_CONFIG['show_bar_numbers'])."""
+    Balken optional (global via PLOT_CONFIG['show_bar_numbers']).
+
+    totals : dict | None
+        Therapiename → Gesamtzahl der Therapien dieses Typs (vor Matching/Cutoff).
+        - totals=None  (Default): 100% = gematchte/auswertbare Therapien (altes
+          Verhalten); Legende zeigt 'n=<matched>'.
+        - totals gesetzt: 100% = ALLE Therapien des Typs. Die Balken zeigen damit,
+          welcher Anteil der Therapien eine nutzbare UICC/ECOG besitzt. Legende
+          zeigt 'n=<matched> / <total> total (<coverage>%)'.
+    """
     if show_bar_numbers is None:
         show_bar_numbers = PLOT_CONFIG["show_bar_numbers"]
-    therapy_totals = agg.groupby("therapy")["count"].sum().to_dict()
+    # Gematchte/auswertbare Anzahl je Therapie = Summe der dargestellten Kategorien
+    matched_totals = agg.groupby("therapy")["count"].sum().to_dict()
+    use_totals = totals is not None
     x_positions = np.arange(len(category_order))
     n = len(therapies)
     # Balkenbreite + zentrierte Offsets: garantiert mittige Ausrichtung über Ticks
@@ -115,16 +127,23 @@ def _build_grouped_bar(
     for offset, therapy in zip(offsets, therapies):
         sub = agg[agg["therapy"] == therapy].set_index("category").reindex(category_order).fillna(0)
         counts = sub["count"].values.astype(float)
-        total = int(therapy_totals.get(therapy, 0))
-        if relative and total > 0:
-            counts = 100.0 * counts / total
+        matched = int(matched_totals.get(therapy, 0))
+        # Nenner für die %-Berechnung: Gesamtzahl (falls übergeben) statt nur gematchte
+        denom = int(totals.get(therapy, 0)) if use_totals else matched
+        if relative and denom > 0:
+            counts = 100.0 * counts / denom
+        if use_totals:
+            cov = 100.0 * matched / denom if denom > 0 else 0.0
+            _label = f"{therapy} (n={matched:,} / {denom:,} total, {cov:.1f}%)"
+        else:
+            _label = f"{therapy} (n={matched:,})"
         bars = ax.bar(
             x_positions + offset,
             counts,
             width=width,
             color=color_map[therapy],
             alpha=0.9,
-            label=f"{therapy} (n={total:,})",
+            label=_label,
         )
         if show_bar_numbers:
             for bar in bars:
@@ -140,8 +159,11 @@ def _build_grouped_bar(
     ax.set_xticks(x_positions)
     ax.set_xticklabels(category_order, rotation=0, ha="center")
     ax.set_xlabel(xlabel, fontsize=PLOT_CONFIG["fontsize_axis_label"])
-    ax.set_ylabel("Share within therapy (%)" if relative else "Number of Condition IDs",
-                  fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    if relative:
+        _ylabel = "Share of all therapies (%)" if use_totals else "Share within therapy (%)"
+    else:
+        _ylabel = "Number of Condition IDs"
+    ax.set_ylabel(_ylabel, fontsize=PLOT_CONFIG["fontsize_axis_label"])
     # Plottitel nur wenn global erlaubt UND ein Titel übergeben wurde
     if title and PLOT_CONFIG["show_titles"]:
         ax.set_title(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15)
@@ -990,6 +1012,7 @@ def plot_uicc_distribution_grouped_bar(
     exclude_missing: bool = True,
     exclude_zero: bool = True,
     relative: bool = True,
+    totals: dict | None = None,
 ) -> plt.Figure:
     """
     Gruppiertes Balkendiagramm der UICC-Stage-Verteilung pro Therapietyp.
@@ -999,6 +1022,11 @@ def plot_uicc_distribution_grouped_bar(
     exclude_zero    : Stage '0' ausschließen (default True)
     relative        : Anteil je Therapie in % statt absoluter Zahlen.
                       n bezieht sich auf das, was nach Ausschluss übrig bleibt.
+    totals          : dict | None – Therapiename → Gesamtzahl der Therapien
+                      dieses Typs (vor Matching/Cutoff). Wenn gesetzt, ist
+                      100% = ALLE Therapien (nicht nur die gematchten); die
+                      Balken zeigen den Anteil mit nutzbarer UICC, die Legende
+                      'matched / total (coverage%)'. Default None → altes Verhalten.
     """
     if dpi is None:
         dpi = PLOT_CONFIG["dpi"]
@@ -1023,8 +1051,14 @@ def plot_uicc_distribution_grouped_bar(
         counts.columns = ["category", "count"]
         counts["therapy"] = therapy
         rows.append(counts)
-        print(f"    [UICC-Dist] {therapy}: n={int(counts['count'].sum()):,} "
-              f"(nach Ausschluss missing={exclude_missing}, 0={exclude_zero})")
+        _matched = int(counts["count"].sum())
+        if totals is not None and totals.get(therapy, 0) > 0:
+            _cov = 100.0 * _matched / totals[therapy]
+            print(f"    [UICC-Dist] {therapy}: matched={_matched:,} / total={totals[therapy]:,} "
+                  f"({_cov:.1f}% mit nutzbarer UICC)")
+        else:
+            print(f"    [UICC-Dist] {therapy}: n={_matched:,} "
+                  f"(nach Ausschluss missing={exclude_missing}, 0={exclude_zero})")
     agg = pd.concat(rows, ignore_index=True)
     return _build_grouped_bar(
         agg=agg,
@@ -1036,6 +1070,7 @@ def plot_uicc_distribution_grouped_bar(
         save_path=save_path,
         dpi=dpi,
         relative=relative,
+        totals=totals,
     )
 
 
@@ -1048,6 +1083,7 @@ def plot_ecog_distribution_grouped_bar(
     dpi: int = None,
     exclude_unknown: bool = True,
     relative: bool = True,
+    totals: dict | None = None,
 ) -> plt.Figure:
     """
     Gruppiertes Balkendiagramm der ECOG-Verteilung pro Therapietyp.
@@ -1055,6 +1091,11 @@ def plot_ecog_distribution_grouped_bar(
 
     exclude_unknown : U/Unknown ausschließen (default True)
     relative        : Anteil je Therapie in % (n nach Ausschluss).
+    totals          : dict | None – Therapiename → Gesamtzahl der Therapien
+                      dieses Typs (vor Matching/Cutoff). Wenn gesetzt, ist
+                      100% = ALLE Therapien (nicht nur die gematchten); die
+                      Balken zeigen den Anteil mit nutzbarem ECOG, die Legende
+                      'matched / total (coverage%)'. Default None → altes Verhalten.
     """
     if dpi is None:
         dpi = PLOT_CONFIG["dpi"]
@@ -1077,8 +1118,14 @@ def plot_ecog_distribution_grouped_bar(
         counts.columns = ["category", "count"]
         counts["therapy"] = therapy
         rows.append(counts)
-        print(f"    [ECOG-Dist] {therapy}: n={int(counts['count'].sum()):,} "
-              f"(nach Ausschluss U={exclude_unknown})")
+        _matched = int(counts["count"].sum())
+        if totals is not None and totals.get(therapy, 0) > 0:
+            _cov = 100.0 * _matched / totals[therapy]
+            print(f"    [ECOG-Dist] {therapy}: matched={_matched:,} / total={totals[therapy]:,} "
+                  f"({_cov:.1f}% mit nutzbarem ECOG)")
+        else:
+            print(f"    [ECOG-Dist] {therapy}: n={_matched:,} "
+                  f"(nach Ausschluss U={exclude_unknown})")
     agg = pd.concat(rows, ignore_index=True)
     return _build_grouped_bar(
         agg=agg,
@@ -1090,6 +1137,7 @@ def plot_ecog_distribution_grouped_bar(
         save_path=save_path,
         dpi=dpi,
         relative=relative,
+        totals=totals,
     )
 
 

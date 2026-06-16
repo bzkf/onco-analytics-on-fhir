@@ -1340,6 +1340,25 @@ for label, df_before, df_after in _cut_overview:
 
 # ── UICC-Verteilung  PARALLEL je Quelle ──────────────────────────────────────
 print(f"\n  [PLOT] UICC-Staging-Verteilung je Therapietyp → uicc_distribution_[obds/must].png")
+
+# Nenner = ALLE Therapien des jeweiligen Typs (vor Matching/3M-Cutoff/Ausschluss).
+# Dadurch zeigen die Balken den Anteil der Therapien mit NUTZBARER UICC/ECOG;
+# 100% = Gesamtzahl der Therapien (nicht die gematchten). Für oBDS und MUST
+# identisch, da nur die Staging-QUELLE wechselt, die Therapien aber dieselben sind
+# → der Coverage-Vorteil von MUST wird so sichtbar.
+# Hinweis: len(df_*_17) zählt ALLE Therapiezeilen des Typs. Wer stattdessen nur
+# die matching-fähigen (mit gültigem Therapiedatum) als Basis möchte, kann hier
+# den jeweiligen stats["n_therapy"]-Wert aus dem Merge einsetzen.
+_therapy_totals = {
+    "Surgical Procedure": len(df_ops_17),
+    "Systemic Therapy": len(df_system_17),
+    "Radiation Therapy": len(df_radio_17),
+}
+print(f"    Gesamt-Therapien (Nenner, 100%): "
+      f"OP={_therapy_totals['Surgical Procedure']:,}, "
+      f"System={_therapy_totals['Systemic Therapy']:,}, "
+      f"Radio={_therapy_totals['Radiation Therapy']:,}")
+
 for _src_label in [s for s, _ in UICC_SOURCES]:
     print(f"    [{_src_label.upper()}] df_ou/su/ru_3m ({_src_label})")
     plot_uicc_distribution_grouped_bar(
@@ -1348,6 +1367,7 @@ for _src_label in [s for s, _ in UICC_SOURCES]:
             "Systemic Therapy": df_su_3m_by_src[_src_label],
             "Radiation Therapy": df_ru_3m_by_src[_src_label],
         },
+        totals=_therapy_totals,
         save_path=str(DIR_3M / f"uicc_distribution_{_src_label}.png"),
     )
 
@@ -1361,6 +1381,7 @@ plot_ecog_distribution_grouped_bar(
         "Systemic Therapy": df_se_3m,
         "Radiation Therapy": df_re_3m,
     },
+    totals=_therapy_totals,
     save_path=str(DIR_3M / "ecog_distribution.png"),
 )
 
