@@ -44,7 +44,7 @@ PLOT_CONFIG = {
     # Globale Schalter
     "show_titles": False,            # plt.title/Plottitel global aus (außer Subplot-Titel)
     "show_legend": True,             # Legenden anzeigen (einzeln überschreibbar)
-    "show_bar_numbers": False,       # Zahlen über Balken global aus
+    "show_bar_numbers": True,       # Zahlen über Balken global aus
 }
 
 

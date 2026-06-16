@@ -24,9 +24,8 @@ except ImportError:
 
 
 def _age_bins_18_start(step: int = 5):
-    """Altersbrackets: erstes Bracket hardcoded 18-20, danach step-Schritte.
-    Gibt (bins, labels) zurück."""
-    bins = [18, 21] + list(range(21 + (step - 1), 95, step)) + [np.inf]
+    """Altersbrackets: erstes Bracket 18-19, danach step-Schritte ab 20."""
+    bins = [18, 20] + list(range(20 + step, 95, step)) + [np.inf]
     labels = []
     for i in range(len(bins) - 1):
         lo = int(bins[i])
