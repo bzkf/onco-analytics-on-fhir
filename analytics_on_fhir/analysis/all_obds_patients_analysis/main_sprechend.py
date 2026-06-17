@@ -1,3 +1,40 @@
+"""
+main_sprechend.py
+=================
+Steuerzentrale ("Orchestrator") der BZKF-oBDS-Kohortenauswertung.
+
+Diese Datei lädt alle Quelldaten, baut die Kohorten schrittweise auf und ruft
+sämtliche Plot-Funktionen (plots.py, PlotsICDDiagzuAlter.py,
+SecondPaper_NebenDiagnosen_Plots.py, data_processing.py) auf.
+
+Die Konsolenausgabe ist bewusst "sprechend": an JEDEM Filterschritt wird
+ausgegeben, wie sich Zeilen / cond_ids / Patienten verändern, damit der
+komplette Datenfluss ohne Blick in den Code nachvollziehbar ist.
+
+────────────────────────────────────────────────────────────────────────────
+PIPELINE-ÜBERBLICK (Reihenfolge der Filter)
+────────────────────────────────────────────────────────────────────────────
+    Eingang   :  Alle oBDS-Karzinom-cond_ids (df_obds; Patienten können
+                 mehrere Tumore/cond_ids haben)
+    Filter 1  :  D-Diagnosen entfernen (gutartige/unsichere Neubildungen)
+    Filter 2  :  C44 entfernen (Hauttumoren ohne systemische Relevanz)
+    Filter 2b :  Minderjährige entfernen (age_at_diagnosis < 18)
+    Filter 3  :  Top-20 Tumor-Entitäten behalten  →  GRUNDKOHORTE (GK)
+    Filter 4  :  asserted_year >= YEAR_CUTOFF  →  GK_17
+                 (AKTUELL DEAKTIVIERT, siehe YEAR_CUTOFF unten)
+    Filter 5  :  3-Monats-Cutoff für Therapie×Staging-PAARE (months_diff ≤ 3)
+
+KOHORTEN (Master = df_tumore; alle Slave-Tabellen werden über cond_ids gefiltert)
+    GK     – Grundkohorte (Top-20, kein D/C44, ≥18, Therapien nur K&P)
+    GK_17  – GK + Jahresschnitt (derzeit ohne Effekt, da YEAR_CUTOFF deaktiviert)
+    3M     – GK_17 + nur Therapie×Staging-Paare mit ≤ 3 Monaten Abstand
+
+STAGING-QUELLEN (laufen PARALLEL, mischen sich NICHT):
+    oBDS   – df_uicc_tnm + weitere_klassifikation(UICC)
+    MUST   – Brigittes MUST-Tool (Result1_UICC_full.csv je Standort)
+────────────────────────────────────────────────────────────────────────────
+"""
+
 import sys
 from pathlib import Path
 
@@ -57,6 +94,23 @@ from SecondPaper_NebenDiagnosen_Plots import LevelConfig, run_nebendiagnosen_rep
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _counts(
+    df: pd.DataFrame,
+    cond_col: str = "condition_id_hash",
+    pat_col: str = "patient_resource_id_hash",
+) -> tuple[int, int | None, int | None]:
+    """
+    Zentrale Kennzahlen eines DataFrames: (Zeilen, eindeutige cond_ids, eindeutige Patienten).
+
+    Fehlt eine Spalte (z.B. Patienten-ID in einer Staging-Tabelle), wird für
+    diese Kennzahl None zurückgegeben.
+    """
+    n_rows = len(df)
+    n_cond = df[cond_col].nunique() if cond_col in df.columns else None
+    n_pat = df[pat_col].nunique() if pat_col in df.columns else None
+    return n_rows, n_cond, n_pat
+
+
 def _log_load(
     label: str,
     df: pd.DataFrame,
@@ -64,17 +118,39 @@ def _log_load(
     pat_col: str = "patient_resource_id_hash",
 ) -> None:
     """Gibt nach dem Laden eines DataFrames Zeilen / cond_ids / Patienten aus."""
-    n_cond = df[cond_col].nunique() if cond_col in df.columns else None
-    n_pat = df[pat_col].nunique() if pat_col in df.columns else None
+    n_rows, n_cond, n_pat = _counts(df, cond_col, pat_col)
     cond_str = f"{n_cond:>8,}" if n_cond is not None else "       –"
     pat_str = f"{n_pat:>8,}" if n_pat is not None else "       –"
-    print(f"    {label}: {len(df):>9,} Zeilen  |  cond_ids: {cond_str}  |  Patienten: {pat_str}")
+    print(f"    {label}: {n_rows:>9,} Zeilen  |  cond_ids: {cond_str}  |  Patienten: {pat_str}")
 
 
 def _log_filter(label: str, n_before: int, n_after: int, unit: str = "cond_ids") -> None:
-    """Druckt Filtereffekt als Vorher → Nachher."""
+    """Druckt Filtereffekt EINER Kennzahl als Vorher → Nachher (Kurzform)."""
     pct = 100 * n_after / n_before if n_before > 0 else 0
     print(f"    Filter '{label}': {n_before:,} → {n_after:,} {unit}  ({pct:.1f}% verbleiben)")
+
+
+def _log_step(
+    label: str,
+    before: tuple[int, int | None, int | None],
+    after: tuple[int, int | None, int | None],
+) -> None:
+    """
+    Druckt einen Filterschritt vollständig auf ALLEN drei Ebenen
+    (Zeilen / cond_ids / Patienten) als Vorher → Nachher inkl. Delta und Anteil.
+
+    `before`/`after` sind (Zeilen, cond_ids, Patienten)-Tupel, wie von
+    `_counts()` geliefert. So lässt sich ohne Code-Blick exakt nachvollziehen,
+    wieviele Zeilen, cond_ids und Patienten ein Filter entfernt.
+    """
+    names = ("Zeilen", "cond_ids", "Patienten")
+    print(f"    Filter '{label}':")
+    for name, b, a in zip(names, before, after):
+        if b is None or a is None:
+            print(f"      {name:<10}: –  (Spalte nicht vorhanden)")
+            continue
+        pct = 100 * a / b if b else 0
+        print(f"      {name:<10}: {b:>11,} → {a:>11,}   ({a - b:>+10,}  |  {pct:5.1f}% bleibt)")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -104,7 +180,17 @@ PLOTS = Path(
 SITES = "UKER, TUM, UKA, LMU, UKR, UKW"
 #SITES = "UKER"
 
-asserted_year = 1970
+# ──────────────────────────────────────────────────────────────────────────────
+# JAHRES-CUTOFF (Filter 4)  –  EINZIGE Quelle der Wahrheit
+# ──────────────────────────────────────────────────────────────────────────────
+# Ursprünglich 2017: Vor 2017 war die Meldepflicht inkonsistent → Completeness-
+# Bias. AKTUELL BEWUSST DEAKTIVIERT, indem der Schnitt auf 1900 gesetzt wird:
+# Kein Diagnosejahr liegt vor 1900, daher entfernt Filter 4 praktisch nichts.
+# Vorteil: Die Filterlogik bleibt im Code erhalten und kann durch Setzen auf
+# 2017 jederzeit reaktiviert werden, ohne umzuprogrammieren.
+#
+#   → Zum Reaktivieren des Jahresschnitts:  YEAR_CUTOFF = 2017
+YEAR_CUTOFF = 1900
 
 FILES = {
     "obds": "df_all_obds_clean_deidentified.parquet",
@@ -125,11 +211,22 @@ paths = {
     name: [BASE_DIR / site / "parquet" / filename for site in site_list]
     for name, filename in FILES.items()
 }
-print(paths)
+
+# ── Sprechende Einlese-Übersicht (ersetzt rohen print(paths)-Dump) ───────────
+print("\n" + "━" * 70)
+print("DATEN-EINLESEN  –  Multi-Site-Parquets")
+print("━" * 70)
+print(f"  BASE_DIR : {BASE_DIR}")
+print(f"  Standorte ({len(site_list)}): {', '.join(s.upper() for s in site_list)}")
+print(f"  Datensätze je Standort ({len(FILES)}):")
+for _name, _fn in FILES.items():
+    print(f"    {_name:<24} ← {_fn}")
+
 dfs = {}
 
 for dataset_name, dataset_paths in paths.items():
     tmp_dfs = []
+    _per_site_rows = []
 
     for path, site in zip(dataset_paths, site_list):
         #df = pd.read_parquet(path, engine="pyarrow")
@@ -137,13 +234,14 @@ for dataset_name, dataset_paths in paths.items():
 
         # Standort mitführen (für Nachforschung Nebendiagnosen / UKW-Diagnose)
         df["site"] = site
-
-        #print("\nFILE:", path)
+        _per_site_rows.append(f"{site.upper()}={len(df):,}")
         tmp_dfs.append(df)
 
-    dfs[dataset_name] = pd.concat(
-        tmp_dfs,
-        ignore_index=True,
+    dfs[dataset_name] = pd.concat(tmp_dfs, ignore_index=True)
+    # Konkatenations-Ergebnis je Datensatz bestätigen (Zeilen gesamt + je Standort)
+    print(
+        f"    [LOAD] {dataset_name:<24}: {len(dfs[dataset_name]):>10,} Zeilen "
+        f"({len(tmp_dfs)} Standorte: {', '.join(_per_site_rows)})"
     )
 
 # ── MUST-UICC: pro Standort als CSV, NICHT im parquet/-Unterordner ────────────
@@ -177,7 +275,7 @@ df_must_uicc_all = dfs["must_uicc"]
 
 # Namensschema:
 #   01_GK     = Grundkohorte  (Top-20 Entitäten, kein D/C44, nur K&P)  – alle Jahre
-#   02_GK_17  = + Filter asserted_year >= 2017
+#   02_GK_17  = + Filter asserted_year >= YEAR_CUTOFF (Filter 4; aktuell deaktiviert)
 #   02_GK_17/3M = + max. 3 Monate Abstand ECOG/UICC zu Therapie
 DIR_GK = PLOTS / "01_GK"
 DIR_GK_17 = PLOTS / "02_GK_17"
@@ -252,34 +350,43 @@ print("━" * 70)
 print("\n  [LOAD] Tumorkohorte (Roh):")
 print(f"    Quelle: df_all_obds_clean_deidentified.parquet")
 df_tumore = df_obds
-_n0_rows = len(df_tumore)
-_n0_cond = df_tumore["condition_id_hash"].nunique()
-_n0_pat = df_tumore["patient_resource_id_hash"].nunique()
+_step0 = _counts(df_tumore)
+_n0_rows, _n0_cond, _n0_pat = _step0
 print(f"    Zeilen: {_n0_rows:,}  |  cond_ids: {_n0_cond:,}  |  Patienten: {_n0_pat:,}")
 
-# ── Filter 1: D-Diagnosen entfernen (gutartige Neubildungen) ──────────────────
-print("\n  [FILTER 1] Entferne D-Diagnosen (icd10_parent_code enthält 'D'):")
+# ── Filter 1: D-Diagnosen entfernen (gutartige/unsichere Neubildungen) ────────
+print("\n  [FILTER 1] Entferne D-Diagnosen (icd10_parent_code beginnt mit 'D'):")
 df_tumore = df_tumore[~df_tumore["icd10_parent_code"].str.startswith("D", na=False)]
-_n1_cond = df_tumore["condition_id_hash"].nunique()
-_log_filter("D-Diagnosen entfernt", _n0_cond, _n1_cond)
+_step1 = _counts(df_tumore)
+_n1_cond = _step1[1]
+_log_step("D-Diagnosen entfernt", _step0, _step1)
 
 # ── Filter 2: C44 entfernen (Hauttumoren – keine systemische Relevanz) ────────
 print("\n  [FILTER 2] Entferne C44 (Bösartige Neubildungen der Haut):")
 df_tumore = df_tumore[~df_tumore["icd10_parent_code"].str.startswith("C44", na=False)]
-
-_n2_cond = df_tumore["condition_id_hash"].nunique()
-_log_filter("C44 entfernt", _n1_cond, _n2_cond)
+_step2 = _counts(df_tumore)
+_n2_cond = _step2[1]
+_log_step("C44 entfernt", _step1, _step2)
 
 # ── Filter 2b: Minderjährige entfernen (age_at_diagnosis < 18) ────────────────
 # Wirkt auf die GESAMTKOHORTE, also vor Butterfly-Plot und Top-20-Bestimmung.
 print("\n  [FILTER 2b] Entferne minderjährige Patienten (age_at_diagnosis < 18):")
 _age_num = pd.to_numeric(df_tumore["age_at_diagnosis"], errors="coerce")
 _n_underage_rows = int((_age_num < 18).sum())
-_n_underage_pat  = df_tumore.loc[_age_num < 18, "patient_resource_id_hash"].nunique()
+_n_underage_pat = df_tumore.loc[_age_num < 18, "patient_resource_id_hash"].nunique()
+_n_age_nan = int(_age_num.isna().sum())
 df_tumore = df_tumore[_age_num >= 18]
-_n2b_cond = df_tumore["condition_id_hash"].nunique()
-print(f"    Entfernt: {_n_underage_rows:,} Zeilen  |  {_n_underage_pat:,} minderjährige Patienten")
-_log_filter("Minderjährige (<18) entfernt", _n2_cond, _n2b_cond)
+_step2b = _counts(df_tumore)
+_n2b_cond = _step2b[1]
+print(
+    f"    Direkt entfernt: {_n_underage_rows:,} Zeilen  |  {_n_underage_pat:,} minderjährige Patienten"
+)
+if _n_age_nan:
+    print(
+        f"    HINWEIS: {_n_age_nan:,} Zeilen ohne numerisches Alter fallen ebenfalls heraus "
+        f"(age_at_diagnosis nicht parsebar → NaN, erfüllt '>= 18' nicht)."
+    )
+_log_step("Minderjährige (<18) entfernt", _step2, _step2b)
 
 # ── ICD-Klartextnamen ergänzen (Lookup aus DWH) ───────────────────────────────
 print("\n  [MERGE] ICD-Klartextnamen (DWH_ICD_CODE_MAPPING) → left join auf icd10_parent_code:")
@@ -292,8 +399,12 @@ _icd_lookup = pd.read_parquet(os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ABSCHNITT A  –  BUTTERFLY-PLOT  (Demographischer Alters-/Geschlechts-Baum)
-# Grundkohorte: df_tumore (Top-20 Entitäten, kein D/C44).
+# Kohorte: df_tumore NACH D/C44/<18-Filter, aber VOR dem Top-20-Filter (Filter 3).
 # Kein Jahres- oder Therapiefilter – vollständige demographische Übersicht.
+# WICHTIG: Die Top-20-Auswahl für butterfly_topn.png wird NICHT hier, sondern
+# INNERHALB von plot_population_pyramid_topn() per value_counts gebildet. Da die
+# Auswahllogik identisch zu Filter 3 ist (value_counts auf entity_or_parent),
+# stimmen die 20 Entitäten mit der späteren Grundkohorte überein.
 # ══════════════════════════════════════════════════════════════════════════════
 
 DIR_BUTTERFLY.mkdir(parents=True, exist_ok=True)
@@ -301,14 +412,17 @@ DIR_BUTTERFLY.mkdir(parents=True, exist_ok=True)
 print("\n" + "━" * 70)
 print("ABSCHNITT A  –  BUTTERFLY-PLOT  (Demographischer Alters-/Geschlechts-Baum)")
 print("━" * 70)
-print(f"  Kohorte: df_tumore NACH D/C44-Filter, VOR Top-20-Filter")
+print(f"  Kohorte: df_tumore NACH D/C44/<18-Filter, VOR Top-20-Filter")
 print(
     f"  cond_ids: {df_tumore['condition_id_hash'].nunique():,}  |  "
     f"Patienten: {df_tumore['patient_resource_id_hash'].nunique():,}  |  "
     f"Entitäten (entity_or_parent): {df_tumore['entity_or_parent'].nunique():,}"
 )
-
-DIR_BUTTERFLY.mkdir(parents=True, exist_ok=True)
+print(
+    f"  HINWEIS: butterfly_topn.png wählt die Top-20-Entitäten intern "
+    f"(in plot_population_pyramid_topn); <18 und ungültige Geschlechter werden "
+    f"in der Plot-Funktion zusätzlich verworfen (siehe deren Printouts)."
+)
 
 print(f"\n  [PLOT] butterfly_overall.png  – Alters-/Geschlechtsverteilung, alle Entitäten")
 plot_population_pyramid_from_raw(
@@ -349,14 +463,20 @@ print("\n" + "━" * 70)
 print("FILTER 3  –  Top-20 Tumor-Entitäten (entity_or_parent)")
 print("━" * 70)
 print(f"  Rationale: Fokus auf häufige Tumorentitäten mit ausreichender Fallzahl")
-_n_pre_top20 = df_tumore["condition_id_hash"].nunique()
+_step_pre_top20 = _counts(df_tumore)
+_n_entities_all = df_tumore["entity_or_parent"].nunique()
 df_tumore = df_tumore[
     df_tumore["entity_or_parent"].isin(df_tumore["entity_or_parent"].value_counts().iloc[:20].index)
 ]
 cond_ids_gk = df_tumore["condition_id_hash"]
-_n3_cond = cond_ids_gk.nunique()
-_n3_pat = df_tumore["patient_resource_id_hash"].nunique()
-_log_filter("Top-20 Entitäten behalten", _n_pre_top20, _n3_cond)
+_step3 = _counts(df_tumore)
+_n3_cond = _step3[1]
+_n3_pat = _step3[2]
+print(
+    f"  Entitäten: {_n_entities_all:,} vorhanden  →  20 behalten "
+    f"({_n_entities_all - 20:,} seltenere Entitäten verworfen)"
+)
+_log_step("Top-20 Entitäten behalten", _step_pre_top20, _step3)
 print(f"  ─ GRUNDKOHORTE (GK) festgelegt ─────────────────────────────────────")
 print(f"  Master-DF: df_tumore  →  {_n3_cond:,} cond_ids  |  {_n3_pat:,} Patienten")
 print(f"  Alle nachgelagerten DataFrames werden auf diese cond_ids gefiltert.")
@@ -585,37 +705,60 @@ print(
 )
 
 
-def _load_therapy(df, dropna_cols: list) -> pd.DataFrame:
-    # df = pd.read_parquet(os.path.join(DATA, filename))
-    _n_raw = len(df)
+def _load_therapy(df, dropna_cols: list, label: str) -> pd.DataFrame:
+    """
+    Bereitet eine Therapietabelle für die Grundkohorte auf und gibt JEDEN
+    Filterschritt sprechend aus (Zeilen + cond_ids), damit kein Filtereffekt
+    – insbesondere der K&P-Intentions-Filter – unsichtbar bleibt.
+
+    Schritte (in dieser Reihenfolge):
+        0) Roh
+        1) dropna auf `dropna_cols` (Pflichtfelder)
+        2) auf GK einschränken (condition_id_hash ∈ cond_ids_gk)
+        3) "" → "unknown" ersetzen, dann nur Intention K (kurativ) / P (palliativ)
+
+    Args:
+        df:          Roh-DataFrame des Therapietyps (bereits multi-site konkateniert)
+        dropna_cols: Pflichtspalten, ohne die eine Zeile unbrauchbar ist
+        label:       Anzeigename des Therapietyps (für die Printout-Zuordnung)
+    """
+    def _rc(d):
+        return len(d), d["condition_id_hash"].nunique()
+
+    n0, c0 = _rc(df)
     df = df.dropna(subset=dropna_cols)
+    n1, c1 = _rc(df)
     df = df.sort_values(["condition_id_hash", "months_between_asserted_therapy_start_date"])
     df = df[df["condition_id_hash"].isin(cond_ids_gk)]
+    n2, c2 = _rc(df)
     df = df.replace("", "unknown")
-    _n_before_kp = len(df)
     df = df[df["therapy_intention"].isin(["K", "P"])]
+    n3, c3 = _rc(df)
+
+    print(f"    [{label}]")
+    print(f"      0) Roh:                  {n0:>9,} Zeilen | {c0:>8,} cond_ids")
+    print(f"      1) nach dropna({', '.join(dropna_cols)}):")
+    print(f"                               {n1:>9,} Zeilen | {c1:>8,} cond_ids   ({n1 - n0:>+9,} Zeilen)")
+    print(f"      2) nach GK-cond_id-Filter:")
+    print(f"                               {n2:>9,} Zeilen | {c2:>8,} cond_ids   ({n2 - n1:>+9,} Zeilen)")
+    print(f"      3) nach Intention K&P:   {n3:>9,} Zeilen | {c3:>8,} cond_ids   ({n3 - n2:>+9,} Zeilen)")
+    print(f"         (entfernt Intention ≠ K/P, z.B. diagnostisch/unbekannt)")
     return df
 
 
 print(f"    [LOAD] OP: df_ops_grouped_deidentified.parquet")
-df_ops_gk = _load_therapy(df_ops_grouped, ["condition_id_hash", "ops_code"])
-print(
-    f"      → {len(df_ops_gk):,} Zeilen  |  cond_ids: {df_ops_gk['condition_id_hash'].nunique():,}"
-)
+df_ops_gk = _load_therapy(df_ops_grouped, ["condition_id_hash", "ops_code"], label="OP")
 
 print(f"    [LOAD] Radiotherapie: df_radiotherapies_joined_deidentified.parquet")
-df_radio_gk = _load_therapy(df_radiotherapies_joined, ["condition_id_hash", "zielgebiet"])
-print(
-    f"      → {len(df_radio_gk):,} Zeilen  |  cond_ids: {df_radio_gk['condition_id_hash'].nunique():,}"
+df_radio_gk = _load_therapy(
+    df_radiotherapies_joined, ["condition_id_hash", "zielgebiet"], label="Radiotherapie"
 )
 
 print(f"    [LOAD] Systemtherapie: df_system_therapies_deidentified.parquet")
 df_system_gk = _load_therapy(
     df_systemtherapies,
     ["condition_id_hash", "therapy_protocol_text", "months_between_asserted_therapy_start_date"],
-)
-print(
-    f"      → {len(df_system_gk):,} Zeilen  |  cond_ids: {df_system_gk['condition_id_hash'].nunique():,}"
+    label="Systemtherapie",
 )
 
 df_ops_gk["therapy_typ"] = "op"
@@ -851,7 +994,7 @@ results_neben = run_nebendiagnosen_report(
     icd_code_col_in_mapping="ICD_Code",
     all_patient_ids=all_patient_ids_gk,
 )
-print("Speichern im Nebendiagnose Unterordner im Plotordner")
+print(f"  [SAVE] Alle Nebendiagnosen-Plots & Excel-Exporte → {DIR_NEBENDIAG}")
 print(f"  ✓ Abschnitt B abgeschlossen  →  {DIR_NEBENDIAG}")
 
 
@@ -963,10 +1106,24 @@ for _src_label, _df_uicc_src in UICC_SOURCES_unfiltered:
             file_name_bubble=bub_f,
         )
 
-print("FILTERUNG: Entferne Unkowns("U") und missing für ECOG und UICC")
+print("\n" + "━" * 70)
+print("STAGING-BEREINIGUNG  –  Entferne 'missing' UICC und 'U' ECOG")
+print("  Gilt AB HIER für alle Therapie×Staging-Merges (Abschnitt C/D/E).")
+print("  WICHTIG: Die unfilterten Inventar-/Bubble-Plots OBERHALB enthalten")
+print("  'missing'/'U' noch (bewusst, um die Rohabdeckung zu zeigen).")
+print("━" * 70)
+
+_b_must = _counts(df_uicc_must)
 df_uicc_must = df_uicc_must[~(df_uicc_must["uicc_tnm"] == "missing")]
+_log_step("UICC MUST: 'missing' entfernt", _b_must, _counts(df_uicc_must))
+
+_b_uicc = _counts(df_uicc_gk)
 df_uicc_gk = df_uicc_gk[~(df_uicc_gk["uicc_tnm"] == "missing")]
+_log_step("UICC oBDS: 'missing' entfernt", _b_uicc, _counts(df_uicc_gk))
+
+_b_ecog = _counts(df_ecog_gk)
 df_ecog_gk = df_ecog_gk[~(df_ecog_gk["ecog_performance_status"] == "U")]
+_log_step("ECOG: 'U' (unbekannt) entfernt", _b_ecog, _counts(df_ecog_gk))
 
 UICC_SOURCES = [
     ("obds", df_uicc_gk),
@@ -978,8 +1135,9 @@ print(f"\n  [MERGE] Nearest-date-Merge: 6 Therapie-Staging-Paare (GK, alle Jahre
 print(f"    Methode: merge_asof (direction=backward, tolerance=None) pro cond_id")
 print(f"    Für jede Therapie wird das zeitlich nächste zurückliegende ECOG/UICC gesucht.")
 print(f"    ECOG: einmal. UICC: PARALLEL für beide Quellen (_obds / _must).")
-print(f"    HINWEIS: Resultierende DFs (df_se, df_su_obds/_must, …) werden nach 2017-Filter")
-print(f"    auf cond_ids_17 eingeschränkt → Basis für 3M-Cutoff (Abschnitt E).")
+print(f"    HINWEIS: Resultierende DFs (df_se, df_su_obds/_must, …) werden nach dem")
+print(f"    Jahresfilter (asserted_year >= {YEAR_CUTOFF}) auf cond_ids_17 eingeschränkt")
+print(f"    → Basis für 3M-Cutoff (Abschnitt E).")
 _merge_args = dict(
     id_col="condition_id_hash",
     therapy_time_col="months_between_asserted_therapy_start_date",
@@ -1098,27 +1256,40 @@ for label, df_m, s in _overview:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# FILTER: asserted_year >= 2017
+# FILTER 4: asserted_year >= YEAR_CUTOFF
 # ══════════════════════════════════════════════════════════════════════════════
+# Single Source of Truth ist die oben definierte Konstante YEAR_CUTOFF.
+# Der Block erkennt selbst, ob der Schnitt tatsächlich greift, und gibt es
+# ehrlich aus (kein hartkodiertes "2017" mehr in den Printouts).
+
+# Ist der Cutoff so niedrig gewählt, dass er nichts entfernen kann?
+_year_series = pd.to_numeric(df_tumore["asserted_year"], errors="coerce")
+_year_min = int(_year_series.min()) if _year_series.notna().any() else YEAR_CUTOFF
+_cutoff_active = YEAR_CUTOFF > _year_min
 
 print("\n" + "━" * 70)
-print("UNGEFILTERT!!!!!!!!!!!!!!!!WAR AUF 2017, dirty hack um diesen Auszuschalten!!!!!!!!!!")
-print("FILTER 4  –  Jahresschnitt asserted_year >= 2017")
-print("  Rationale: Vor 2017 inkonsistente Meldepflicht → Completeness-Bias.")
+print(f"FILTER 4  –  Jahresschnitt asserted_year >= {YEAR_CUTOFF}")
+if not _cutoff_active:
+    print(f"  *** AKTUELL DEAKTIVIERT ***")
+    print(f"  YEAR_CUTOFF={YEAR_CUTOFF} liegt am/unter dem frühesten Diagnosejahr")
+    print(f"  in den Daten ({_year_min}) → es wird praktisch nichts entfernt.")
+    print(f"  (Zum Reaktivieren oben YEAR_CUTOFF = 2017 setzen.)")
+else:
+    print(f"  Rationale: Vor {YEAR_CUTOFF} inkonsistente Meldepflicht → Completeness-Bias.")
 print("  Alle nachgelagerten DataFrames werden auf diesen Schnitt reduziert.")
 print("━" * 70)
 
-df_tumore_17 = df_tumore[df_tumore["asserted_year"] >= 1900]  #TODO: war auf 2017, dirty hack um diesen Auszuschalten
+_step_pre_year = _counts(df_tumore)
+df_tumore_17 = df_tumore[_year_series >= YEAR_CUTOFF]
 cond_ids_17 = df_tumore_17["condition_id_hash"]
-_log_filter("asserted_year >= 2017", _n3_cond, cond_ids_17.nunique())
-print(f"  Patienten nach 2017-Filter: {df_tumore_17['patient_resource_id_hash'].nunique():,}")
+_log_step(f"asserted_year >= {YEAR_CUTOFF}", _step_pre_year, _counts(df_tumore_17))
 
 print(f"\n  Slave-DataFrames auf cond_ids_17 einschränken:")
 df_ops_17 = df_ops_gk[df_ops_gk["condition_id_hash"].isin(cond_ids_17)]
 df_radio_17 = df_radio_gk[df_radio_gk["condition_id_hash"].isin(cond_ids_17)]
 df_system_17 = df_system_gk[df_system_gk["condition_id_hash"].isin(cond_ids_17)]
 df_ecog_17 = df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_17)]
-# UICC ≥2017 je Quelle (für die Sweeps, parallel)
+# UICC ≥ Cutoff je Quelle (für die Sweeps, parallel)
 df_uicc_17_by_src = {
     _src: _df[_df["condition_id_hash"].isin(cond_ids_17)]
     for _src, _df in UICC_SOURCES
@@ -1146,7 +1317,7 @@ print(f"  (df_se→df_se_17 etc. – diese sind die Basis für den 3M-Cutoff in 
 df_se_17 = df_se[df_se["condition_id_hash"].isin(cond_ids_17)]
 df_re_17 = df_re[df_re["condition_id_hash"].isin(cond_ids_17)]
 df_oe_17 = df_oe[df_oe["condition_id_hash"].isin(cond_ids_17)]
-# UICC-Merge-Ergebnisse je Quelle auf 2017 einschränken
+# UICC-Merge-Ergebnisse je Quelle auf cond_ids_17 (Jahresfilter) einschränken
 df_su_17_by_src, df_ru_17_by_src, df_ou_17_by_src = {}, {}, {}
 for _src_label in [s for s, _ in UICC_SOURCES]:
     df_su_17_by_src[_src_label] = df_su_by_src[_src_label][df_su_by_src[_src_label]["condition_id_hash"].isin(cond_ids_17)]
@@ -1168,13 +1339,13 @@ for label, df_m in _overview17:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ABSCHNITT D  –  GK_17  (alle Therapien, >= 2017)
+# ABSCHNITT D  –  GK_17  (alle Therapien, asserted_year >= YEAR_CUTOFF)
 # ══════════════════════════════════════════════════════════════════════════════
 
 DIR_GK_17.mkdir(parents=True, exist_ok=True)
 
 print("\n" + "━" * 70)
-print("ABSCHNITT D  –  GK_17  (alle Therapien, asserted_year >= 2017)")
+print(f"ABSCHNITT D  –  GK_17  (alle Therapien, asserted_year >= {YEAR_CUTOFF})")
 print(
     f"  Kohorte: df_tumore_17  |  {cond_ids_17.nunique():,} cond_ids  |  "
     f"{df_tumore_17['patient_resource_id_hash'].nunique():,} Patienten"
@@ -1441,19 +1612,26 @@ print(f"  ✓ Abschnitt E abgeschlossen  →  {DIR_3M}")
 print("\n" + "━" * 70)
 print("PIPELINE-ZUSAMMENFASSUNG")
 print("━" * 70)
-print(f"  Eingabe:    Alle OBDS-Karzinom-cond_ids              {_n0_cond:>9,}")
-print(f"  Filter 1:   D-Diagnosen entfernt                     {_n1_cond:>9,}")
-print(f"  Filter 2:   C44 entfernt                             {_n2_cond:>9,}")
-print(f"  Filter 2b:  Minderjährige (<18) entfernt             {_n2b_cond:>9,}")
-print(f"  Filter 3:   Top-20 Entitäten → GRUNDKOHORTE (GK)     {_n3_cond:>9,}")
-print(f"  Filter 4:   asserted_year >= 2017 → GK_17            {cond_ids_17.nunique():>9,}")
-print(f"  Filter 5:   3M-Cutoff ECOG/UICC zu Therapie")
-print(f"    System × ECOG valide Paare:                        {len(df_se_3m):>9,}")
-print(f"    Radio  × ECOG valide Paare:                        {len(df_re_3m):>9,}")
-print(f"    OP     × ECOG valide Paare:                        {len(df_oe_3m):>9,}")
+print(f"  {'Schritt':<46}{'cond_ids':>12}{'Patienten':>12}")
+print("  " + "─" * 68)
+print(f"  {'Eingabe: alle oBDS-Karzinom-cond_ids':<46}{_step0[1]:>12,}{_step0[2]:>12,}")
+print(f"  {'Filter 1: D-Diagnosen entfernt':<46}{_step1[1]:>12,}{_step1[2]:>12,}")
+print(f"  {'Filter 2: C44 entfernt':<46}{_step2[1]:>12,}{_step2[2]:>12,}")
+print(f"  {'Filter 2b: Minderjährige (<18) entfernt':<46}{_step2b[1]:>12,}{_step2b[2]:>12,}")
+print(f"  {'Filter 3: Top-20 Entitäten → GRUNDKOHORTE (GK)':<46}{_step3[1]:>12,}{_step3[2]:>12,}")
+_f4_label = (
+    f"Filter 4: asserted_year >= {YEAR_CUTOFF} → GK_17"
+    + ("" if _cutoff_active else "  [DEAKTIVIERT]")
+)
+print(f"  {_f4_label:<46}{cond_ids_17.nunique():>12,}{df_tumore_17['patient_resource_id_hash'].nunique():>12,}")
+print("  " + "─" * 68)
+print(f"  Filter 5: 3M-Cutoff ECOG/UICC zu Therapie (valide Therapie×Staging-Paare):")
+print(f"    {'System × ECOG':<30}{len(df_se_3m):>9,} Paare")
+print(f"    {'Radio  × ECOG':<30}{len(df_re_3m):>9,} Paare")
+print(f"    {'OP     × ECOG':<30}{len(df_oe_3m):>9,} Paare")
 for _src_label in [s for s, _ in UICC_SOURCES]:
-    print(f"    System × UICC [{_src_label}] valide Paare:               {len(df_su_3m_by_src[_src_label]):>9,}")
-    print(f"    Radio  × UICC [{_src_label}] valide Paare:               {len(df_ru_3m_by_src[_src_label]):>9,}")
-    print(f"    OP     × UICC [{_src_label}] valide Paare:               {len(df_ou_3m_by_src[_src_label]):>9,}")
+    print(f"    {f'System × UICC [{_src_label}]':<30}{len(df_su_3m_by_src[_src_label]):>9,} Paare")
+    print(f"    {f'Radio  × UICC [{_src_label}]':<30}{len(df_ru_3m_by_src[_src_label]):>9,} Paare")
+    print(f"    {f'OP     × UICC [{_src_label}]':<30}{len(df_ou_3m_by_src[_src_label]):>9,} Paare")
 print("━" * 70)
 print("\n✓ Pipeline vollständig abgeschlossen.")

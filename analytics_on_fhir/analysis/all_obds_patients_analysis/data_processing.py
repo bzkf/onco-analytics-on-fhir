@@ -30,7 +30,15 @@ import numpy as np
 import pandas as pd
 
 # ── Zentrale Konfiguration aus plot_config.py ─────────────────────────────────
-from plot_config import PLOT_CONFIG, tab20b_colors
+# UICC_MAPPING + map_uicc_to_main_stage zentral importiert, damit ALLE Plots
+# (auch der ECOG×UICC-Bubble, Fig 3) dieselbe vollständige Substage→Hauptstufe-
+# Zuordnung verwenden (inkl. IIIC2, IIID, IVA1).
+from plot_config import (
+    PLOT_CONFIG,
+    UICC_MAPPING,
+    map_uicc_to_main_stage,
+    tab20b_colors,
+)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -198,8 +206,9 @@ def merge_with_nearest_date_matching(
     df_left    = df_left.dropna(subset=[therapy_time_col])
     df_right   = df_right.dropna(subset=[lz_time_col])
     n_dropped  = n_before - len(df_left)
+    print(f"  [merge_nearest] {plot_title or 'Therapie × Staging'}  (direction={direction}, tolerance={tolerance})")
     if n_dropped > 0:
-        print(f"[INFO] {n_dropped:,} Zeilen wegen NaN in '{therapy_time_col}' entfernt")
+        print(f"  [merge_nearest]   {n_dropped:,} Therapiezeilen wegen NaN in '{therapy_time_col}' entfernt")
 
     df_left[therapy_time_col] = df_left[therapy_time_col].astype("float64")
     df_right[lz_time_col]     = df_right[lz_time_col].astype("float64")
@@ -218,9 +227,10 @@ def merge_with_nearest_date_matching(
 
     n_matched   = df_merged["months_diff"].notna().sum()
     n_unmatched = df_merged["months_diff"].isna().sum()
-    print(f"  Matched   : {n_matched:,}  ({100*n_matched/len(df_merged):.1f}%)")
-    print(f"  Unmatched : {n_unmatched:,}  ({100*n_unmatched/len(df_merged):.1f}%)")
-    print(df_merged["months_diff"].describe().to_string())
+    print(f"  [merge_nearest]   Matched   : {n_matched:,}  ({100*n_matched/len(df_merged):.1f}%)")
+    print(f"  [merge_nearest]   Unmatched : {n_unmatched:,}  ({100*n_unmatched/len(df_merged):.1f}%)")
+    print(f"  [merge_nearest]   Verteilung months_diff (Therapie − Staging):")
+    print("    " + df_merged["months_diff"].describe().to_string().replace("\n", "\n    "))
 
     stats = {
         "n_therapy":   len(df_left),
@@ -261,7 +271,7 @@ def merge_with_nearest_date_matching(
             Path(save_path).mkdir(parents=True, exist_ok=True)
             full_path = Path(save_path) / save_name
             fig.savefig(full_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
-            print(f"Plot gespeichert unter: {full_path.resolve()}")
+            print(f"  [merge_nearest]   Delta-Histogramm gespeichert: {full_path.resolve()}")
         plt.show()
         plt.close(fig)
 
@@ -320,13 +330,13 @@ def sweep_tolerance_fast(
     n_lz_clean        = len(df_right)
 
     print("=" * 60)
-    print("PRE-MERGE CLEANUP")
+    print(f"[sweep] {title or 'Toleranz-Sweep'}  –  PRE-MERGE CLEANUP")
     print("=" * 60)
-    print(f"  Therapy rows  :  {n_therapies_raw:>8,}  →  {n_therapies_clean:>8,}"
+    print(f"  [sweep] Therapy rows  :  {n_therapies_raw:>8,}  →  {n_therapies_clean:>8,}"
           f"  (dropped {nan_left:,} NaN in '{therapy_time_col}')")
-    print(f"  Therapy cond  :  {n_patients_raw:>8,}  →  {n_patients_clean:>8,}"
+    print(f"  [sweep] Therapy cond  :  {n_patients_raw:>8,}  →  {n_patients_clean:>8,}"
           f"  ({n_patients_raw - n_patients_clean:,} cond_ids lost)")
-    print(f"  LZ rows       :  {n_lz_raw:>8,}  →  {n_lz_clean:>8,}"
+    print(f"  [sweep] LZ rows       :  {n_lz_raw:>8,}  →  {n_lz_clean:>8,}"
           f"  (dropped {nan_right:,} NaN in '{lz_time_col}')")
     print("=" * 60)
 
@@ -336,7 +346,7 @@ def sweep_tolerance_fast(
     df_right = df_right.sort_values(lz_time_col).reset_index(drop=True)
 
     # ── Einmal mergen (kein Toleranz-Loop) ───────────────────────────────────
-    print("Merging (no tolerance)...")
+    print("  [sweep] Merging (nearest, ohne Toleranz)...")
     df_merged_full = pd.merge_asof(
         df_left, df_right,
         left_on=therapy_time_col, right_on=lz_time_col,
@@ -349,14 +359,14 @@ def sweep_tolerance_fast(
 
     n_no_match    = df_merged_full[lz_time_col].isna().sum()
     n_matched_any = len(df_merged_full) - n_no_match
-    print(f"  Merge result  :  {len(df_merged_full):,} rows total")
-    print(f"  With LZ match :  {n_matched_any:,}  ({100*n_matched_any/len(df_merged_full):.1f}%)")
-    print(f"  No LZ match   :  {n_no_match:,}  ({100*n_no_match/len(df_merged_full):.1f}%)")
+    print(f"  [sweep]   Merge result  :  {len(df_merged_full):,} rows total")
+    print(f"  [sweep]   With LZ match :  {n_matched_any:,}  ({100*n_matched_any/len(df_merged_full):.1f}%)")
+    print(f"  [sweep]   No LZ match   :  {n_no_match:,}  ({100*n_no_match/len(df_merged_full):.1f}%)")
     print("=" * 60)
 
     # ── Sweep ─────────────────────────────────────────────────────────────────
     tolerances = list(tolerances)
-    print(f"Sweeping {len(tolerances)} tolerances...")
+    print(f"  [sweep] Sweeping {len(tolerances)} Toleranzwerte (Nenner = {n_patients_clean:,} cond_ids)...")
 
     records = []
     for tol in tolerances:
@@ -371,7 +381,7 @@ def sweep_tolerance_fast(
         })
 
     df_sweep = pd.DataFrame(records)
-    print("Sweep done.")
+    print("  [sweep] Sweep done.")
     print("=" * 60)
 
     # ── Plot ──────────────────────────────────────────────────────────────────
@@ -403,10 +413,10 @@ def sweep_tolerance_fast(
             ax.plot([0, hl_x],    [hl_y, hl_y],
                     color="red", linestyle="--", linewidth=1.2, alpha=0.7, zorder=3)
             ax.scatter(hl_x, hl_y, color="red", s=80, zorder=5)
-            print(f"  Highlight tol={hl_x}  →  "
-                  f"{row['n_cond_ids'].values[0]:,} cond_ids  ({hl_y:.1f}%)")
+            print(f"  [sweep]   Highlight tol={hl_x} Monate  →  "
+                  f"{row['n_cond_ids'].values[0]:,} cond_ids  ({hl_y:.1f}% bleiben)")
         else:
-            print(f"[WARNING] highlight_tolerance={highlight_tolerance} nicht in tolerances")
+            print(f"  [sweep][WARNING] highlight_tolerance={highlight_tolerance} nicht in tolerances")
 
     ax.text(
         0.5, -0.10, f"Total therapy rows: {n_therapies_clean:,}",
@@ -423,7 +433,7 @@ def sweep_tolerance_fast(
         save_path.mkdir(parents=True, exist_ok=True)
         full_path = save_path / file_name
         fig.savefig(full_path, dpi=dpi, bbox_inches="tight")
-        print(f"Plot saved to: {full_path.resolve()}")
+        print(f"  [sweep] gespeichert: {full_path.resolve()}")
 
     plt.show()
     plt.close(fig)
@@ -459,21 +469,14 @@ def merge_and_plot_ecog_uicc_proximity(
         dpi = PLOT_CONFIG["dpi"]
     plt.rcParams["font.family"] = font_family
 
-    # ── UICC-Konstanten (lokal, da nur für diesen Plot benötigt) ─────────────
-    UICC_MAPPING = {
-        "0": "0", "0a": "0", "0is": "0",
-        "I": "I", "IA": "I", "IA1": "I", "IA2": "I", "IA3": "I",
-        "IB": "I", "IB1": "I", "IB2": "I", "IC": "I",
-        "II": "II", "IIA": "II", "IIA1": "II", "IIA2": "II",
-        "IIB": "II", "IIC": "II",
-        "III": "III", "IIIA": "III", "IIIB": "III",
-        "IIIC": "III", "IIIC1": "III",
-        "IV": "IV", "IVA": "IV", "IVB": "IV", "IVC": "IV",
-    }
-    UICC_ORDER_MAIN = ["unknown", "0", "I", "II", "III", "IV"]
+    # ── UICC-Konstanten ───────────────────────────────────────────────────────
+    # UICC_MAPPING (Substage→Hauptstufe) wird ZENTRAL aus plot_config importiert
+    # (siehe Modul-Import oben) – kein lokales, unvollständiges Dict mehr.
+    # 'missing' ist die Sammelkategorie für unbekannte/nicht zuordenbare UICC.
+    UICC_ORDER_MAIN = ["missing", "0", "I", "II", "III", "IV"]
     ECOG_ORDER      = ["U", "0", "1", "2", "3", "4"]
     UICC_COLORS = {
-        "unknown": "#b0b0b0", "0": "#555555", "I": "#08519c",
+        "missing": "#b0b0b0", "0": "#555555", "I": "#08519c",
         "II": "#006d2c", "III": "#a63603", "IV": "#54278f",
     }
 
@@ -498,11 +501,11 @@ def merge_and_plot_ecog_uicc_proximity(
     n_uicc = len(df_right)
 
     print("=" * 60)
-    print("ECOG × UICC PROXIMITY MERGE")
+    print(f"[ecog_uicc_prox] ECOG × UICC PROXIMITY MERGE  →  {file_name_bubble}")
     print("=" * 60)
-    print(f"  ECOG rows    :  {n_ecog:,}  (dropped {nan_left:,} NaN)")
-    print(f"  UICC rows    :  {n_uicc:,}  (dropped {nan_right:,} NaN)")
-    print(f"  Max tolerance:  {'no limit' if max_months is None else f'{max_months} months'}")
+    print(f"  [ecog_uicc_prox] ECOG rows    :  {n_ecog:,}  (dropped {nan_left:,} NaN in '{ecog_time_col}')")
+    print(f"  [ecog_uicc_prox] UICC rows    :  {n_uicc:,}  (dropped {nan_right:,} NaN in '{uicc_time_col}')")
+    print(f"  [ecog_uicc_prox] Max tolerance:  {'kein Limit' if max_months is None else f'{max_months} Monate'}")
 
     df_merged = pd.merge_asof(
         df_left, df_right,
@@ -525,10 +528,10 @@ def merge_and_plot_ecog_uicc_proximity(
     n_cond_ids  = df_best[id_col].nunique()
     n_unmatched = n_ecog - n_matched
 
-    print(f"  Matched pairs          : {n_matched:,}  ({100*n_matched/n_ecog:.1f}%)")
-    print(f"  Unique cond_ids matched: {n_cond_ids:,}")
-    print(f"  Unmatched ECOG rows    : {n_unmatched:,}")
-    print(f"  Median abs diff        : {df_best['_abs_diff'].median():.2f} months")
+    print(f"  [ecog_uicc_prox] Matched pairs          : {n_matched:,}  ({100*n_matched/n_ecog:.1f}%)")
+    print(f"  [ecog_uicc_prox] Unique cond_ids matched: {n_cond_ids:,}")
+    print(f"  [ecog_uicc_prox] Unmatched ECOG rows    : {n_unmatched:,}")
+    print(f"  [ecog_uicc_prox] Median abs diff        : {df_best['_abs_diff'].median():.2f} Monate")
     print("=" * 60)
 
     tol_label = "no tolerance" if max_months is None else f"max {max_months}m"
@@ -598,7 +601,7 @@ def merge_and_plot_ecog_uicc_proximity(
     if save_path is not None:
         Path(save_path).mkdir(parents=True, exist_ok=True)
         fig1.savefig(Path(save_path) / file_name_dist, dpi=dpi, bbox_inches="tight")
-        print(f"Plot 1 saved to: {Path(save_path) / file_name_dist}")
+        print(f"  [ecog_uicc_prox] Distribution+Scatter gespeichert: {Path(save_path) / file_name_dist}")
     plt.show()
     plt.close(fig1)
 
@@ -608,7 +611,9 @@ def merge_and_plot_ecog_uicc_proximity(
         df_plot[ecog_cat_col].astype(str).str.strip().replace({"nan": "U", "": "U"})
     )
     df_plot[uicc_cat_col] = df_plot[uicc_cat_col].astype(str).str.strip()
-    df_plot["uicc_main"]  = df_plot[uicc_cat_col].map(UICC_MAPPING).fillna("unknown")
+    # Zentrale Substage→Hauptstufe-Zuordnung (liefert 'missing' für Unbekanntes,
+    # nie NaN → kein fillna nötig). Vorher: lokales, unvollständiges Dict.
+    df_plot["uicc_main"]  = df_plot[uicc_cat_col].map(map_uicc_to_main_stage)
 
     df_plot_filtered = df_plot[
         df_plot[ecog_cat_col].isin(ECOG_ORDER) &
@@ -670,11 +675,11 @@ def merge_and_plot_ecog_uicc_proximity(
                           .isin(UICC_MAPPING.keys())).sum())
     legend_handles = []
 
-    if "unknown" in uicc_present:
+    if "missing" in uicc_present:
         legend_handles.append(
-            mpatches.Patch(color=UICC_COLORS["unknown"], label=f"unknown  ({unknown_count:,})")
+            mpatches.Patch(color=UICC_COLORS["missing"], label=f"missing  ({unknown_count:,})")
         )
-    for main in [u for u in uicc_present if u != "unknown"]:
+    for main in [u for u in uicc_present if u != "missing"]:
         subs   = substage_map.get(main, [])
         chunks = [subs[i:i + 4] for i in range(0, len(subs), 4)]
         label  = f"Stage {main}:\n" + "\n".join("  " + ",  ".join(c) for c in chunks)
@@ -691,7 +696,7 @@ def merge_and_plot_ecog_uicc_proximity(
 
     if save_path is not None:
         fig2.savefig(Path(save_path) / file_name_bubble, dpi=dpi, bbox_inches="tight")
-        print(f"Plot 2 saved to: {Path(save_path) / file_name_bubble}")
+        print(f"  [ecog_uicc_prox] Bubble gespeichert: {Path(save_path) / file_name_bubble}")
     plt.show()
     plt.close(fig2)
 

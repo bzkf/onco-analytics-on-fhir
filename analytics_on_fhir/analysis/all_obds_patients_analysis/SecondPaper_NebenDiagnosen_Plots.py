@@ -210,6 +210,18 @@ def plot_top_bar(
     xlabel      = "No. of diagnosis rows" if mode == "all" else "No. of patients"
     title_pfx   = f"Top {n_shown}" if top_n else "All categories"
 
+    # ── Sprechende Diagnostik (Stolperfalle: NaN in der Level-Spalte = stumm
+    #    verworfen; bei Top-N werden zusätzlich seltene Kategorien nicht gezeigt)
+    _n_in = len(df)
+    _n_nan_level = _n_in - n_rows
+    print(
+        f"  [top_bar] {level.display_name} / {mode}: "
+        f"{_n_in:,} Zeilen rein  →  {n_rows:,} mit Wert in '{level.column}' "
+        f"({_n_nan_level:,} ohne Wert verworfen)  |  {n_cats:,} Kategorien, "
+        f"{n_shown:,} dargestellt"
+        + (f" (Top-{top_n}; {n_cats - n_shown:,} seltenere nicht gezeigt)" if top_n else " (alle)")
+    )
+
     fig, ax = plt.subplots(figsize=(12, max(6, n_shown * 0.45)))
     bars = ax.barh(
         list(range(n_shown)),
@@ -480,6 +492,16 @@ def run_ebene_distribution_plots(
         df, icd_mapping_df, icd_code_col_in_df, icd_code_col_in_mapping
     )
     results: dict = {}
+
+    # ── Abdeckung der Klassifikation melden: wieviele Zeilen je Ebene zugeordnet
+    #    wurden bzw. ohne Zuordnung blieben (Codes nicht in der Einteilungstabelle).
+    _n_total = len(df_merged)
+    for _ebene_col in _EBENE_COLS:
+        _n_mapped = int(df_merged[_ebene_col].notna().sum())
+        print(
+            f"  [ebene] {_ebene_col}: {_n_mapped:,}/{_n_total:,} Zeilen klassifiziert "
+            f"({_n_total - _n_mapped:,} ohne Zuordnung in der Klassifikationstabelle)"
+        )
 
     for ebene_col, ebene_display in _EBENE_COLS.items():
         results[ebene_col] = {}

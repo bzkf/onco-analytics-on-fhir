@@ -61,6 +61,22 @@ def plot_population_pyramid_from_raw(
             labels.append(f"{start}+" if np.isinf(end) else f"{start}-{int(end - 1)}")
 
     data["age_group"] = pd.cut(data[age_col], bins=bins, labels=labels, right=False)
+
+    # ── Diagnostik: stille Filter offenlegen (Alter außerhalb Bins, Geschlecht) ──
+    _n_in = len(data)
+    _age_num = pd.to_numeric(data[age_col], errors="coerce")
+    _hi = bins[-1]
+    _n_age_out = int(((_age_num < bins[0]) | (_age_num >= _hi) | _age_num.isna()).sum())
+    _n_sex_bad = int((~data[sex_col].isin([male_label, female_label])).sum())
+    print(
+        f"  [butterfly_raw] {_n_in:,} Zeilen rein  |  Altersbrackets ab {bins[0]} "
+        f"(<18 und ungültiges Alter werden nicht dargestellt)"
+    )
+    print(f"  [butterfly_raw]   außerhalb Altersbereich/ohne Alter (nicht im Plot): {_n_age_out:,}")
+    print(
+        f"  [butterfly_raw]   Geschlecht ≠ {male_label}/{female_label} (nicht im Plot): {_n_sex_bad:,}"
+    )
+
     grouped = data.groupby(["age_group", sex_col]).size().unstack(fill_value=0)
     for col in [male_label, female_label]:
         if col not in grouped.columns:
@@ -72,6 +88,10 @@ def plot_population_pyramid_from_raw(
     male = grouped[male_label].values
     total_female = int(female.sum())
     total_male = int(male.sum())
+    print(
+        f"  [butterfly_raw]   dargestellt: {female_label}={total_female:,}, "
+        f"{male_label}={total_male:,}"
+    )
     y = np.arange(len(ages))
 
     _cols = tab20b_colors(4)
@@ -97,7 +117,7 @@ def plot_population_pyramid_from_raw(
     plt.tight_layout()
     if output_path:
         fig.savefig(output_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
-        print(f"Plot saved to: {output_path}")
+        print(f"  [butterfly_raw] gespeichert: {output_path}")
     plt.close(fig)
 
 
@@ -134,6 +154,30 @@ def plot_population_pyramid_topn(
     data_top = data[data[diagnosis_col].isin(top_diag)]
     n_female_top = int((data_top[sex_col] == female_label).sum())
     n_male_top = int((data_top[sex_col] == male_label).sum())
+
+    # ── Diagnostik (Fig 1): Top-N-Auswahl + stille Filter offenlegen ──────────
+    _n_in = len(data)
+    _age_num = pd.to_numeric(data[age_col], errors="coerce")
+    _hi = bins[-1]
+    _n_age_out = int(((_age_num < bins[0]) | (_age_num >= _hi) | _age_num.isna()).sum())
+    _n_sex_bad = int((~data[sex_col].isin([male_label, female_label])).sum())
+    _n_top_rows = len(data_top)
+    print(f"  [butterfly_topn] {_n_in:,} Zeilen rein  |  Top-{top_n} '{diagnosis_col}' INTERN bestimmt")
+    print(
+        f"  [butterfly_topn]   Top-{top_n} deckt {_n_top_rows:,} Zeilen ab  "
+        f"({_n_in - _n_top_rows:,} Zeilen seltenerer Entitäten "
+        f"{'als „Other“ behalten' if include_other else 'verworfen'})"
+    )
+    print(
+        f"  [butterfly_topn]   außerhalb Altersbereich/ohne Alter: {_n_age_out:,}  |  "
+        f"Geschlecht ≠ {male_label}/{female_label}: {_n_sex_bad:,}"
+    )
+    print(
+        f"  [butterfly_topn]   dargestellt (Top-{top_n}): {female_label}={n_female_top:,}, "
+        f"{male_label}={n_male_top:,}"
+    )
+    for _i, (_ent, _cnt) in enumerate(data_top[diagnosis_col].value_counts().items(), 1):
+        print(f"  [butterfly_topn]     {_i:>2}. {str(_ent):<45} n={_cnt:,}")
 
     # "Other"-Kategorie optional (default aus, Punkt 10)
     if include_other:
@@ -203,7 +247,7 @@ def plot_population_pyramid_topn(
     plt.tight_layout()
     if output_path:
         fig.savefig(output_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
-        print(f"Plot saved to: {output_path}")
+        print(f"  [butterfly_topn] gespeichert: {output_path}")
     plt.close(fig)
 
 
@@ -277,4 +321,4 @@ if __name__ == "__main__":
         output_path=DIR_BUTTERFLY / "butterfly_overall.tiff",
     )
 
-    print("debug")
+    print("✓ Butterfly-Plots (standalone) abgeschlossen.")

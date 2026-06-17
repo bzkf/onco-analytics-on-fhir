@@ -59,6 +59,33 @@ from plot_config import (
 # importiert (siehe Import-Block oben) und NICHT hier neu definiert.
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PRINTOUT-STEUERUNG  (relevante Paper-Plots vs. übrige Plots)
+# ══════════════════════════════════════════════════════════════════════════════
+# Die Paper-relevanten Plotfunktionen geben sprechende Diagnostik aus, damit jede
+# interne Filterung (Stolperfallen!) im Konsolen-Log nachvollziehbar ist. Alle
+# übrigen Plots (nicht im Paper) sind standardmäßig STUMM, lassen sich aber durch
+# Umschalten von VERBOSE_OTHER_PLOTS=True bei Bedarf wieder einschalten.
+# Jede Diagnostik-Zeile trägt ein [funktionsname]-Präfix, sodass klar ist, AUS
+# WELCHER Plot-Funktion sie stammt. Echte Warnungen/Fehler werden IMMER gedruckt.
+VERBOSE_PAPER_PLOTS = True    # Paper-relevante Plots (Fig 1, 2, 3, 6, 7, 12, …)
+VERBOSE_OTHER_PLOTS = False   # übrige Plots (Violin, Bias, Dropout, Lorenz, Gender, Scatter)
+
+
+def _say(msg: str, *, paper: bool = True) -> None:
+    """
+    Schaltbare Diagnostik-Ausgabe einer Plot-Funktion.
+
+    paper=True  → nur drucken, wenn VERBOSE_PAPER_PLOTS gesetzt ist
+    paper=False → nur drucken, wenn VERBOSE_OTHER_PLOTS gesetzt ist
+
+    Für Warnungen/Fehler NICHT verwenden – die sollen immer sichtbar sein
+    (direktes print()).
+    """
+    if (paper and VERBOSE_PAPER_PLOTS) or (not paper and VERBOSE_OTHER_PLOTS):
+        print(msg)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PRIVATE HILFSFUNKTIONEN
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -183,7 +210,7 @@ def _build_grouped_bar(
         path = Path(save_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
-        print(f"Plot saved to: {path.resolve()}")
+        _say(f"[grouped_bar] gespeichert: {path.resolve()}")
     else:
         plt.show()
     plt.close()
@@ -255,10 +282,23 @@ def plot_age_distribution_grouped_bar(
         color_map.update(colors)
 
     rows = []
+    _say(
+        f"[age_dist] Altersverteilung je Therapietyp  |  Bracket={age_bracket}J  "
+        f"|  Bins {bins[0]}–{bins[-1]} (erstes Bracket 18–19)"
+    )
     for therapy, df in dataframes.items():
         if age_column not in df.columns:
             raise ValueError(f"Spalte '{age_column}' nicht in Therapiegruppe '{therapy}'.")
+        _n_in = len(df)
         ages = pd.to_numeric(df[age_column], errors="coerce").dropna()
+        _n_valid = len(ages)
+        _n_drop = _n_in - _n_valid
+        # Werte außerhalb der Bins (z.B. <18 oder >=105) fallen bei pd.cut auf NaN
+        _n_outside = int(((ages < bins[0]) | (ages >= bins[-1])).sum())
+        _say(
+            f"[age_dist]   {therapy:<22}: {_n_in:>8,} Zeilen rein  →  {_n_valid:>8,} mit gültigem Alter "
+            f"({_n_drop:,} ohne Alter verworfen; {_n_outside:,} außerhalb {bins[0]}–{bins[-1]})"
+        )
         counts = (
             pd.cut(ages, bins=bins, labels=labels, right=False)
             .value_counts()
@@ -337,7 +377,7 @@ def plot_age_distribution_grouped_bar(
         path = Path(save_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
-        print(f"Plot saved to: {path.resolve()}")
+        _say(f"[age_dist] gespeichert: {path.resolve()}")
     else:
         plt.show()
     plt.close()
@@ -400,9 +440,9 @@ def plot_therapy_times(
     save_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight", facecolor="white")
-        print(f"\nPlot gespeichert unter:\n{save_path.resolve()}")
+        _say(f"[therapy_times] gespeichert: {save_path.resolve()}", paper=False)
     except Exception as e:
-        print(f"Fehler beim Speichern: {e}")
+        print(f"[therapy_times] Fehler beim Speichern: {e}")
     plt.close(fig)
 
 
@@ -498,7 +538,7 @@ def plot_therapy_bias_analysis(
         if directory:
             os.makedirs(directory, exist_ok=True)
         fig.savefig(save_path, dpi=PLOT_CONFIG["dpi"], bbox_inches=None)
-        print(f"Plot saved to: {save_path}")
+        _say(f"[therapy_bias] gespeichert: {save_path}", paper=False)
     plt.show()
     plt.close(fig)
 
@@ -567,12 +607,13 @@ def plot_dropout_curve(
                 zorder=3,
             )
             ax.scatter(hl_x, hl_y, color="red", s=80, zorder=5)
-            print(
-                f"  Highlight month={hl_x}  →  "
-                f"{hl_row['patients_remaining'].values[0]:,} cond_ids  ({hl_y:.1f}%)"
+            _say(
+                f"[dropout] Highlight month={hl_x}  →  "
+                f"{hl_row['patients_remaining'].values[0]:,} cond_ids  ({hl_y:.1f}%)",
+                paper=False,
             )
         else:
-            print(f"[WARNING] highlight_month={highlight_month} nicht in result_df")
+            print(f"[dropout][WARNING] highlight_month={highlight_month} nicht in result_df")
     ax.text(
         0.5,
         -0.10,
@@ -590,7 +631,7 @@ def plot_dropout_curve(
         save_path.mkdir(parents=True, exist_ok=True)
         full_path = save_path / dateiname
         fig.savefig(full_path, dpi=dpi, bbox_inches="tight")
-        print(f"Plot gespeichert als: {full_path.resolve()}")
+        _say(f"[dropout] gespeichert: {full_path.resolve()}", paper=False)
     plt.show()
     plt.close(fig)
     return result_df, fig
@@ -613,7 +654,7 @@ def plot_lorenz_curve(
     counts = _therapy_counts_per_cond(df, cond_col, n_total_patients)
     values = np.sort(counts.to_numpy(dtype=float))
     if values.size == 0:
-        print("[WARNUNG] Keine Daten für Lorenz-Kurve")
+        print("[lorenz][WARNUNG] Keine Daten für Lorenz-Kurve")
         return
     cum_vals = np.cumsum(values)
     cum_vals = np.insert(cum_vals, 0, 0)
@@ -690,14 +731,23 @@ def plot_log_histogram(
     plt.rcParams["font.family"] = font_family
     counts = _therapy_counts_per_cond(df, cond_col, n_total_patients)
     if counts.empty:
-        print("[WARNING] No data for histogram")
+        print("[log_histo][WARNING] Keine Daten für Histogramm")
         return
+    _n_with_therapy_pre = df[cond_col].nunique()
+    _say(
+        f"[log_histo] {cohort_name or 'Kohorte'}: {len(counts):,} cond_ids im Nenner "
+        f"({_n_with_therapy_pre:,} mit ≥1 Therapie; "
+        f"{len(counts) - _n_with_therapy_pre:,} mit 0 Therapien als Balken bei x=0 ergänzt)"
+    )
     # ── Ausreißer entfernen (Punkt 6) ────────────────────────────────────────
+    # WICHTIG für die Caption: cond_ids mit sehr vielen Therapien werden gekappt.
     if max_therapies is not None:
         n_outliers = int((counts > max_therapies).sum())
-        if n_outliers > 0:
-            print(f"    [log_histo] {n_outliers} Ausreißer-cond_ids mit > {max_therapies} "
-                  f"Therapien entfernt (max war {int(counts.max())}).")
+        _say(
+            f"[log_histo]   Ausreißer-Cap max_therapies={max_therapies}: "
+            f"{n_outliers:,} cond_ids mit > {max_therapies} Therapien entfernt "
+            f"(Maximum war {int(counts.max())} Therapien/cond_id)."
+        )
         counts = counts[counts <= max_therapies]
     n_with_therapy = df[cond_col].nunique()
     use_year_split = (year_col is not None) and (year_cutoff is not None)
@@ -906,6 +956,30 @@ def plot_uicc_ecog_inventory(
         ecog_n_known = sum(v for l, v in zip(ecog_labels, ecog_vals) if l != "U")
         ecog_max = max(ecog_vals) if ecog_vals else 1
 
+    # ── Sprechende Diagnostik (Fig 2) ─────────────────────────────────────────
+    _say(
+        f"[uicc_ecog_inventory] {cohort_name or 'Kohorte'}  |  "
+        f"Datei={Path(output_path).name if output_path else '–'}"
+    )
+    _say(
+        "[uicc_ecog_inventory]   UICC (oBDS): "
+        f"{uicc_obds_total:,} Zeilen → Hauptstufen "
+        + ", ".join(f"{s}={uicc_obds[s]:,}" for s in stages)
+    )
+    if has_must:
+        _say(
+            "[uicc_ecog_inventory]   UICC (MUST): "
+            f"{uicc_must_total:,} Zeilen → Hauptstufen "
+            + ", ".join(f"{s}={uicc_must[s]:,}" for s in stages)
+        )
+    if show_ecog:
+        _say(
+            "[uicc_ecog_inventory]   ECOG: "
+            f"{ecog_total:,} Zeilen  (bekannt 0–4: {ecog_n_known:,};  "
+            + ", ".join(f"{l}={v:,}" for l, v in zip(ecog_labels, ecog_vals))
+            + ")"
+        )
+
     FIG_WIDTH = 12.5
     FIG_HEIGHT = 8
 
@@ -998,7 +1072,7 @@ def plot_uicc_ecog_inventory(
     if output_path:
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
-        print(f"Plot saved to: {output_path}")
+        _say(f"[uicc_ecog_inventory] gespeichert: {output_path}")
     if show:
         plt.show()
     plt.close(fig)
@@ -1053,11 +1127,19 @@ def plot_uicc_distribution_grouped_bar(
         order.remove("0")
 
     rows = []
+    _say(
+        f"[uicc_dist] UICC-Verteilung je Therapie  |  Ausschluss: "
+        f"missing={exclude_missing}, Stage0={exclude_zero}  |  relativ={relative}"
+    )
     for therapy, df in dataframes.items():
         if uicc_column not in df.columns:
             raise ValueError(f"Spalte '{uicc_column}' nicht in '{therapy}'.")
-        mapped = df[uicc_column].map(map_uicc_to_main_stage)
-        mapped = mapped[mapped.isin(order)]  # nur behaltene Stufen → n schrumpft
+        mapped_all = df[uicc_column].map(map_uicc_to_main_stage)
+        _n_all = len(mapped_all)
+        _n_missing = int((mapped_all == "missing").sum())
+        _n_zero = int((mapped_all == "0").sum())
+        mapped = mapped_all[mapped_all.isin(order)]  # nur behaltene Hauptstufen → n schrumpft
+        _n_excluded = _n_all - len(mapped)
         counts = mapped.value_counts().reindex(order, fill_value=0).reset_index()
         counts.columns = ["category", "count"]
         counts["therapy"] = therapy
@@ -1065,11 +1147,16 @@ def plot_uicc_distribution_grouped_bar(
         _matched = int(counts["count"].sum())
         if totals is not None and totals.get(therapy, 0) > 0:
             _cov = 100.0 * _matched / totals[therapy]
-            print(f"    [UICC-Dist] {therapy}: matched={_matched:,} / total={totals[therapy]:,} "
-                  f"({_cov:.1f}% mit nutzbarer UICC)")
+            _say(
+                f"[uicc_dist]   {therapy:<22}: dargestellt={_matched:,} / total={totals[therapy]:,} "
+                f"({_cov:.1f}% mit nutzbarer UICC)  |  ausgeschlossen={_n_excluded:,} "
+                f"(missing={_n_missing:,}, Stage0={_n_zero:,})"
+            )
         else:
-            print(f"    [UICC-Dist] {therapy}: n={_matched:,} "
-                  f"(nach Ausschluss missing={exclude_missing}, 0={exclude_zero})")
+            _say(
+                f"[uicc_dist]   {therapy:<22}: dargestellt n={_matched:,}  |  ausgeschlossen="
+                f"{_n_excluded:,} (missing={_n_missing:,}, Stage0={_n_zero:,})"
+            )
     agg = pd.concat(rows, ignore_index=True)
     return _build_grouped_bar(
         agg=agg,
@@ -1129,11 +1216,18 @@ def plot_ecog_distribution_grouped_bar(
         order = order + ["U"]
 
     rows = []
+    _say(
+        f"[ecog_dist] ECOG-Verteilung je Therapie  |  Ausschluss: U(unbekannt)="
+        f"{exclude_unknown}  |  relativ={relative}"
+    )
     for therapy, df in dataframes.items():
         if ecog_column not in df.columns:
             raise ValueError(f"Spalte '{ecog_column}' nicht in '{therapy}'.")
-        mapped = df[ecog_column].map(map_ecog_value)
-        mapped = mapped[mapped.isin(order)]
+        mapped_all = df[ecog_column].map(map_ecog_value)
+        _n_all = len(mapped_all)
+        _n_u = int((mapped_all == "U").sum())
+        mapped = mapped_all[mapped_all.isin(order)]
+        _n_excluded = _n_all - len(mapped)
         counts = mapped.value_counts().reindex(order, fill_value=0).reset_index()
         counts.columns = ["category", "count"]
         counts["therapy"] = therapy
@@ -1141,11 +1235,15 @@ def plot_ecog_distribution_grouped_bar(
         _matched = int(counts["count"].sum())
         if totals is not None and totals.get(therapy, 0) > 0:
             _cov = 100.0 * _matched / totals[therapy]
-            print(f"    [ECOG-Dist] {therapy}: matched={_matched:,} / total={totals[therapy]:,} "
-                  f"({_cov:.1f}% mit nutzbarem ECOG)")
+            _say(
+                f"[ecog_dist]   {therapy:<22}: dargestellt={_matched:,} / total={totals[therapy]:,} "
+                f"({_cov:.1f}% mit nutzbarem ECOG)  |  ausgeschlossen U={_n_u:,}"
+            )
         else:
-            print(f"    [ECOG-Dist] {therapy}: n={_matched:,} "
-                  f"(nach Ausschluss U={exclude_unknown})")
+            _say(
+                f"[ecog_dist]   {therapy:<22}: dargestellt n={_matched:,}  |  "
+                f"ausgeschlossen U={_n_u:,}"
+            )
     agg = pd.concat(rows, ignore_index=True)
     return _build_grouped_bar(
         agg=agg,
@@ -1231,7 +1329,7 @@ def plot_gender_stage_grouped_bar(
         path = Path(save_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
-        print(f"Plot saved to: {path.resolve()}")
+        _say(f"[gender_stage] gespeichert: {path.resolve()}", paper=False)
     else:
         plt.show()
     plt.close()
@@ -1260,6 +1358,10 @@ def plot_merge_panel(
     fig, axes = plt.subplots(3, 2, figsize=(12, 10))
     fig.subplots_adjust(hspace=0.60, wspace=0.30)
     hist_color = tab20b_colors(1)[0]
+    _say(
+        f"[merge_panel] {file_name}: {len(panel_entries)} Histogramme "
+        f"(months_diff je Therapie×Staging, log_y={log_y})"
+    )
     for idx, entry in enumerate(panel_entries):
         row = idx // 2
         col = idx % 2
@@ -1267,6 +1369,13 @@ def plot_merge_panel(
         data = entry["df"]["months_diff"].dropna()
         stats = entry.get("stats", {})
         staging_label = entry.get("staging_label", "Staging")
+        if stats:
+            _pct = 100 * stats.get("n_matched", 0) / stats["n_therapy"] if stats.get("n_therapy") else 0
+            _say(
+                f"[merge_panel]   {entry['title']:<30}: "
+                f"{stats.get('n_matched', 0):>7,}/{stats.get('n_therapy', 0):>7,} gematcht "
+                f"({_pct:4.1f}%)  |  {len(data):>7,} Paare mit Δ-Wert"
+            )
 
         # ── Bin-Kanten so verschieben, dass jeder Bin auf seinem Tick
         # zentriert liegt (FIX). Anzahl der Bins (=bins) bleibt unverändert,
@@ -1317,7 +1426,7 @@ def plot_merge_panel(
         full_path = Path(save_path) / file_name
         Path(save_path).mkdir(parents=True, exist_ok=True)
         fig.savefig(full_path, dpi=dpi, bbox_inches="tight")
-        print(f"Panel gespeichert: {full_path.resolve()}")
+        _say(f"[merge_panel] gespeichert: {full_path.resolve()}")
     plt.show()
     plt.close(fig)
 
@@ -1340,6 +1449,10 @@ def plot_sweep_panel(
     PAIR_COLORS = {"ECOG": "#2e6fba", "UICC": "#2e8b57"}
     fig, axes = plt.subplots(3, 2, figsize=(10, 12), sharex=True, sharey=True)
     fig.subplots_adjust(hspace=0.38, wspace=0.15)
+    _say(
+        f"[sweep_panel] {file_name}: {len(sweeps)} Toleranz-Sweeps "
+        f"(% gematchte cond_ids je Therapie×Staging über Toleranzfenster)"
+    )
     for idx, entry in enumerate(sweeps):
         row = idx // 2
         col = idx % 2
@@ -1369,6 +1482,11 @@ def plot_sweep_panel(
             hl_row = df[df["tolerance"] == hl]
             if not hl_row.empty:
                 hl_y = hl_row["pct_cond_ids"].values[0]
+                _say(
+                    f"[sweep_panel]   {therapy:<16} × {pair:<14}: bei Toleranz {hl} Monaten "
+                    f"bleiben {hl_y:4.1f}% der cond_ids"
+                    + (f" (von n={n_total:,})" if n_total else "")
+                )
                 ax.plot(
                     [hl, hl],
                     [0, hl_y],
@@ -1405,7 +1523,7 @@ def plot_sweep_panel(
         save_path.mkdir(parents=True, exist_ok=True)
         full_path = save_path / file_name
         fig.savefig(full_path, dpi=dpi, bbox_inches="tight")
-        print(f"Panel saved to: {full_path.resolve()}")
+        _say(f"[sweep_panel] gespeichert: {full_path.resolve()}")
     plt.show()
     plt.close(fig)
 
@@ -1438,7 +1556,7 @@ def scatterplot(
     if speichern:
         if not os.path.exists(ordner):
             os.makedirs(ordner)
-            print(f"Ordner erstellt: {ordner}")
+            _say(f"[scatterplot] Ordner erstellt: {ordner}", paper=False)
         pfad = os.path.join(ordner, dateiname)
         plt.savefig(pfad, dpi=dpi, bbox_inches="tight")
-        print(f"Plot gespeichert als: {pfad}")
+        _say(f"[scatterplot] gespeichert: {pfad}", paper=False)
