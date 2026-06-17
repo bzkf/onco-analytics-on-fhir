@@ -1868,7 +1868,7 @@ class AMLStudy:
             dtype={"patient_mrn": str},
         )
         lab_data["lab_dateTime"] = pd.to_datetime(
-            lab_data["lab_dateTime"], errors="raise", format="ISO8601"
+            lab_data["lab_dateTime"], errors="coerce", format="ISO8601"
         )
 
         columns_to_hash = ["observation_id", "observation_patient_reference", "patient_mrn"]
