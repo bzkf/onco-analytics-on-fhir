@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.33.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.1...v2.33.2) (2026-06-17)
+
+
+### Bug Fixes
+
+* return successfully if no labs are found ([#533](https://github.com/bzkf/onco-analytics-on-fhir/issues/533)) ([014d000](https://github.com/bzkf/onco-analytics-on-fhir/commit/014d0009ba0a921c157e6c5474d9a2fbf06047db))
+
 ## [2.33.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.0...v2.33.1) (2026-06-16)
 
 
