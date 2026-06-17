@@ -480,31 +480,35 @@ class AMLStudy:
                 ],
             )
 
-            all_labs.append(lab_df_chunk)
+            if len(lab_df_chunk) > 0:
+                all_labs.append(lab_df_chunk)
 
-        lab_df = pd.concat(all_labs, ignore_index=True)
+        if all_labs:
+            lab_df = pd.concat(all_labs, ignore_index=True)
 
-        if "lab_codeableconcept_code" not in lab_df.columns:
-            lab_df["lab_codeableconcept_code"] = pd.NA
+            if "lab_codeableconcept_code" not in lab_df.columns:
+                lab_df["lab_codeableconcept_code"] = pd.NA
 
-        if "loinc_display" not in lab_df.columns:
-            lab_df["loinc_display"] = pd.NA
+            if "loinc_display" not in lab_df.columns:
+                lab_df["loinc_display"] = pd.NA
 
-        patient_mrn_lookup = (
-            patient_df[["condition_patient_reference", "patient_mrn"]]
-            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
-            .sort_values("patient_mrn")
-            .drop_duplicates(subset=["condition_patient_reference"], keep="first")
-            .set_index("condition_patient_reference")["patient_mrn"]
-        )
+            patient_mrn_lookup = (
+                patient_df[["condition_patient_reference", "patient_mrn"]]
+                .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+                .sort_values("patient_mrn")
+                .drop_duplicates(subset=["condition_patient_reference"], keep="first")
+                .set_index("condition_patient_reference")["patient_mrn"]
+            )
 
-        lab_df["patient_mrn"] = lab_df["observation_patient_reference"].map(patient_mrn_lookup)
+            lab_df["patient_mrn"] = lab_df["observation_patient_reference"].map(patient_mrn_lookup)
 
-        lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
+            lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
 
-        logger.info(f"all_labs_df size: {lab_df.count()}. {lab_df.dtypes}")
+            logger.info(f"all_labs_df size: {lab_df.count()}. {lab_df.dtypes}")
 
-        self.post_process_lab_values(lab_df)
+            self.post_process_lab_values(lab_df)
+        else:
+            logger.info("Found no lab values to given patients.")
 
     _MEDICATION_FHIR_PATHS = [
         ("medication_id", "Medication.id"),
