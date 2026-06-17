@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.33.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.0...v2.33.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* transform ops code + version in json if type is dict ([#528](https://github.com/bzkf/onco-analytics-on-fhir/issues/528)) ([5798a52](https://github.com/bzkf/onco-analytics-on-fhir/commit/5798a5206cf87830aeb5f9006e2731d9863f51b5))
+
 ## [2.33.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.3...v2.33.0) (2026-06-15)
 
 
