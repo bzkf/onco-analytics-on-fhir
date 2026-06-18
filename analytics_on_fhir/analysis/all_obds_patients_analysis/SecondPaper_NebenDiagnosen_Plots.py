@@ -502,6 +502,8 @@ def run_ebene_distribution_plots(
             f"  [ebene] {_ebene_col}: {_n_mapped:,}/{_n_total:,} Zeilen klassifiziert "
             f"({_n_total - _n_mapped:,} ohne Zuordnung in der Klassifikationstabelle)"
         )
+    df_differenz = df_merged[df_merged[_ebene_col].isna()]
+    df_differenz["icd_code"].value_counts().to_excel(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\nicht_mappbare_nebendiagnosecodes.xlsx")
 
     for ebene_col, ebene_display in _EBENE_COLS.items():
         results[ebene_col] = {}
@@ -874,7 +876,11 @@ def run_nebendiagnosen_report(
             ]
         )
         df_core  = df[df[icd_code_col_in_df].isin(core_codes)].copy()
+        #df_note_core = df[~(df[icd_code_col_in_df].isin(core_codes))].copy()
         n_core   = len(df_core)
+        df_core.to_csv(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\core_nebendiagnosen_semicolon.csv", sep=";")
+        df_core.to_parquet(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\core_nebendiagnosen_semicolon.parquet")
+
         n_kept_pct = 100 * n_core / n_total_rows if n_total_rows else 0
         # "not relevant" = Zeilen, die durch den klinischen Filter herausfallen
         n_not_relevant = n_total_rows - n_core

@@ -1447,8 +1447,8 @@ def plot_sweep_panel(
     """
     plt.rcParams["font.family"] = font_family
     PAIR_COLORS = {"ECOG": "#2e6fba", "UICC": "#2e8b57"}
-    fig, axes = plt.subplots(3, 2, figsize=(10, 12), sharex=True, sharey=True)
-    fig.subplots_adjust(hspace=0.38, wspace=0.15)
+    fig, axes = plt.subplots(3, 2, figsize=(10, 14), sharex=True, sharey=True)
+    fig.subplots_adjust(hspace=0.50, wspace=0.25)
     _say(
         f"[sweep_panel] {file_name}: {len(sweeps)} Toleranz-Sweeps "
         f"(% gematchte cond_ids je Therapie×Staging über Toleranzfenster)"

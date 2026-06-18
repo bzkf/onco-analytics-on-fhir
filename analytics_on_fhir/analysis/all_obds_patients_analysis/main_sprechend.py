@@ -537,7 +537,8 @@ _wk_uicc = (
         subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
     )
 )
-
+print('_wk_uicc = (_wk_uicc.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
+print('Wegen Right Join und sonst nicht nutzbaren Werten')
 _wk_with_time = _wk_uicc["months_between_asserted_uicc_tnm_date"].notna().sum() if "months_between_asserted_uicc_tnm_date" in _wk_uicc.columns else 0
 print(
     f"    weitere_klassifikation → UICC-Einträge: {len(_wk_uicc):,} Zeilen  |  cond_ids: {_wk_uicc['condition_id_hash'].nunique():,}"
@@ -555,6 +556,8 @@ df_uicc_raw = (
     .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
     .loc[:, lambda d: ~d.columns.duplicated()]
 )
+print('df_uicc_raw.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
+print('Wegen Right Join und sonst nicht nutzbaren Werten')
 print(
     f"    df_uicc_tnm: {_n_uicc_before_drop:,} Zeilen geladen  →  {len(df_uicc_raw):,} nach dropna  |  cond_ids: {df_uicc_raw['condition_id_hash'].nunique():,}"
 )
@@ -599,6 +602,9 @@ df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
 df_uicc_must = df_uicc_must.dropna(
     subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
 )
+print('df_uicc_must = df_uicc_must.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
+print('Wegen Right Join und sonst nicht nutzbaren Werten')
+
 _must_known = df_uicc_must["uicc_tnm"].notna().sum()
 _must_miss = df_uicc_must["uicc_tnm"].isna().sum()
 print(
@@ -641,6 +647,14 @@ _in_both = _gk_all_ids & _must_all_ids
 _newly_covered = _gk_missing_ids & _must_known_ids
 _coverage_lost = _gk_known_ids & _must_missing_ids
 _n_gk_total = cond_ids_gk.nunique()
+
+#Check auf gründe der differenz zw. OBDS und MUST UICC
+fehlende_must_ids = list(df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]["condition_id_hash"])
+fehlende_must_icd_codes_df_tumore = df_tumore[df_tumore["condition_id_hash"].isin(fehlende_must_ids)]["entity_or_parent"].value_counts()
+
+fehlende_entitäten_UICC = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_gk["condition_id_hash"])]["entity_or_parent"].value_counts()
+fehlende_entitäten_MUST = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_must["condition_id_hash"])]["entity_or_parent"].value_counts()
+
 
 print(f"\n  Gesamtkohorte GK aus Tumortabelle              : {_n_gk_total:>8,}  cond_ids")
 print(
@@ -877,6 +891,7 @@ df_conditions_raw = df_mii_conditions
 _n_cond_raw = len(df_conditions_raw)
 # C-Codes = Tumordiagnosen → raus; D-Codes bleiben als Nebendiagnosen
 df_conditions_raw = df_conditions_raw[~df_conditions_raw["icd_code"].str.contains("C", na=False)]
+df_conditions_raw = df_conditions_raw[~df_conditions_raw["icd_code"].str.contains("NaN", na=False)]
 print(
     f"    Roh: {_n_cond_raw:,} Zeilen  →  {len(df_conditions_raw):,} nach Entfernen von C-Diagnosen"
 )
@@ -926,10 +941,31 @@ if "site" in df_conditions_mapped.columns:
         print(f"      {str(_site).upper():<6} [{_ncol} ↔ {_tcol}]")
         print(f"             {len(_grp):>9,} Zeilen  |  IDs: {len(_site_ids):>8,}  |  match: {len(_site_match):>8,} ({_pct:.1f}%){_flag}")
 
+df_conditions_mapped["icd_code"].value_counts().to_excel(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\Nebendiagnosen_value_counts.xlsx")
 # Auf Patienten der GK einschränken (über den standortabhängigen Join-Key)
 df_conditions_mapped = df_conditions_mapped[
     df_conditions_mapped["_join_key"].isin(all_patient_ids_gk)
 ]
+# gefiltert_für_komische_werte_analyse = df_conditions_mapped[
+#     df_conditions_mapped['icd_code'].isna() |
+#     df_conditions_mapped['icd_code'].astype(str).str.contains('!', na=False) |
+#     (df_conditions_mapped["icd_code"] == "NaN")
+# ]
+#
+# gefiltert_für_komische_werte_analyse_na = df_conditions_mapped[
+#     df_conditions_mapped['icd_code'].isna()
+# ]
+#
+# gefiltert_für_komische_werte_analyse_ausrufezeichen = df_conditions_mapped[
+#     df_conditions_mapped['icd_code'].astype(str).str.contains('!', na=False)
+# ]
+#
+# gefiltert_für_komische_werte_analyse_NaN = df_conditions_mapped[
+#     (df_conditions_mapped["icd_code"] == "NaN")  # <-- Hier Klammern setzen!
+# ]
+# gefiltert_für_komische_werte_analyse_NaN["site"].value_counts()
+
+
 _n_with_neben = df_conditions_mapped["_join_key"].nunique()
 _n_without = len(all_patient_ids_gk) - _n_with_neben
 
