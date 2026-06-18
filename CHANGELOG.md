@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.33.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.2...v2.33.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* ignore malformed date time ([#535](https://github.com/bzkf/onco-analytics-on-fhir/issues/535)) ([7bb7201](https://github.com/bzkf/onco-analytics-on-fhir/commit/7bb7201f6433a382a1819f7311472de915bc17ea))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump aiohttp from 3.14.0 to 3.14.1 ([#532](https://github.com/bzkf/onco-analytics-on-fhir/issues/532)) ([c96886d](https://github.com/bzkf/onco-analytics-on-fhir/commit/c96886d899b5cd4e4a9359761dc2a5821124dedf))
+* **deps:** bump bleach from 6.3.0 to 6.4.0 ([#530](https://github.com/bzkf/onco-analytics-on-fhir/issues/530)) ([f2f9964](https://github.com/bzkf/onco-analytics-on-fhir/commit/f2f9964f1586854631b9a480e4f91c3aeb2f6818))
+* **deps:** bump pyjwt from 2.12.1 to 2.13.0 ([#527](https://github.com/bzkf/onco-analytics-on-fhir/issues/527)) ([be9eb87](https://github.com/bzkf/onco-analytics-on-fhir/commit/be9eb87268928070d119adbd5848f6a4ba3db2e7))
+* **deps:** bump tornado from 6.5.6 to 6.5.7 ([#531](https://github.com/bzkf/onco-analytics-on-fhir/issues/531)) ([c07fdb3](https://github.com/bzkf/onco-analytics-on-fhir/commit/c07fdb3d0916f10e18752a3ffb58f4e905f3acf3))
+
 ## [2.33.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.1...v2.33.2) (2026-06-17)
 
 
