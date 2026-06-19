@@ -177,6 +177,8 @@ PLOTS = Path(
     r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\plots"
 )
 
+test_tnm = pd.read_parquet(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\all_obds_data_allsites\tum\parquet\df_n_tnm_deidentified.parquet")
+
 SITES = "UKER, TUM, UKA, LMU, UKR, UKW"
 #SITES = "UKER"
 
@@ -507,6 +509,7 @@ else:
     print(f"\n✓ Alle Einträge haben gültige Gender-Werte (female/male)")
 
 
+#TODO: BRIGITTE HIER!
 print("\n" + "━" * 70)
 print("DATEN LADEN – SLAVE-TABELLEN: UICC, ECOG, THERAPIEN")
 print("  (Alle auf GK gefiltert via cond_ids_gk / patient_resource_id_hash)")
@@ -564,8 +567,13 @@ print(
 print(f"    NaN-UICC-Werte wurden als 'missing' kodiert.")
 
 print(f"\n  [MERGE] oBDS-Grundkohorte: df_uicc_tnm + weitere_klassifikation (UICC) → df_uicc_gk")
+df_uicc_raw["source"] = "OBDS"
+_wk_uicc["source"] = "WK"
+
 df_uicc_gk = pd.concat([df_uicc_raw, _wk_uicc], ignore_index=True, sort=False)
 df_uicc_gk["uicc_tnm"] = df_uicc_gk["uicc_tnm"].fillna("missing")
+df_uicc_gk = df_uicc_gk.drop_duplicates(subset=['uicc_tnm', 'condition_id_hash', 'months_between_asserted_uicc_tnm_date'])
+#TODO: Drop Duplicates.
 _uicc_known = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).ne("missing")][
     "condition_id_hash"
 ].nunique()
@@ -649,6 +657,7 @@ _coverage_lost = _gk_known_ids & _must_missing_ids
 _n_gk_total = cond_ids_gk.nunique()
 
 #Check auf gründe der differenz zw. OBDS und MUST UICC
+df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]
 fehlende_must_ids = list(df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]["condition_id_hash"])
 fehlende_must_icd_codes_df_tumore = df_tumore[df_tumore["condition_id_hash"].isin(fehlende_must_ids)]["entity_or_parent"].value_counts()
 
@@ -685,6 +694,8 @@ df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
 
 
 print("═" * 70)
+
+#TODO: BRIGITTE HIER! ENDE
 
 
 # ── ECOG  (gefiltert auf GK) ──────────────────────────────────────────────────
