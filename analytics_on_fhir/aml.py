@@ -737,6 +737,11 @@ class AMLStudy:
         med_df.drop_duplicates(subset=["medication_id"], inplace=True)
         logger.info("all_meds_df after removing duplicates: {}", med_df.count())
 
+        if "medication_ops_code" in med_df.columns:
+            logger.info("Loading OPS mappings")
+            ops_mapping = self.load_ops_codes(HERE / "ops2026syst_kodes.txt")
+            med_df["medication_ops_display"] = med_df["medication_ops_code"].map(ops_mapping)
+
         for col in [
             "medication_code_text",
             "medication_atc_display",
