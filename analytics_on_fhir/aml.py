@@ -436,8 +436,72 @@ class AMLStudy:
                 f"(total available: {total_available})"
             )
 
+        self.extract_encounters(patient_list=patient_list)
         self.extract_labs(patient_list=patient_list)
         self.extract_procedures(patient_list=patient_list)
+
+    def extract_encounters(self, patient_list):
+        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+        all_encs = []
+
+        for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
+            chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
+
+            enc_df_chunk = self.search.trade_rows_for_dataframe(
+                df=chunk_df,
+                resource_type="Encounter",
+                request_params={
+                    "_count": self.settings.fhir.page_count,
+                    "_elements": "identifier, status, class, subject, period",
+                },
+                df_constraints={
+                    "subject": "subject_list",
+                },
+                with_ref=False,
+                fhir_paths=[
+                    ("encounter_id", "Encounter.id"),
+                    ("encounter_patient_reference", "subject.reference"),
+                    ("status", "Encounter.status"),
+                    (
+                        "enc_class_code",
+                        "class.where(system='http://terminology.hl7.org/CodeSystem/v3-ActCode').code",
+                    ),
+                    (
+                        "enc_class_display",
+                        "class.where(system='http://terminology.hl7.org/CodeSystem/v3-ActCode').display",
+                    ),
+                    (
+                        "enc_period_start",
+                        "period.start",
+                    ),
+                    (
+                        "enc_period_end",
+                        "period.end",
+                    ),
+                ],
+            )
+
+            if len(enc_df_chunk) > 0:
+                all_encs.append(enc_df_chunk)
+
+        if all_encs:
+            enc_df = pd.concat(all_encs, ignore_index=True)
+
+            patient_mrn_lookup = (
+                patient_df[["condition_patient_reference", "patient_mrn"]]
+                .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+                .sort_values("patient_mrn")
+                .drop_duplicates(subset=["condition_patient_reference"], keep="first")
+                .set_index("condition_patient_reference")["patient_mrn"]
+            )
+
+            enc_df["patient_mrn"] = enc_df["encounter_patient_reference"].map(patient_mrn_lookup)
+
+            enc_df.to_csv(os.path.join(self.output_dir, "aml_all_encounters.csv"), index=False)
+
+            logger.info(f"all_encs_df size: {enc_df.count()}. {enc_df.dtypes}")
+        else:
+            logger.info("Found no encounters to given patients.")
 
     def extract_labs(self, patient_list):
         patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
@@ -1528,6 +1592,35 @@ class AMLStudy:
 
         patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
 
+        # FHIR Encounters
+        fhir_encounters = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_encounters.csv"),
+            sep=",",
+            dtype={"patient_mrn": str},
+        )
+
+        columns_to_hash = [
+            "encounter_id",
+            "encounter_patient_reference",
+            "patient_mrn",
+        ]
+
+        for column in columns_to_hash:
+            fhir_encounters[column] = fhir_encounters[column].apply(crypto_hash_nullable)
+
+        date_cols = [
+            "enc_period_start",
+            "enc_period_end",
+        ]
+        for col in date_cols:
+            if col in fhir_encounters.columns:
+                fhir_encounters[col] = pd.to_datetime(
+                    fhir_encounters[col], errors="coerce", utc=True, format="ISO8601"
+                )
+                fhir_encounters[col] = fhir_encounters[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        fhir_encounters.to_csv(de_identified_dir / "aml_fhir_encounters.csv", index=False)
+
         # Zenzy
         if os.path.exists(
             self.settings.aml.csv_input_file
@@ -1812,7 +1905,10 @@ class AMLStudy:
 
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
-        if sap_medication_path and os.path.exists(sap_medication_path):
+        if sap_medication_path and (
+            os.path.exists(sap_medication_path)
+            or self.settings.aml.csv_input_file.startswith("s3://")
+        ):
             sap_medikation = pd.read_csv(
                 sap_medication_path,
                 sep=";",
