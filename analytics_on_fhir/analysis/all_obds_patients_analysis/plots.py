@@ -904,7 +904,215 @@ def plot_log_histogram(
 # ══════════════════════════════════════════════════════════════════════════════
 # D – UICC / ECOG INVENTAR & VERTEILUNG
 # ══════════════════════════════════════════════════════════════════════════════
+def plot_uicc_ecog_inventory_coverage(
+    df_uicc,
+    df_ecog=None,
+    uicc_col: str = "uicc_tnm",
+    ecog_col: str = "ecog_performance_status",
+    cond_col: str = "cond_id",
+    n_total_cond_ids: Optional[int] = None,
+    cohort_name: str = "",
+    title: Optional[str] = "UICC & ECOG Inventory",
+    output_path: Optional[Path] = None,
+    show: bool = True,
+    font_family: str = "DejaVu Sans",
+    show_legend: bool | None = None,
+    show_ecog: bool = True,
+    show_known_label: bool = True,   # nur fuer Signatur-Kompatibilitaet, hier ungenutzt
+    color_unusable: str = "#bdbdbd",
+    color_usable: Optional[str] = None,
+) -> dict:
+    """
+    Variante von plot_uicc_ecog_inventory – ZWEIGETEILT:
 
+      OBEN  (ZEILEN-Ebene)  : UICC-Stufen 0–IV bzw. ECOG 0–4 als absolute Anzahl
+                              NUTZBARER Staging-/ECOG-ZEILEN. Identisch zur alten
+                              Funktion, nur OHNE die Missing/Unknown-Zeile.
+      UNTEN (COND_ID-Ebene) : je Modalitaet EIN 100%-Balken ueber die KOHORTE:
+                                - "usable"     = cond_ids mit >=1 Eintrag != missing/U
+                                - "no staging" = alle uebrigen Kohorten-cond_ids,
+                                                 d.h. nur-missing/U UND cond_ids ganz
+                                                 ohne Eintrag (durch das dropna auf das
+                                                 Datum verloren gegangen).
+
+    Damit beantwortet der untere Balken die eigentliche Coverage-Frage auf
+    Patienten-/cond_id-Ebene, waehrend die oberen Balken weiter die nutzbaren
+    Messwerte (Zeilen) zeigen.
+
+    Nenner (100%) der unteren Balken = n_total_cond_ids (Kohorten-cond_ids, also
+    cond_ids_gk.nunique()). Fehlt n_total_cond_ids, wird der untere Balken
+    uebersprungen (mit Warnung).
+
+    Hinweis: Diese Funktion MUSS vor der STAGING-BEREINIGUNG aufgerufen werden,
+    solange df_uicc/df_ecog noch 'missing'/'U' enthalten – nur dann ist die
+    cond_id-Coverage gegen die volle Kohorte korrekt.
+    """
+    from matplotlib.colors import to_rgb
+
+    def _text_on(color: object) -> str:
+        """Dunkler oder weisser Text je nach Helligkeit der Balkenfarbe."""
+        r, g, b = to_rgb(color)
+        return "#222222" if (0.299 * r + 0.587 * g + 0.114 * b) > 0.6 else "white"
+
+    if show_legend is None:
+        show_legend = PLOT_CONFIG["show_legend"]
+    plt.rcParams["font.family"] = font_family
+
+    if show_ecog and df_ecog is None:
+        print("[uicc_ecog_inventory_coverage][WARNUNG] show_ecog=True aber df_ecog=None -> ECOG deaktiviert.")
+        show_ecog = False
+
+    have_total = (n_total_cond_ids is not None) and (n_total_cond_ids > 0)
+
+    # ── UICC: nutzbare Zeilen je Hauptstufe + cond_id-Coverage ───────────────
+    stages = ["0", "I", "II", "III", "IV"]
+    stage_labels = [f"Stage {s}" for s in stages]
+    uicc_mapped = df_uicc[uicc_col].map(map_uicc_to_main_stage)
+    uicc_stage_rows = {s: int((uicc_mapped == s).sum()) for s in stages}
+    uicc_rows_usable = sum(uicc_stage_rows.values())
+    uicc_usable_cond = int(df_uicc.loc[uicc_mapped.isin(stages), cond_col].nunique())
+    uicc_nostage_cond = (n_total_cond_ids - uicc_usable_cond) if have_total else None
+
+    # ── ECOG: analog ─────────────────────────────────────────────────────────
+    ecog_level_rows, ecog_rows_usable, ecog_usable_cond, ecog_nostage_cond = {}, 0, 0, None
+    if show_ecog:
+        ecog_levels = ["0", "1", "2", "3", "4"]
+        ecog_mapped = df_ecog[ecog_col].map(map_ecog_value)
+        ecog_level_rows = {v: int((ecog_mapped == v).sum()) for v in ecog_levels}
+        ecog_rows_usable = sum(ecog_level_rows.values())
+        ecog_usable_cond = int(df_ecog.loc[ecog_mapped.isin(ecog_levels), cond_col].nunique())
+        ecog_nostage_cond = (n_total_cond_ids - ecog_usable_cond) if have_total else None
+
+    # ── Sprechende Diagnostik ────────────────────────────────────────────────
+    _say(f"[uicc_ecog_inventory_coverage] {cohort_name or 'Kohorte'}  |  "
+         f"Datei={Path(output_path).name if output_path else '-'}")
+    _say("[uicc_ecog_inventory_coverage]   UICC nutzbare Zeilen: "
+         f"{uicc_rows_usable:,}  (" + ", ".join(f"{s}={uicc_stage_rows[s]:,}" for s in stages) + ")")
+    if have_total:
+        _say("[uicc_ecog_inventory_coverage]   UICC cond_id-Coverage: "
+             f"usable={uicc_usable_cond:,}  no-staging={uicc_nostage_cond:,}  / N={n_total_cond_ids:,} "
+             f"({100 * uicc_usable_cond / n_total_cond_ids:.1f}% usable)")
+    if show_ecog:
+        _say("[uicc_ecog_inventory_coverage]   ECOG nutzbare Zeilen: "
+             f"{ecog_rows_usable:,}  (" + ", ".join(f"{v}={ecog_level_rows[v]:,}" for v in ecog_levels) + ")")
+        if have_total:
+            _say("[uicc_ecog_inventory_coverage]   ECOG cond_id-Coverage: "
+                 f"usable={ecog_usable_cond:,}  no-staging={ecog_nostage_cond:,}  / N={n_total_cond_ids:,} "
+                 f"({100 * ecog_usable_cond / n_total_cond_ids:.1f}% usable)")
+
+    # ── Layout: 2x2 (oben Stufen / unten Coverage), bzw. 2x1 ohne ECOG ───────
+    FIG_WIDTH, FIG_HEIGHT = 12.5, 8.5
+    if show_ecog:
+        fig = plt.figure(figsize=(FIG_WIDTH, FIG_HEIGHT))
+        gs = fig.add_gridspec(2, 2, width_ratios=[3, 1], height_ratios=[4, 1],
+                              wspace=0.45, hspace=0.55)
+        ax_uicc = fig.add_subplot(gs[0, 0])
+        ax_ecog = fig.add_subplot(gs[0, 1])
+        ax_uicc_cov = fig.add_subplot(gs[1, 0])
+        ax_ecog_cov = fig.add_subplot(gs[1, 1])
+    else:
+        fig = plt.figure(figsize=(FIG_WIDTH * 0.72, FIG_HEIGHT))
+        gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.55)
+        ax_uicc = fig.add_subplot(gs[0, 0])
+        ax_uicc_cov = fig.add_subplot(gs[1, 0])
+        ax_ecog = ax_ecog_cov = None
+
+    uicc_bar_color = tab20b_colors(6)[0]
+    ecog_bar_color = tab20b_colors(6)[2]
+
+    # ── obere Stufen-Balken (ZEILEN-Ebene) ───────────────────────────────────
+    def _stage_panel(ax, order, labels, rowmap, total_usable, bar_color, pad_factor, panel_title):
+        y = np.arange(len(order))
+        vals = [rowmap[k] for k in order]
+        vmax = max(vals) if any(vals) else 1
+        ax.barh(y, vals, height=0.6, color=bar_color, edgecolor="white", linewidth=0.6)
+        for yi, k in zip(y, order):
+            v = rowmap[k]
+            pct = f"  ({100 * v / total_usable:.1f}%)" if total_usable else ""
+            ax.text(v + vmax * 0.012, yi, f"{v:,}{pct}", va="center", ha="left",
+                    fontsize=PLOT_CONFIG["fontsize_bar_label"], color="#333333")
+        ax.set_yticks(y)
+        ax.set_yticklabels(labels, fontsize=PLOT_CONFIG["fontsize_base"], fontweight="bold")
+        ax.set_xlim(0, vmax * pad_factor)
+        ax.set_ylim(-0.6, len(order) - 0.4)
+        ax.spines[["top", "right", "bottom"]].set_visible(False)
+        ax.xaxis.set_visible(False)
+        ax.tick_params(left=False)
+        ax.set_title(panel_title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=10)
+
+    _stage_panel(ax_uicc, stages, stage_labels, uicc_stage_rows, uicc_rows_usable,
+                 uicc_bar_color, 1.20,
+                 f"UICC Stage Distribution (usable rows)\nrows = {uicc_rows_usable:,}")
+    if show_ecog:
+        _stage_panel(ax_ecog, ecog_levels, [f"ECOG {v}" for v in ecog_levels], ecog_level_rows,
+                     ecog_rows_usable, ecog_bar_color, 1.55,
+                     f"ECOG Performance Status (usable rows)\nrows = {ecog_rows_usable:,}")
+
+    # ── untere 100%-Coverage-Balken (COND_ID-Ebene) ──────────────────────────
+    def _draw_coverage(ax, usable, nostage, modality, bar_color):
+        total = usable + nostage
+        if total <= 0:
+            ax.axis("off")
+            return
+        pu, pn = 100 * usable / total, 100 * nostage / total
+        cu = color_usable or bar_color
+        ax.barh([0], [pu], height=0.55, color=cu, edgecolor="white", linewidth=0.8)
+        ax.barh([0], [pn], left=[pu], height=0.55, color=color_unusable, edgecolor="white", linewidth=0.8)
+        # usable-Label: in das Segment, wenn breit genug, sonst oberhalb
+        if pu >= 11:
+            ax.text(pu / 2, 0, f"{usable:,}\n{pu:.1f}%", va="center", ha="center",
+                    color=_text_on(cu), fontweight="bold", fontsize=PLOT_CONFIG["fontsize_bar_label"])
+        else:
+            ax.text(0, 0.45, f"{usable:,} ({pu:.1f}%)", va="bottom", ha="left",
+                    color="#333333", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
+        # no-staging-Label: analog
+        if pn >= 11:
+            ax.text(pu + pn / 2, 0, f"{nostage:,}\n{pn:.1f}%", va="center", ha="center",
+                    color=_text_on(color_unusable), fontweight="bold", fontsize=PLOT_CONFIG["fontsize_bar_label"])
+        else:
+            ax.text(100, 0.45, f"{nostage:,} ({pn:.1f}%)", va="bottom", ha="right",
+                    color="#333333", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
+        ax.set_xlim(0, 100)
+        ax.set_ylim(-0.6, 0.85)
+        ax.set_yticks([0])
+        ax.set_yticklabels([modality], fontsize=PLOT_CONFIG["fontsize_base"], fontweight="bold")
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:.0f}%"))
+        ax.spines[["top", "right", "left"]].set_visible(False)
+        ax.tick_params(left=False)
+        ax.set_xlabel("Share of cohort cond_ids (%)", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
+        ax.set_title(f"Cohort coverage: usable vs. no usable staging  (cond_ids, N={total:,})",
+                     fontsize=PLOT_CONFIG["fontsize_annotation_small"], fontweight="bold", pad=6)
+
+    if have_total:
+        _draw_coverage(ax_uicc_cov, uicc_usable_cond, uicc_nostage_cond, "UICC", uicc_bar_color)
+        if show_ecog:
+            _draw_coverage(ax_ecog_cov, ecog_usable_cond, ecog_nostage_cond, "ECOG", ecog_bar_color)
+    else:
+        ax_uicc_cov.axis("off")
+        if show_ecog:
+            ax_ecog_cov.axis("off")
+        print("[uicc_ecog_inventory_coverage][WARNUNG] n_total_cond_ids fehlt -> cond_id-Coverage uebersprungen.")
+
+    if title and PLOT_CONFIG["show_titles"]:
+        sup = f"{cohort_name} - {title}" if cohort_name else title
+        fig.suptitle(sup, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.02)
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=PLOT_CONFIG["dpi"], bbox_inches="tight")
+        _say(f"[uicc_ecog_inventory_coverage] gespeichert: {output_path}")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    return {
+        "uicc": {"stage_rows": uicc_stage_rows, "usable_rows": uicc_rows_usable,
+                 "usable_cond_ids": uicc_usable_cond, "nostage_cond_ids": uicc_nostage_cond},
+        "ecog": ({"level_rows": ecog_level_rows, "usable_rows": ecog_rows_usable,
+                  "usable_cond_ids": ecog_usable_cond, "nostage_cond_ids": ecog_nostage_cond}
+                 if show_ecog else None),
+        "n_total_cond_ids": n_total_cond_ids,
+    }
 
 def plot_uicc_ecog_inventory(
     df_uicc,

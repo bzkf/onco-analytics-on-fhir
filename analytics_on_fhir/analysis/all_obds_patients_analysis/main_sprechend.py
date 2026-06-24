@@ -78,6 +78,7 @@ from plots import (
     plot_uicc_distribution_grouped_bar,
     plot_uicc_ecog_inventory,
     scatterplot,
+    plot_uicc_ecog_inventory_coverage
 )
 
 # Butterfly-Plots (demographischer Alters-/Geschlechts-Baum)
@@ -518,6 +519,13 @@ print("━" * 70)
 # ── UICC  GRUNDKOHORTE oBDS = df_uicc_tnm + weitere_klassifikation ────────────
 print("\n  [LOAD] UICC-Staging oBDS – Quelle 1a: df_uicc_tnm_deidentified.parquet")
 print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
+
+# print("FIND: CHECK UICC weitere_klassifikation Raw Numbers:")
+# print("Value Counts:")
+# print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["weitere_klassifikation_value_code"].value_counts(dropna=False))
+# print("Cond_Ids:")
+# print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["condition_id_hash"].nunique())
+
 _wk = df_weitere_klassifikation
 _wk = _wk[_wk["condition_id_hash"].isin(cond_ids_gk)]
 # WICHTIG: weitere_klassifikation hat eine EIGENE Zeitspalte
@@ -540,6 +548,14 @@ _wk_uicc = (
         subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
     )
 )
+
+# print("FIND: CHECK UICC weitere_klassifikation Filtered Numbers:")
+# print("Value Counts:")
+# print(_wk_uicc["uicc_tnm"].value_counts(dropna=False))
+# print("Cond_Ids:")
+# print(_wk_uicc['condition_id_hash'].nunique())
+
+
 print('_wk_uicc = (_wk_uicc.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
 print('Wegen Right Join und sonst nicht nutzbaren Werten')
 _wk_with_time = _wk_uicc["months_between_asserted_uicc_tnm_date"].notna().sum() if "months_between_asserted_uicc_tnm_date" in _wk_uicc.columns else 0
@@ -549,7 +565,17 @@ print(
 print(f"      davon mit Zeitstempel (nach Umbenennung): {_wk_with_time:,}")
 
 df_uicc_raw = df_uicc_tnm
+
+# print("FIND: CHECK UICC OBDS RAW Numbers:")
+# print("Value Counts:")
+# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# print("Cond_Ids:")
+# print(df_uicc_raw['condition_id_hash'].nunique())
+
 df_uicc_raw = df_uicc_raw[df_uicc_raw["condition_id_hash"].isin(cond_ids_gk)]
+df_uicc_raw["months_between_asserted_uicc_tnm_date"].value_counts(dropna=False)# <-- 83678 times none
+df_uicc_raw["uicc_tnm"].value_counts(dropna=False)# <-- 329797 times none
+
 _n_uicc_before_drop = len(df_uicc_raw)
 df_uicc_raw["uicc_tnm"] = df_uicc_raw["uicc_tnm"].fillna("missing")
 df_uicc_raw = (
@@ -559,12 +585,21 @@ df_uicc_raw = (
     .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
     .loc[:, lambda d: ~d.columns.duplicated()]
 )
+
+# print("FIND: CHECK UICC OBDS Filtered Numbers:")
+# print("Value Counts:")
+# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# print("Cond_Ids:")
+# print(df_uicc_raw['condition_id_hash'].nunique())
+
 print('df_uicc_raw.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
 print('Wegen Right Join und sonst nicht nutzbaren Werten')
 print(
     f"    df_uicc_tnm: {_n_uicc_before_drop:,} Zeilen geladen  →  {len(df_uicc_raw):,} nach dropna  |  cond_ids: {df_uicc_raw['condition_id_hash'].nunique():,}"
 )
 print(f"    NaN-UICC-Werte wurden als 'missing' kodiert.")
+
+
 
 print(f"\n  [MERGE] oBDS-Grundkohorte: df_uicc_tnm + weitere_klassifikation (UICC) → df_uicc_gk")
 df_uicc_raw["source"] = "OBDS"
@@ -587,6 +622,12 @@ print(
 print(
     f"    Davon bekannte UICC:  {_uicc_known:,} cond_ids  |  'missing': {_uicc_miss:,}  |  kein Eintrag: {_uicc_none:,}"
 )
+
+# print("FIND: CHECK UICC joined OBDS+WK Filtered Numbers:")
+# print("Value Counts:")
+# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# print("Cond_Ids:")
+# print(df_uicc_raw['condition_id_hash'].nunique())
 
 # ── UICC  MUST-Tool (Brigitte) – multi-site, MIT Zeitstempel ─────────────────
 print(f"\n  [LOAD] UICC-Staging – Quelle 2 (MUST-Tool, Brigitte): Result1_UICC_full.csv (alle Standorte)")
@@ -1105,6 +1146,35 @@ plot_uicc_inventory_comparison(
     n_total=cond_ids_gk.nunique(),
     out_dir=DIR_GK,
 )
+
+# ── Plot 3b: UICC/ECOG Coverage (cond_id-Ebene, zweigeteilt) ─────────────────
+# Wie Plot 3, aber die Missing/Unknown-Zeile ist durch einen 100%-Balken auf
+# cond_id-Ebene ersetzt: nutzbare ECOG/UICC (>=1 Eintrag != missing/U) vs.
+# Kohorten-cond_ids OHNE nutzbares Staging (nur-missing/U UND ganz ohne Eintrag).
+# MUSS vor der STAGING-BEREINIGUNG laufen (df_uicc_gk/df_ecog_gk enthalten hier
+# noch 'missing'/'U') – sonst stimmt der Nenner gegen die volle Kohorte nicht.
+print(f"  [PLOT] UICC/ECOG Coverage → uicc_ecog_inventory_coverage.png + ..._must.png")
+print(f"    Zeigt: nutzbare Zeilen (oben) + cond_id-Coverage der Kohorte (unten)")
+_cov_kwargs = dict(
+    df_ecog=df_ecog_gk,
+    uicc_col="uicc_tnm",
+    ecog_col="ecog_performance_status",
+    cond_col="condition_id_hash",
+    n_total_cond_ids=cond_ids_gk.nunique(),
+    show_known_label=False,
+    show=False,
+)
+plot_uicc_ecog_inventory_coverage(
+    df_uicc=df_uicc_gk,
+    output_path=DIR_GK / "uicc_ecog_inventory_coverage.png",
+    **_cov_kwargs,
+)
+if df_uicc_must is not None:
+    plot_uicc_ecog_inventory_coverage(
+        df_uicc=df_uicc_must,
+        output_path=DIR_GK / "uicc_ecog_inventory_coverage_must.png",
+        **_cov_kwargs,
+    )
 
 # ── Plot 4: Lorenz-Kurve + Log-Histogramm  (alle Therapien konkateniert) ──────
 print(f"  [PLOT] Lorenz-Kurve Therapieverteilung → lorenz.png")
