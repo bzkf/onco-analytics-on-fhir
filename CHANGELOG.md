@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.34.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.3...v2.34.0) (2026-06-24)
+
+
+### Features
+
+* adding FHIR encounters ([#541](https://github.com/bzkf/onco-analytics-on-fhir/issues/541)) ([5467f35](https://github.com/bzkf/onco-analytics-on-fhir/commit/5467f3511bbff68de2788026f6dd02d3e93dc1cb))
+* load OPS display for medication ([#540](https://github.com/bzkf/onco-analytics-on-fhir/issues/540)) ([c18277c](https://github.com/bzkf/onco-analytics-on-fhir/commit/c18277cac135bd8898183da1d143477766dc8fc4))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump jupyter-server from 2.18.0 to 2.20.0 ([#537](https://github.com/bzkf/onco-analytics-on-fhir/issues/537)) ([c62dae4](https://github.com/bzkf/onco-analytics-on-fhir/commit/c62dae45adcfa62d4be2b7467457254ce737163c))
+* **deps:** update dependency jupyterlab to v4.5.9 [security] ([#539](https://github.com/bzkf/onco-analytics-on-fhir/issues/539)) ([fa156b4](https://github.com/bzkf/onco-analytics-on-fhir/commit/fa156b49fe8453a7969af2a090c8953476f2024f))
+
 ## [2.33.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.2...v2.33.3) (2026-06-17)
 
 
