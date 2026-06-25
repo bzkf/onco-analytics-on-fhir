@@ -647,7 +647,7 @@ class AMLStudy:
                     with_ref=False,
                     fhir_paths=fhir_paths,
                 )
-                if len(result) > 0:
+                if resource_type in result.keys():
                     resource_chunk = result[resource_type]
                     resource_chunk = resource_chunk.drop_duplicates(subset=["type", "id"])
 
