@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.34.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.34.0...v2.34.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* only use result for existing keys ([#543](https://github.com/bzkf/onco-analytics-on-fhir/issues/543)) ([5eedb12](https://github.com/bzkf/onco-analytics-on-fhir/commit/5eedb126d96beb12f1b2958794f421770dc2ce59))
+
 ## [2.34.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.3...v2.34.0) (2026-06-24)
 
 
