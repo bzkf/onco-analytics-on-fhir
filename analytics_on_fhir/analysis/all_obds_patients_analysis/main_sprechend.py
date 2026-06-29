@@ -65,20 +65,14 @@ from data_processing import (
     patient_dropout_by_cutoff,
     sweep_tolerance_fast,
 )
-from plots import (
+from plots import (  # plot_ecog_distribution_grouped_bar,; ,; plot_lorenz_curve,; plot_merge_panel,; plot_sweep_panel,; plot_uicc_distribution_grouped_bar,; plot_uicc_ecog_inventory,; plot_uicc_ecog_inventory_coverage,
     plot_age_distribution_grouped_bar,
     plot_dropout_curve,
-    plot_ecog_distribution_grouped_bar,
+    plot_entity_distribution_grouped_bar,
     plot_log_histogram,
-    plot_lorenz_curve,
-    plot_merge_panel,
-    plot_sweep_panel,
     plot_therapy_bias_analysis,
     plot_therapy_times,
-    plot_uicc_distribution_grouped_bar,
-    plot_uicc_ecog_inventory,
     scatterplot,
-    plot_uicc_ecog_inventory_coverage
 )
 
 # Butterfly-Plots (demographischer Alters-/Geschlechts-Baum)
@@ -159,29 +153,33 @@ def _log_step(
 # ══════════════════════════════════════════════════════════════════════════════
 
 # read in all data
-# BASE_DIR = Path(
-#     "/home/coder/git/onco-analytics-on-fhir/"
-#     "analytics_on_fhir/analysis/all_obds_patients_analysis/"
-#     "all_obds_data_allsites"
-# )
-
-
 BASE_DIR = Path(
-    #r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\onco-analytics-on-fhir\analytics_on_fhir\analysis\all_obds_patients_analysis\all_obds_data_allsites"
-    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\all_obds_data_allsites"
+    "/home/coder/git/onco-analytics-on-fhir/"
+    "analytics_on_fhir/analysis/all_obds_patients_analysis/"
+    "all_obds_data_allsites"
 )
 
 DATA = Path(
-    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\resources"
-)
-PLOTS = Path(
-    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\plots"
+    "/home/coder/git/onco-analytics-on-fhir/analytics_on_fhir/analysis/all_obds_patients_analysis"
 )
 
-test_tnm = pd.read_parquet(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\all_obds_data_allsites\tum\parquet\df_n_tnm_deidentified.parquet")
+PLOTS = Path(
+    "/home/coder/git/onco-analytics-on-fhir/analytics_on_fhir/analysis/all_obds_patients_analysis/plots"
+)
+# BASE_DIR = Path(
+#     # r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\onco-analytics-on-fhir\analytics_on_fhir\analysis\all_obds_patients_analysis\all_obds_data_allsites"
+#     r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\all_obds_data_allsites"
+# )
+
+# DATA = Path(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\resources")
+# PLOTS = Path(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\plots")
+
+# test_tnm = pd.read_parquet(
+#     r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\all_obds_data_allsites\tum\parquet\df_n_tnm_deidentified.parquet"
+# )
 
 SITES = "UKER, TUM, UKA, LMU, UKR, UKW"
-#SITES = "UKER"
+# SITES = "UKER"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # JAHRES-CUTOFF (Filter 4)  –  EINZIGE Quelle der Wahrheit
@@ -193,7 +191,7 @@ SITES = "UKER, TUM, UKA, LMU, UKR, UKW"
 # 2017 jederzeit reaktiviert werden, ohne umzuprogrammieren.
 #
 #   → Zum Reaktivieren des Jahresschnitts:  YEAR_CUTOFF = 2017
-YEAR_CUTOFF = 1900
+YEAR_CUTOFF = 2017
 
 FILES = {
     "obds": "df_all_obds_clean_deidentified.parquet",
@@ -206,7 +204,7 @@ FILES = {
     "systemtherapies": "df_system_therapies_deidentified.parquet",
 }
 
-#site_list = [s.strip() for s in SITES.split(",")]
+# site_list = [s.strip() for s in SITES.split(",")]
 site_list = [s.strip().lower() for s in SITES.split(",")]
 
 
@@ -232,7 +230,7 @@ for dataset_name, dataset_paths in paths.items():
     _per_site_rows = []
 
     for path, site in zip(dataset_paths, site_list):
-        #df = pd.read_parquet(path, engine="pyarrow")
+        # df = pd.read_parquet(path, engine="pyarrow")
         df = pd.read_parquet(path)
 
         # Standort mitführen (für Nachforschung Nebendiagnosen / UKW-Diagnose)
@@ -275,7 +273,6 @@ df_systemtherapies = dfs["systemtherapies"]
 df_must_uicc_all = dfs["must_uicc"]
 
 
-
 # Namensschema:
 #   01_GK     = Grundkohorte  (Top-20 Entitäten, kein D/C44, nur K&P)  – alle Jahre
 #   02_GK_17  = + Filter asserted_year >= YEAR_CUTOFF (Filter 4; aktuell deaktiviert)
@@ -303,38 +300,38 @@ _TCOLS = [
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def plot_uicc_inventory_comparison(
-    df_uicc_gk: pd.DataFrame,
-    df_uicc_must: pd.DataFrame | None,
-    df_ecog: pd.DataFrame,
-    n_total: int,
-    out_dir: Path,
-    uicc_only_must: bool = False,
-) -> None:
-    _inv_kwargs = dict(
-        uicc_col="uicc_tnm",
-        ecog_col="ecog_performance_status",
-        cond_col="condition_id_hash",
-        n_total_cond_ids=n_total,
-    )
+# def plot_uicc_inventory_comparison(
+#     df_uicc_gk: pd.DataFrame,
+#     df_uicc_must: pd.DataFrame | None,
+#     df_ecog: pd.DataFrame,
+#     n_total: int,
+#     out_dir: Path,
+#     uicc_only_must: bool = False,
+# ) -> None:
+#     _inv_kwargs = dict(
+#         uicc_col="uicc_tnm",
+#         ecog_col="ecog_performance_status",
+#         cond_col="condition_id_hash",
+#         n_total_cond_ids=n_total,
+#     )
 
-    plot_uicc_ecog_inventory(
-        df_uicc=df_uicc_gk,
-        df_ecog=df_ecog,
-        output_path=out_dir / "uicc_ecog_inventory.png",
-        show_known_label=False,
-        **_inv_kwargs,
-    )
+# plot_uicc_ecog_inventory(
+#     df_uicc=df_uicc_gk,
+#     df_ecog=df_ecog,
+#     output_path=out_dir / "uicc_ecog_inventory.png",
+#     show_known_label=False,
+#     **_inv_kwargs,
+# )
 
-    if df_uicc_must is not None:
-        plot_uicc_ecog_inventory(
-            df_uicc=df_uicc_must,
-            df_ecog=None if uicc_only_must else df_ecog,
-            show_ecog=not uicc_only_must,
-            output_path=out_dir / "uicc_ecog_inventory_must.png",
-            show_known_label = False,
-            **_inv_kwargs,
-        )
+# if df_uicc_must is not None:
+#     plot_uicc_ecog_inventory(
+#         df_uicc=df_uicc_must,
+#         df_ecog=None if uicc_only_must else df_ecog,
+#         show_ecog=not uicc_only_must,
+#         output_path=out_dir / "uicc_ecog_inventory_must.png",
+#         show_known_label=False,
+#         **_inv_kwargs,
+#     )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -438,9 +435,7 @@ plot_population_pyramid_from_raw(
     output_path=DIR_BUTTERFLY / "butterfly_overall.png",
 )
 
-print(
-    f"  [PLOT] butterfly_topn.png  – Alters-/Geschlechtsverteilung, Top-20 Entitäten farbkodiert"
-)
+print(f"  [PLOT] butterfly_topn.png  – Alters-/Geschlechtsverteilung, Top-20 Entitäten farbkodiert")
 plot_population_pyramid_topn(
     df_tumore,
     age_col="age_at_diagnosis",
@@ -458,8 +453,6 @@ plot_population_pyramid_topn(
 )
 
 print(f"  ✓ Abschnitt A abgeschlossen  →  {DIR_BUTTERFLY}")
-
-
 
 
 print("\n" + "━" * 70)
@@ -510,118 +503,127 @@ else:
     print(f"\n✓ Alle Einträge haben gültige Gender-Werte (female/male)")
 
 
-#TODO: BRIGITTE HIER!
-print("\n" + "━" * 70)
-print("DATEN LADEN – SLAVE-TABELLEN: UICC, ECOG, THERAPIEN")
-print("  (Alle auf GK gefiltert via cond_ids_gk / patient_resource_id_hash)")
-print("━" * 70)
+# # TODO: BRIGITTE HIER!
+# print("\n" + "━" * 70)
+# print("DATEN LADEN – SLAVE-TABELLEN: UICC, ECOG, THERAPIEN")
+# print("  (Alle auf GK gefiltert via cond_ids_gk / patient_resource_id_hash)")
+# print("━" * 70)
 
-# ── UICC  GRUNDKOHORTE oBDS = df_uicc_tnm + weitere_klassifikation ────────────
-print("\n  [LOAD] UICC-Staging oBDS – Quelle 1a: df_uicc_tnm_deidentified.parquet")
-print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
+# # ── UICC  GRUNDKOHORTE oBDS = df_uicc_tnm + weitere_klassifikation ────────────
+# print("\n  [LOAD] UICC-Staging oBDS – Quelle 1a: df_uicc_tnm_deidentified.parquet")
+# print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
 
-# print("FIND: CHECK UICC weitere_klassifikation Raw Numbers:")
-# print("Value Counts:")
-# print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["weitere_klassifikation_value_code"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["condition_id_hash"].nunique())
+# # print("FIND: CHECK UICC weitere_klassifikation Raw Numbers:")
+# # print("Value Counts:")
+# # print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["weitere_klassifikation_value_code"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["condition_id_hash"].nunique())
 
-_wk = df_weitere_klassifikation
-_wk = _wk[_wk["condition_id_hash"].isin(cond_ids_gk)]
-# WICHTIG: weitere_klassifikation hat eine EIGENE Zeitspalte
-# (months_between_asserted_weitere_klassifikation_date). Diese muss auf die
-# gemeinsame UICC-Zeitspalte umbenannt werden, sonst fehlt sie nach dem concat
-# und alle wk-UICC-Zeilen fallen bei jedem zeitbasierten dropna heraus.
-_wk_uicc = (
-    _wk[_wk["weitere_klassifikation_name"] == "UICC"]
-    .rename(
-        {
-            "weitere_klassifikation_value_code": "uicc_tnm",
-            "months_between_asserted_weitere_klassifikation_date": "months_between_asserted_uicc_tnm_date",
-        },
-        axis=1,
-    )
-    .loc[:, lambda d: ~d.columns.duplicated()]
-)
-_wk_uicc = (
-    _wk_uicc.dropna(
-        subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
-    )
-)
+# _wk = df_weitere_klassifikation
+# _wk = _wk[_wk["condition_id_hash"].isin(cond_ids_gk)]
+# # WICHTIG: weitere_klassifikation hat eine EIGENE Zeitspalte
+# # (months_between_asserted_weitere_klassifikation_date). Diese muss auf die
+# # gemeinsame UICC-Zeitspalte umbenannt werden, sonst fehlt sie nach dem concat
+# # und alle wk-UICC-Zeilen fallen bei jedem zeitbasierten dropna heraus.
+# _wk_uicc = (
+#     _wk[_wk["weitere_klassifikation_name"] == "UICC"]
+#     .rename(
+#         {
+#             "weitere_klassifikation_value_code": "uicc_tnm",
+#             "months_between_asserted_weitere_klassifikation_date": "months_between_asserted_uicc_tnm_date",
+#         },
+#         axis=1,
+#     )
+#     .loc[:, lambda d: ~d.columns.duplicated()]
+# )
+# _wk_uicc = _wk_uicc.dropna(
+#     subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+# )
 
-# print("FIND: CHECK UICC weitere_klassifikation Filtered Numbers:")
-# print("Value Counts:")
-# print(_wk_uicc["uicc_tnm"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(_wk_uicc['condition_id_hash'].nunique())
+# # print("FIND: CHECK UICC weitere_klassifikation Filtered Numbers:")
+# # print("Value Counts:")
+# # print(_wk_uicc["uicc_tnm"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(_wk_uicc['condition_id_hash'].nunique())
 
 
-print('_wk_uicc = (_wk_uicc.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
-print('Wegen Right Join und sonst nicht nutzbaren Werten')
-_wk_with_time = _wk_uicc["months_between_asserted_uicc_tnm_date"].notna().sum() if "months_between_asserted_uicc_tnm_date" in _wk_uicc.columns else 0
-print(
-    f"    weitere_klassifikation → UICC-Einträge: {len(_wk_uicc):,} Zeilen  |  cond_ids: {_wk_uicc['condition_id_hash'].nunique():,}"
-)
-print(f"      davon mit Zeitstempel (nach Umbenennung): {_wk_with_time:,}")
+# print(
+#     '_wk_uicc = (_wk_uicc.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]'
+# )
+# print("Wegen Right Join und sonst nicht nutzbaren Werten")
+# _wk_with_time = (
+#     _wk_uicc["months_between_asserted_uicc_tnm_date"].notna().sum()
+#     if "months_between_asserted_uicc_tnm_date" in _wk_uicc.columns
+#     else 0
+# )
+# print(
+#     f"    weitere_klassifikation → UICC-Einträge: {len(_wk_uicc):,} Zeilen  |  cond_ids: {_wk_uicc['condition_id_hash'].nunique():,}"
+# )
+# print(f"      davon mit Zeitstempel (nach Umbenennung): {_wk_with_time:,}")
 
-df_uicc_raw = df_uicc_tnm
+# df_uicc_raw = df_uicc_tnm
 
-# print("FIND: CHECK UICC OBDS RAW Numbers:")
-# print("Value Counts:")
-# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(df_uicc_raw['condition_id_hash'].nunique())
+# # print("FIND: CHECK UICC OBDS RAW Numbers:")
+# # print("Value Counts:")
+# # print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(df_uicc_raw['condition_id_hash'].nunique())
 
-df_uicc_raw = df_uicc_raw[df_uicc_raw["condition_id_hash"].isin(cond_ids_gk)]
-df_uicc_raw["months_between_asserted_uicc_tnm_date"].value_counts(dropna=False)# <-- 83678 times none
-df_uicc_raw["uicc_tnm"].value_counts(dropna=False)# <-- 329797 times none
+# df_uicc_raw = df_uicc_raw[df_uicc_raw["condition_id_hash"].isin(cond_ids_gk)]
+# df_uicc_raw["months_between_asserted_uicc_tnm_date"].value_counts(
+#     dropna=False
+# )  # <-- 83678 times none
+# df_uicc_raw["uicc_tnm"].value_counts(dropna=False)  # <-- 329797 times none
 
-_n_uicc_before_drop = len(df_uicc_raw)
-df_uicc_raw["uicc_tnm"] = df_uicc_raw["uicc_tnm"].fillna("missing")
-df_uicc_raw = (
-    df_uicc_raw.dropna(
-        subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
-    )
-    .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
-    .loc[:, lambda d: ~d.columns.duplicated()]
-)
+# _n_uicc_before_drop = len(df_uicc_raw)
+# df_uicc_raw["uicc_tnm"] = df_uicc_raw["uicc_tnm"].fillna("missing")
+# df_uicc_raw = (
+#     df_uicc_raw.dropna(
+#         subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+#     )
+#     .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
+#     .loc[:, lambda d: ~d.columns.duplicated()]
+# )
 
-# print("FIND: CHECK UICC OBDS Filtered Numbers:")
-# print("Value Counts:")
-# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(df_uicc_raw['condition_id_hash'].nunique())
+# # print("FIND: CHECK UICC OBDS Filtered Numbers:")
+# # print("Value Counts:")
+# # print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(df_uicc_raw['condition_id_hash'].nunique())
 
-print('df_uicc_raw.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
-print('Wegen Right Join und sonst nicht nutzbaren Werten')
-print(
-    f"    df_uicc_tnm: {_n_uicc_before_drop:,} Zeilen geladen  →  {len(df_uicc_raw):,} nach dropna  |  cond_ids: {df_uicc_raw['condition_id_hash'].nunique():,}"
-)
-print(f"    NaN-UICC-Werte wurden als 'missing' kodiert.")
+# print(
+#     'df_uicc_raw.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]'
+# )
+# print("Wegen Right Join und sonst nicht nutzbaren Werten")
+# print(
+#     f"    df_uicc_tnm: {_n_uicc_before_drop:,} Zeilen geladen  →  {len(df_uicc_raw):,} nach dropna  |  cond_ids: {df_uicc_raw['condition_id_hash'].nunique():,}"
+# )
+# print(f"    NaN-UICC-Werte wurden als 'missing' kodiert.")
 
 
+# print(f"\n  [MERGE] oBDS-Grundkohorte: df_uicc_tnm + weitere_klassifikation (UICC) → df_uicc_gk")
+# df_uicc_raw["source"] = "OBDS"
+# _wk_uicc["source"] = "WK"
 
-print(f"\n  [MERGE] oBDS-Grundkohorte: df_uicc_tnm + weitere_klassifikation (UICC) → df_uicc_gk")
-df_uicc_raw["source"] = "OBDS"
-_wk_uicc["source"] = "WK"
-
-df_uicc_gk = pd.concat([df_uicc_raw, _wk_uicc], ignore_index=True, sort=False)
-df_uicc_gk["uicc_tnm"] = df_uicc_gk["uicc_tnm"].fillna("missing")
-df_uicc_gk = df_uicc_gk.drop_duplicates(subset=['uicc_tnm', 'condition_id_hash', 'months_between_asserted_uicc_tnm_date'])
-#TODO: Drop Duplicates.
-_uicc_known = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).ne("missing")][
-    "condition_id_hash"
-].nunique()
-_uicc_miss = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).eq("missing")][
-    "condition_id_hash"
-].nunique()
-_uicc_none = _n3_cond - df_uicc_gk["condition_id_hash"].nunique()
-print(
-    f"    df_uicc_gk (oBDS): {len(df_uicc_gk):,} Zeilen  |  cond_ids: {df_uicc_gk['condition_id_hash'].nunique():,}"
-)
-print(
-    f"    Davon bekannte UICC:  {_uicc_known:,} cond_ids  |  'missing': {_uicc_miss:,}  |  kein Eintrag: {_uicc_none:,}"
-)
+# df_uicc_gk = pd.concat([df_uicc_raw, _wk_uicc], ignore_index=True, sort=False)
+# df_uicc_gk["uicc_tnm"] = df_uicc_gk["uicc_tnm"].fillna("missing")
+# df_uicc_gk = df_uicc_gk.drop_duplicates(
+#     subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+# )
+# # TODO: Drop Duplicates.
+# _uicc_known = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).ne("missing")][
+#     "condition_id_hash"
+# ].nunique()
+# _uicc_miss = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).eq("missing")][
+#     "condition_id_hash"
+# ].nunique()
+# _uicc_none = _n3_cond - df_uicc_gk["condition_id_hash"].nunique()
+# print(
+#     f"    df_uicc_gk (oBDS): {len(df_uicc_gk):,} Zeilen  |  cond_ids: {df_uicc_gk['condition_id_hash'].nunique():,}"
+# )
+# print(
+#     f"    Davon bekannte UICC:  {_uicc_known:,} cond_ids  |  'missing': {_uicc_miss:,}  |  kein Eintrag: {_uicc_none:,}"
+# )
 
 # print("FIND: CHECK UICC joined OBDS+WK Filtered Numbers:")
 # print("Value Counts:")
@@ -629,139 +631,154 @@ print(
 # print("Cond_Ids:")
 # print(df_uicc_raw['condition_id_hash'].nunique())
 
-# ── UICC  MUST-Tool (Brigitte) – multi-site, MIT Zeitstempel ─────────────────
-print(f"\n  [LOAD] UICC-Staging – Quelle 2 (MUST-Tool, Brigitte): Result1_UICC_full.csv (alle Standorte)")
-print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
-# df_must_uicc_all wurde oben im Multi-Site-Loop konkateniert (inkl. site-Spalte).
-# MUST ist eine EIGENSTÄNDIGE, vollständige UICC-Quelle (Kollegin hat ihre
-# Merge-/1-Wochen-Logik bereits in der CSV umgesetzt). MUST mischt sich NICHT
-# mit oBDS – beide laufen parallel. Zeitspalte wird auf die gemeinsame
-# UICC-Zeitspalte umbenannt.
-df_uicc_must = (
-    df_must_uicc_all[["ID", "RESULTING_UICC", "site", "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE"]]
-    .rename(columns={
-        "ID": "condition_id_hash",
-        "RESULTING_UICC": "uicc_tnm",
-        "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE": "months_between_asserted_uicc_tnm_date",
-    })
-    .pipe(lambda d: d[d["condition_id_hash"].isin(cond_ids_gk)])
-    .reset_index(drop=True)
-)
-df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
-df_uicc_must = df_uicc_must.dropna(
-    subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
-)
-print('df_uicc_must = df_uicc_must.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
-print('Wegen Right Join und sonst nicht nutzbaren Werten')
+# # ── UICC  MUST-Tool (Brigitte) – multi-site, MIT Zeitstempel ─────────────────
+# print(
+#     f"\n  [LOAD] UICC-Staging – Quelle 2 (MUST-Tool, Brigitte): Result1_UICC_full.csv (alle Standorte)"
+# )
+# print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
+# # df_must_uicc_all wurde oben im Multi-Site-Loop konkateniert (inkl. site-Spalte).
+# # MUST ist eine EIGENSTÄNDIGE, vollständige UICC-Quelle (Kollegin hat ihre
+# # Merge-/1-Wochen-Logik bereits in der CSV umgesetzt). MUST mischt sich NICHT
+# # mit oBDS – beide laufen parallel. Zeitspalte wird auf die gemeinsame
+# # UICC-Zeitspalte umbenannt.
+# df_uicc_must = (
+#     df_must_uicc_all[["ID", "RESULTING_UICC", "site", "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE"]]
+#     .rename(
+#         columns={
+#             "ID": "condition_id_hash",
+#             "RESULTING_UICC": "uicc_tnm",
+#             "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE": "months_between_asserted_uicc_tnm_date",
+#         }
+#     )
+#     .pipe(lambda d: d[d["condition_id_hash"].isin(cond_ids_gk)])
+#     .reset_index(drop=True)
+# )
+# df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
+# df_uicc_must = df_uicc_must.dropna(
+#     subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+# )
+# print(
+#     'df_uicc_must = df_uicc_must.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]'
+# )
+# print("Wegen Right Join und sonst nicht nutzbaren Werten")
 
-_must_known = df_uicc_must["uicc_tnm"].notna().sum()
-_must_miss = df_uicc_must["uicc_tnm"].isna().sum()
-print(
-    f"    Zeilen: {len(df_uicc_must):,}  |  cond_ids: {df_uicc_must['condition_id_hash'].nunique():,}"
-)
-print(
-    f"    Bekannte UICC: {_must_known:,}  |  NaN (kein Staging aus TNM ableitbar): {_must_miss:,}"
-)
-print(f"    Pro Standort:")
-for _site, _grp in df_uicc_must.groupby("site"):
-    _k = _grp["uicc_tnm"].notna().sum()
-    print(f"      {_site.upper():<6}: {len(_grp):>8,} Zeilen  |  bekannt: {_k:,}")
-print(f"    MUST ist eigenständige UICC-Quelle (läuft parallel zu oBDS).")
+# _must_known = df_uicc_must["uicc_tnm"].notna().sum()
+# _must_miss = df_uicc_must["uicc_tnm"].isna().sum()
+# print(
+#     f"    Zeilen: {len(df_uicc_must):,}  |  cond_ids: {df_uicc_must['condition_id_hash'].nunique():,}"
+# )
+# print(
+#     f"    Bekannte UICC: {_must_known:,}  |  NaN (kein Staging aus TNM ableitbar): {_must_miss:,}"
+# )
+# print(f"    Pro Standort:")
+# for _site, _grp in df_uicc_must.groupby("site"):
+#     _k = _grp["uicc_tnm"].notna().sum()
+#     print(f"      {_site.upper():<6}: {len(_grp):>8,} Zeilen  |  bekannt: {_k:,}")
+# print(f"    MUST ist eigenständige UICC-Quelle (läuft parallel zu oBDS).")
 
-# ── Bestandsvergleich GK-OBDS vs. MUST ────────────────────────────────────────
-print("\n" + "━" * 70)
-print("UICC QUELLENVERGLEICH: OBDS-Tabelle vs. MUST-Tool (Brigitte)")
-print("  Ziel: Quantifizieren wieviele cond_ids durch das MUST-Tool")
-print("  neu erschlossen werden bzw. welche Coverage verloren geht.")
-print("━" * 70)
+# # ── Bestandsvergleich GK-OBDS vs. MUST ────────────────────────────────────────
+# print("\n" + "━" * 70)
+# print("UICC QUELLENVERGLEICH: OBDS-Tabelle vs. MUST-Tool (Brigitte)")
+# print("  Ziel: Quantifizieren wieviele cond_ids durch das MUST-Tool")
+# print("  neu erschlossen werden bzw. welche Coverage verloren geht.")
+# print("━" * 70)
 
-_gk_all_ids = set(df_uicc_gk["condition_id_hash"].dropna().unique())
-_must_all_ids = set(df_uicc_must["condition_id_hash"].dropna().unique())
-_gk_known_ids = set(
-    df_uicc_gk.loc[
-        df_uicc_gk["uicc_tnm"].astype(str).str.strip().ne("missing"),
-        "condition_id_hash",
-    ]
-    .dropna()
-    .unique()
-)
-_must_known_ids = set(
-    df_uicc_must.loc[df_uicc_must["uicc_tnm"].notna(), "condition_id_hash"].unique()
-)
-_gk_missing_ids = _gk_all_ids - _gk_known_ids
-_must_missing_ids = _must_all_ids - _must_known_ids
-_only_in_gk = _gk_all_ids - _must_all_ids
-_only_in_must = _must_all_ids - _gk_all_ids
-_in_both = _gk_all_ids & _must_all_ids
-_newly_covered = _gk_missing_ids & _must_known_ids
-_coverage_lost = _gk_known_ids & _must_missing_ids
-_n_gk_total = cond_ids_gk.nunique()
+# _gk_all_ids = set(df_uicc_gk["condition_id_hash"].dropna().unique())
+# _must_all_ids = set(df_uicc_must["condition_id_hash"].dropna().unique())
+# _gk_known_ids = set(
+#     df_uicc_gk.loc[
+#         df_uicc_gk["uicc_tnm"].astype(str).str.strip().ne("missing"),
+#         "condition_id_hash",
+#     ]
+#     .dropna()
+#     .unique()
+# )
+# _must_known_ids = set(
+#     df_uicc_must.loc[df_uicc_must["uicc_tnm"].notna(), "condition_id_hash"].unique()
+# )
+# _gk_missing_ids = _gk_all_ids - _gk_known_ids
+# _must_missing_ids = _must_all_ids - _must_known_ids
+# _only_in_gk = _gk_all_ids - _must_all_ids
+# _only_in_must = _must_all_ids - _gk_all_ids
+# _in_both = _gk_all_ids & _must_all_ids
+# _newly_covered = _gk_missing_ids & _must_known_ids
+# _coverage_lost = _gk_known_ids & _must_missing_ids
+# _n_gk_total = cond_ids_gk.nunique()
 
-#Check auf gründe der differenz zw. OBDS und MUST UICC
-df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]
-fehlende_must_ids = list(df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]["condition_id_hash"])
-fehlende_must_icd_codes_df_tumore = df_tumore[df_tumore["condition_id_hash"].isin(fehlende_must_ids)]["entity_or_parent"].value_counts()
+# # Check auf gründe der differenz zw. OBDS und MUST UICC
+# df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]
+# fehlende_must_ids = list(
+#     df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))][
+#         "condition_id_hash"
+#     ]
+# )
+# fehlende_must_icd_codes_df_tumore = df_tumore[
+#     df_tumore["condition_id_hash"].isin(fehlende_must_ids)
+# ]["entity_or_parent"].value_counts()
 
-fehlende_entitäten_UICC = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_gk["condition_id_hash"])]["entity_or_parent"].value_counts()
-fehlende_entitäten_MUST = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_must["condition_id_hash"])]["entity_or_parent"].value_counts()
-
-
-print(f"\n  Gesamtkohorte GK aus Tumortabelle              : {_n_gk_total:>8,}  cond_ids")
-print(
-    f"\n  OBDS-Table  – cond_ids mit UICC-Einträgen      : {len(_gk_all_ids):>8,}  (≥1 Zeile in df_uicc_gk)"
-)
-print(f"  OBDS-Table  – davon mit bekannter UICC          : {len(_gk_known_ids):>8,}")
-print(f"  OBDS-Table  – davon nur 'missing' UICC          : {len(_gk_missing_ids):>8,}")
-print(f"  OBDS-Table  – ohne jeden UICC-Eintrag           : {_n_gk_total - len(_gk_all_ids):>8,}")
-print(f"\n  MUST – cond_ids gesamt (GK-gefiltert)          : {len(_must_all_ids):>8,}")
-print(f"  MUST – davon mit bekannter UICC                 : {len(_must_known_ids):>8,}")
-print(f"  MUST – davon ohne UICC (NaN)                    : {len(_must_missing_ids):>8,}")
-print(
-    f"  MUST – nicht in MUST enthalten                  : {_n_gk_total - len(_must_all_ids):>8,}  (GK-cond_ids, die im CSV fehlen)"
-)
-print(f"\n  Überschneidung GK ∩ MUST inkl. Missings        : {len(_in_both):>8,}  cond_ids")
-print(f"  Nur in OBDS-Table (nicht in MUST)               : {len(_only_in_gk):>8,}  cond_ids")
-print(f"  Nur in MUST (nicht in GK)                       : {len(_only_in_must):>8,}  cond_ids")
-print(f"\n  Neu bedeckt durch MUST                         : {len(_newly_covered):>8,}  cond_ids")
-print(f"    (in OBDS-Table 'missing', im MUST-Tool bekannt)")
-print(f"  Coverage verloren durch MUST                    : {len(_coverage_lost):>8,}  cond_ids")
-print(f"    (in OBDS-Table bekannt, im MUST-Tool missing)")
-print("━" * 70)
-
-df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
-
-# Parallel-Quellenliste: über diese wird jede UICC-Analyse doppelt gefahren.
+# fehlende_entitäten_UICC = df_tumore[
+#     df_tumore["condition_id_hash"].isin(df_uicc_gk["condition_id_hash"])
+# ]["entity_or_parent"].value_counts()
+# fehlende_entitäten_MUST = df_tumore[
+#     df_tumore["condition_id_hash"].isin(df_uicc_must["condition_id_hash"])
+# ]["entity_or_parent"].value_counts()
 
 
+# print(f"\n  Gesamtkohorte GK aus Tumortabelle              : {_n_gk_total:>8,}  cond_ids")
+# print(
+#     f"\n  OBDS-Table  – cond_ids mit UICC-Einträgen      : {len(_gk_all_ids):>8,}  (≥1 Zeile in df_uicc_gk)"
+# )
+# print(f"  OBDS-Table  – davon mit bekannter UICC          : {len(_gk_known_ids):>8,}")
+# print(f"  OBDS-Table  – davon nur 'missing' UICC          : {len(_gk_missing_ids):>8,}")
+# print(f"  OBDS-Table  – ohne jeden UICC-Eintrag           : {_n_gk_total - len(_gk_all_ids):>8,}")
+# print(f"\n  MUST – cond_ids gesamt (GK-gefiltert)          : {len(_must_all_ids):>8,}")
+# print(f"  MUST – davon mit bekannter UICC                 : {len(_must_known_ids):>8,}")
+# print(f"  MUST – davon ohne UICC (NaN)                    : {len(_must_missing_ids):>8,}")
+# print(
+#     f"  MUST – nicht in MUST enthalten                  : {_n_gk_total - len(_must_all_ids):>8,}  (GK-cond_ids, die im CSV fehlen)"
+# )
+# print(f"\n  Überschneidung GK ∩ MUST inkl. Missings        : {len(_in_both):>8,}  cond_ids")
+# print(f"  Nur in OBDS-Table (nicht in MUST)               : {len(_only_in_gk):>8,}  cond_ids")
+# print(f"  Nur in MUST (nicht in GK)                       : {len(_only_in_must):>8,}  cond_ids")
+# print(f"\n  Neu bedeckt durch MUST                         : {len(_newly_covered):>8,}  cond_ids")
+# print(f"    (in OBDS-Table 'missing', im MUST-Tool bekannt)")
+# print(f"  Coverage verloren durch MUST                    : {len(_coverage_lost):>8,}  cond_ids")
+# print(f"    (in OBDS-Table bekannt, im MUST-Tool missing)")
+# print("━" * 70)
 
-print("═" * 70)
+# df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
 
-#TODO: BRIGITTE HIER! ENDE
+# # Parallel-Quellenliste: über diese wird jede UICC-Analyse doppelt gefahren.
 
 
-# ── ECOG  (gefiltert auf GK) ──────────────────────────────────────────────────
-print(f"\n  [LOAD] ECOG-Leistungszustand: df_leistungszustand_ecog_karnofsky_deidentified.parquet")
-print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
-df_ecog_gk = df_ecog
-_n_ecog_raw = len(df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_gk)])
-df_ecog_gk = (
-    df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_gk)]
-    .dropna(
-        subset=[
-            "ecog_performance_status",
-            "condition_id_hash",
-            "months_between_asserted_effective_dateTime",
-        ]
-    )
-    .sort_values(["condition_id_hash", "months_between_asserted_effective_dateTime"])
-)
-_ecog_known = df_ecog_gk[df_ecog_gk["ecog_performance_status"].astype(str).ne("U")][
-    "condition_id_hash"
-].nunique()
-print(f"    GK-gefiltert: {_n_ecog_raw:,} Zeilen  →  {len(df_ecog_gk):,} nach dropna")
-print(
-    f"    cond_ids: {df_ecog_gk['condition_id_hash'].nunique():,}  |  davon mit bekanntem ECOG (≠ U): {_ecog_known:,}"
-)
+# print("═" * 70)
+
+# # TODO: BRIGITTE HIER! ENDE
+
+
+# # ── ECOG  (gefiltert auf GK) ──────────────────────────────────────────────────
+# print(f"\n  [LOAD] ECOG-Leistungszustand: df_leistungszustand_ecog_karnofsky_deidentified.parquet")
+# print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
+# df_ecog_gk = df_ecog
+# _n_ecog_raw = len(df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_gk)])
+# df_ecog_gk = (
+#     df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_gk)]
+#     .dropna(
+#         subset=[
+#             "ecog_performance_status",
+#             "condition_id_hash",
+#             "months_between_asserted_effective_dateTime",
+#         ]
+#     )
+#     .sort_values(["condition_id_hash", "months_between_asserted_effective_dateTime"])
+# )
+# _ecog_known = df_ecog_gk[df_ecog_gk["ecog_performance_status"].astype(str).ne("U")][
+#     "condition_id_hash"
+# ].nunique()
+# print(f"    GK-gefiltert: {_n_ecog_raw:,} Zeilen  →  {len(df_ecog_gk):,} nach dropna")
+# print(
+#     f"    cond_ids: {df_ecog_gk['condition_id_hash'].nunique():,}  |  davon mit bekanntem ECOG (≠ U): {_ecog_known:,}"
+# )
 
 # ── Therapien  (nur K & P Intention; gefiltert auf GK) ───────────────────────
 print(f"\n  [LOAD] Therapien – alle drei Typen auf GK gefiltert (intention K & P):")
@@ -788,6 +805,7 @@ def _load_therapy(df, dropna_cols: list, label: str) -> pd.DataFrame:
         dropna_cols: Pflichtspalten, ohne die eine Zeile unbrauchbar ist
         label:       Anzeigename des Therapietyps (für die Printout-Zuordnung)
     """
+
     def _rc(d):
         return len(d), d["condition_id_hash"].nunique()
 
@@ -804,10 +822,16 @@ def _load_therapy(df, dropna_cols: list, label: str) -> pd.DataFrame:
     print(f"    [{label}]")
     print(f"      0) Roh:                  {n0:>9,} Zeilen | {c0:>8,} cond_ids")
     print(f"      1) nach dropna({', '.join(dropna_cols)}):")
-    print(f"                               {n1:>9,} Zeilen | {c1:>8,} cond_ids   ({n1 - n0:>+9,} Zeilen)")
+    print(
+        f"                               {n1:>9,} Zeilen | {c1:>8,} cond_ids   ({n1 - n0:>+9,} Zeilen)"
+    )
     print(f"      2) nach GK-cond_id-Filter:")
-    print(f"                               {n2:>9,} Zeilen | {c2:>8,} cond_ids   ({n2 - n1:>+9,} Zeilen)")
-    print(f"      3) nach Intention K&P:   {n3:>9,} Zeilen | {c3:>8,} cond_ids   ({n3 - n2:>+9,} Zeilen)")
+    print(
+        f"                               {n2:>9,} Zeilen | {c2:>8,} cond_ids   ({n2 - n1:>+9,} Zeilen)"
+    )
+    print(
+        f"      3) nach Intention K&P:   {n3:>9,} Zeilen | {c3:>8,} cond_ids   ({n3 - n2:>+9,} Zeilen)"
+    )
     print(f"         (entfernt Intention ≠ K/P, z.B. diagnostisch/unbekannt)")
     return df
 
@@ -851,7 +875,7 @@ print(
     f"ohne Therapieeintrag: {_n3_cond - len(_cond_any_therapy):,}"
 )
 
-#TODO: Bugfixing unbedingt wieder einfügen!
+# TODO: Bugfixing unbedingt wieder einfügen!
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ABSCHNITT B  –  NEBENDIAGNOSEN
@@ -883,15 +907,16 @@ NEBENDIAG_EXCEL = os.path.join(DATA, "Nebendiagnosen_Zuordnung_Ebenen_Domaenen_v
 # Pro Standort als (Nebendiag.-Spalte, Tumor-Spalte) konfigurierbar:
 JOIN_COLS_BY_SITE = {
     "uker": ("condition_patient_reference_hash", "patient_resource_id_hash"),
-    "tum":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "uka":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "lmu":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "ukr":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "ukw":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+    "tum": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "uka": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "lmu": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "ukr": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "ukw": ("patient_mrn_hash", "patid_pseudonym_hash"),
 }
 # Fallback für Standorte, die oben nicht gelistet sind:
 JOIN_COLS_DEFAULT = ("patient_mrn_hash", "patid_pseudonym_hash")
 TOP_N_NEBEN = 20
+
 
 # ── Einheitlichen Join-Key je Seite bauen (standortabhängig befüllt) ─────────
 # Idee: Auf beiden Tabellen wird EINE neue Spalte '_join_key' erzeugt, die je
@@ -912,8 +937,11 @@ def _build_join_key(df, side: str) -> pd.Series:
         if col in df.columns:
             key.loc[mask] = df.loc[mask, col].values
         else:
-            print(f"    ⚠ Standort {_site.upper()}: Spalte '{col}' fehlt ({side}) – keine Keys gesetzt.")
+            print(
+                f"    ⚠ Standort {_site.upper()}: Spalte '{col}' fehlt ({side}) – keine Keys gesetzt."
+            )
     return key
+
 
 # ── ICD-Mapping & Hierarchie laden ───────────────────────────────────────────
 _icd_lookup_neben = pd.read_parquet(ICD_MAPPING_PATH)
@@ -981,7 +1009,9 @@ print(f"    Eindeutige Join-Keys Nebendiagnosen: {len(_neben_ids_all):,}")
 print(f"    Eindeutige Join-Keys GK-Tumore:      {len(_gk_ids_all):,}")
 print(f"    Schnittmenge (matchen):              {len(_matched_ids):,}")
 if len(_neben_ids_all) > 0:
-    print(f"    Match-Rate (Nebendiag.-Seite): {100 * len(_matched_ids) / len(_neben_ids_all):.1f}%")
+    print(
+        f"    Match-Rate (Nebendiag.-Seite): {100 * len(_matched_ids) / len(_neben_ids_all):.1f}%"
+    )
 if "site" in df_conditions_mapped.columns:
     print(f"    Match pro Standort (mit jeweils standortspezifischen Spalten):")
     for _site, _grp in df_conditions_mapped.groupby("site"):
@@ -991,9 +1021,13 @@ if "site" in df_conditions_mapped.columns:
         _pct = 100 * len(_site_match) / len(_site_ids) if _site_ids else 0
         _flag = "  ⚠ AUFFÄLLIG WENIG" if _pct < 50 else ""
         print(f"      {str(_site).upper():<6} [{_ncol} ↔ {_tcol}]")
-        print(f"             {len(_grp):>9,} Zeilen  |  IDs: {len(_site_ids):>8,}  |  match: {len(_site_match):>8,} ({_pct:.1f}%){_flag}")
+        print(
+            f"             {len(_grp):>9,} Zeilen  |  IDs: {len(_site_ids):>8,}  |  match: {len(_site_match):>8,} ({_pct:.1f}%){_flag}"
+        )
 
-df_conditions_mapped["icd_code"].value_counts().to_excel(r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\Nebendiagnosen_value_counts.xlsx")
+df_conditions_mapped["icd_code"].value_counts().to_excel(
+    r"C:\Users\boehnesn1\Desktop\Projects\BZKF_GIT\Nebendiagnosen_value_counts.xlsx"
+)
 # Auf Patienten der GK einschränken (über den standortabhängigen Join-Key)
 df_conditions_mapped = df_conditions_mapped[
     df_conditions_mapped["_join_key"].isin(all_patient_ids_gk)
@@ -1021,23 +1055,15 @@ df_conditions_mapped = df_conditions_mapped[
 _n_with_neben = df_conditions_mapped["_join_key"].nunique()
 _n_without = len(all_patient_ids_gk) - _n_with_neben
 
-print(
-    f"\n  [FILTER] Auf GK-Patienten einschränken (_join_key ∈ all_patient_ids_gk):"
-)
+print(f"\n  [FILTER] Auf GK-Patienten einschränken (_join_key ∈ all_patient_ids_gk):")
 print(
     f"    Nebendiagnosen-Zeilen: {len(df_conditions_mapped):,}  |  "
     f"Patienten mit ≥1 Nebendiagnose: {_n_with_neben:,}  |  "
     f"Patienten ohne Nebendiagnose: {_n_without:,}"
 )
-print(
-    f"    HINWEIS: Dies sind die Zahlen VOR der klinischen Filterung (Kerscher-Liste /"
-)
-print(
-    f"    icd_nebendiagnosen_einteilung). Die klinisch gefilterten Zahlen werden in der"
-)
-print(
-    f"    Plot-Methode run_nebendiagnosen_report ermittelt und dort zusätzlich ausgegeben."
-)
+print(f"    HINWEIS: Dies sind die Zahlen VOR der klinischen Filterung (Kerscher-Liste /")
+print(f"    icd_nebendiagnosen_einteilung). Die klinisch gefilterten Zahlen werden in der")
+print(f"    Plot-Methode run_nebendiagnosen_report ermittelt und dort zusätzlich ausgegeben.")
 
 print(f"\n  [EXPORT] ICD_NAME_NebenDiagnosen_value_counts.xlsx  (rohe Häufigkeiten)")
 # ── Rohe Value Counts exportieren ─────────────────────────────────────────────
@@ -1047,7 +1073,7 @@ df_conditions_mapped["ICD_NAME"].value_counts().to_excel(
 
 # ── Level-Konfiguration ───────────────────────────────────────────────────────
 
-#TODO Geändert wegen deutscher Namen. Mappingtable muss geändert/übersetzt werden oder ein Mappingtable von außen hinzugefügt werden
+# TODO Geändert wegen deutscher Namen. Mappingtable muss geändert/übersetzt werden oder ein Mappingtable von außen hinzugefügt werden
 # level_configs_neben = [
 #     LevelConfig("ICD_NAME", "ICD_NAME", "Full ICD code"),
 #     LevelConfig("ICD_BASE_NAME", "ICD_BASE_NAME", "Base code (3-digit)"),
@@ -1062,7 +1088,7 @@ level_configs_neben = [
     LevelConfig("chapter_range", "chapter_range", "ICD chapter"),
 ]
 
-#── Report starten ────────────────────────────────────────────────────────────
+# ── Report starten ────────────────────────────────────────────────────────────
 print(f"\n  [REPORT] run_nebendiagnosen_report startet …")
 print(f"    Level: ICD_NAME, ICD_BASE_NAME, group_full, chapter_full")
 print(f"    Modi: 'all' + 'unique'  |  Top-N: {TOP_N_NEBEN}")
@@ -1086,10 +1112,10 @@ print(f"  [SAVE] Alle Nebendiagnosen-Plots & Excel-Exporte → {DIR_NEBENDIAG}")
 print(f"  ✓ Abschnitt B abgeschlossen  →  {DIR_NEBENDIAG}")
 
 
-#══════════════════════════════════════════════════════════════════════════════
-#ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre)
-#Plots: Überblick über die Kohorte vor jeglichem zeitlichem Filter.
-#══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre)
+# Plots: Überblick über die Kohorte vor jeglichem zeitlichem Filter.
+# ══════════════════════════════════════════════════════════════════════════════
 
 DIR_GK.mkdir(parents=True, exist_ok=True)
 
@@ -1107,7 +1133,7 @@ df_alle_gk = pd.concat(
 )
 print(f"\n  df_alle_gk: {len(df_alle_gk):,} Therapiezeilen gesamt (alle Typen)")
 
-# ── Plot 1: Altersverteilung  (5-Jahres- und 10-Jahres-Gruppen) ──────────────
+# ── Plot 1a: Altersverteilung  (5-Jahres- und 10-Jahres-Gruppen) ──────────────
 print(f"\n  [PLOT] Altersverteilung je Therapietyp → age_dist_5yr.png / age_dist_10yr.png")
 for bracket, fname in [(5, "age_dist_5yr.png"), (10, "age_dist_10yr.png")]:
     plot_age_distribution_grouped_bar(
@@ -1121,70 +1147,81 @@ for bracket, fname in [(5, "age_dist_5yr.png"), (10, "age_dist_10yr.png")]:
         title=False,
         save_path=str(DIR_GK / fname),
     )
-
-# ── Plot 2: Bias-Analyse  (Diagnosejahr vs. rel. Therapiestart) ──────────────
-print(f"  [PLOT] Bias-Analyse Diagnosejahr vs. rel. Therapiestart → bias_op/system/radio.png")
-print(f"    Zeigt: Zusammenhang zwischen Diagnosejahr und Zeitabstand Diagnose→Therapie")
-print(f"    Detektiert Meldebias (ältere Jahre: lückenhafte Therapiedokumentation)")
-for df_t, name in [(df_ops_gk, "op"), (df_system_gk, "system"), (df_radio_gk, "radio")]:
-    plot_therapy_bias_analysis(
-        df_t,
-        relative_col="months_between_asserted_therapy_start_date",
-        diagnosis_year_col="asserted_year",
-        figsize=(10, 4),
-        save_path=str(DIR_GK / f"bias_{name}.png"),
-    )
-
-# ── Plot 3: UICC/ECOG Inventar  (GK-OBDS + MUST) ─────────────────────────────
-print(f"  [PLOT] UICC/ECOG Inventar → uicc_ecog_inventory.png + uicc_ecog_inventory_must.png")
-print(f"    Zeigt: Bestand und Staging-Verteilung vor Zeitfilter")
-#df_uicc_gk["uicc_tnm"].value_counts().sum()
-plot_uicc_inventory_comparison(
-    df_uicc_gk=df_uicc_gk,
-    df_uicc_must=df_uicc_must,
-    df_ecog=df_ecog_gk,
-    n_total=cond_ids_gk.nunique(),
-    out_dir=DIR_GK,
+# ── Plot 1b: Entitätenverteilung je Therapietyp ──────────────────────────────
+print(f"\n  [PLOT] Entitätenverteilung je Therapietyp → entity_dist.png")
+plot_entity_distribution_grouped_bar(
+    dataframes={
+        "Surgical Procedure": df_ops_gk,
+        "Systemic Therapy": df_system_gk,
+        "Radiation Therapy": df_radio_gk,
+    },
+    entity_column="entity_or_parent",
+    title=False,
+    save_path=str(DIR_GK / "entity_dist.png"),
 )
+# # ── Plot 2: Bias-Analyse  (Diagnosejahr vs. rel. Therapiestart) ──────────────
+# print(f"  [PLOT] Bias-Analyse Diagnosejahr vs. rel. Therapiestart → bias_op/system/radio.png")
+# print(f"    Zeigt: Zusammenhang zwischen Diagnosejahr und Zeitabstand Diagnose→Therapie")
+# print(f"    Detektiert Meldebias (ältere Jahre: lückenhafte Therapiedokumentation)")
+# for df_t, name in [(df_ops_gk, "op"), (df_system_gk, "system"), (df_radio_gk, "radio")]:
+#     plot_therapy_bias_analysis(
+#         df_t,
+#         relative_col="months_between_asserted_therapy_start_date",
+#         diagnosis_year_col="asserted_year",
+#         figsize=(10, 4),
+#         save_path=str(DIR_GK / f"bias_{name}.png"),
+#     )
 
-# ── Plot 3b: UICC/ECOG Coverage (cond_id-Ebene, zweigeteilt) ─────────────────
-# Wie Plot 3, aber die Missing/Unknown-Zeile ist durch einen 100%-Balken auf
-# cond_id-Ebene ersetzt: nutzbare ECOG/UICC (>=1 Eintrag != missing/U) vs.
-# Kohorten-cond_ids OHNE nutzbares Staging (nur-missing/U UND ganz ohne Eintrag).
-# MUSS vor der STAGING-BEREINIGUNG laufen (df_uicc_gk/df_ecog_gk enthalten hier
-# noch 'missing'/'U') – sonst stimmt der Nenner gegen die volle Kohorte nicht.
-print(f"  [PLOT] UICC/ECOG Coverage → uicc_ecog_inventory_coverage.png + ..._must.png")
-print(f"    Zeigt: nutzbare Zeilen (oben) + cond_id-Coverage der Kohorte (unten)")
-_cov_kwargs = dict(
-    df_ecog=df_ecog_gk,
-    uicc_col="uicc_tnm",
-    ecog_col="ecog_performance_status",
-    cond_col="condition_id_hash",
-    n_total_cond_ids=cond_ids_gk.nunique(),
-    show_known_label=False,
-    show=False,
-)
-plot_uicc_ecog_inventory_coverage(
-    df_uicc=df_uicc_gk,
-    output_path=DIR_GK / "uicc_ecog_inventory_coverage.png",
-    **_cov_kwargs,
-)
-if df_uicc_must is not None:
-    plot_uicc_ecog_inventory_coverage(
-        df_uicc=df_uicc_must,
-        output_path=DIR_GK / "uicc_ecog_inventory_coverage_must.png",
-        **_cov_kwargs,
-    )
+# # ── Plot 3: UICC/ECOG Inventar  (GK-OBDS + MUST) ─────────────────────────────
+# print(f"  [PLOT] UICC/ECOG Inventar → uicc_ecog_inventory.png + uicc_ecog_inventory_must.png")
+# print(f"    Zeigt: Bestand und Staging-Verteilung vor Zeitfilter")
+# # df_uicc_gk["uicc_tnm"].value_counts().sum()
+# plot_uicc_inventory_comparison(
+#     df_uicc_gk=df_uicc_gk,
+#     df_uicc_must=df_uicc_must,
+#     df_ecog=df_ecog_gk,
+#     n_total=cond_ids_gk.nunique(),
+#     out_dir=DIR_GK,
+# )
 
-# ── Plot 4: Lorenz-Kurve + Log-Histogramm  (alle Therapien konkateniert) ──────
-print(f"  [PLOT] Lorenz-Kurve Therapieverteilung → lorenz.png")
-print(f"    Zeigt: Wie ungleich sind Therapien auf cond_ids verteilt?")
-plot_lorenz_curve(
-    df_alle_gk,
-    n_total_patients=cond_ids_gk.nunique(),
-    cond_col="condition_id_hash",
-    output_path=DIR_GK / "lorenz.png",
-)
+# # ── Plot 3b: UICC/ECOG Coverage (cond_id-Ebene, zweigeteilt) ─────────────────
+# # Wie Plot 3, aber die Missing/Unknown-Zeile ist durch einen 100%-Balken auf
+# # cond_id-Ebene ersetzt: nutzbare ECOG/UICC (>=1 Eintrag != missing/U) vs.
+# # Kohorten-cond_ids OHNE nutzbares Staging (nur-missing/U UND ganz ohne Eintrag).
+# # MUSS vor der STAGING-BEREINIGUNG laufen (df_uicc_gk/df_ecog_gk enthalten hier
+# # noch 'missing'/'U') – sonst stimmt der Nenner gegen die volle Kohorte nicht.
+# print(f"  [PLOT] UICC/ECOG Coverage → uicc_ecog_inventory_coverage.png + ..._must.png")
+# print(f"    Zeigt: nutzbare Zeilen (oben) + cond_id-Coverage der Kohorte (unten)")
+# _cov_kwargs = dict(
+#     df_ecog=df_ecog_gk,
+#     uicc_col="uicc_tnm",
+#     ecog_col="ecog_performance_status",
+#     cond_col="condition_id_hash",
+#     n_total_cond_ids=cond_ids_gk.nunique(),
+#     show_known_label=False,
+#     show=False,
+# )
+# plot_uicc_ecog_inventory_coverage(
+#     df_uicc=df_uicc_gk,
+#     output_path=DIR_GK / "uicc_ecog_inventory_coverage.png",
+#     **_cov_kwargs,
+# )
+# if df_uicc_must is not None:
+#     plot_uicc_ecog_inventory_coverage(
+#         df_uicc=df_uicc_must,
+#         output_path=DIR_GK / "uicc_ecog_inventory_coverage_must.png",
+#         **_cov_kwargs,
+#     )
+
+# # ── Plot 4: Lorenz-Kurve + Log-Histogramm  (alle Therapien konkateniert) ──────
+# print(f"  [PLOT] Lorenz-Kurve Therapieverteilung → lorenz.png")
+# print(f"    Zeigt: Wie ungleich sind Therapien auf cond_ids verteilt?")
+# plot_lorenz_curve(
+#     df_alle_gk,
+#     n_total_patients=cond_ids_gk.nunique(),
+#     cond_col="condition_id_hash",
+#     output_path=DIR_GK / "lorenz.png",
+# )
 print(f"  [PLOT] Log-Histogramm Therapieverteilung → log_histo.png")
 print(f"    Zeigt: Häufigkeitsverteilung der Therapieanzahl pro cond_id (log-skaliert)")
 plot_log_histogram(
@@ -1195,181 +1232,295 @@ plot_log_histogram(
 )
 
 
+# # ── Plot 5: ECOG × UICC Nähe – PARALLEL für beide Quellen (oBDS + MUST) ──────
+# UICC_SOURCES_unfiltered = [
+#     ("obds", df_uicc_gk),
+#     ("must", df_uicc_must),
+# ]
 
-# ── Plot 5: ECOG × UICC Nähe – PARALLEL für beide Quellen (oBDS + MUST) ──────
-UICC_SOURCES_unfiltered = [
-    ("obds", df_uicc_gk),
-    ("must", df_uicc_must),
-]
+# print(f"\n  [PLOT] ECOG × UICC Zeitliche Nähe (keine Toleranz + 3M-Cutoff):")
+# print(f"    Methode: nearest-date-Merge (direction=nearest) pro cond_id")
+# print(f"    Läuft PARALLEL für beide UICC-Quellen (Dateien mit _obds / _must Suffix).")
+# for _src_label, _df_uicc_src in UICC_SOURCES_unfiltered:
+#     print(
+#         f"    [{_src_label.upper()}] df_ecog_gk ({len(df_ecog_gk):,}) × df_uicc_{_src_label}_time ({len(_df_uicc_src):,} Zeilen)"
+#     )
+#     for max_m, dist_f, bub_f in [
+#         (
+#             None,
+#             f"ecog_uicc_dist_no_tolerance_{_src_label}.png",
+#             f"ecog_uicc_bubble_no_tolerance_{_src_label}.png",
+#         ),
+#         (
+#             3.0,
+#             f"ecog_uicc_dist_3months_{_src_label}.png",
+#             f"ecog_uicc_bubble_3months_{_src_label}.png",
+#         ),
+#     ]:
+#         merge_and_plot_ecog_uicc_proximity(
+#             df_leistungszustand=df_ecog_gk,
+#             df_uicc=_df_uicc_src,
+#             id_col="condition_id_hash",
+#             ecog_time_col="months_between_asserted_effective_dateTime",
+#             uicc_time_col="months_between_asserted_uicc_tnm_date",
+#             max_months=max_m,
+#             save_path=str(DIR_GK),
+#             file_name_dist=dist_f,
+#             file_name_bubble=bub_f,
+#         )
 
-print(f"\n  [PLOT] ECOG × UICC Zeitliche Nähe (keine Toleranz + 3M-Cutoff):")
-print(f"    Methode: nearest-date-Merge (direction=nearest) pro cond_id")
-print(f"    Läuft PARALLEL für beide UICC-Quellen (Dateien mit _obds / _must Suffix).")
-for _src_label, _df_uicc_src in UICC_SOURCES_unfiltered:
-    print(f"    [{_src_label.upper()}] df_ecog_gk ({len(df_ecog_gk):,}) × df_uicc_{_src_label}_time ({len(_df_uicc_src):,} Zeilen)")
-    for max_m, dist_f, bub_f in [
-        (None, f"ecog_uicc_dist_no_tolerance_{_src_label}.png", f"ecog_uicc_bubble_no_tolerance_{_src_label}.png"),
-        (3.0,  f"ecog_uicc_dist_3months_{_src_label}.png",      f"ecog_uicc_bubble_3months_{_src_label}.png"),
-    ]:
-        merge_and_plot_ecog_uicc_proximity(
-            df_leistungszustand=df_ecog_gk,
-            df_uicc=_df_uicc_src,
-            id_col="condition_id_hash",
-            ecog_time_col="months_between_asserted_effective_dateTime",
-            uicc_time_col="months_between_asserted_uicc_tnm_date",
-            max_months=max_m,
-            save_path=str(DIR_GK),
-            file_name_dist=dist_f,
-            file_name_bubble=bub_f,
-        )
+# print("\n" + "━" * 70)
+# print("STAGING-BEREINIGUNG  –  Entferne 'missing' UICC und 'U' ECOG")
+# print("  Gilt AB HIER für alle Therapie×Staging-Merges (Abschnitt C/D/E).")
+# print("  WICHTIG: Die unfilterten Inventar-/Bubble-Plots OBERHALB enthalten")
+# print("  'missing'/'U' noch (bewusst, um die Rohabdeckung zu zeigen).")
+# print("━" * 70)
 
-print("\n" + "━" * 70)
-print("STAGING-BEREINIGUNG  –  Entferne 'missing' UICC und 'U' ECOG")
-print("  Gilt AB HIER für alle Therapie×Staging-Merges (Abschnitt C/D/E).")
-print("  WICHTIG: Die unfilterten Inventar-/Bubble-Plots OBERHALB enthalten")
-print("  'missing'/'U' noch (bewusst, um die Rohabdeckung zu zeigen).")
-print("━" * 70)
+# _b_must = _counts(df_uicc_must)
+# df_uicc_must = df_uicc_must[~(df_uicc_must["uicc_tnm"] == "missing")]
+# _log_step("UICC MUST: 'missing' entfernt", _b_must, _counts(df_uicc_must))
 
-_b_must = _counts(df_uicc_must)
-df_uicc_must = df_uicc_must[~(df_uicc_must["uicc_tnm"] == "missing")]
-_log_step("UICC MUST: 'missing' entfernt", _b_must, _counts(df_uicc_must))
+# _b_uicc = _counts(df_uicc_gk)
+# df_uicc_gk = df_uicc_gk[~(df_uicc_gk["uicc_tnm"] == "missing")]
+# _log_step("UICC oBDS: 'missing' entfernt", _b_uicc, _counts(df_uicc_gk))
 
-_b_uicc = _counts(df_uicc_gk)
-df_uicc_gk = df_uicc_gk[~(df_uicc_gk["uicc_tnm"] == "missing")]
-_log_step("UICC oBDS: 'missing' entfernt", _b_uicc, _counts(df_uicc_gk))
+# _b_ecog = _counts(df_ecog_gk)
+# df_ecog_gk = df_ecog_gk[~(df_ecog_gk["ecog_performance_status"] == "U")]
+# _log_step("ECOG: 'U' (unbekannt) entfernt", _b_ecog, _counts(df_ecog_gk))
 
-_b_ecog = _counts(df_ecog_gk)
-df_ecog_gk = df_ecog_gk[~(df_ecog_gk["ecog_performance_status"] == "U")]
-_log_step("ECOG: 'U' (unbekannt) entfernt", _b_ecog, _counts(df_ecog_gk))
+# UICC_SOURCES = [
+#     ("obds", df_uicc_gk),
+#     ("must", df_uicc_must),
+# ]
 
-UICC_SOURCES = [
-    ("obds", df_uicc_gk),
-    ("must", df_uicc_must),
-]
+# # ── Plot 6: Merge Therapie × ECOG/UICC  (nächstes Datum, ohne Toleranz) ───────
+# print(f"\n  [MERGE] Nearest-date-Merge: 6 Therapie-Staging-Paare (GK, alle Jahre)")
+# print(f"    Methode: merge_asof (direction=backward, tolerance=None) pro cond_id")
+# print(f"    Für jede Therapie wird das zeitlich nächste zurückliegende ECOG/UICC gesucht.")
+# print(f"    ECOG: einmal. UICC: PARALLEL für beide Quellen (_obds / _must).")
+# print(f"    HINWEIS: Resultierende DFs (df_se, df_su_obds/_must, …) werden nach dem")
+# print(f"    Jahresfilter (asserted_year >= {YEAR_CUTOFF}) auf cond_ids_17 eingeschränkt")
+# print(f"    → Basis für 3M-Cutoff (Abschnitt E).")
+# _merge_args = dict(
+#     id_col="condition_id_hash",
+#     therapy_time_col="months_between_asserted_therapy_start_date",
+#     direction="backward",
+#     tolerance=None,
+#     plot=True,
+#     log_y=True,
+#     save_path=str(DIR_GK),
+# )
 
-# ── Plot 6: Merge Therapie × ECOG/UICC  (nächstes Datum, ohne Toleranz) ───────
-print(f"\n  [MERGE] Nearest-date-Merge: 6 Therapie-Staging-Paare (GK, alle Jahre)")
-print(f"    Methode: merge_asof (direction=backward, tolerance=None) pro cond_id")
-print(f"    Für jede Therapie wird das zeitlich nächste zurückliegende ECOG/UICC gesucht.")
-print(f"    ECOG: einmal. UICC: PARALLEL für beide Quellen (_obds / _must).")
-print(f"    HINWEIS: Resultierende DFs (df_se, df_su_obds/_must, …) werden nach dem")
-print(f"    Jahresfilter (asserted_year >= {YEAR_CUTOFF}) auf cond_ids_17 eingeschränkt")
-print(f"    → Basis für 3M-Cutoff (Abschnitt E).")
-_merge_args = dict(
-    id_col="condition_id_hash",
-    therapy_time_col="months_between_asserted_therapy_start_date",
-    direction="backward",
-    tolerance=None,
-    plot=True,
-    log_y=True,
-    save_path=str(DIR_GK),
-)
+# for _src_label, _df_uicc_src in UICC_SOURCES:
+#     print(
+#         f"    [{_src_label.upper()}] df_ecog_gk ({len(df_ecog_gk):,}) × df_uicc_{_src_label}_time ({len(_df_uicc_src):,} Zeilen)"
+#     )
 
-for _src_label, _df_uicc_src in UICC_SOURCES:
-    print(f"    [{_src_label.upper()}] df_ecog_gk ({len(df_ecog_gk):,}) × df_uicc_{_src_label}_time ({len(_df_uicc_src):,} Zeilen)")
 
-def _run_nearest_merge(df_t, df_s, lz_col, title, delta_f):
-    df_m, stats = merge_with_nearest_date_matching(
-        df_t, df_s, lz_time_col=lz_col, plot_title=title, save_name=delta_f, **_merge_args,
-    )
-    df_m = (
-        df_m.rename(columns={
-            "condition_id_hash_x": "condition_id_hash",
-            "patient_resource_id_hash_x": "patient_resource_id_hash",
-        })
-        .drop(columns=["condition_id_hash_y", "patient_resource_id_hash_y"], errors="ignore")
-        .dropna(subset=["months_diff"])
-    )
-    return df_m, stats
+# def _run_nearest_merge(df_t, df_s, lz_col, title, delta_f):
+#     df_m, stats = merge_with_nearest_date_matching(
+#         df_t,
+#         df_s,
+#         lz_time_col=lz_col,
+#         plot_title=title,
+#         save_name=delta_f,
+#         **_merge_args,
+#     )
+#     df_m = (
+#         df_m.rename(
+#             columns={
+#                 "condition_id_hash_x": "condition_id_hash",
+#                 "patient_resource_id_hash_x": "patient_resource_id_hash",
+#             }
+#         )
+#         .drop(columns=["condition_id_hash_y", "patient_resource_id_hash_y"], errors="ignore")
+#         .dropna(subset=["months_diff"])
+#     )
+#     return df_m, stats
 
-scatter_info = []
 
-# ── ECOG-Merges (einmal, unabhängig von UICC-Quelle) ─────────────────────────
-df_se, s_se = _run_nearest_merge(df_system_gk, df_ecog_gk, "months_between_asserted_effective_dateTime",
-                                 "Systemic Therapy × ECOG", "delta_system_ecog.png")
-scatter_info.append((df_se, "months_between_asserted_effective_dateTime", "Systemic Therapy × ECOG", "scatter_system_ecog"))
-df_re, s_re = _run_nearest_merge(df_radio_gk, df_ecog_gk, "months_between_asserted_effective_dateTime",
-                                 "Radiotherapy × ECOG", "delta_radio_ecog.png")
-scatter_info.append((df_re, "months_between_asserted_effective_dateTime", "Radiotherapy × ECOG", "scatter_radio_ecog"))
-df_oe, s_oe = _run_nearest_merge(df_ops_gk, df_ecog_gk, "months_between_asserted_effective_dateTime",
-                                 "OP × ECOG", "delta_op_ecog.png")
-scatter_info.append((df_oe, "months_between_asserted_effective_dateTime", "OP × ECOG", "scatter_op_ecog"))
+# scatter_info = []
 
-# ── UICC-Merges (PARALLEL für beide Quellen) ─────────────────────────────────
-# Ergebnis-Dicts: df_su_by_src["obds"], df_su_by_src["must"], etc.
-df_su_by_src, df_ru_by_src, df_ou_by_src = {}, {}, {}
-s_su_by_src, s_ru_by_src, s_ou_by_src = {}, {}, {}
-for _src_label, _df_uicc_src in UICC_SOURCES:
-    print(f"    [{_src_label.upper()}] UICC-Merges (3 Therapien) mit df_uicc_{_src_label}_time ({len(_df_uicc_src):,} Zeilen)")
-    _su, _ssu = _run_nearest_merge(df_system_gk, _df_uicc_src, "months_between_asserted_uicc_tnm_date",
-                                   f"Systemic Therapy × UICC ({_src_label})", f"delta_system_uicc_{_src_label}.png")
-    _ru, _sru = _run_nearest_merge(df_radio_gk, _df_uicc_src, "months_between_asserted_uicc_tnm_date",
-                                   f"Radiotherapy × UICC ({_src_label})", f"delta_radio_uicc_{_src_label}.png")
-    _ou, _sou = _run_nearest_merge(df_ops_gk, _df_uicc_src, "months_between_asserted_uicc_tnm_date",
-                                   f"OP × UICC ({_src_label})", f"delta_op_uicc_{_src_label}.png")
-    df_su_by_src[_src_label], s_su_by_src[_src_label] = _su, _ssu
-    df_ru_by_src[_src_label], s_ru_by_src[_src_label] = _ru, _sru
-    df_ou_by_src[_src_label], s_ou_by_src[_src_label] = _ou, _sou
-    scatter_info.append((_su, "months_between_asserted_uicc_tnm_date", f"Systemic Therapy × UICC ({_src_label})", f"scatter_system_uicc_{_src_label}"))
-    scatter_info.append((_ru, "months_between_asserted_uicc_tnm_date", f"Radiotherapy × UICC ({_src_label})", f"scatter_radio_uicc_{_src_label}"))
-    scatter_info.append((_ou, "months_between_asserted_uicc_tnm_date", f"OP × UICC ({_src_label})", f"scatter_op_uicc_{_src_label}"))
+# # ── ECOG-Merges (einmal, unabhängig von UICC-Quelle) ─────────────────────────
+# df_se, s_se = _run_nearest_merge(
+#     df_system_gk,
+#     df_ecog_gk,
+#     "months_between_asserted_effective_dateTime",
+#     "Systemic Therapy × ECOG",
+#     "delta_system_ecog.png",
+# )
+# scatter_info.append(
+#     (
+#         df_se,
+#         "months_between_asserted_effective_dateTime",
+#         "Systemic Therapy × ECOG",
+#         "scatter_system_ecog",
+#     )
+# )
+# df_re, s_re = _run_nearest_merge(
+#     df_radio_gk,
+#     df_ecog_gk,
+#     "months_between_asserted_effective_dateTime",
+#     "Radiotherapy × ECOG",
+#     "delta_radio_ecog.png",
+# )
+# scatter_info.append(
+#     (
+#         df_re,
+#         "months_between_asserted_effective_dateTime",
+#         "Radiotherapy × ECOG",
+#         "scatter_radio_ecog",
+#     )
+# )
+# df_oe, s_oe = _run_nearest_merge(
+#     df_ops_gk,
+#     df_ecog_gk,
+#     "months_between_asserted_effective_dateTime",
+#     "OP × ECOG",
+#     "delta_op_ecog.png",
+# )
+# scatter_info.append(
+#     (df_oe, "months_between_asserted_effective_dateTime", "OP × ECOG", "scatter_op_ecog")
+# )
 
-print(f"\n  [PLOT] Scatter-Plots Therapiepaar → scatter_[typ]_[staging].png")
-print(f"    Zeigt: Streuen ECOG/UICC-Datum und Therapiedatum gemeinsam?")
+# # ── UICC-Merges (PARALLEL für beide Quellen) ─────────────────────────────────
+# # Ergebnis-Dicts: df_su_by_src["obds"], df_su_by_src["must"], etc.
+# df_su_by_src, df_ru_by_src, df_ou_by_src = {}, {}, {}
+# s_su_by_src, s_ru_by_src, s_ou_by_src = {}, {}, {}
+# for _src_label, _df_uicc_src in UICC_SOURCES:
+#     print(
+#         f"    [{_src_label.upper()}] UICC-Merges (3 Therapien) mit df_uicc_{_src_label}_time ({len(_df_uicc_src):,} Zeilen)"
+#     )
+#     _su, _ssu = _run_nearest_merge(
+#         df_system_gk,
+#         _df_uicc_src,
+#         "months_between_asserted_uicc_tnm_date",
+#         f"Systemic Therapy × UICC ({_src_label})",
+#         f"delta_system_uicc_{_src_label}.png",
+#     )
+#     _ru, _sru = _run_nearest_merge(
+#         df_radio_gk,
+#         _df_uicc_src,
+#         "months_between_asserted_uicc_tnm_date",
+#         f"Radiotherapy × UICC ({_src_label})",
+#         f"delta_radio_uicc_{_src_label}.png",
+#     )
+#     _ou, _sou = _run_nearest_merge(
+#         df_ops_gk,
+#         _df_uicc_src,
+#         "months_between_asserted_uicc_tnm_date",
+#         f"OP × UICC ({_src_label})",
+#         f"delta_op_uicc_{_src_label}.png",
+#     )
+#     df_su_by_src[_src_label], s_su_by_src[_src_label] = _su, _ssu
+#     df_ru_by_src[_src_label], s_ru_by_src[_src_label] = _ru, _sru
+#     df_ou_by_src[_src_label], s_ou_by_src[_src_label] = _ou, _sou
+#     scatter_info.append(
+#         (
+#             _su,
+#             "months_between_asserted_uicc_tnm_date",
+#             f"Systemic Therapy × UICC ({_src_label})",
+#             f"scatter_system_uicc_{_src_label}",
+#         )
+#     )
+#     scatter_info.append(
+#         (
+#             _ru,
+#             "months_between_asserted_uicc_tnm_date",
+#             f"Radiotherapy × UICC ({_src_label})",
+#             f"scatter_radio_uicc_{_src_label}",
+#         )
+#     )
+#     scatter_info.append(
+#         (
+#             _ou,
+#             "months_between_asserted_uicc_tnm_date",
+#             f"OP × UICC ({_src_label})",
+#             f"scatter_op_uicc_{_src_label}",
+#         )
+#     )
 
-# Scatter-Plots: ECOG/UICC-Datum vs. Therapiedatum
-for df_m, lz_col, titel, fname in scatter_info:
-    x_col = "months_between_asserted_therapy_start_date"
-    scatterplot(
-        df_m[x_col],
-        df_m[lz_col],
-        titel=titel,
-        x_label="Therapy start (months)",
-        y_label=lz_col,
-        farbe="red",
-        punktgroesse=5,
-        speichern=True,
-        dateiname=fname,
-        ordner=str(DIR_GK),
-    )
+# print(f"\n  [PLOT] Scatter-Plots Therapiepaar → scatter_[typ]_[staging].png")
+# print(f"    Zeigt: Streuen ECOG/UICC-Datum und Therapiedatum gemeinsam?")
 
-print(f"  [PLOT] Panel-Plot Merge-Histogramme → panel_months_diff_[obds/must].png")
-# Panel-Plot je UICC-Quelle (ECOG-Einträge identisch, UICC quellenspezifisch)
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    plot_merge_panel(
-        panel_entries=[
-            {"df": df_se, "title": "Systemic Therapy × ECOG", "stats": s_se, "staging_label": "ECOG in"},
-            {"df": df_su_by_src[_src_label], "title": f"Systemic Therapy × UICC ({_src_label})", "stats": s_su_by_src[_src_label], "staging_label": "UICC in"},
-            {"df": df_re, "title": "Radiotherapy × ECOG", "stats": s_re, "staging_label": "ECOG in"},
-            {"df": df_ru_by_src[_src_label], "title": f"Radiotherapy × UICC ({_src_label})", "stats": s_ru_by_src[_src_label], "staging_label": "UICC in"},
-            {"df": df_oe, "title": "OP × ECOG", "stats": s_oe, "staging_label": "ECOG in"},
-            {"df": df_ou_by_src[_src_label], "title": f"OP × UICC ({_src_label})", "stats": s_ou_by_src[_src_label], "staging_label": "UICC in"},
-        ],
-        log_y=True,
-        save_path=str(DIR_GK),
-        file_name=f"panel_months_diff_{_src_label}.png",
-        dpi=300,
-    )
+# # Scatter-Plots: ECOG/UICC-Datum vs. Therapiedatum
+# for df_m, lz_col, titel, fname in scatter_info:
+#     x_col = "months_between_asserted_therapy_start_date"
+#     scatterplot(
+#         df_m[x_col],
+#         df_m[lz_col],
+#         titel=titel,
+#         x_label="Therapy start (months)",
+#         y_label=lz_col,
+#         farbe="red",
+#         punktgroesse=5,
+#         speichern=True,
+#         dateiname=fname,
+#         ordner=str(DIR_GK),
+#     )
 
-print(f"  ✓ Abschnitt C abgeschlossen  →  {DIR_GK}")
+# print(f"  [PLOT] Panel-Plot Merge-Histogramme → panel_months_diff_[obds/must].png")
+# # Panel-Plot je UICC-Quelle (ECOG-Einträge identisch, UICC quellenspezifisch)
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     plot_merge_panel(
+#         panel_entries=[
+#             {
+#                 "df": df_se,
+#                 "title": "Systemic Therapy × ECOG",
+#                 "stats": s_se,
+#                 "staging_label": "ECOG in",
+#             },
+#             {
+#                 "df": df_su_by_src[_src_label],
+#                 "title": f"Systemic Therapy × UICC ({_src_label})",
+#                 "stats": s_su_by_src[_src_label],
+#                 "staging_label": "UICC in",
+#             },
+#             {
+#                 "df": df_re,
+#                 "title": "Radiotherapy × ECOG",
+#                 "stats": s_re,
+#                 "staging_label": "ECOG in",
+#             },
+#             {
+#                 "df": df_ru_by_src[_src_label],
+#                 "title": f"Radiotherapy × UICC ({_src_label})",
+#                 "stats": s_ru_by_src[_src_label],
+#                 "staging_label": "UICC in",
+#             },
+#             {"df": df_oe, "title": "OP × ECOG", "stats": s_oe, "staging_label": "ECOG in"},
+#             {
+#                 "df": df_ou_by_src[_src_label],
+#                 "title": f"OP × UICC ({_src_label})",
+#                 "stats": s_ou_by_src[_src_label],
+#                 "staging_label": "UICC in",
+#             },
+#         ],
+#         log_y=True,
+#         save_path=str(DIR_GK),
+#         file_name=f"panel_months_diff_{_src_label}.png",
+#         dpi=300,
+#     )
 
-print(f"\n  Merge-Ergebnisse GK (alle Jahre) – Überblick:")
-_overview = [
-    ("System × ECOG", df_se, s_se),
-    ("Radio  × ECOG", df_re, s_re),
-    ("OP     × ECOG", df_oe, s_oe),
-]
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    _overview += [
-        (f"System × UICC [{_src_label}]", df_su_by_src[_src_label], s_su_by_src[_src_label]),
-        (f"Radio  × UICC [{_src_label}]", df_ru_by_src[_src_label], s_ru_by_src[_src_label]),
-        (f"OP     × UICC [{_src_label}]", df_ou_by_src[_src_label], s_ou_by_src[_src_label]),
-    ]
-for label, df_m, s in _overview:
-    pct = 100 * s["n_matched"] / s["n_therapy"] if s["n_therapy"] > 0 else 0
-    print(
-        f"    {label:<22}: {s['n_therapy']:>7,} Therapien → {s['n_matched']:>7,} gematcht ({pct:.1f}%)  |  {s['n_unmatched']:>6,} unmatched"
-    )
+# print(f"  ✓ Abschnitt C abgeschlossen  →  {DIR_GK}")
+
+# print(f"\n  Merge-Ergebnisse GK (alle Jahre) – Überblick:")
+# _overview = [
+#     ("System × ECOG", df_se, s_se),
+#     ("Radio  × ECOG", df_re, s_re),
+#     ("OP     × ECOG", df_oe, s_oe),
+# ]
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     _overview += [
+#         (f"System × UICC [{_src_label}]", df_su_by_src[_src_label], s_su_by_src[_src_label]),
+#         (f"Radio  × UICC [{_src_label}]", df_ru_by_src[_src_label], s_ru_by_src[_src_label]),
+#         (f"OP     × UICC [{_src_label}]", df_ou_by_src[_src_label], s_ou_by_src[_src_label]),
+#     ]
+# for label, df_m, s in _overview:
+#     pct = 100 * s["n_matched"] / s["n_therapy"] if s["n_therapy"] > 0 else 0
+#     print(
+#         f"    {label:<22}: {s['n_therapy']:>7,} Therapien → {s['n_matched']:>7,} gematcht ({pct:.1f}%)  |  {s['n_unmatched']:>6,} unmatched"
+#     )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1405,12 +1556,11 @@ print(f"\n  Slave-DataFrames auf cond_ids_17 einschränken:")
 df_ops_17 = df_ops_gk[df_ops_gk["condition_id_hash"].isin(cond_ids_17)]
 df_radio_17 = df_radio_gk[df_radio_gk["condition_id_hash"].isin(cond_ids_17)]
 df_system_17 = df_system_gk[df_system_gk["condition_id_hash"].isin(cond_ids_17)]
-df_ecog_17 = df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_17)]
+# df_ecog_17 = df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_17)]
 # UICC ≥ Cutoff je Quelle (für die Sweeps, parallel)
-df_uicc_17_by_src = {
-    _src: _df[_df["condition_id_hash"].isin(cond_ids_17)]
-    for _src, _df in UICC_SOURCES
-}
+# df_uicc_17_by_src = {
+#     _src: _df[_df["condition_id_hash"].isin(cond_ids_17)] for _src, _df in UICC_SOURCES
+# }
 print(
     f"    df_ops_17:    {len(df_ops_17):>8,} Zeilen  |  cond_ids: {df_ops_17['condition_id_hash'].nunique():,}"
 )
@@ -1420,39 +1570,45 @@ print(
 print(
     f"    df_system_17: {len(df_system_17):>8,} Zeilen  |  cond_ids: {df_system_17['condition_id_hash'].nunique():,}"
 )
-print(
-    f"    df_ecog_17:   {len(df_ecog_17):>8,} Zeilen  |  cond_ids: {df_ecog_17['condition_id_hash'].nunique():,}"
-)
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    _u17 = df_uicc_17_by_src[_src_label]
-    print(
-        f"    df_uicc_17 [{_src_label}]: {len(_u17):>8,} Zeilen  |  cond_ids: {_u17['condition_id_hash'].nunique():,}"
-    )
+# print(
+#     f"    df_ecog_17:   {len(df_ecog_17):>8,} Zeilen  |  cond_ids: {df_ecog_17['condition_id_hash'].nunique():,}"
+# )
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     _u17 = df_uicc_17_by_src[_src_label]
+#     print(
+#         f"    df_uicc_17 [{_src_label}]: {len(_u17):>8,} Zeilen  |  cond_ids: {_u17['condition_id_hash'].nunique():,}"
+#     )
 
-print(f"\n  Merge-Ergebnisse aus GK auf cond_ids_17 einschränken")
-print(f"  (df_se→df_se_17 etc. – diese sind die Basis für den 3M-Cutoff in Abschnitt E):")
-df_se_17 = df_se[df_se["condition_id_hash"].isin(cond_ids_17)]
-df_re_17 = df_re[df_re["condition_id_hash"].isin(cond_ids_17)]
-df_oe_17 = df_oe[df_oe["condition_id_hash"].isin(cond_ids_17)]
-# UICC-Merge-Ergebnisse je Quelle auf cond_ids_17 (Jahresfilter) einschränken
-df_su_17_by_src, df_ru_17_by_src, df_ou_17_by_src = {}, {}, {}
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    df_su_17_by_src[_src_label] = df_su_by_src[_src_label][df_su_by_src[_src_label]["condition_id_hash"].isin(cond_ids_17)]
-    df_ru_17_by_src[_src_label] = df_ru_by_src[_src_label][df_ru_by_src[_src_label]["condition_id_hash"].isin(cond_ids_17)]
-    df_ou_17_by_src[_src_label] = df_ou_by_src[_src_label][df_ou_by_src[_src_label]["condition_id_hash"].isin(cond_ids_17)]
-_overview17 = [
-    ("System × ECOG", df_se_17),
-    ("Radio  × ECOG", df_re_17),
-    ("OP     × ECOG", df_oe_17),
-]
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    _overview17 += [
-        (f"System × UICC [{_src_label}]", df_su_17_by_src[_src_label]),
-        (f"Radio  × UICC [{_src_label}]", df_ru_17_by_src[_src_label]),
-        (f"OP     × UICC [{_src_label}]", df_ou_17_by_src[_src_label]),
-    ]
-for label, df_m in _overview17:
-    print(f"    {label:<22}: {len(df_m):>7,} Zeilen verbleiben")
+# print(f"\n  Merge-Ergebnisse aus GK auf cond_ids_17 einschränken")
+# print(f"  (df_se→df_se_17 etc. – diese sind die Basis für den 3M-Cutoff in Abschnitt E):")
+# df_se_17 = df_se[df_se["condition_id_hash"].isin(cond_ids_17)]
+# df_re_17 = df_re[df_re["condition_id_hash"].isin(cond_ids_17)]
+# df_oe_17 = df_oe[df_oe["condition_id_hash"].isin(cond_ids_17)]
+# # UICC-Merge-Ergebnisse je Quelle auf cond_ids_17 (Jahresfilter) einschränken
+# df_su_17_by_src, df_ru_17_by_src, df_ou_17_by_src = {}, {}, {}
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     df_su_17_by_src[_src_label] = df_su_by_src[_src_label][
+#         df_su_by_src[_src_label]["condition_id_hash"].isin(cond_ids_17)
+#     ]
+#     df_ru_17_by_src[_src_label] = df_ru_by_src[_src_label][
+#         df_ru_by_src[_src_label]["condition_id_hash"].isin(cond_ids_17)
+#     ]
+#     df_ou_17_by_src[_src_label] = df_ou_by_src[_src_label][
+#         df_ou_by_src[_src_label]["condition_id_hash"].isin(cond_ids_17)
+#     ]
+# _overview17 = [
+#     ("System × ECOG", df_se_17),
+#     ("Radio  × ECOG", df_re_17),
+#     ("OP     × ECOG", df_oe_17),
+# ]
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     _overview17 += [
+#         (f"System × UICC [{_src_label}]", df_su_17_by_src[_src_label]),
+#         (f"Radio  × UICC [{_src_label}]", df_ru_17_by_src[_src_label]),
+#         (f"OP     × UICC [{_src_label}]", df_ou_17_by_src[_src_label]),
+#     ]
+# for label, df_m in _overview17:
+#     print(f"    {label:<22}: {len(df_m):>7,} Zeilen verbleiben")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1475,6 +1631,16 @@ df_alle_17 = pd.concat(
     ignore_index=True,
 )
 print(f"\n  df_alle_17: {len(df_alle_17):,} Therapiezeilen gesamt")
+
+
+print(f"  [PLOT] Log-Histogramm Therapieverteilung NACH asserted_year Filter → log_histo.png")
+print(f"    Zeigt: Häufigkeitsverteilung der Therapieanzahl pro cond_id (log-skaliert)")
+plot_log_histogram(
+    df_alle_17,
+    n_total_patients=cond_ids_17.nunique(),
+    cond_col="condition_id_hash",
+    output_path=DIR_GK / "log_histo_assertedyear_filtered.png",
+)
 
 # ── Plot 1: Violin-Plots  (gesamt + je Therapietyp) ───────────────────────────
 print(f"\n  [PLOT] Violin-Plots Therapiezeitpunkte relativ zur Diagnose → violin_*.png")
@@ -1529,50 +1695,98 @@ print(f"    ECOG-Sweeps einmal; UICC-Sweeps PARALLEL je Quelle (_obds / _must)."
 _tols = range(0, 13)
 df_sweeps = {}
 
-# ECOG-Sweeps (einmal)
-_ecog_sweep_specs = [
-    (df_system_17, df_ecog_17, "System → ECOG", "sweep_system_ecog.png", len(df_system_17)),
-    (df_radio_17,  df_ecog_17, "Radio → ECOG",  "sweep_radio_ecog.png",  len(df_radio_17)),
-    (df_ops_17,    df_ecog_17, "OP → ECOG",     "sweep_op_ecog.png",     len(df_ops_17)),
-]
-for df_t, df_s, title, fname, n_t in _ecog_sweep_specs:
-    df_sweeps[fname] = sweep_tolerance_fast(
-        df_t, df_s, lz_time_col="months_between_asserted_effective_dateTime",
-        tolerances=_tols, save_plot=True, save_dir=str(DIR_GK_17),
-        file_name=fname, title=title, highlight_tolerance=3,
-    )
+# # ECOG-Sweeps (einmal)
+# _ecog_sweep_specs = [
+#     (df_system_17, df_ecog_17, "System → ECOG", "sweep_system_ecog.png", len(df_system_17)),
+#     (df_radio_17, df_ecog_17, "Radio → ECOG", "sweep_radio_ecog.png", len(df_radio_17)),
+#     (df_ops_17, df_ecog_17, "OP → ECOG", "sweep_op_ecog.png", len(df_ops_17)),
+# ]
+# for df_t, df_s, title, fname, n_t in _ecog_sweep_specs:
+#     df_sweeps[fname] = sweep_tolerance_fast(
+#         df_t,
+#         df_s,
+#         lz_time_col="months_between_asserted_effective_dateTime",
+#         tolerances=_tols,
+#         save_plot=True,
+#         save_dir=str(DIR_GK_17),
+#         file_name=fname,
+#         title=title,
+#         highlight_tolerance=3,
+#     )
 
-# UICC-Sweeps (je Quelle)
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    _u17 = df_uicc_17_by_src[_src_label]
-    print(f"    [{_src_label.upper()}] UICC-Sweeps mit df_uicc_17 ({len(_u17):,} Zeilen)")
-    for df_t, title, fname in [
-        (df_system_17, f"System → UICC ({_src_label})", f"sweep_system_uicc_{_src_label}.png"),
-        (df_radio_17,  f"Radio → UICC ({_src_label})",  f"sweep_radio_uicc_{_src_label}.png"),
-        (df_ops_17,    f"OP → UICC ({_src_label})",     f"sweep_op_uicc_{_src_label}.png"),
-    ]:
-        df_sweeps[fname] = sweep_tolerance_fast(
-            df_t, _u17, lz_time_col="months_between_asserted_uicc_tnm_date",
-            tolerances=_tols, save_plot=True, save_dir=str(DIR_GK_17),
-            file_name=fname, title=title, highlight_tolerance=3,
-        )
+# # UICC-Sweeps (je Quelle)
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     _u17 = df_uicc_17_by_src[_src_label]
+#     print(f"    [{_src_label.upper()}] UICC-Sweeps mit df_uicc_17 ({len(_u17):,} Zeilen)")
+#     for df_t, title, fname in [
+#         (df_system_17, f"System → UICC ({_src_label})", f"sweep_system_uicc_{_src_label}.png"),
+#         (df_radio_17, f"Radio → UICC ({_src_label})", f"sweep_radio_uicc_{_src_label}.png"),
+#         (df_ops_17, f"OP → UICC ({_src_label})", f"sweep_op_uicc_{_src_label}.png"),
+#     ]:
+#         df_sweeps[fname] = sweep_tolerance_fast(
+#             df_t,
+#             _u17,
+#             lz_time_col="months_between_asserted_uicc_tnm_date",
+#             tolerances=_tols,
+#             save_plot=True,
+#             save_dir=str(DIR_GK_17),
+#             file_name=fname,
+#             title=title,
+#             highlight_tolerance=3,
+#         )
 
-# Panel je UICC-Quelle (ECOG-Sweeps identisch, UICC quellenspezifisch)
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    plot_sweep_panel(
-        sweeps=[
-            {"df": df_sweeps["sweep_system_ecog.png"], "therapy": "System Therapy", "pair": "ECOG", "highlight": 3, "n_total": len(df_system_17)},
-            {"df": df_sweeps[f"sweep_system_uicc_{_src_label}.png"], "therapy": "System Therapy", "pair": f"UICC ({_src_label})", "highlight": 3, "n_total": len(df_system_17)},
-            {"df": df_sweeps["sweep_radio_ecog.png"], "therapy": "Radiotherapy", "pair": "ECOG", "highlight": 3, "n_total": len(df_radio_17)},
-            {"df": df_sweeps[f"sweep_radio_uicc_{_src_label}.png"], "therapy": "Radiotherapy", "pair": f"UICC ({_src_label})", "highlight": 3, "n_total": len(df_radio_17)},
-            {"df": df_sweeps["sweep_op_ecog.png"], "therapy": "OP", "pair": "ECOG", "highlight": 3, "n_total": len(df_ops_17)},
-            {"df": df_sweeps[f"sweep_op_uicc_{_src_label}.png"], "therapy": "OP", "pair": f"UICC ({_src_label})", "highlight": 3, "n_total": len(df_ops_17)},
-        ],
-        save_plot=True,
-        save_dir=str(DIR_GK_17),
-        file_name=f"sweep_panel_{_src_label}.png",
-        dpi=300,
-    )
+# # Panel je UICC-Quelle (ECOG-Sweeps identisch, UICC quellenspezifisch)
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     plot_sweep_panel(
+#         sweeps=[
+#             {
+#                 "df": df_sweeps["sweep_system_ecog.png"],
+#                 "therapy": "System Therapy",
+#                 "pair": "ECOG",
+#                 "highlight": 3,
+#                 "n_total": len(df_system_17),
+#             },
+#             {
+#                 "df": df_sweeps[f"sweep_system_uicc_{_src_label}.png"],
+#                 "therapy": "System Therapy",
+#                 "pair": f"UICC ({_src_label})",
+#                 "highlight": 3,
+#                 "n_total": len(df_system_17),
+#             },
+#             {
+#                 "df": df_sweeps["sweep_radio_ecog.png"],
+#                 "therapy": "Radiotherapy",
+#                 "pair": "ECOG",
+#                 "highlight": 3,
+#                 "n_total": len(df_radio_17),
+#             },
+#             {
+#                 "df": df_sweeps[f"sweep_radio_uicc_{_src_label}.png"],
+#                 "therapy": "Radiotherapy",
+#                 "pair": f"UICC ({_src_label})",
+#                 "highlight": 3,
+#                 "n_total": len(df_radio_17),
+#             },
+#             {
+#                 "df": df_sweeps["sweep_op_ecog.png"],
+#                 "therapy": "OP",
+#                 "pair": "ECOG",
+#                 "highlight": 3,
+#                 "n_total": len(df_ops_17),
+#             },
+#             {
+#                 "df": df_sweeps[f"sweep_op_uicc_{_src_label}.png"],
+#                 "therapy": "OP",
+#                 "pair": f"UICC ({_src_label})",
+#                 "highlight": 3,
+#                 "n_total": len(df_ops_17),
+#             },
+#         ],
+#         save_plot=True,
+#         save_dir=str(DIR_GK_17),
+#         file_name=f"sweep_panel_{_src_label}.png",
+#         dpi=300,
+#     )
 
 
 print(f"  ✓ Abschnitt D abgeschlossen  →  {DIR_GK_17}")
@@ -1599,35 +1813,37 @@ def _cut3m(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["months_diff"] <= 3.0].copy()
 
 
-# ECOG-3M (einmal)
-df_se_3m = _cut3m(df_se_17)
-df_re_3m = _cut3m(df_re_17)
-df_oe_3m = _cut3m(df_oe_17)
-# UICC-3M je Quelle
-df_su_3m_by_src, df_ru_3m_by_src, df_ou_3m_by_src = {}, {}, {}
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    df_su_3m_by_src[_src_label] = _cut3m(df_su_17_by_src[_src_label])
-    df_ru_3m_by_src[_src_label] = _cut3m(df_ru_17_by_src[_src_label])
-    df_ou_3m_by_src[_src_label] = _cut3m(df_ou_17_by_src[_src_label])
+# # ECOG-3M (einmal)
+# df_se_3m = _cut3m(df_se_17)
+# df_re_3m = _cut3m(df_re_17)
+# df_oe_3m = _cut3m(df_oe_17)
+# # UICC-3M je Quelle
+# df_su_3m_by_src, df_ru_3m_by_src, df_ou_3m_by_src = {}, {}, {}
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     df_su_3m_by_src[_src_label] = _cut3m(df_su_17_by_src[_src_label])
+#     df_ru_3m_by_src[_src_label] = _cut3m(df_ru_17_by_src[_src_label])
+#     df_ou_3m_by_src[_src_label] = _cut3m(df_ou_17_by_src[_src_label])
 
-print(f"\n  3M-Cutoff Ergebnis – verbleibende Therapie-Staging-Paare:")
-_cut_overview = [
-    ("System × ECOG", df_se_17, df_se_3m),
-    ("Radio  × ECOG", df_re_17, df_re_3m),
-    ("OP     × ECOG", df_oe_17, df_oe_3m),
-]
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    _cut_overview += [
-        (f"System × UICC [{_src_label}]", df_su_17_by_src[_src_label], df_su_3m_by_src[_src_label]),
-        (f"Radio  × UICC [{_src_label}]", df_ru_17_by_src[_src_label], df_ru_3m_by_src[_src_label]),
-        (f"OP     × UICC [{_src_label}]", df_ou_17_by_src[_src_label], df_ou_3m_by_src[_src_label]),
-    ]
-for label, df_before, df_after in _cut_overview:
-    pct = 100 * len(df_after) / len(df_before) if len(df_before) > 0 else 0
-    print(f"    {label:<22}: {len(df_before):>7,} → {len(df_after):>7,} Paare  ({pct:.1f}% verbleiben)")
+# print(f"\n  3M-Cutoff Ergebnis – verbleibende Therapie-Staging-Paare:")
+# _cut_overview = [
+#     ("System × ECOG", df_se_17, df_se_3m),
+#     ("Radio  × ECOG", df_re_17, df_re_3m),
+#     ("OP     × ECOG", df_oe_17, df_oe_3m),
+# ]
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     _cut_overview += [
+#         (f"System × UICC [{_src_label}]", df_su_17_by_src[_src_label], df_su_3m_by_src[_src_label]),
+#         (f"Radio  × UICC [{_src_label}]", df_ru_17_by_src[_src_label], df_ru_3m_by_src[_src_label]),
+#         (f"OP     × UICC [{_src_label}]", df_ou_17_by_src[_src_label], df_ou_3m_by_src[_src_label]),
+#     ]
+# for label, df_before, df_after in _cut_overview:
+#     pct = 100 * len(df_after) / len(df_before) if len(df_before) > 0 else 0
+#     print(
+#         f"    {label:<22}: {len(df_before):>7,} → {len(df_after):>7,} Paare  ({pct:.1f}% verbleiben)"
+#     )
 
-# ── UICC-Verteilung  PARALLEL je Quelle ──────────────────────────────────────
-print(f"\n  [PLOT] UICC-Staging-Verteilung je Therapietyp → uicc_distribution_[obds/must].png")
+# # ── UICC-Verteilung  PARALLEL je Quelle ──────────────────────────────────────
+# print(f"\n  [PLOT] UICC-Staging-Verteilung je Therapietyp → uicc_distribution_[obds/must].png")
 
 # Nenner = ALLE Therapien des jeweiligen Typs (vor Matching/3M-Cutoff/Ausschluss).
 # Dadurch zeigen die Balken den Anteil der Therapien mit NUTZBARER UICC/ECOG;
@@ -1642,84 +1858,86 @@ _therapy_totals = {
     "Systemic Therapy": len(df_system_17),
     "Radiation Therapy": len(df_radio_17),
 }
-print(f"    Gesamt-Therapien (Nenner, 100%): "
-      f"OP={_therapy_totals['Surgical Procedure']:,}, "
-      f"System={_therapy_totals['Systemic Therapy']:,}, "
-      f"Radio={_therapy_totals['Radiation Therapy']:,}")
-
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    print(f"    [{_src_label.upper()}] df_ou/su/ru_3m ({_src_label})")
-    plot_uicc_distribution_grouped_bar(
-        dataframes={
-            "Surgical Procedure": df_ou_3m_by_src[_src_label],
-            "Systemic Therapy": df_su_3m_by_src[_src_label],
-            "Radiation Therapy": df_ru_3m_by_src[_src_label],
-        },
-        totals=_therapy_totals,
-        save_path=str(DIR_3M / f"uicc_distribution_{_src_label}.png"),
-    )
-
-
-# ── ECOG-Verteilung  ─────────────────────────────────────────────────────────
-print(f"  [PLOT] ECOG-Performance-Verteilung je Therapietyp → ecog_distribution.png")
-print(f"    Inputs: df_oe/se/re_3m (3M-gefilterte Paare)")
-plot_ecog_distribution_grouped_bar(
-    dataframes={
-        "Surgical Procedure": df_oe_3m,
-        "Systemic Therapy": df_se_3m,
-        "Radiation Therapy": df_re_3m,
-    },
-    totals=_therapy_totals,
-    save_path=str(DIR_3M / "ecog_distribution.png"),
+print(
+    f"    Gesamt-Therapien (Nenner, 100%): "
+    f"OP={_therapy_totals['Surgical Procedure']:,}, "
+    f"System={_therapy_totals['Systemic Therapy']:,}, "
+    f"Radio={_therapy_totals['Radiation Therapy']:,}"
 )
 
-# ── Altersverteilung nach 3M-Cutoff ──────────────────────────────────────────
-print(f"  [PLOT] Altersverteilung nach 3M-Match → age_dist_5yr.png / age_dist_10yr.png")
-fig = plot_age_distribution_grouped_bar(
-    dataframes={
-        "Surgical Procedure": df_oe_3m,
-        "Systemic Therapy": df_se_3m,
-        "Radiation Therapy": df_re_3m,
-    },
-    age_column="age_at_diagnosis",
-    age_bracket=5,
-    title=False,
-    save_path=str(DIR_3M / "age_dist_5yr.png"),
-    show_bar_numbers=True,       # erzwingt Anzeige, egal was PLOT_CONFIG sagt
-    color_shade=1,                # 0=gedeckt, 1=kräftiger, 2/3=heller
-    show_total_in_legend=True,
-)
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     print(f"    [{_src_label.upper()}] df_ou/su/ru_3m ({_src_label})")
+#     plot_uicc_distribution_grouped_bar(
+#         dataframes={
+#             "Surgical Procedure": df_ou_3m_by_src[_src_label],
+#             "Systemic Therapy": df_su_3m_by_src[_src_label],
+#             "Radiation Therapy": df_ru_3m_by_src[_src_label],
+#         },
+#         totals=_therapy_totals,
+#         save_path=str(DIR_3M / f"uicc_distribution_{_src_label}.png"),
+#     )
 
-# ── Violin-Plots nach 3M-Cutoff ──────────────────────────────────────────────
-print(f"  [PLOT] Violin-Plots Therapiezeitpunkte (3M-Match) → violin_*.png")
-df_alle_3m = pd.concat(
-    [
-        df_re_3m[[c for c in _TCOLS if c in df_re_3m.columns]],
-        df_se_3m[[c for c in _TCOLS if c in df_se_3m.columns]],
-        df_oe_3m[[c for c in _TCOLS if c in df_oe_3m.columns]],
-    ],
-    ignore_index=True,
-)
-plot_therapy_times(
-    df_alle_3m,
-    rel_time_col="months_between_asserted_therapy_start_date",
-    title="Alle Therapien (3M-Match) – Zeitpunkt relativ zur Diagnose",
-    save_path=str(DIR_3M / "violin_alle_therapien.png"),
-    allow_negative=True,
-)
-for df_m, fname in [
-    (df_oe_3m, "violin_op.png"),
-    (df_re_3m, "violin_radio.png"),
-    (df_se_3m, "violin_system.png"),
-]:
-    plot_therapy_times(
-        df_m,
-        rel_time_col="months_between_asserted_therapy_start_date",
-        save_path=str(DIR_3M / fname),
-        allow_negative=True,
-    )
 
-print(f"  ✓ Abschnitt E abgeschlossen  →  {DIR_3M}")
+# # ── ECOG-Verteilung  ─────────────────────────────────────────────────────────
+# print(f"  [PLOT] ECOG-Performance-Verteilung je Therapietyp → ecog_distribution.png")
+# print(f"    Inputs: df_oe/se/re_3m (3M-gefilterte Paare)")
+# plot_ecog_distribution_grouped_bar(
+#     dataframes={
+#         "Surgical Procedure": df_oe_3m,
+#         "Systemic Therapy": df_se_3m,
+#         "Radiation Therapy": df_re_3m,
+#     },
+#     totals=_therapy_totals,
+#     save_path=str(DIR_3M / "ecog_distribution.png"),
+# )
+
+# # ── Altersverteilung nach 3M-Cutoff ──────────────────────────────────────────
+# print(f"  [PLOT] Altersverteilung nach 3M-Match → age_dist_5yr.png / age_dist_10yr.png")
+# fig = plot_age_distribution_grouped_bar(
+#     dataframes={
+#         "Surgical Procedure": df_oe_3m,
+#         "Systemic Therapy": df_se_3m,
+#         "Radiation Therapy": df_re_3m,
+#     },
+#     age_column="age_at_diagnosis",
+#     age_bracket=5,
+#     title=False,
+#     save_path=str(DIR_3M / "age_dist_5yr.png"),
+#     show_bar_numbers=True,  # erzwingt Anzeige, egal was PLOT_CONFIG sagt
+#     color_shade=1,  # 0=gedeckt, 1=kräftiger, 2/3=heller
+#     show_total_in_legend=True,
+# )
+
+# # ── Violin-Plots nach 3M-Cutoff ──────────────────────────────────────────────
+# print(f"  [PLOT] Violin-Plots Therapiezeitpunkte (3M-Match) → violin_*.png")
+# df_alle_3m = pd.concat(
+#     [
+#         df_re_3m[[c for c in _TCOLS if c in df_re_3m.columns]],
+#         df_se_3m[[c for c in _TCOLS if c in df_se_3m.columns]],
+#         df_oe_3m[[c for c in _TCOLS if c in df_oe_3m.columns]],
+#     ],
+#     ignore_index=True,
+# )
+# plot_therapy_times(
+#     df_alle_3m,
+#     rel_time_col="months_between_asserted_therapy_start_date",
+#     title="Alle Therapien (3M-Match) – Zeitpunkt relativ zur Diagnose",
+#     save_path=str(DIR_3M / "violin_alle_therapien.png"),
+#     allow_negative=True,
+# )
+# for df_m, fname in [
+#     (df_oe_3m, "violin_op.png"),
+#     (df_re_3m, "violin_radio.png"),
+#     (df_se_3m, "violin_system.png"),
+# ]:
+#     plot_therapy_times(
+#         df_m,
+#         rel_time_col="months_between_asserted_therapy_start_date",
+#         save_path=str(DIR_3M / fname),
+#         allow_negative=True,
+#     )
+
+# print(f"  ✓ Abschnitt E abgeschlossen  →  {DIR_3M}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1736,19 +1954,20 @@ print(f"  {'Filter 1: D-Diagnosen entfernt':<46}{_step1[1]:>12,}{_step1[2]:>12,}
 print(f"  {'Filter 2: C44 entfernt':<46}{_step2[1]:>12,}{_step2[2]:>12,}")
 print(f"  {'Filter 2b: Minderjährige (<18) entfernt':<46}{_step2b[1]:>12,}{_step2b[2]:>12,}")
 print(f"  {'Filter 3: Top-20 Entitäten → GRUNDKOHORTE (GK)':<46}{_step3[1]:>12,}{_step3[2]:>12,}")
-_f4_label = (
-    f"Filter 4: asserted_year >= {YEAR_CUTOFF} → GK_17"
-    + ("" if _cutoff_active else "  [DEAKTIVIERT]")
+_f4_label = f"Filter 4: asserted_year >= {YEAR_CUTOFF} → GK_17" + (
+    "" if _cutoff_active else "  [DEAKTIVIERT]"
 )
-print(f"  {_f4_label:<46}{cond_ids_17.nunique():>12,}{df_tumore_17['patient_resource_id_hash'].nunique():>12,}")
+print(
+    f"  {_f4_label:<46}{cond_ids_17.nunique():>12,}{df_tumore_17['patient_resource_id_hash'].nunique():>12,}"
+)
 print("  " + "─" * 68)
 print(f"  Filter 5: 3M-Cutoff ECOG/UICC zu Therapie (valide Therapie×Staging-Paare):")
-print(f"    {'System × ECOG':<30}{len(df_se_3m):>9,} Paare")
-print(f"    {'Radio  × ECOG':<30}{len(df_re_3m):>9,} Paare")
-print(f"    {'OP     × ECOG':<30}{len(df_oe_3m):>9,} Paare")
-for _src_label in [s for s, _ in UICC_SOURCES]:
-    print(f"    {f'System × UICC [{_src_label}]':<30}{len(df_su_3m_by_src[_src_label]):>9,} Paare")
-    print(f"    {f'Radio  × UICC [{_src_label}]':<30}{len(df_ru_3m_by_src[_src_label]):>9,} Paare")
-    print(f"    {f'OP     × UICC [{_src_label}]':<30}{len(df_ou_3m_by_src[_src_label]):>9,} Paare")
+# print(f"    {'System × ECOG':<30}{len(df_se_3m):>9,} Paare")
+# print(f"    {'Radio  × ECOG':<30}{len(df_re_3m):>9,} Paare")
+# print(f"    {'OP     × ECOG':<30}{len(df_oe_3m):>9,} Paare")
+# for _src_label in [s for s, _ in UICC_SOURCES]:
+#     print(f"    {f'System × UICC [{_src_label}]':<30}{len(df_su_3m_by_src[_src_label]):>9,} Paare")
+#     print(f"    {f'Radio  × UICC [{_src_label}]':<30}{len(df_ru_3m_by_src[_src_label]):>9,} Paare")
+#     print(f"    {f'OP     × UICC [{_src_label}]':<30}{len(df_ou_3m_by_src[_src_label]):>9,} Paare")
 print("━" * 70)
 print("\n✓ Pipeline vollständig abgeschlossen.")
