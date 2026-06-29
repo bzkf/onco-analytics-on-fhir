@@ -76,7 +76,7 @@ from plots import (  # plot_ecog_distribution_grouped_bar,; ,; plot_lorenz_curve
 )
 
 # Butterfly-Plots (demographischer Alters-/Geschlechts-Baum)
-from PlotsICDDiagzuAlter import plot_population_pyramid_from_raw, plot_population_pyramid_topn
+from PlotsICDDiagzuAlter import plot_population_pyramid_from_raw, plot_population_pyramid_topn, extract_contingency_tables_topn
 from SecondPaper_NebenDiagnosen_Plots import LevelConfig, run_nebendiagnosen_report
 
 # TODO: Must hinzufügen und VGL Plot  <- warten auf anpassung
@@ -422,6 +422,17 @@ print(
     f"  HINWEIS: butterfly_topn.png wählt die Top-20-Entitäten intern "
     f"(in plot_population_pyramid_topn); <18 und ungültige Geschlechter werden "
     f"in der Plot-Funktion zusätzlich verworfen (siehe deren Printouts)."
+)
+
+tables = extract_contingency_tables_topn(
+    df=df_tumore,
+    age_col="age_at_diagnosis",
+    sex_col="gender",
+    diagnosis_col="entity_or_parent",
+    top_n=20,
+    male_label="male",
+    female_label="female",
+    output_path=DIR_BUTTERFLY,  # speichert als contingency_male.csv, contingency_female.csv
 )
 
 print(f"\n  [PLOT] butterfly_overall.png  – Alters-/Geschlechtsverteilung, alle Entitäten")

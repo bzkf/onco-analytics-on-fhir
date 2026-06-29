@@ -37,6 +37,121 @@ def _age_bins_18_start(step: int = 5):
     return bins, labels
 
 
+def extract_contingency_tables_topn(
+    df,
+    age_col,
+    sex_col,
+    diagnosis_col,
+    bins=None,
+    age_step: int = 5,
+    top_n=10,
+    male_label="male",
+    female_label="female",
+    include_other: bool = False,
+    output_path: Path | str | None = None,
+):
+    """
+    Extract contingency tables (diagnosis × age_bracket) for each sex.
+    Saves as CSV with row totals (rightmost) and column totals (bottom row).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data
+    age_col : str
+        Column name for age
+    sex_col : str
+        Column name for sex
+    diagnosis_col : str
+        Column name for diagnosis/entity
+    bins : list, optional
+        Age bins
+    age_step : int
+        Age step for binning (default 5)
+    top_n : int
+        Number of top diagnoses to include (default 10)
+    male_label : str
+        Label for male (default "male")
+    female_label : str
+        Label for female (default "female")
+    include_other : bool
+        Whether to include "Other" category (default False)
+    output_path : Path | str, optional
+        Directory to save CSV files
+
+    Returns
+    -------
+    dict
+        Dictionary with keys 'male' and 'female', each containing the contingency table
+    """
+    data = df.copy()
+
+    # ── age groups ────────────────────────────────────────────────────────────
+    if bins is None:
+        bins, labels = _age_bins_18_start(age_step)
+    else:
+        labels = [
+            f"{int(bins[i])}+" if np.isinf(bins[i + 1]) else f"{int(bins[i])}-{int(bins[i + 1] - 1)}"
+            for i in range(len(bins) - 1)
+        ]
+
+    data["age_group"] = pd.cut(data[age_col], bins=bins, labels=labels, right=False)
+
+    # ── top-N diagnoses ───────────────────────────────────────────────────────
+    top_diag = data[diagnosis_col].value_counts().nlargest(top_n).index
+    data_top = data[data[diagnosis_col].isin(top_diag)]
+
+    if include_other:
+        data["diag_group"] = np.where(
+            data[diagnosis_col].isin(top_diag), data[diagnosis_col], "Other"
+        )
+        categories = list(top_diag) + ["Other"]
+    else:
+        data = data[data[diagnosis_col].isin(top_diag)].copy()
+        data["diag_group"] = data[diagnosis_col]
+        categories = list(top_diag)
+
+    # ── build contingency tables ──────────────────────────────────────────────
+    tables = {}
+
+    for sex, sex_label in [(male_label, "male"), (female_label, "female")]:
+        subset = data[data[sex_col] == sex]
+
+        # Pivot: rows=diagnosis, columns=age_group
+        pivot = (
+            subset.groupby(["diag_group", "age_group"]).size()
+            .unstack(fill_value=0)
+            .reindex(categories)
+            .fillna(0)
+            .astype(int)
+        )
+
+        # Ensure all age brackets are present
+        for label in labels:
+            if label not in pivot.columns:
+                pivot[label] = 0
+        pivot = pivot[labels]
+
+        # Add row totals (sum for each diagnosis)
+        pivot["TOTAL"] = pivot.sum(axis=1)
+
+        # Add column totals (sum for each age bracket)
+        totals_row = pivot.sum(axis=0)
+        totals_row.name = "TOTAL"
+        pivot = pd.concat([pivot, totals_row.to_frame().T])
+
+        tables[sex_label] = pivot
+
+        # Save to CSV if output_path provided
+        if output_path:
+            output_path = Path(output_path)
+            output_path.mkdir(parents=True, exist_ok=True)
+            csv_file = output_path / f"contingency_{sex_label}.csv"
+            pivot.to_csv(csv_file)
+            print(f"  [contingency] gespeichert: {csv_file}")
+
+    return tables
+
 def plot_population_pyramid_from_raw(
     df,
     age_col,
