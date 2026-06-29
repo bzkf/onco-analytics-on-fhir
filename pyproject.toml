@@ -57,3 +57,6 @@ select = [
 
 [tool.ruff]
 line-length = 100
+
+[tool.setuptools]
+packages = ["analytics_on_fhir"]
