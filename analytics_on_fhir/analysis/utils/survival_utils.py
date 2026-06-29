@@ -94,6 +94,22 @@ def km_lifeline_logRank(data, event_col, time_col, cat_col, cat_names):
     return results, symbol
 
 
+def add_survival_markers(kmf, ax, times=None, color=None):
+    if times is None:
+        times = [60, 120]
+
+    surv = kmf.survival_function_
+
+    for t in times:
+        # letzte bekannte Zeit <= t
+        idx = surv.index[surv.index <= t].max()
+
+        y = surv.loc[idx].values[0]
+
+        ax.scatter(t, y, color=color, zorder=5)
+        ax.axvline(t, linestyle="--", linewidth=0.7, alpha=0.3)
+
+
 def km_lifeline(
     data,
     event_col,
@@ -111,6 +127,7 @@ def km_lifeline(
     cmap="tab20b",
     colors=None,
     ylim=None,
+    xlim=None,  # für 5y/10y "zoom" bzw Achse abschneiden
     ax=None,
 ):
 
@@ -157,8 +174,21 @@ def km_lifeline(
             ci_show=ci,
             color=color,
         )
+        add_survival_markers(kmf, ax=ax, color=color)
 
         kmfs.append(kmf)
+        # Median ausgeben
+        med = kmf.median_survival_time_
+        print(
+            f"[KM Median] Overall: {f'{med:.1f} months' if med != float('inf') else 'Not reached (inf)'}"
+        )
+        for label, m in [("1-Year OS", 12), ("3-Year OS", 36), ("5-Year OS", 60)]:
+            if m <= kmf.timeline.max():
+                rate = kmf.survival_function_at_times(m).values[0]
+                print(f"  {label}: {rate * 100:.1f}%")
+            else:
+                print(f"  {label}: Not enough data")
+        print("========================================\n")
 
     # grouped km
     else:
@@ -204,8 +234,22 @@ def km_lifeline(
                 ci_show=ci,
                 color=color,
             )
+            add_survival_markers(kmf, ax=ax, color=color)
 
             kmfs.append(kmf)
+
+            # Median OS ausgeben
+            med = kmf.median_survival_time_
+            print(
+                f"[KM Median] {label}: {f'{med:.1f} months' if med != float('inf') else 'Not reached (inf)'}"
+            )
+            for label, m in [("1-Year OS", 12), ("3-Year OS", 36), ("5-Year OS", 60)]:
+                if m <= kmf.timeline.max():
+                    rate = kmf.survival_function_at_times(m).values[0]
+                    print(f"  {label}: {rate * 100:.1f}%")
+                else:
+                    print(f"  {label}: Not enough data")
+            print("========================================\n")
 
     # ----------------------------------------
     # LOG-RANK TEST
@@ -239,6 +283,9 @@ def km_lifeline(
     ax.set_xlabel(xl)
     ax.set_ylabel(yl)
 
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
     if ylim is not None:
         ax.set_ylim(ylim)
     else:
@@ -262,6 +309,18 @@ def km_lifeline(
         add_at_risk_counts(*kmfs, ax=ax)
 
     return ax
+
+
+def median_iqr(x):
+    x = pd.Series(x).dropna()
+
+    return {
+        "n": len(x),
+        "median": x.median(),
+        "q1": x.quantile(0.25),
+        "q3": x.quantile(0.75),
+        "iqr": x.quantile(0.75) - x.quantile(0.25),
+    }
 
 
 def plot_survival_cohort_pca(
@@ -577,8 +636,16 @@ def plot_survival_cohort_pca(
     )
 
     plt.tight_layout()
-    plt.savefig(f"consort_flow_{asserted_year or 'plot'}.png", dpi=150, bbox_inches="tight")
+    plt.savefig("consort_flow_plot.png", dpi=150, bbox_inches="tight")
     plt.show()
     print("y_km   =", y_km)
     print("y_event=", y_event)
     print("y_sub  =", y_sub)
+
+
+def latest_per_condition(df, date_col, output_col):
+    df = df.dropna(subset=[date_col])
+
+    return df.loc[df.groupby("condition_id_hash")[date_col].idxmax()][
+        ["condition_id_hash", date_col]
+    ].rename(columns={date_col: output_col})

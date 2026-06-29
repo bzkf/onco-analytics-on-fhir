@@ -1,81 +1,85 @@
 import sys
+from functools import reduce
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from analytics_on_fhir.analysis.utils.load_multisite_parquets import (
+    build_all_obds_paths, load_multisite_parquets,
+    load_multisite_parquets_from_paths)
+from analytics_on_fhir.analysis.utils.survival_utils import (
+    km_lifeline, latest_per_condition, median_iqr, plot_survival_cohort_pca)
 from IPython.display import display
 
-print(sys.path)
-from analytics_on_fhir.analysis.utils.survival_utils import km_lifeline, plot_survival_cohort_pca
-
 report = {}
-
+# read in all data from pca1
+BASE_DIR = Path(
+    "/home/coder/git/onco-analytics-on-fhir/"
+    "analytics_on_fhir/analysis/study_name_pca_analysis/"
+    "pca1_data_allsites"
+)
+# for progressions - i dont have them in pca
+BASE_DIR_ALL_OBDS = Path(
+    "/home/coder/git/onco-analytics-on-fhir/"
+    "analytics_on_fhir/analysis/all_obds_patients_analysis/"
+    "all_obds_data_allsites"
+)
 sites = "UKER, TUM, UKA, LMU, UKW"
 # sites = "UKER"
 # sites = "TUM"
 # sites = "UKA"
 # sites = "LMU"
 # sites = "UKW"
+# sites = "UKR" --> filter from all obds if u wanna use this
 
-asserted_year = 2010
+asserted_year_min = 2010
+asserted_year_max = 2023
 
-# COHORT or control for labs
-cohort_or_control = "control"
+# COHORT or control for labs KM and Metastasis M KM
+cohort_or_control = "cohort"
 
-obds_paths = []
-vital_paths = []
-tnm_m_paths = []
+# augment data with verlaufsinfo - any record of the patient from progression and other obds
+extend_df_km_by_progression = True
 
-for site in [s.strip().lower() for s in sites.split(",")]:
-    obds_path = f"/home/coder/git/onco-analytics-on-fhir/analytics_on_fhir/analysis/study_name_pca_analysis/pca1_data_allsites/{site}/parquet/df_c61_conditions_patients_death_gleason_met_clean_deidentified.parquet"
-    vital_path = f"/home/coder/git/onco-analytics-on-fhir/analytics_on_fhir/analysis/study_name_pca_analysis/pca1_data_allsites/{site}/parquet/df_vitalstatus_deidentified.parquet"
-    tnm_m_path = f"/home/coder/git/onco-analytics-on-fhir/analytics_on_fhir/analysis/study_name_pca_analysis/pca1_data_allsites/{site}/parquet/df_m_tnm_deidentified.parquet"
-
-    obds_paths.append(obds_path)
-    vital_paths.append(vital_path)
-    tnm_m_paths.append(tnm_m_path)
-
-print(obds_paths)
-print(vital_paths)
-print(tnm_m_paths)
-
-
-OBDS_DTYPES = {
-    "asserted_year": "Int64",
-    "age_at_diagnosis": "Float64",
-    "cohort_flag": "Int64",
-    "is_deceased": "boolean",
+pca1_config = {
+    "obds": {
+        "file": "df_c61_conditions_patients_death_gleason_met_clean_deidentified.parquet",
+        "subdir": "parquet",
+    },
+    "vitalstatus": {
+        "file": "df_vitalstatus_deidentified.parquet",
+        "subdir": "parquet",
+        "date_col": "months_between_asserted_effective_dateTime",
+        "output_col": "vitalstatus_months",
+    },
+    "tnm_m": {
+        "file": "df_m_tnm_deidentified.parquet",
+        "subdir": "parquet",
+        "date_col": "months_between_asserted_m_tnm_date",
+        "output_col": "tnm_m_months",
+    },
+    "labs": {
+        "file": "df_mii_labs_asserted_deidentified.parquet",
+        "subdir": "parquet",
+        "date_col": "months_between_asserted_effective_dateTime",
+        "output_col": "lab_months",
+    },
+    # add other dfs here for extend follow up as well
 }
 
-VITAL_DTYPES = {
-    "months_between_asserted_effective_dateTime": "Float64",
-    "months_between_asserted_deceased_datetime": "Float64",
-    "months_between_asserted_date_death": "Float64",
-}
+paths = build_all_obds_paths(base_dir=BASE_DIR, config=pca1_config, sites=sites)
+# load prograssions here seperately from BASE_DIR_ALL_OBDS
 
-dfs_obds = []
-for path in obds_paths:
-    tmp = pd.read_parquet(path)
+dfs = {key: load_multisite_parquets_from_paths(paths[key]) for key in pca1_config.keys()}
+df_obds = dfs["obds"]
 
-    for col, dtype in OBDS_DTYPES.items():
-        if col in tmp.columns:
-            tmp[col] = tmp[col].astype(dtype)
+df_obds.head()
 
-    if "patient_resource_id_hash" in tmp.columns:
-        tmp["patient_resource_id_hash"] = tmp["patient_resource_id_hash"].astype("string")
-
-    if "condition_id_hash" in tmp.columns:
-        tmp["condition_id_hash"] = tmp["condition_id_hash"].astype("string")
-
-    if "icd10_code" in tmp.columns:
-        tmp["icd10_code"] = tmp["icd10_code"].astype("string")
-
-    tmp["site"] = path.split("data_allsites/")[1].split("/parquet")[0]
-    dfs_obds.append(tmp)
-
-df_obds = pd.concat(dfs_obds, ignore_index=True)
 # remove C44 and all D* ICD10 codes
 # df_obds = df_obds[~df_obds["icd10_code"].str.startswith(("C44", "D"), na=False)]
-df_obds = df_obds[df_obds["asserted_year"] >= asserted_year]
+df_obds = df_obds[df_obds["asserted_year"] >= asserted_year_min]
+df_obds = df_obds[df_obds["asserted_year"] <= asserted_year_max]
+
 
 df_obds.head()
 print(df_obds.shape[0])
@@ -85,33 +89,55 @@ df_obds = df_obds.loc[:, ~df_obds.columns.str.contains("metastasis", case=False,
 df_obds = df_obds.drop_duplicates()
 print(df_obds.shape[0])
 df_obds.head()
-report[f"Initial tumor records (diagnosis year ≥ {asserted_year})"] = df_obds.shape[0]
+report[f"Initial tumor records (diagnosis year {asserted_year_min} - {asserted_year_max})"] = (
+    df_obds.shape[0]
+)
 
+n_with = df_obds["gleason_score"].notna().sum()
+n_without = df_obds["gleason_score"].isna().sum()
 
-dfs_vital = []
-for path in vital_paths:
-    tmp = pd.read_parquet(path)
+print(f"With Gleason score: {n_with:,}")
+print(f"Without Gleason score: {n_without:,}")
 
-    for col, dtype in VITAL_DTYPES.items():
-        if col in tmp.columns:
-            tmp[col] = pd.to_numeric(tmp[col], errors="coerce").astype(dtype)
+# in df_obds, groupby patient_resource_id_hash and only keep first tumor
+# with smallest age_at_diagnosis
+# wichtig für unabhängige Beobachtung Kaplan Meier --> nur für Erstdiagnose hier
+df_obds_first_tumor = (
+    df_obds.sort_values("age_at_diagnosis")
+    .groupby("patient_resource_id_hash")
+    .first()
+    .reset_index()
+)
 
-    if "patient_resource_id_hash" in tmp.columns:
-        tmp["patient_resource_id_hash"] = tmp["patient_resource_id_hash"].astype("string")
+report["Patients after first-tumor selection"] = df_obds_first_tumor.shape[0]
+report["Unique patients after first-tumor selection"] = df_obds_first_tumor[
+    "patient_resource_id_hash"
+].nunique()
+report
 
-    if "condition_id_hash" in tmp.columns:
-        tmp["condition_id_hash"] = tmp["condition_id_hash"].astype("string")
-
-    if "vitalstatus_code" in tmp.columns:
-        tmp["vitalstatus_code"] = tmp["vitalstatus_code"].astype("string").str.strip().str.upper()
-
-    tmp["site"] = path.split("data_allsites/")[1].split("/parquet")[0]
-    dfs_vital.append(tmp)
-
-df_vital = pd.concat(dfs_vital, ignore_index=True)
+df_vital = dfs["vitalstatus"]
 
 df_vital.head()
 report["Vital status records"] = df_vital.shape[0]
+
+
+df_lab = dfs["labs"]
+
+df_lab.head()
+df_lab.shape[0]
+mask = (
+    df_lab["loinc_code"].notna()
+    & (df_lab["loinc_code"].astype(str).str.strip() != "")
+    & (df_lab["loinc_code"].astype(str).str.lower() != "missing")
+)
+
+n_ops_present = mask.sum()
+
+print(f"Ops code present: {n_ops_present:,}")
+# 2010 - 2023
+df_lab = df_lab[df_lab["asserted_year"] >= asserted_year_min]
+df_lab = df_lab[df_lab["asserted_year"] <= asserted_year_max]
+df_lab.shape[0]
 
 
 print(df_vital["months_between_asserted_effective_dateTime"].dtype)
@@ -145,8 +171,18 @@ df_vital_latest = (
 )
 
 df_vital_latest.head(50)
+df_vital_latest["vitalstatus_code"].isna().sum()
+df_vital_latest["vitalstatus_code"].value_counts()
 
-report["Only latest available vital status, remove duplicates"] = df_vital_latest.shape[0]
+# ich will nur die patient_resource_id_hash hier behalten, dei auch in meinem df_obds nach all den
+# filterungen sind
+valid_patients = set(df_obds_first_tumor["patient_resource_id_hash"])
+
+df_vital_latest = df_vital_latest[
+    df_vital_latest["patient_resource_id_hash"].isin(valid_patients)
+].copy()
+
+report["Latest vital status records"] = df_vital_latest.shape[0]
 
 
 # remove negative months_between_asserted_effective_dateTime
@@ -160,27 +196,12 @@ report["Unique patients with valid vital status information"] = df_vital_latest[
     "patient_resource_id_hash"
 ].nunique()
 
-# in df_obds, groupby patient_resource_id_hash and only keep first tumor
-# with smallest age_at_diagnosis
-# wichtig für unabhängige Beobachtung Kaplan Meier --> nur für Erstdiagnose hier
-df_obds_first_tumor = (
-    df_obds.sort_values("age_at_diagnosis")
-    .groupby("patient_resource_id_hash")
-    .first()
-    .reset_index()
-)
-
-report["Patients after first-tumor selection"] = df_obds_first_tumor.shape[0]
-report["Unique patients after first-tumor selection"] = df_obds_first_tumor[
-    "patient_resource_id_hash"
-].nunique()
-
 
 # JOIN FIRST TUMOR DF WITH LATEST VITALSTATUS
 df_join = df_obds_first_tumor.merge(
     df_vital_latest, on="patient_resource_id_hash", how="left", suffixes=("", "_vital")
 )
-report["Patients after join with vital status data"] = df_join.shape[0]
+report["Patients after join with follow-up data"] = df_join.shape[0]
 report["C61 patients"] = (df_join["icd10_code"] == "C61").sum()
 df_join.to_csv("dj_join.csv", index=False)
 
@@ -279,6 +300,163 @@ df_join["is_deceased"].isna().sum()
 df_join["vitalstatus_code"].isna().mean()
 df_join["vitalstatus_code"].isna().sum()
 
+
+# tnm m
+df_tnm_m = dfs["tnm_m"]
+df_tnm_m["m_tnm_clean"] = df_tnm_m["m_tnm"].astype("string").str.strip()
+df_tnm_m["m_tnm_clean"].value_counts()
+df_tnm_m.head()
+
+df_tnm_m = df_tnm_m[df_tnm_m["asserted_year"] >= asserted_year_min]
+df_tnm_m = df_tnm_m[df_tnm_m["asserted_year"] <= asserted_year_max]
+
+df_tnm_m.head()
+df_tnm_m.shape
+df_tnm_m["condition_id_hash"].nunique()  # 24066
+
+
+# # extend df_join if extend_df_km_by_progression is set to True in the beginning of the script
+# # extend it with any other most up to date and available information of the patient for censoring
+# # for improving completeness of follow up time
+#     # read in progressions from all_obds and filter for icd10_code == C61
+
+# TO DO - das nach oben ziehen
+if extend_df_km_by_progression:
+    print("extend_df_km_by_progression")
+    obds_extension_config = {
+        "progressions": {
+            "file": "df_progressions_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_effective_dateTime",
+            "output_col": "progression_months",
+        }
+    }
+
+    pca_extension_config = {
+        "tnm_t": {
+            "file": "df_t_tnm_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_t_tnm_date",
+            "output_col": "tnm_t_months",
+        },
+        "tnm_n": {
+            "file": "df_n_tnm_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_n_tnm_date",
+            "output_col": "tnm_n_months",
+        },
+        # df_tnm_m schon vorhanden
+        "tnm_uicc": {
+            "file": "df_uicc_tnm_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_uicc_tnm_date",
+            "output_col": "tnm_uicc_months",
+        },
+        "ops_grouped": {
+            "file": "df_ops_grouped_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_therapy_start_date",
+            "output_col": "op_months",
+        },
+        "radiotherapies": {
+            "file": "df_radiotherapies_joined_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_therapy_start_date",
+            "output_col": "rt_months",
+        },
+        "systemtherapies": {
+            "file": "df_system_therapies_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_therapy_start_date",
+            "output_col": "st_months",
+        },
+        "metastasis": {
+            "file": "df_metastasis_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_metastasis_date",
+            "output_col": "metastasis_months",
+        },
+        "weitere_klassifikation": {
+            "file": "df_weitere_klassifikation_deidentified.parquet",
+            "subdir": "parquet",
+            "date_col": "months_between_asserted_weitere_klassifikation_date",
+            "output_col": "weitere_klassifikation_months",
+        },
+    }
+
+    paths_obds = build_all_obds_paths(
+        base_dir=BASE_DIR_ALL_OBDS, config=obds_extension_config, sites=sites
+    )
+    dfs_obds = {
+        key: load_multisite_parquets_from_paths(paths_obds[key]) for key in obds_extension_config
+    }
+    df_progression = dfs_obds["progressions"]
+    df_progression = df_progression[df_progression["icd10_code"] == "C61"]
+
+    paths_pca = build_all_obds_paths(base_dir=BASE_DIR, config=pca_extension_config, sites=sites)
+    dfs_pca = {
+        key: load_multisite_parquets_from_paths(paths_pca[key]) for key in pca_extension_config
+    }
+
+    latest_dfs = {}
+
+    for key, cfg in pca_extension_config.items():
+        latest_dfs[key] = latest_per_condition(
+            df=dfs_pca[key],
+            date_col=cfg["date_col"],
+            output_col=cfg["output_col"],
+        )
+
+    # add progressions
+    latest_dfs["progressions"] = latest_per_condition(
+        df=df_progression,
+        date_col=obds_extension_config["progressions"]["date_col"],
+        output_col=obds_extension_config["progressions"]["output_col"],
+    )
+    # add tnm m already existing
+    latest_dfs["tnm_m"] = latest_per_condition(
+        df_tnm_m,
+        "months_between_asserted_m_tnm_date",
+        "tnm_m_months",
+    )
+
+    # save latest record numbers
+    report[
+        "Latest other records (progressions,\nTNM, UICC, therapies, metastasis, other classification)"
+    ] = sum(df.shape[0] for df in latest_dfs.values())
+
+    df_all = reduce(
+        lambda left, right: left.merge(
+            right,
+            on="condition_id_hash",
+            how="outer",
+        ),
+        latest_dfs.values(),
+    )
+
+    # automatisch aus config sammeln
+    followup_cols = (
+        [cfg["output_col"] for cfg in obds_extension_config.values()]
+        + [cfg["output_col"] for cfg in pca_extension_config.values()]
+        + ["tnm_m_months"]
+    )
+
+    df_all["months_followup_extended"] = df_all[followup_cols].max(axis=1)
+    df_all.head()
+
+    df_join = df_join.merge(
+        df_all[["condition_id_hash", "months_followup_extended"]],
+        on="condition_id_hash",
+        how="left",
+    )
+    # fill missing followup_time directly
+    df_join["followup_time"] = df_join["followup_time"].combine_first(
+        df_join["months_followup_extended"]
+    )
+    # update event information from progressions
+    df_join.loc[df_join["event"].isna() & df_join["followup_time"].notna(), "event"] = False
+
+# find final df_km cohort
 # check unknown events
 df_join.head()
 unknown_event_mask = df_join["event"].isna()
@@ -287,9 +465,34 @@ unknown_year_dist = (
     df_join.loc[unknown_event_mask, "asserted_year"].value_counts(dropna=False).sort_index()
 )
 
+# Baseline Characteristics der ausgeschlossenen Patienten ermitteln
+df_excluded = df_join.loc[unknown_event_mask].copy()
+
+print(f"=== BASELINE CHARACTERISTICS OF EXCLUDED PATIENTS (N = {df_excluded.shape[0]:,}) ===")
+
+# 1. Verteilung nach Diagnosejahr
+print("\n--- Distribution by Diagnosis Year ---")
+unknown_year_dist = df_excluded["asserted_year"].value_counts(dropna=False).sort_index()
 print(unknown_year_dist)
-unknown_year_dist.sum()
-unknown_year_dist.head()
+
+# 2. Verteilung nach Standorten (Sites)
+if "site" in df_excluded.columns:
+    print("\n--- Distribution by Site ---")
+    site_dist = df_excluded["site"].value_counts(dropna=False)
+    print(site_dist)
+
+# 3. Alter bei Diagnose (Metriken)
+if "age_at_diagnosis" in df_excluded.columns:
+    print("\n--- Age at Diagnosis ---")
+    print(df_excluded["age_at_diagnosis"].describe().round(1))
+
+# 4. Gleason-Score Verteilung (Klinische Eigenschaft)
+if "gleason_score" in df_excluded.columns:
+    print("\n--- Gleason Score Distribution ---")
+    gleason_dist = df_excluded["gleason_score"].value_counts(dropna=False).sort_index()
+    print(gleason_dist)
+
+print("\n=======================================================")
 
 # remove NA events
 report["Excluded: unknown event status"] = unknown_event_mask.sum()
@@ -354,8 +557,12 @@ report["Censored patients: control"] = ((df_km["event"] == 0) & (df_km["cohort_f
 
 # report
 summary = pd.DataFrame.from_dict(report, orient="index", columns=["count"])
-summary[f"% of initial tumor records (diagnosis year ≥ {asserted_year})"] = (
-    summary["count"] / report[f"Initial tumor records (diagnosis year ≥ {asserted_year})"] * 100
+summary[
+    f"% of initial tumor records (diagnosis year {asserted_year_min} - {asserted_year_max})"
+] = (
+    summary["count"]
+    / report[f"Initial tumor records (diagnosis year {asserted_year_min} - {asserted_year_max})"]
+    * 100
 )
 summary["% of first-tumor cohort"] = np.nan
 
@@ -375,16 +582,118 @@ display(
 )
 
 
-# plot
-# gesamt km
-km_lifeline(
-    data=df_km,
-    event_col="event",
-    time_col="survival_time_months",
-    cat_col=None,
-    title=f"C61 Overall Survival > {asserted_year}, {sites}",
+# calculate follow up statistics
+followup_stats = {}
+
+# ----------------------------------
+# alle Patienten
+# ----------------------------------
+followup_stats["all_patients"] = median_iqr(df_km["survival_time_months"])
+
+# ----------------------------------
+# zensierte Patienten
+# ----------------------------------
+followup_stats["censored"] = median_iqr(df_km.loc[df_km["event"] == 0, "followup_time"])
+
+# ----------------------------------
+# verstorbene Patienten
+# ----------------------------------
+followup_stats["deceased"] = median_iqr(df_km.loc[df_km["event"] == 1, "death_time"])
+
+# ----------------------------------
+# cohort
+# ----------------------------------
+followup_stats["cohort"] = median_iqr(
+    df_km.loc[
+        df_km["cohort_flag"] == 1,
+        "survival_time_months",
+    ]
 )
 
+# ----------------------------------
+# control
+# ----------------------------------
+followup_stats["control"] = median_iqr(
+    df_km.loc[
+        df_km["cohort_flag"] == 0,
+        "survival_time_months",
+    ]
+)
+
+# ----------------------------------
+# deceased cohort
+# ----------------------------------
+followup_stats["deceased_cohort"] = median_iqr(
+    df_km.loc[
+        (df_km["event"] == 1) & (df_km["cohort_flag"] == 1),
+        "death_time",
+    ]
+)
+
+# ----------------------------------
+# deceased control
+# ----------------------------------
+followup_stats["deceased_control"] = median_iqr(
+    df_km.loc[
+        (df_km["event"] == 1) & (df_km["cohort_flag"] == 0),
+        "death_time",
+    ]
+)
+
+# ----------------------------------
+# censored cohort
+# ----------------------------------
+followup_stats["censored_cohort"] = median_iqr(
+    df_km.loc[
+        (df_km["event"] == 0) & (df_km["cohort_flag"] == 1),
+        "followup_time",
+    ]
+)
+
+# ----------------------------------
+# censored control
+# ----------------------------------
+followup_stats["censored_control"] = median_iqr(
+    df_km.loc[
+        (df_km["event"] == 0) & (df_km["cohort_flag"] == 0),
+        "followup_time",
+    ]
+)
+
+followup_table = pd.DataFrame(
+    [
+        {
+            "group": name,
+            "n": s["n"],
+            "median_months": round(s["median"], 1),
+            "median (IQR)": (f"{s['median']:.1f} ({s['q1']:.1f}–{s['q3']:.1f})"),
+        }
+        for name, s in followup_stats.items()
+    ]
+)
+
+order = [
+    "all_patients",
+    "cohort",
+    "control",
+    "censored",
+    "censored_cohort",
+    "censored_control",
+    "deceased",
+    "deceased_cohort",
+    "deceased_control",
+]
+
+followup_table["group"] = pd.Categorical(
+    followup_table["group"],
+    categories=order,
+    ordered=True,
+)
+
+followup_table = followup_table.sort_values("group")
+display(followup_table)
+
+# plot
 # entities cohort vs rest
 km_lifeline(
     data=df_km,
@@ -392,24 +701,40 @@ km_lifeline(
     time_col="survival_time_months",
     cat_col="cohort_flag",
     cat_names=[(1, "cohort"), (0, "control")],
-    title=f"C61 Survival cohort vs control > {asserted_year}, {sites}",
+    title=f"C61 Survival cohort vs control, diagnosis year {asserted_year_min} - {asserted_year_max}, {sites}",
     stat=True,
     show_stat=True,
 )
 
+# add pct
+total = report["Patients after join with follow-up data"]
+summary["pct"] = summary["count"] / total * 100
+##
 
 # cohort diagram
 LEFT_STEPS = [
-    f"Initial tumor records (diagnosis year ≥ {asserted_year})",
+    f"Initial tumor records (diagnosis year {asserted_year_min} - {asserted_year_max})",
     "Patients after first-tumor selection",
 ]
 RIGHT_STEPS = [
-    "Vital status records",
-    "Only latest available vital status, remove duplicates",
-    "Patients with non-negative follow-up time",
+    # "Vital status records",
+    # "Only latest available vital status, remove duplicates",
+    # "Patients with non-negative follow-up time",
+    "Latest vital status records",
+    "Latest other records (progressions,\nTNM, UICC, therapies, metastasis, other classification)",
+    # "Latest progression records",
+    # "Latest TNM T records",
+    # "Latest TNM N records",
+    # "Latest TNM M records",
+    # "Latest UICC records",
+    # "Latest surgery records",
+    # "Latest radio therapy records",
+    # "Latest systemic therapy records",
+    # "Latest metastasis records",
+    # "Latest other classification records"
 ]
 CENTER_STEPS = [
-    "Patients after join with vital status data",
+    "Patients after join with follow-up data",
     "Excluded: unknown event status",
     "Excluded: missing survival time",
     "Excluded: survival time >100 years",
@@ -418,14 +743,159 @@ CENTER_STEPS = [
 ]
 plot_survival_cohort_pca(
     summary,
-    asserted_year=asserted_year,
-    title=f"C61 Survival Cohort: {sites} - diagnoses ≥ {asserted_year}",
+    title=f"C61 Survival Cohort: {sites} - diagnosis year {asserted_year_min} - {asserted_year_max}",
     left_steps=LEFT_STEPS,
     right_steps=RIGHT_STEPS,
     center_steps=CENTER_STEPS,
 )
 
 
+##############################################################################################
+######### SURVIVAL x METASTASIERUNG M0, M1a, M1b, M1c
+
+# 1. M-stage filtern
+target_m_stages = ["M0", "M1a", "M1b", "M1c"]
+
+df_tnm_m = df_tnm_m[df_tnm_m["m_tnm_clean"].isin(target_m_stages)].copy()
+
+print(df_tnm_m["m_tnm_clean"].value_counts())
+
+
+# EIN M-stage pro Patient (0–4 Monate nach Diagnose)
+df_tnm_unique = (
+    df_tnm_m[
+        (df_tnm_m["months_between_asserted_m_tnm_date"] >= 0)
+        & (df_tnm_m["months_between_asserted_m_tnm_date"] <= 4)
+    ]
+    .sort_values("m_tnm_clean", ascending=False)
+    .groupby("condition_id_hash")
+    .first()
+    .reset_index()
+)
+
+print(
+    f"Unique patients with M-stage within 4 months: "
+    f"{df_tnm_unique['condition_id_hash'].nunique():,}"
+)
+
+
+# SURVIVAL BASE (NICHT filtern!)
+df_km_base = df_km.copy()
+
+
+# Merge survival + M-stage
+df_km_tnm = df_km_base.merge(
+    df_tnm_unique[["condition_id_hash", "m_tnm_clean"]], on="condition_id_hash", how="inner"
+)
+
+print("After M-stage merge:", df_km_tnm.shape[0])
+print(df_km_tnm["m_tnm_clean"].value_counts())
+
+
+# cohort OR control
+if cohort_or_control == "cohort":
+    df_cohort_or_control = df_km_tnm[df_km_tnm["cohort_flag"] == 1].copy()
+else:
+    df_cohort_or_control = df_km_tnm[df_km_tnm["cohort_flag"] == 0].copy()
+
+
+# KM: M-stage innerhalb cohort/control
+km_lifeline(
+    data=df_cohort_or_control,
+    event_col="event",
+    time_col="survival_time_months",
+    cat_col="m_tnm_clean",
+    cat_names=[
+        ("M0", "M0"),
+        ("M1a", "M1a"),
+        ("M1b", "M1b"),
+        ("M1c", "M1c"),
+    ],
+    title=f"OS by TNM-M up to 4 months after diagnosis, ({cohort_or_control}), diagnosis year {asserted_year_min} - {asserted_year_max}, {sites}",
+    stat=True,
+    show_stat=True,
+)
+
+
+# cross view (M × cohort/control)
+df_km_tnm["m_cohort_group"] = (
+    df_km_tnm["m_tnm_clean"].astype(str)
+    + "_"
+    + df_km_tnm["cohort_flag"].map({1: "cohort", 0: "control"})
+)
+
+order = [
+    "M0_cohort",
+    "M0_control",
+    "M1a_cohort",
+    "M1a_control",
+    "M1b_cohort",
+    "M1b_control",
+    "M1c_cohort",
+    "M1c_control",
+]
+
+df_km_tnm["m_cohort_group"] = pd.Categorical(
+    df_km_tnm["m_cohort_group"], categories=order, ordered=True
+)
+
+
+km_lifeline(
+    data=df_km_tnm,
+    event_col="event",
+    time_col="survival_time_months",
+    cat_col="m_cohort_group",
+    cat_names=[
+        ("M0_cohort", "M0 cohort"),
+        ("M0_control", "M0 control"),
+    ],
+    title=f"OS by TNM-M up to 4 months after diagnosis × cohort/control, diagnosis year {asserted_year_min} - {asserted_year_max}, {sites}",
+    stat=True,
+    show_stat=True,
+)
+km_lifeline(
+    data=df_km_tnm,
+    event_col="event",
+    time_col="survival_time_months",
+    cat_col="m_cohort_group",
+    cat_names=[
+        ("M1a_cohort", "M1a cohort"),
+        ("M1a_control", "M1a control"),
+    ],
+    title=f"OS by TNM-M up to 4 months after diagnosis × cohort/control, diagnosis year {asserted_year_min} - {asserted_year_max}, {sites}",
+    stat=True,
+    show_stat=True,
+)
+
+km_lifeline(
+    data=df_km_tnm,
+    event_col="event",
+    time_col="survival_time_months",
+    cat_col="m_cohort_group",
+    cat_names=[
+        ("M1b_cohort", "M1b cohort"),
+        ("M1b_control", "M1b control"),
+    ],
+    title=f"OS by TNM-M up to 4 months after diagnosis × cohort/control, diagnosis year {asserted_year_min} - {asserted_year_max}, {sites}",
+    stat=True,
+    show_stat=True,
+)
+
+km_lifeline(
+    data=df_km_tnm,
+    event_col="event",
+    time_col="survival_time_months",
+    cat_col="m_cohort_group",
+    cat_names=[
+        ("M1c_cohort", "M1c cohort"),
+        ("M1c_control", "M1c control"),
+    ],
+    title=f"OS by TNM-M up to 4 months after diagnosis × cohort/control, diagnosis year {asserted_year_min} - {asserted_year_max}, {sites}",
+    stat=True,
+    show_stat=True,
+)
+
+"""
 ##############################################################################################
 ######### SURVIVAL x PSA ANSPRECHEN NACH THERAPIE
 # PSA
@@ -664,7 +1134,7 @@ km_lifeline(
         ("poor_responder", "poor_responder (<50% reduction)"),
         ("no_psa_data", "no_psa_data"),
     ],
-    title=f"OS by PSA response, {cohort_or_control}, diagnosis > {asserted_year}, {sites}",
+    title=f"OS by PSA response, {cohort_or_control}, diagnosis year {asserted_year_min} - {asserted_year_max}, {sites}",
     stat=True,
     show_stat=True,
 )
@@ -736,101 +1206,5 @@ km_lifeline(
 # # Condition intersection df_km df_resp: 76
 # # Patient intersection df_join df_panel: 76
 # # Patient intersection df_km df_panel: 76
-
-
-##############################################################################################
-######### SURVIVAL x METASTASIERUNG M0, M1a, M1b, M1c
-
-TNM_M_DTYPES = {
-    "asserted_year": "Int64",
-    "age_at_diagnosis": "Float64",
-    "months_between_asserted_m_tnm_date": "Float64",
-    "site": "string",
-    "m_tnm": "string",
-}
-
-
-dfs_tnm_m = []
-for path in tnm_m_paths:
-    tmp = pd.read_parquet(path)
-
-    for col, dtype in TNM_M_DTYPES.items():
-        if col in tmp.columns:
-            tmp[col] = tmp[col].astype(dtype)
-
-    # if "patient_resource_id_hash" in tmp.columns:
-    #     tmp["patient_resource_id_hash"] = tmp["patient_resource_id_hash"].astype("string")
-
-    if "condition_id_hash" in tmp.columns:
-        tmp["condition_id_hash"] = tmp["condition_id_hash"].astype("string")
-
-    # if "icd10_code" in tmp.columns:
-    #     tmp["icd10_code"] = tmp["icd10_code"].astype("string")
-
-    tmp["site"] = path.split("data_allsites/")[1].split("/parquet")[0]
-    dfs_tnm_m.append(tmp)
-
-df_tnm_m = pd.concat(dfs_tnm_m, ignore_index=True)
-df_tnm_m["m_tnm_clean"] = df_tnm_m["m_tnm"].astype("string").str.strip()
-df_tnm_m["m_tnm_clean"].value_counts()
-df_tnm_m.head()
-
-df_tnm_m = df_tnm_m[df_tnm_m["asserted_year"] >= asserted_year]
-df_tnm_m.head()
-df_tnm_m.shape
-df_tnm_m["condition_id_hash"].nunique()  # 24066
-
-
-# maximalwert innerhalb 4 monate nach diagnose?
-# MX raus
-target_m_stages = ["M0", "M1a", "M1b", "M1c"]
-df_tnm_m = df_tnm_m[df_tnm_m["m_tnm_clean"].isin(target_m_stages)].copy()
-df_tnm_m["condition_id_hash"].nunique()
-df_tnm_m["m_tnm_clean"].value_counts()
-
-df_tnm_unique = (
-    df_tnm_m[
-        (df_tnm_m["months_between_asserted_m_tnm_date"] >= 0)
-        & (df_tnm_m["months_between_asserted_m_tnm_date"] <= 4)
-    ]
-    .sort_values("m_tnm_clean", ascending=False)
-    .groupby("condition_id_hash")
-    .first()
-    .reset_index()
-)
-
-print(
-    f"\nEinzigartige Krankheitsfälle mit M-Status innerhalb von 4 Monaten: {df_tnm_unique['condition_id_hash'].nunique()}"
-)
-df_tnm_unique.head(50)
-print(df_tnm_unique["m_tnm_clean"].value_counts())
-
-if cohort_or_control == "cohort":
-    df_km_filtered = df_km[df_km["cohort_flag"] == 1].copy()
-else:
-    df_km_filtered = df_km[df_km["cohort_flag"] == 0].copy()
-
-# 5. INNER JOIN an den tnm_m DF (wir wollen nur Patienten mit bekannter M-Klassifikation plotten)
-df_km_tnm = df_km_filtered.merge(
-    df_tnm_unique[["condition_id_hash", "m_tnm_clean"]], on="condition_id_hash", how="inner"
-)
-
-df_km_tnm.head()
-print(f"Verbleibende Patienten im KM-Plot nach TNM-M Match: {df_km_tnm.shape[0]}")
-print(df_km_tnm["m_tnm_clean"].value_counts())
-
-km_lifeline(
-    data=df_km_tnm,
-    event_col="event",
-    time_col="survival_time_months",
-    cat_col="m_tnm_clean",
-    cat_names=[
-        ("M0", "M0"),
-        ("M1a", "M1a"),
-        ("M1b", "M1b"),
-        ("M1c", "M1c"),
-    ],
-    title=f"OS by Metastasis Stage (TNM-M), {cohort_or_control}, diagnosis > {asserted_year}, {sites}",
-    stat=True,
-    show_stat=True,
-)
+ """
+ """
