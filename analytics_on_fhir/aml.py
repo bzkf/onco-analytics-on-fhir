@@ -1539,7 +1539,7 @@ class AMLStudy:
 
     def de_identify(self):
         CRYPTO_HASH_KEY = secrets.token_bytes(256)
-        DAY_SHIFT = secrets.randbelow(201) - 100
+        DAY_SHIFT = secrets.randbelow(61) - 30
 
         def crypto_hash(s: str):
             if pd.isna(s):
