@@ -1062,8 +1062,16 @@ class AMLStudy:
             icd_codes_aml, conditions.icd_code == icd_codes_aml.icd_code, "inner"
         )
 
+        conditions = conditions.join(
+            patients.select("patient_id", "patient_mrn"),
+            conditions.condition_patient_reference == patients.patient_id,
+            "left",
+        )
+
         logger.info(f"Found {conditions.count()} Conditions with AML ICD code")
         conditions.show()
+
+        save_final_df(conditions, self.settings, suffix="obds_conditions")
 
         aml_patient_references = conditions.select("condition_patient_reference").distinct()
 
@@ -1907,6 +1915,36 @@ class AMLStudy:
             )
 
         obds_progressions.to_csv(de_identified_dir / "aml_obds_progressions.csv", index=False)
+
+        # obds conditions
+        obds_conditions = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_conditions.csv"),
+            sep=";",
+            dtype={"patient_mrn": str},
+        )
+
+        columns_to_hash = [
+            "condition_id",
+            "condition_patient_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_conditions[column] = obds_conditions[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = [
+            "diagnosis_recordedDate",
+            "diagnosis_onsetDateTime",
+            "diagnosis_assertedDateTime",
+        ]
+        for column in columns_to_shift:
+            obds_conditions[column] = pd.to_datetime(
+                obds_conditions[column], errors="raise", format="ISO8601"
+            )
+            obds_conditions[column] = obds_conditions[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        obds_conditions.to_csv(de_identified_dir / "aml_obds_diagnoses.csv", index=False)
 
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
