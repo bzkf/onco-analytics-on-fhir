@@ -1,6 +1,6 @@
 services:
   data-loader:
-    image: docker.io/confluentinc/cp-kcat:8.2.0@sha256:202244a9b32c9d19d0721eb80ff3a4abfe1a23b188f8eee5c50c779fb4c9d4af
+    image: docker.io/confluentinc/cp-kcat:8.2.1@sha256:21df66a65d2d6b5b9c6669e4c0f49f7f5570afb7dddf53a1b4c2ba4654493fd1
     ipc: none
     security_opt:
       - "no-new-privileges:true"
