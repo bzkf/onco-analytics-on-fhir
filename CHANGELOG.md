@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.35.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.34.1...v2.35.0) (2026-07-01)
+
+
+### Features
+
+* include obds diagnoses ([#545](https://github.com/bzkf/onco-analytics-on-fhir/issues/545)) ([3d47b14](https://github.com/bzkf/onco-analytics-on-fhir/commit/3d47b14fc2ae19fabc6be8b50f2201a02c5e7dff))
+
 ## [2.34.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.34.0...v2.34.1) (2026-06-25)
 
 
