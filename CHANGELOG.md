@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.35.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.0...v2.35.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* include meta.profile in obds export ([#547](https://github.com/bzkf/onco-analytics-on-fhir/issues/547)) ([b00dc6e](https://github.com/bzkf/onco-analytics-on-fhir/commit/b00dc6e02f324c5649e99783f507e84e2ce2a68f))
+
 ## [2.35.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.34.1...v2.35.0) (2026-07-01)
 
 
