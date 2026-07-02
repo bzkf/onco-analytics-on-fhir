@@ -1049,6 +1049,10 @@ class AMLStudy:
                             "path": f"code.coding.where(system = '{FHIR_CODE_SYSTEM_ICD10}').code",
                             "name": "icd_code",
                         },
+                        {
+                            "path": "meta.profile.first()",
+                            "name": "meta_profile",
+                        },
                     ],
                 }
             ],
