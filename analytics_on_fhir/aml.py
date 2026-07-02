@@ -1050,7 +1050,7 @@ class AMLStudy:
                             "name": "icd_code",
                         },
                         {
-                            "path": "meta.profile.first().toString()",
+                            "path": "meta.profile.first()",
                             "name": "meta_profile",
                         },
                     ],
