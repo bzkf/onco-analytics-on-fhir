@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.35.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.1...v2.35.2) (2026-07-03)
+
+
+### Bug Fixes
+
+* parse column 'patient_mrn' explicitly as str ([#549](https://github.com/bzkf/onco-analytics-on-fhir/issues/549)) ([d3a58d2](https://github.com/bzkf/onco-analytics-on-fhir/commit/d3a58d295cbe44900ddde6de88e33c48277c828b))
+
 ## [2.35.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.0...v2.35.1) (2026-07-02)
 
 
