@@ -419,6 +419,7 @@ class AMLStudy:
             else:
                 merged_df["last_follow_up_datetime"] = pd.NaT
 
+        merged_df["patient_mrn"] = merged_df["patient_mrn"].astype(str)
         merged_df.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
         logger.info(f"merged_df size: {merged_df.count()}. {merged_df.dtypes}")
@@ -565,6 +566,7 @@ class AMLStudy:
             )
 
             lab_df["patient_mrn"] = lab_df["observation_patient_reference"].map(patient_mrn_lookup)
+            lab_df["patient_mrn"] = lab_df["patient_mrn"].astype(str)
 
             lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
 
