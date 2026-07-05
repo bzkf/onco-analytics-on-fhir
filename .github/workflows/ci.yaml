@@ -31,6 +31,7 @@ jobs:
       pull-requests: write
       actions: read
       security-events: write
+      attestations: write
     with:
       image: ghcr.io/${{ github.repository }}/analytics-on-fhir
       build-context: .
