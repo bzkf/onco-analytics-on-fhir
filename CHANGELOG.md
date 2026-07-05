@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.35.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.2...v2.35.3) (2026-07-05)
+
+
+### Miscellaneous Chores
+
+* **deps:** update github-actions ([#551](https://github.com/bzkf/onco-analytics-on-fhir/issues/551)) ([fad9452](https://github.com/bzkf/onco-analytics-on-fhir/commit/fad945236aaeb9ab6d4d59b0ef50a434cbef4021))
+
 ## [2.35.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.1...v2.35.2) (2026-07-03)
 
 
