@@ -1,8 +1,11 @@
 # provided by Johannes Meier, UKR
 # extended by Jasmin Ziegler
 
+from functools import reduce
+
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from lifelines import KaplanMeierFitter
 from lifelines.plotting import add_at_risk_counts
@@ -129,6 +132,7 @@ def km_lifeline(
     ylim=None,
     xlim=None,  # für 5y/10y "zoom" bzw Achse abschneiden
     ax=None,
+    show_plot=True,
 ):
 
     if ax is None:
@@ -308,7 +312,10 @@ def km_lifeline(
     if len(kmfs) > 0:
         add_at_risk_counts(*kmfs, ax=ax)
 
-    return ax
+    if show_plot:
+        plt.show()
+
+    # return ax
 
 
 def median_iqr(x):
@@ -323,7 +330,7 @@ def median_iqr(x):
     }
 
 
-def plot_survival_cohort_pca(
+def plot_survival_cohort(
     summary,
     asserted_year=None,
     title="survival cohort",
@@ -555,7 +562,7 @@ def plot_survival_cohort_pca(
             ax,
             X_CENTER - 0.12,
             y_sub,
-            f"Rest\nN={get('Deceased patients: control'):,}",
+            f"Control\nN={get('Deceased patients: control'):,}",
             style="final",
             width=0.18,
         )
@@ -590,7 +597,7 @@ def plot_survival_cohort_pca(
             ax,
             X_CENTER + 0.32,
             y_sub,
-            f"Rest\nN={get('Censored patients: control'):,}",
+            f"Control\nN={get('Censored patients: control'):,}",
             style="final",
             width=0.18,
         )
@@ -649,3 +656,199 @@ def latest_per_condition(df, date_col, output_col):
     return df.loc[df.groupby("condition_id_hash")[date_col].idxmax()][
         ["condition_id_hash", date_col]
     ].rename(columns={date_col: output_col})
+
+
+def load_and_clean_base_data(
+    df_obds: pd.DataFrame, asserted_min: int, asserted_max: int = None, target_entities: list = None
+):
+    """
+    Filtert nach Diagnosejahren, entfernt Duplikate und extrahiert den ersten Tumor pro Patient.
+    Filtert target_entities falls vorhanden.
+    Voraussetzung: Studienspezifische Filter (Alter, ICD10, Spalten) wurden bereits angewendet.
+    """
+    df_clean = df_obds.copy()
+
+    df_clean = df_clean[df_clean["asserted_year"] >= asserted_min]
+    if asserted_max is not None:
+        df_clean = df_clean[df_clean["asserted_year"] <= asserted_max]
+
+    df_clean = df_clean.drop_duplicates()
+
+    # Top 20 Entitäten filtern
+    if target_entities is not None:
+        df_clean = df_clean[df_clean["entity_or_parent"].isin(target_entities)]
+
+    df_first_tumor = (
+        df_clean.sort_values("age_at_diagnosis")
+        .groupby("patient_resource_id_hash")
+        .first()
+        .reset_index()
+    )
+
+    return df_clean, df_first_tumor
+
+
+def process_survival_events(df_first_tumor: pd.DataFrame, df_vital: pd.DataFrame):
+    """
+    Bereinigt den Vitalstatus (nur aktuellster Eintrag, keine negativen Zeiten),
+    verknüpft ihn mit der Kohorte und berechnet das Survival-Event und die Zeiten.
+    """
+    df_v = df_vital.copy().reset_index(drop=True)
+
+    # Nur den aktuellsten Vitalstatus pro Patient (größte Follow-up Zeit)
+    idx = (
+        df_v.groupby("patient_resource_id_hash")["months_between_asserted_effective_dateTime"]
+        .idxmax()
+        .dropna()
+        .astype(int)
+    )
+    df_vital_latest = df_v.loc[idx].reset_index(drop=True)
+
+    # Filter auf valide Patienten (aus der Kohorte) & nicht-negative Zeiten
+    valid_patients = set(df_first_tumor["patient_resource_id_hash"])
+    df_vital_latest = df_vital_latest[
+        df_vital_latest["patient_resource_id_hash"].isin(valid_patients)
+        & (df_vital_latest["months_between_asserted_effective_dateTime"] >= 0)
+    ].copy()
+
+    # Zusammenführen von Tumor-Daten und Vitalstatus
+    df_join = df_first_tumor.merge(
+        df_vital_latest, on="patient_resource_id_hash", how="left", suffixes=("", "_vital")
+    )
+
+    # Event definieren (1 = Tod, 0 = Zensiert, NA = Unbekannt)
+    event = pd.Series(pd.NA, index=df_join.index, dtype="boolean")
+
+    # Sicher tot (Event = True)
+    event.loc[df_join["is_deceased"].eq(True) | df_join["vitalstatus_code"].eq("T")] = True
+
+    # Sicher lebend / zensiert (Event = False) - nur wo event noch NA ist
+    event.loc[
+        (
+            df_join["vitalstatus_code"].eq("L")
+            | (df_join["is_deceased"].eq(False) & df_join["vitalstatus_code"].notna())
+        )
+        & event.isna()
+    ] = False
+
+    df_join["event"] = event
+
+    # Finale Zeit-Spalten für die Survival-Analyse vorbereiten
+    df_join["death_time"] = df_join["months_between_asserted_deceased_datetime"].combine_first(
+        df_join["months_between_asserted_date_death"]
+    )
+    df_join["followup_time"] = df_join["months_between_asserted_effective_dateTime"]
+
+    # Wir geben df_vital_latest für den Report zurück, und df_join zum Weiterarbeiten
+    return df_vital_latest, df_join
+
+
+def extend_followup_times(
+    df_join: pd.DataFrame, extension_dfs: dict, extension_config: dict, df_tnm_m: pd.DataFrame
+):
+    """
+    Sucht in allen Zusatz-Tabellen nach der neuesten Follow-up-Zeit pro Condition,
+    verknüpft diese mit df_join und aktualisiert 'followup_time' und 'event'.
+    """
+    latest_dfs = {}
+
+    # Neueste Datensätze pro Zusatz-Tabelle berechnen
+    for key, cfg in extension_config.items():
+        # Wichtig: Bei PCA filterst du Progressions auf C61, das passiert vor dieser Funktion
+        latest_dfs[key] = latest_per_condition(
+            df=extension_dfs[key],
+            date_col=cfg["date_col"],
+            output_col=cfg["output_col"],
+        )
+
+    # TNM_M gesondert hinzufügen (da es schon im Haupt-Config geladen wurde) - ggf. umstellen iwann
+    latest_dfs["tnm_m"] = latest_per_condition(
+        df=df_tnm_m,
+        date_col="months_between_asserted_m_tnm_date",
+        output_col="tnm_m_months",
+    )
+
+    # Alle Latest-DFs zusammenführen (Outer Join)
+    df_all = reduce(
+        lambda left, right: left.merge(right, on="condition_id_hash", how="outer"),
+        latest_dfs.values(),
+    )
+
+    # Spaltennamen für Follow-ups sammeln
+    followup_cols = [cfg["output_col"] for cfg in extension_config.values()] + ["tnm_m_months"]
+
+    # Nur positive Zeiten berücksichtigen und Maximum finden
+    df_followup_positive_only = df_all[followup_cols].where(df_all[followup_cols] >= 0)
+    df_all["months_followup_extended"] = df_followup_positive_only.max(axis=1)
+
+    # An den Haupt-Datensatz (df_join) mergen
+    df_join_extended = df_join.merge(
+        df_all[["condition_id_hash", "months_followup_extended"]],
+        on="condition_id_hash",
+        how="left",
+    )
+
+    # Follow-up Zeit und Event updaten
+    df_join_extended["followup_time"] = df_join_extended["followup_time"].combine_first(
+        df_join_extended["months_followup_extended"]
+    )
+    # Wenn Event fehlt (NA) aber eine Follow-up Zeit existiert
+    # -> Patient lebte noch zu dem Zeitpunkt (Zensiert = 0)
+    df_join_extended.loc[
+        df_join_extended["event"].isna() & df_join_extended["followup_time"].notna(), "event"
+    ] = False
+
+    # Zählen der hinzugefügten Records für den Report
+    records_count = sum(df.shape[0] for df in latest_dfs.values())
+
+    return df_join_extended, records_count
+
+
+def finalize_km_cohort(df_join: pd.DataFrame):
+    """
+    Berechnet die finale Überlebenszeit, filtert unplausible oder
+    diskordante Datensätze und gibt die Kaplan-Meier-Kohorte zurück.
+    """
+    df = df_join.copy()
+    exclusion_report = {}
+
+    # Fehlender Event-Status
+    unknown_mask = df["event"].isna()
+    exclusion_report["Excluded: unknown event status"] = unknown_mask.sum()
+    df = df.loc[~unknown_mask].copy()
+    df["event"] = df["event"].astype(int)
+
+    # Finale Überlebenszeit berechnen
+    df["survival_time_months"] = np.where(df["event"] == 1, df["death_time"], df["followup_time"])
+
+    # Fehlende Überlebenszeit
+    missing_mask = df["survival_time_months"].isna()
+    exclusion_report["Excluded: survival time missing"] = missing_mask.sum()
+    df = df.loc[~missing_mask].copy()
+
+    # Implausible Zeiten (> 100 Jahre = 1200 Monate)
+    outlier_mask = df["survival_time_months"] > 1200
+    exclusion_report["Excluded: survival time >100 years"] = outlier_mask.sum()
+    df = df.loc[~outlier_mask].copy()
+
+    # Negative Überlebenszeiten (Diagnose nach Tod / fehlerhafte Daten)
+    negative_mask = df["survival_time_months"] < 0
+    exclusion_report["Excluded: negative survival time"] = negative_mask.sum()
+    df = df.loc[~negative_mask].copy()
+
+    # Diskordante Fälle (oBDS sagt tot, Vitalstatus sagt lebend)
+    discordant_mask = (
+        (df["is_deceased"].eq(True))
+        & (df["vitalstatus_code"] == "L")
+        & (df["death_time"] < df["followup_time"])
+    )
+    excl_key = (
+        "Excluded: discordant mortality records (vital_status code = L after is_deceased=True)"
+    )
+    exclusion_report[excl_key] = discordant_mask.sum()
+
+    # Finaler Datensatz
+    df_km = df.loc[~discordant_mask].copy()
+    exclusion_report["Kaplan-Meier eligible cohort"] = df_km.shape[0]
+
+    return df_km, exclusion_report

@@ -178,6 +178,7 @@ dependencies = [
     { name = "s3fs" },
     { name = "seaborn" },
     { name = "statsmodels" },
+    { name = "tableone" },
     { name = "typed-settings", extra = ["cattrs", "dotenv"] },
     { name = "xlsxwriter" },
 ]
@@ -214,6 +215,7 @@ requires-dist = [
     { name = "s3fs", specifier = "==2026.3.0" },
     { name = "seaborn", specifier = "==0.13.2" },
     { name = "statsmodels", specifier = "==0.14.6" },
+    { name = "tableone", specifier = ">=0.9.6" },
     { name = "typed-settings", extras = ["cattrs", "dotenv"], specifier = "==25.3.0" },
     { name = "xlsxwriter", specifier = "==3.2.9" },
 ]
@@ -3077,6 +3079,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2e/b0/24bca682d6a6337854be37f242d116cceeda9942571d5804c44bc1bdd427/syrupy-5.1.0.tar.gz", hash = "sha256:df543c7aa50d3cf1246e83d58fe490afe5f7dab7b41e74ecc0d8d23ae19bd4b8", size = 50495, upload-time = "2026-01-25T14:53:06.2Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/de/70/cf880c3b95a6034ef673e74b369941b42315c01f1554a5637a4f8b911009/syrupy-5.1.0-py3-none-any.whl", hash = "sha256:95162d2b05e61ed3e13f117b88dfab7c58bd6f90e66ebbf918e8a77114ad51c5", size = 51658, upload-time = "2026-01-25T14:53:05.105Z" },
+]
+
+[[package]]
+name = "tableone"
+version = "0.9.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "scipy" },
+    { name = "statsmodels" },
+    { name = "tabulate" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7b/73/89df5ae4dfe687d92d3b622451f5d71b39a4589c4dda06987b04c2c767a0/tableone-0.9.6.tar.gz", hash = "sha256:466e1d7b11d600081f3c84d630ee1155b21755bc5d4c36aa7d20aa301d667abc", size = 774235, upload-time = "2026-02-10T17:59:48.798Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/9a/90c5d549de582850aa181e5cf5d0ff15faf77e3cb6a1633204eb2573328d/tableone-0.9.6-py3-none-any.whl", hash = "sha256:e6b7b0f00d9f3b271b0d6aa38c636a18459994e72c744d7e0821004671760e1b", size = 43587, upload-time = "2026-02-10T17:59:47.599Z" },
+]
+
+[[package]]
+name = "tabulate"
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/58/8c37dea7bbf769b20d58e7ace7e5edfe65b849442b00ffcdd56be88697c6/tabulate-0.10.0.tar.gz", hash = "sha256:e2cfde8f79420f6deeffdeda9aaec3b6bc5abce947655d17ac662b126e48a60d", size = 91754, upload-time = "2026-03-04T18:55:34.402Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl", hash = "sha256:f0b0622e567335c8fabaaa659f1b33bcb6ddfe2e496071b743aa113f8774f2d3", size = 39814, upload-time = "2026-03-04T18:55:31.284Z" },
 ]
 
 [[package]]
