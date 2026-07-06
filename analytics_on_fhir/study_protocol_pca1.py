@@ -881,39 +881,6 @@ class StudyProtocolPCa1:
             deidentified=True,
         )
 
-    def extract_save_progressions(self, df_all_conditions, crypto_key):
-        progressions = progression_view(self.data)
-        progressions = cast_study_dates(
-            progressions,
-            [
-                "effective_dateTime",
-            ],
-        )
-
-        progressions = progressions.join(
-            df_all_conditions,
-            on="condition_id",
-            how="right",
-        )
-        progressions.show()
-
-        save_final_df(progressions, self.settings, suffix="progressions")
-        progressions_deidentified = deidentify(progressions, IDENTIFYING_COLS, crypto_key)
-        progressions_deidentified.show()
-
-        save_final_df(
-            progressions_deidentified,
-            self.settings,
-            suffix="progressions_deidentified",
-            deidentified=True,
-        )
-        save_final_df_parquet(
-            progressions_deidentified,
-            self.settings,
-            suffix="progressions_deidentified",
-            deidentified=True,
-        )
-
     def extract_save_metastasis(self, df_all_conditions, crypto_key):
         df_metastasis = extract_metastasis(self.pc, self.data, self.settings, self.spark)
         logger.info(f"df_1_2_cond_id_asserted.count() = : {df_all_conditions.count()}")
