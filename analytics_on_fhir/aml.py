@@ -167,6 +167,18 @@ DATA_DICTIONARY = {
 HERE = Path(os.path.abspath(os.path.dirname(__file__)))
 
 
+def _clean_patient_mrn(value):
+    # Some sites emit a purely-numeric identifier.value as a JSON number
+    # instead of a JSON string. Mixed with a missing identifier elsewhere in the
+    # same column, pandas silently upcasts the whole column to float64, which
+    # would otherwise bake a trailing ".0" into the MRN once stringified.
+    if pd.isna(value):
+        return pd.NA
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return str(value)
+
+
 class AMLStudy:
     def __init__(self, settings: Settings, data: DataSource):
         self.settings = settings
@@ -282,6 +294,7 @@ class AMLStudy:
         # merging patient + condition dataframes, removing duplicates, cleaning and saving merged_df
         if len(condition_patient_df) > 0:
             patient_df = condition_patient_df["Patient"].drop_duplicates(subset=["patient_id"])
+            patient_df["patient_mrn"] = patient_df["patient_mrn"].apply(_clean_patient_mrn)
             condition_df = condition_patient_df["Condition"]
         else:
             logger.info("Found no patients to given AML ICD codes.")
@@ -419,7 +432,6 @@ class AMLStudy:
             else:
                 merged_df["last_follow_up_datetime"] = pd.NaT
 
-        merged_df["patient_mrn"] = merged_df["patient_mrn"].astype(str)
         merged_df.to_csv(os.path.join(self.output_dir, "aml_all_patients.csv"), index=False)
 
         logger.info(f"merged_df size: {merged_df.count()}. {merged_df.dtypes}")
@@ -442,7 +454,9 @@ class AMLStudy:
         self.extract_procedures(patient_list=patient_list)
 
     def extract_encounters(self, patient_list):
-        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+        patient_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+        )
         all_encs = []
 
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
@@ -490,7 +504,7 @@ class AMLStudy:
 
             patient_mrn_lookup = (
                 patient_df[["condition_patient_reference", "patient_mrn"]]
-                .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+                .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
                 .sort_values("patient_mrn")
                 .drop_duplicates(subset=["condition_patient_reference"], keep="first")
                 .set_index("condition_patient_reference")["patient_mrn"]
@@ -505,7 +519,9 @@ class AMLStudy:
             logger.info("Found no encounters to given patients.")
 
     def extract_labs(self, patient_list):
-        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+        patient_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+        )
         all_labs = []
 
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
@@ -559,14 +575,13 @@ class AMLStudy:
 
             patient_mrn_lookup = (
                 patient_df[["condition_patient_reference", "patient_mrn"]]
-                .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+                .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
                 .sort_values("patient_mrn")
                 .drop_duplicates(subset=["condition_patient_reference"], keep="first")
                 .set_index("condition_patient_reference")["patient_mrn"]
             )
 
             lab_df["patient_mrn"] = lab_df["observation_patient_reference"].map(patient_mrn_lookup)
-            lab_df["patient_mrn"] = lab_df["patient_mrn"].astype(str)
 
             lab_df.to_csv(os.path.join(self.output_dir, "aml_all_labs.csv"), index=False)
 
@@ -704,7 +719,7 @@ class AMLStudy:
             )
         patient_mrn_lookup = (
             patient_df[["condition_patient_reference", "patient_mrn"]]
-            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+            .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
             .sort_values("patient_mrn")
             .drop_duplicates(subset=["condition_patient_reference"], keep="first")
             .set_index("condition_patient_reference")["patient_mrn"]
@@ -726,7 +741,9 @@ class AMLStudy:
         return ops_code_map
 
     def extract_meds(self):
-        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+        patient_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+        )
 
         logger.info("Fetching MedicationRequest")
         med_req_df, med_df_1 = self._fetch_medication_resource(
@@ -844,7 +861,9 @@ class AMLStudy:
         )
 
     def extract_procedures(self, patient_list):
-        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+        patient_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+        )
 
         all_procedures = []
 
@@ -915,7 +934,7 @@ class AMLStudy:
 
         patient_mrn_lookup = (
             patient_df[["condition_patient_reference", "patient_mrn"]]
-            .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+            .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
             .sort_values("patient_mrn")
             .drop_duplicates(subset=["condition_patient_reference"], keep="first")
             .set_index("condition_patient_reference")["patient_mrn"]
@@ -941,7 +960,9 @@ class AMLStudy:
             .dropna()
             .drop_duplicates()
         )
-        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+        patient_df = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+        )
         patient_ids = patient_df["patient_mrn"].dropna().astype(str).str.strip()
         filtered_ids = zenzy_patient_ids[zenzy_patient_ids.isin(patient_ids)]
         filtered_refs = (
