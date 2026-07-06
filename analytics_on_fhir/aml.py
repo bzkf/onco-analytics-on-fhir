@@ -4,12 +4,14 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import shutil
 import tempfile
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import requests
 import urllib3
@@ -167,6 +169,9 @@ DATA_DICTIONARY = {
 HERE = Path(os.path.abspath(os.path.dirname(__file__)))
 
 
+_TRAILING_ZERO_DECIMAL_RE = re.compile(r"^-?\d+\.0+$")
+
+
 def _clean_patient_mrn(value):
     # Some sites emit a purely-numeric identifier.value as a JSON number
     # instead of a JSON string. Mixed with a missing identifier elsewhere in the
@@ -174,9 +179,20 @@ def _clean_patient_mrn(value):
     # would otherwise bake a trailing ".0" into the MRN once stringified.
     if pd.isna(value):
         return pd.NA
-    if isinstance(value, float) and value.is_integer():
-        value = int(value)
-    return str(value)
+    if isinstance(value, (float, np.floating)):
+        return str(int(value)) if float(value).is_integer() else str(value)
+    # Guard against MRNs already corrupted to "1234.0" by a previous pipeline run
+    # (e.g. baked into an older CSV). Only strip a trailing ".0"-style decimal -
+    # never touch plain digit strings, since real MRNs can be zero-padded
+    # (e.g. "007123") and must not have leading zeros stripped.
+    value = str(value)
+    if _TRAILING_ZERO_DECIMAL_RE.match(value):
+        return value.split(".", 1)[0]
+    return value
+
+
+def _clean_patient_mrn_series(series: pd.Series) -> pd.Series:
+    return series.apply(_clean_patient_mrn).astype("string")
 
 
 class AMLStudy:
@@ -294,7 +310,7 @@ class AMLStudy:
         # merging patient + condition dataframes, removing duplicates, cleaning and saving merged_df
         if len(condition_patient_df) > 0:
             patient_df = condition_patient_df["Patient"].drop_duplicates(subset=["patient_id"])
-            patient_df["patient_mrn"] = patient_df["patient_mrn"].apply(_clean_patient_mrn)
+            patient_df["patient_mrn"] = _clean_patient_mrn_series(patient_df["patient_mrn"])
             condition_df = condition_patient_df["Condition"]
         else:
             logger.info("Found no patients to given AML ICD codes.")
@@ -342,7 +358,7 @@ class AMLStudy:
             obds_deaths_df = pd.read_csv(
                 obds_deaths_path,
                 sep=";",
-                dtype={"patient_mrn": str},
+                dtype={"patient_mrn": "string"},
                 usecols=[
                     "patient_mrn",
                     "death_dateTime",
@@ -380,7 +396,7 @@ class AMLStudy:
             vitalstatus_df = pd.read_csv(
                 obds_vitalstatus_path,
                 sep=";",
-                dtype={"patient_mrn": str},
+                dtype={"patient_mrn": "string"},
                 usecols=["patient_mrn", "effective_dateTime", "vitalstatus_code"],
             )
 
@@ -455,7 +471,7 @@ class AMLStudy:
 
     def extract_encounters(self, patient_list):
         patient_df = pd.read_csv(
-            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": "string"}
         )
         all_encs = []
 
@@ -504,7 +520,7 @@ class AMLStudy:
 
             patient_mrn_lookup = (
                 patient_df[["condition_patient_reference", "patient_mrn"]]
-                .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
+                .assign(patient_mrn=lambda x: _clean_patient_mrn_series(x["patient_mrn"]))
                 .sort_values("patient_mrn")
                 .drop_duplicates(subset=["condition_patient_reference"], keep="first")
                 .set_index("condition_patient_reference")["patient_mrn"]
@@ -520,7 +536,7 @@ class AMLStudy:
 
     def extract_labs(self, patient_list):
         patient_df = pd.read_csv(
-            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": "string"}
         )
         all_labs = []
 
@@ -575,7 +591,7 @@ class AMLStudy:
 
             patient_mrn_lookup = (
                 patient_df[["condition_patient_reference", "patient_mrn"]]
-                .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
+                .assign(patient_mrn=lambda x: _clean_patient_mrn_series(x["patient_mrn"]))
                 .sort_values("patient_mrn")
                 .drop_duplicates(subset=["condition_patient_reference"], keep="first")
                 .set_index("condition_patient_reference")["patient_mrn"]
@@ -719,7 +735,7 @@ class AMLStudy:
             )
         patient_mrn_lookup = (
             patient_df[["condition_patient_reference", "patient_mrn"]]
-            .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
+            .assign(patient_mrn=lambda x: _clean_patient_mrn_series(x["patient_mrn"]))
             .sort_values("patient_mrn")
             .drop_duplicates(subset=["condition_patient_reference"], keep="first")
             .set_index("condition_patient_reference")["patient_mrn"]
@@ -742,7 +758,7 @@ class AMLStudy:
 
     def extract_meds(self):
         patient_df = pd.read_csv(
-            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": "string"}
         )
 
         logger.info("Fetching MedicationRequest")
@@ -862,7 +878,7 @@ class AMLStudy:
 
     def extract_procedures(self, patient_list):
         patient_df = pd.read_csv(
-            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": "string"}
         )
 
         all_procedures = []
@@ -934,7 +950,7 @@ class AMLStudy:
 
         patient_mrn_lookup = (
             patient_df[["condition_patient_reference", "patient_mrn"]]
-            .assign(patient_mrn=lambda x: x["patient_mrn"].apply(_clean_patient_mrn))
+            .assign(patient_mrn=lambda x: _clean_patient_mrn_series(x["patient_mrn"]))
             .sort_values("patient_mrn")
             .drop_duplicates(subset=["condition_patient_reference"], keep="first")
             .set_index("condition_patient_reference")["patient_mrn"]
@@ -961,7 +977,7 @@ class AMLStudy:
             .drop_duplicates()
         )
         patient_df = pd.read_csv(
-            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": str}
+            os.path.join(self.output_dir, "aml_all_patients.csv"), dtype={"patient_mrn": "string"}
         )
         patient_ids = patient_df["patient_mrn"].dropna().astype(str).str.strip()
         filtered_ids = zenzy_patient_ids[zenzy_patient_ids.isin(patient_ids)]
@@ -1585,7 +1601,7 @@ class AMLStudy:
 
         patients_with_diagnoses = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_patients.csv"),
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
         # Ensure date columns are datetime even when parse_dates fails
         # (e.g. all-NA columns stay as string with pyarrow string storage)
@@ -1636,7 +1652,7 @@ class AMLStudy:
         fhir_encounters = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_encounters.csv"),
             sep=",",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
 
         columns_to_hash = [
@@ -1668,7 +1684,10 @@ class AMLStudy:
             zenzy_df = pd.read_csv(
                 self.settings.aml.csv_input_file,
                 sep=";",
-                dtype={"patient_mrn": str, self.settings.aml.csv_patient_column: str},
+                dtype={
+                    "patient_mrn": "string",
+                    self.settings.aml.csv_patient_column: "string",
+                },
             )
 
             zenzy_df = zenzy_df[
@@ -1779,7 +1798,7 @@ class AMLStudy:
         fhir_medikation = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"),
             sep=",",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
 
         columns_to_hash = [
@@ -1825,7 +1844,7 @@ class AMLStudy:
         fhir_procedures = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_procedures.csv"),
             sep=",",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
 
         columns_to_hash = [
@@ -1860,7 +1879,7 @@ class AMLStudy:
         obds_weitere_klassifikationen = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_weitere_klassifikationen.csv"),
             sep=";",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
         obds_weitere_klassifikationen["effective_dateTime"] = pd.to_datetime(
             obds_weitere_klassifikationen["effective_dateTime"], errors="raise", format="ISO8601"
@@ -1893,7 +1912,7 @@ class AMLStudy:
         obds_ecog = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_ecog_statuses.csv"),
             sep=";",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
         obds_ecog["effective_dateTime"] = pd.to_datetime(
             obds_ecog["effective_dateTime"], errors="raise", format="ISO8601"
@@ -1919,7 +1938,7 @@ class AMLStudy:
         obds_progressions = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_progressions.csv"),
             sep=";",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
         obds_progressions["effective_dateTime"] = pd.to_datetime(
             obds_progressions["effective_dateTime"], errors="raise", format="ISO8601"
@@ -1947,7 +1966,7 @@ class AMLStudy:
         obds_conditions = pd.read_csv(
             os.path.join(self.output_dir, "df_obds_conditions.csv"),
             sep=";",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
 
         columns_to_hash = [
@@ -1982,7 +2001,7 @@ class AMLStudy:
             sap_medikation = pd.read_csv(
                 sap_medication_path,
                 sep=";",
-                dtype={"patient_mrn": str},
+                dtype={"patient_mrn": "string"},
             ).drop(columns=["FALL_ID", "TEILFALL_ID"], errors="ignore")
 
             sap_medikation["REZEPT_DATUM"] = pd.to_datetime(
@@ -2031,7 +2050,7 @@ class AMLStudy:
         lab_data = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_labs.csv"),
             sep=",",
-            dtype={"patient_mrn": str},
+            dtype={"patient_mrn": "string"},
         )
         lab_data["lab_dateTime"] = pd.to_datetime(
             lab_data["lab_dateTime"], errors="coerce", format="ISO8601"
