@@ -2,7 +2,6 @@ import pathlib
 import sys
 
 from aml import AMLStudy
-from aml_counts import aml_summary_statistics
 from dq import DQStudy
 from embark_rwd import run
 from extract_all_obds import AllObdsPatients
@@ -230,7 +229,6 @@ def run_study(study_name: StudyNames, data: DataSource, pc: PathlingContext):
                 aml.join_with_drug_data()
             aml.extract_meds()
             aml.de_identify()
-            aml_summary_statistics()
         case StudyNames.DQ:
             dq = DQStudy(settings)
             dq.run(data)
