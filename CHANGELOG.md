@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.36.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.3...v2.36.0) (2026-07-06)
+
+
+### Features
+
+* y and progression in pca1 ([#555](https://github.com/bzkf/onco-analytics-on-fhir/issues/555)) ([1ec3a34](https://github.com/bzkf/onco-analytics-on-fhir/commit/1ec3a34289f4a00b50d1f66319377c0fb17f8f05))
+
 ## [2.35.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.2...v2.35.3) (2026-07-05)
 
 
