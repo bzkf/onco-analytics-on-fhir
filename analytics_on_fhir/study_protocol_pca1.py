@@ -33,7 +33,9 @@ from utils import (
     extract_surgeries,
     extract_systemtherapies,
     extract_t_tnm,
+    extract_tnm_parent,
     extract_uicc_tnm,
+    extract_y_tnm,
     group_ops,
     join_radiotherapies,
     map_gleason_sct_to_score,
@@ -179,6 +181,8 @@ class StudyProtocolPCa1:
             df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
             crypto_key,
         )
+
+        self.extract_save_progressions(df_c61_conditions_patients_death_gleason_met, crypto_key)
 
         self.extract_save_leistungszustand_ecog_karnofsky(
             df_c61_conditions_patients_death_gleason_met.select("condition_id", "asserted_date"),
@@ -611,6 +615,16 @@ class StudyProtocolPCa1:
         )
 
     def extract_save_tnm(self, df_all_conditions, crypto_key):
+        # extract tnm parent and inner join to single files
+        df_tnm_parent = extract_tnm_parent(self.pc, self.data, self.settings, self.spark)
+        df_tnm_parent = cast_study_dates(
+            df_tnm_parent,
+            [
+                "parent_tnm_date",
+            ],
+        )
+        df_tnm_parent.show()
+
         # extract t
         df_t_tnm = extract_t_tnm(self.pc, self.data, self.settings, self.spark)
         df_t_tnm = cast_study_dates(
@@ -624,6 +638,14 @@ class StudyProtocolPCa1:
             df_all_conditions,
             on="condition_id",
             how="right",
+        )
+        df_t_tnm.show()
+
+        # join parent
+        df_t_tnm = df_t_tnm.alias("t").join(
+            df_tnm_parent.alias("p"),
+            F.col("t.observation_id") == F.col("p.has_member"),
+            "left",
         )
         df_t_tnm.show()
 
@@ -650,6 +672,12 @@ class StudyProtocolPCa1:
             on="condition_id",
             how="right",
         )
+        # join parent
+        df_n_tnm = df_n_tnm.alias("n").join(
+            df_tnm_parent.alias("p"),
+            F.col("n.observation_id") == F.col("p.has_member"),
+            "left",
+        )
         df_n_tnm.show()
 
         save_final_df(df_n_tnm, self.settings, suffix="n_tnm")
@@ -675,6 +703,12 @@ class StudyProtocolPCa1:
             on="condition_id",
             how="right",
         )
+        # join parent
+        df_m_tnm = df_m_tnm.alias("m").join(
+            df_tnm_parent.alias("p"),
+            F.col("m.observation_id") == F.col("p.has_member"),
+            "left",
+        )
         df_m_tnm.show()
 
         save_final_df(df_m_tnm, self.settings, suffix="m_tnm")
@@ -686,6 +720,39 @@ class StudyProtocolPCa1:
         )
         save_final_df_parquet(
             df_m_tnm_deidentified, self.settings, suffix="m_tnm_deidentified", deidentified=True
+        )
+
+        # extract y tnm
+        df_y_tnm = extract_y_tnm(self.pc, self.data, self.settings, self.spark)
+        df_y_tnm = cast_study_dates(
+            df_y_tnm,
+            [
+                "y_tnm_date",
+            ],
+        )
+
+        df_y_tnm = df_y_tnm.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        # join parent
+        df_y_tnm = df_y_tnm.alias("y").join(
+            df_tnm_parent.alias("p"),
+            F.col("y.observation_id") == F.col("p.has_member"),
+            "left",
+        )
+        df_y_tnm.show()
+
+        save_final_df(df_y_tnm, self.settings, suffix="y_tnm")
+        df_y_tnm_deidentified = deidentify(df_y_tnm, IDENTIFYING_COLS, crypto_key)
+        df_y_tnm_deidentified.show()
+
+        save_final_df(
+            df_y_tnm_deidentified, self.settings, suffix="y_tnm_deidentified", deidentified=True
+        )
+        save_final_df_parquet(
+            df_y_tnm_deidentified, self.settings, suffix="y_tnm_deidentified", deidentified=True
         )
 
         # extract uicc
@@ -701,6 +768,12 @@ class StudyProtocolPCa1:
             df_all_conditions,
             on="condition_id",
             how="right",
+        )
+        # join parent
+        df_uicc_tnm = df_uicc_tnm.alias("u").join(
+            df_tnm_parent.alias("p"),
+            F.col("u.uicc_observation_id") == F.col("p.has_member"),
+            "left",
         )
         df_uicc_tnm.show()
 
@@ -718,6 +791,39 @@ class StudyProtocolPCa1:
             df_uicc_tnm_deidentified,
             self.settings,
             suffix="uicc_tnm_deidentified",
+            deidentified=True,
+        )
+
+    def extract_save_progressions(self, df_all_conditions, crypto_key):
+        progressions = progression_view(self.data)
+        progressions = cast_study_dates(
+            progressions,
+            [
+                "effective_dateTime",
+            ],
+        )
+
+        progressions = progressions.join(
+            df_all_conditions,
+            on="condition_id",
+            how="right",
+        )
+        progressions.show()
+
+        save_final_df(progressions, self.settings, suffix="progressions")
+        progressions_deidentified = deidentify(progressions, IDENTIFYING_COLS, crypto_key)
+        progressions_deidentified.show()
+
+        save_final_df(
+            progressions_deidentified,
+            self.settings,
+            suffix="progressions_deidentified",
+            deidentified=True,
+        )
+        save_final_df_parquet(
+            progressions_deidentified,
+            self.settings,
+            suffix="progressions_deidentified",
             deidentified=True,
         )
 
