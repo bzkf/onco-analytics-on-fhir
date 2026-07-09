@@ -84,6 +84,7 @@ from plots import (
 # Butterfly-Plots (demographischer Alters-/Geschlechts-Baum)
 from PlotsICDDiagzuAlter import plot_population_pyramid_from_raw, plot_population_pyramid_topn, extract_contingency_tables_topn
 from SecondPaper_NebenDiagnosen_Plots import LevelConfig, run_nebendiagnosen_report
+from combined_paper_figures import create_ecog_uicc_panel
 
 # TODO: Must hinzufügen und VGL Plot  <- warten auf anpassung
 # TODO: CAST DTYPES AFTER READING PARQUET FILES!
@@ -883,6 +884,7 @@ ICD_MAPPING_PATH = os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet")
 
 ICD_HIERARCHY_CSV = os.path.join(DATA, "icd10gm2026_basecode_lookup.csv")
 NEBENDIAG_EXCEL = os.path.join(DATA, "Nebendiagnosen_Zuordnung_Ebenen_Domaenen_v1.xlsx")
+NEBENDIAG_EXCEL_CSV_Update = os.path.join(DATA, "nebendiagnosen_review_export_v5_auto_volume.csv")
 
 # ── Join-Konfiguration (EINSTELLBAR, STANDORTABHÄNGIG) ───────────────────────
 # Der Patienten-Join Nebendiagnosen ↔ Tumore läuft je Standort über
@@ -935,6 +937,8 @@ lookup_df_icd = icd10gm2026_hierarchy_fast_helper.load_icd_hierarchy_lookup(ICD_
 
 # ── Nebendiagnosen-Einteilung laden ──────────────────────────────────────────
 icd_nebendiagnosen_einteilung = pd.read_excel(NEBENDIAG_EXCEL, sheet_name="Code_Zuordnung")
+icd_nebendiagnosen_einteilung_CSV_UPDATE = pd.read_csv(NEBENDIAG_EXCEL_CSV_Update, sep=";")
+
 
 # ── Vollständiges Patienten-Universum der GK (vor Nebendiagnosen-Filter) ──────
 # Wird für Log-Histogramm und Lorenz-Kurve benötigt, damit Patienten mit
@@ -1074,6 +1078,24 @@ level_configs_neben = [
 ]
 
 #── Report starten ────────────────────────────────────────────────────────────
+#panelplots für paper
+from combined_paper_figures import create_icd_code_filter_panel
+
+fig_neben, tops = create_icd_code_filter_panel(
+    df_conditions=df_conditions_mapped,
+    patient_col="_join_key",
+    icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung,
+    # level=None → Default: LevelConfig("icd_code", "icd_code", "Full ICD code")
+    cohort_name="Top20 Cohort",
+    mode="unique",
+    top_n=TOP_N_NEBEN,
+    panel_titles=("A) All Available non-C ICD-Codes", "B) After Core Comorbidity Filtering"),
+    nrows=2, ncols=1, figsize=(9, 12), wspace=0.15, hspace = 0.25, context_line_y=-0.1,   # falls noch mehr Abstand gewünscht
+    save_path=str(DIR_NEBENDIAG / "icd_code_before_after_core_filter_panel.png"),
+)
+
+
+#────────────────────────────────────────────────────────────
 print(f"\n  [REPORT] run_nebendiagnosen_report startet …")
 print(f"    Level: ICD_NAME, ICD_BASE_NAME, group_full, chapter_full")
 print(f"    Modi: 'all' + 'unique'  |  Top-N: {TOP_N_NEBEN}")
@@ -1683,6 +1705,33 @@ plot_ecog_distribution_grouped_bar(
     totals=_therapy_totals,
     save_path=str(DIR_3M / "ecog_distribution.png"),
 )
+#combined_panelplots
+fig_panel = create_ecog_uicc_panel(
+    df_ecog={
+        "Surgical Procedure": df_oe_3m,
+        "Systemic Therapy": df_se_3m,
+        "Radiation Therapy": df_re_3m,
+    },
+    df_uicc_obds={
+        "Surgical Procedure": df_ou_3m_by_src["obds"],
+        "Systemic Therapy": df_su_3m_by_src["obds"],
+        "Radiation Therapy": df_ru_3m_by_src["obds"],
+    },
+    df_uicc_must={
+        "Surgical Procedure": df_ou_3m_by_src["must"],
+        "Systemic Therapy": df_su_3m_by_src["must"],
+        "Radiation Therapy": df_ru_3m_by_src["must"],
+    },
+    totals=_therapy_totals,
+    save_path=str(DIR_3M / "ecog_uicc_combined_panel.png"),
+    nrows=3, ncols=1, figsize=(8, 11), wspace=0.15, hspace = 0.45,
+ # Subplot-Orientierung
+    fontsize_axis_label=11, fontsize_tick_label=10,  # Schriftgrößen
+    fontsize_subplot_title=13, fontsize_legend=9,
+    titles=("A) ECOG", "B) UICC (oBDS)", "C) UICC (MUST)"),
+    show_titles=True,
+    fontsize_bar_label=8,
+)
 
 # ── Altersverteilung nach 3M-Cutoff ──────────────────────────────────────────
 print(f"  [PLOT] Altersverteilung nach 3M-Match → age_dist_5yr.png / age_dist_10yr.png")
@@ -1700,6 +1749,10 @@ fig = plot_age_distribution_grouped_bar(
     color_shade=1,                # 0=gedeckt, 1=kräftiger, 2/3=heller
     show_total_in_legend=True,
 )
+
+
+
+
 
 # ── Violin-Plots nach 3M-Cutoff ──────────────────────────────────────────────
 print(f"  [PLOT] Violin-Plots Therapiezeitpunkte (3M-Match) → violin_*.png")
