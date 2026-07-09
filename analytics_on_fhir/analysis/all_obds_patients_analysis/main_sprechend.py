@@ -85,6 +85,7 @@ from plots import (
 from PlotsICDDiagzuAlter import plot_population_pyramid_from_raw, plot_population_pyramid_topn, extract_contingency_tables_topn
 from SecondPaper_NebenDiagnosen_Plots import LevelConfig, run_nebendiagnosen_report
 from combined_paper_figures import create_ecog_uicc_panel
+from domain_translation import add_final_domain_en
 
 # TODO: Must hinzufügen und VGL Plot  <- warten auf anpassung
 # TODO: CAST DTYPES AFTER READING PARQUET FILES!
@@ -939,6 +940,18 @@ lookup_df_icd = icd10gm2026_hierarchy_fast_helper.load_icd_hierarchy_lookup(ICD_
 icd_nebendiagnosen_einteilung = pd.read_excel(NEBENDIAG_EXCEL, sheet_name="Code_Zuordnung")
 icd_nebendiagnosen_einteilung_CSV_UPDATE = pd.read_csv(NEBENDIAG_EXCEL_CSV_Update, sep=";")
 
+icd_nebendiagnosen_einteilung_CSV_UPDATE = icd_nebendiagnosen_einteilung_CSV_UPDATE.rename(columns={
+        "final_analytical_role": "Ebene_1_Analytische_Rolle",
+        "final_core_comorbidity": "In_Core_Comorbidity_Analysis",
+        "code": "ICD_Code",
+        "final_domain" : "Ebene_2_Klinische_Domaene"
+    })
+
+
+# Variante B – final_domain direkt überschreiben (das, was du wörtlich gefragt hast):
+icd_nebendiagnosen_einteilung_CSV_UPDATE = add_final_domain_en(
+    icd_nebendiagnosen_einteilung_CSV_UPDATE, target_col="Ebene_2_Klinische_Domaene"
+)
 
 # ── Vollständiges Patienten-Universum der GK (vor Nebendiagnosen-Filter) ──────
 # Wird für Log-Histogramm und Lorenz-Kurve benötigt, damit Patienten mit
@@ -1084,11 +1097,12 @@ from combined_paper_figures import create_icd_code_filter_panel
 fig_neben, tops = create_icd_code_filter_panel(
     df_conditions=df_conditions_mapped,
     patient_col="_join_key",
-    icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung,
+    icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung_CSV_UPDATE,
     # level=None → Default: LevelConfig("icd_code", "icd_code", "Full ICD code")
     cohort_name="Top20 Cohort",
     mode="unique",
     top_n=TOP_N_NEBEN,
+    icd_code_col_in_mapping = "ICD_Code",
     panel_titles=("A) All Available non-C ICD-Codes", "B) After Core Comorbidity Filtering"),
     nrows=2, ncols=1, figsize=(9, 12), wspace=0.15, hspace = 0.25, context_line_y=-0.1,   # falls noch mehr Abstand gewünscht
     save_path=str(DIR_NEBENDIAG / "icd_code_before_after_core_filter_panel.png"),
@@ -1110,14 +1124,13 @@ results_neben = run_nebendiagnosen_report(
     output_dir=DIR_NEBENDIAG,
     show=False,
     show_title=False,
-    icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung,
+    icd_nebendiagnosen_einteilung=icd_nebendiagnosen_einteilung_CSV_UPDATE,
     icd_code_col_in_df="icd_code",
     icd_code_col_in_mapping="ICD_Code",
     all_patient_ids=all_patient_ids_gk,
 )
 print(f"  [SAVE] Alle Nebendiagnosen-Plots & Excel-Exporte → {DIR_NEBENDIAG}")
 print(f"  ✓ Abschnitt B abgeschlossen  →  {DIR_NEBENDIAG}")
-
 
 #══════════════════════════════════════════════════════════════════════════════
 #ABSCHNITT C  –  GRUNDKOHORTE  (alle Jahre)
