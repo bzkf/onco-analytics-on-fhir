@@ -754,7 +754,7 @@ print("═" * 70)
 # ── ECOG  (gefiltert auf GK) ──────────────────────────────────────────────────
 print(f"\n  [LOAD] ECOG-Leistungszustand: df_leistungszustand_ecog_karnofsky_deidentified.parquet")
 print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
-df_ecog_gk = df_ecog
+df_ecog_gk = df_ecog.copy()
 _n_ecog_raw = len(df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_gk)])
 df_ecog_gk = (
     df_ecog_gk[df_ecog_gk["condition_id_hash"].isin(cond_ids_gk)]
@@ -884,7 +884,7 @@ ICD_MAPPING_PATH = os.path.join(DATA, "DWH_ICD_CODE_MAPPING.parquet")
 
 ICD_HIERARCHY_CSV = os.path.join(DATA, "icd10gm2026_basecode_lookup.csv")
 NEBENDIAG_EXCEL = os.path.join(DATA, "Nebendiagnosen_Zuordnung_Ebenen_Domaenen_v1.xlsx")
-NEBENDIAG_EXCEL_CSV_Update = os.path.join(DATA, "nebendiagnosen_review_export_v5_auto_volume.csv")
+NEBENDIAG_EXCEL_CSV_Update = os.path.join(DATA, "nebendiagnosen_review_export_v10_conservative_learned.csv")
 
 # ── Join-Konfiguration (EINSTELLBAR, STANDORTABHÄNGIG) ───────────────────────
 # Der Patienten-Join Nebendiagnosen ↔ Tumore läuft je Standort über
