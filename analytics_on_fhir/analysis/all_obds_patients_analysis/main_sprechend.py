@@ -524,27 +524,240 @@ else:
 
 
 #TODO: BRIGITTE HIER!
-print("\n" + "━" * 70)
-print("DATEN LADEN – SLAVE-TABELLEN: UICC, ECOG, THERAPIEN")
-print("  (Alle auf GK gefiltert via cond_ids_gk / patient_resource_id_hash)")
-print("━" * 70)
+# print("\n" + "━" * 70)
+# print("DATEN LADEN – SLAVE-TABELLEN: UICC, ECOG, THERAPIEN")
+# print("  (Alle auf GK gefiltert via cond_ids_gk / patient_resource_id_hash)")
+# print("━" * 70)
+#
+# # ── UICC  GRUNDKOHORTE oBDS = df_uicc_tnm + weitere_klassifikation ────────────
+# print("\n  [LOAD] UICC-Staging oBDS – Quelle 1a: df_uicc_tnm_deidentified.parquet")
+# print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
+#
+# # print("FIND: CHECK UICC weitere_klassifikation Raw Numbers:")
+# # print("Value Counts:")
+# # print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["weitere_klassifikation_value_code"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["condition_id_hash"].nunique())
+#
+# _wk = df_weitere_klassifikation
+# _wk = _wk[_wk["condition_id_hash"].isin(cond_ids_gk)]
+# # WICHTIG: weitere_klassifikation hat eine EIGENE Zeitspalte
+# # (months_between_asserted_weitere_klassifikation_date). Diese muss auf die
+# # gemeinsame UICC-Zeitspalte umbenannt werden, sonst fehlt sie nach dem concat
+# # und alle wk-UICC-Zeilen fallen bei jedem zeitbasierten dropna heraus.
+# _wk_uicc = (
+#     _wk[_wk["weitere_klassifikation_name"] == "UICC"]
+#     .rename(
+#         {
+#             "weitere_klassifikation_value_code": "uicc_tnm",
+#             "months_between_asserted_weitere_klassifikation_date": "months_between_asserted_uicc_tnm_date",
+#         },
+#         axis=1,
+#     )
+#     .loc[:, lambda d: ~d.columns.duplicated()]
+# )
+# _wk_uicc = (
+#     _wk_uicc.dropna(
+#         subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+#     )
+# )
+#
+# # print("FIND: CHECK UICC weitere_klassifikation Filtered Numbers:")
+# # print("Value Counts:")
+# # print(_wk_uicc["uicc_tnm"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(_wk_uicc['condition_id_hash'].nunique())
+#
+#
+# print('_wk_uicc = (_wk_uicc.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
+# print('Wegen Right Join und sonst nicht nutzbaren Werten')
+# _wk_with_time = _wk_uicc["months_between_asserted_uicc_tnm_date"].notna().sum() if "months_between_asserted_uicc_tnm_date" in _wk_uicc.columns else 0
+# print(
+#     f"    weitere_klassifikation → UICC-Einträge: {len(_wk_uicc):,} Zeilen  |  cond_ids: {_wk_uicc['condition_id_hash'].nunique():,}"
+# )
+# print(f"      davon mit Zeitstempel (nach Umbenennung): {_wk_with_time:,}")
+#
+# df_uicc_raw = df_uicc_tnm
+#
+# # print("FIND: CHECK UICC OBDS RAW Numbers:")
+# # print("Value Counts:")
+# # print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(df_uicc_raw['condition_id_hash'].nunique())
+#
+# df_uicc_raw = df_uicc_raw[df_uicc_raw["condition_id_hash"].isin(cond_ids_gk)]
+# df_uicc_raw["months_between_asserted_uicc_tnm_date"].value_counts(dropna=False)# <-- 83678 times none
+# df_uicc_raw["uicc_tnm"].value_counts(dropna=False)# <-- 329797 times none
+#
+# _n_uicc_before_drop = len(df_uicc_raw)
+# df_uicc_raw["uicc_tnm"] = df_uicc_raw["uicc_tnm"].fillna("missing")
+# df_uicc_raw = (
+#     df_uicc_raw.dropna(
+#         subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+#     )
+#     .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
+#     .loc[:, lambda d: ~d.columns.duplicated()]
+# )
+#
+# # print("FIND: CHECK UICC OBDS Filtered Numbers:")
+# # print("Value Counts:")
+# # print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(df_uicc_raw['condition_id_hash'].nunique())
+#
+# print('df_uicc_raw.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
+# print('Wegen Right Join und sonst nicht nutzbaren Werten')
+# print(
+#     f"    df_uicc_tnm: {_n_uicc_before_drop:,} Zeilen geladen  →  {len(df_uicc_raw):,} nach dropna  |  cond_ids: {df_uicc_raw['condition_id_hash'].nunique():,}"
+# )
+# print(f"    NaN-UICC-Werte wurden als 'missing' kodiert.")
+#
+#
+#
+# print(f"\n  [MERGE] oBDS-Grundkohorte: df_uicc_tnm + weitere_klassifikation (UICC) → df_uicc_gk")
+# df_uicc_raw["source"] = "OBDS"
+# _wk_uicc["source"] = "WK"
+#
+# df_uicc_gk = pd.concat([df_uicc_raw, _wk_uicc], ignore_index=True, sort=False)
+# df_uicc_gk["uicc_tnm"] = df_uicc_gk["uicc_tnm"].fillna("missing")
+# df_uicc_gk = df_uicc_gk.drop_duplicates(subset=['uicc_tnm', 'condition_id_hash', 'months_between_asserted_uicc_tnm_date'])
+# #TODO: Drop Duplicates.
+# _uicc_known = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).ne("missing")][
+#     "condition_id_hash"
+# ].nunique()
+# _uicc_miss = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).eq("missing")][
+#     "condition_id_hash"
+# ].nunique()
+# _uicc_none = _n3_cond - df_uicc_gk["condition_id_hash"].nunique()
+# print(
+#     f"    df_uicc_gk (oBDS): {len(df_uicc_gk):,} Zeilen  |  cond_ids: {df_uicc_gk['condition_id_hash'].nunique():,}"
+# )
+# print(
+#     f"    Davon bekannte UICC:  {_uicc_known:,} cond_ids  |  'missing': {_uicc_miss:,}  |  kein Eintrag: {_uicc_none:,}"
+# )
+#
+# # print("FIND: CHECK UICC joined OBDS+WK Filtered Numbers:")
+# # print("Value Counts:")
+# # print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
+# # print("Cond_Ids:")
+# # print(df_uicc_raw['condition_id_hash'].nunique())
+#
+# # ── UICC  MUST-Tool (Brigitte) – multi-site, MIT Zeitstempel ─────────────────
+# print(f"\n  [LOAD] UICC-Staging – Quelle 2 (MUST-Tool, Brigitte): Result1_UICC_full.csv (alle Standorte)")
+# print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
+# # df_must_uicc_all wurde oben im Multi-Site-Loop konkateniert (inkl. site-Spalte).
+# # MUST ist eine EIGENSTÄNDIGE, vollständige UICC-Quelle (Kollegin hat ihre
+# # Merge-/1-Wochen-Logik bereits in der CSV umgesetzt). MUST mischt sich NICHT
+# # mit oBDS – beide laufen parallel. Zeitspalte wird auf die gemeinsame
+# # UICC-Zeitspalte umbenannt.
+# df_uicc_must = (
+#     df_must_uicc_all[["ID", "RESULTING_UICC", "site", "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE"]]
+#     .rename(columns={
+#         "ID": "condition_id_hash",
+#         "RESULTING_UICC": "uicc_tnm",
+#         "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE": "months_between_asserted_uicc_tnm_date",
+#     })
+#     .pipe(lambda d: d[d["condition_id_hash"].isin(cond_ids_gk)])
+#     .reset_index(drop=True)
+# )
+# df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
+# df_uicc_must = df_uicc_must.dropna(
+#     subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+# )
+# print('df_uicc_must = df_uicc_must.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
+# print('Wegen Right Join und sonst nicht nutzbaren Werten')
+#
+# _must_known = df_uicc_must["uicc_tnm"].notna().sum()
+# _must_miss = df_uicc_must["uicc_tnm"].isna().sum()
+# print(
+#     f"    Zeilen: {len(df_uicc_must):,}  |  cond_ids: {df_uicc_must['condition_id_hash'].nunique():,}"
+# )
+# print(
+#     f"    Bekannte UICC: {_must_known:,}  |  NaN (kein Staging aus TNM ableitbar): {_must_miss:,}"
+# )
+# print(f"    Pro Standort:")
+# for _site, _grp in df_uicc_must.groupby("site"):
+#     _k = _grp["uicc_tnm"].notna().sum()
+#     print(f"      {_site.upper():<6}: {len(_grp):>8,} Zeilen  |  bekannt: {_k:,}")
+# print(f"    MUST ist eigenständige UICC-Quelle (läuft parallel zu oBDS).")
+#
+# # ── Bestandsvergleich GK-OBDS vs. MUST ────────────────────────────────────────
+# print("\n" + "━" * 70)
+# print("UICC QUELLENVERGLEICH: OBDS-Tabelle vs. MUST-Tool (Brigitte)")
+# print("  Ziel: Quantifizieren wieviele cond_ids durch das MUST-Tool")
+# print("  neu erschlossen werden bzw. welche Coverage verloren geht.")
+# print("━" * 70)
+#
+# _gk_all_ids = set(df_uicc_gk["condition_id_hash"].dropna().unique())
+# _must_all_ids = set(df_uicc_must["condition_id_hash"].dropna().unique())
+# _gk_known_ids = set(
+#     df_uicc_gk.loc[
+#         df_uicc_gk["uicc_tnm"].astype(str).str.strip().ne("missing"),
+#         "condition_id_hash",
+#     ]
+#     .dropna()
+#     .unique()
+# )
+# _must_known_ids = set(
+#     df_uicc_must.loc[df_uicc_must["uicc_tnm"].notna(), "condition_id_hash"].unique()
+# )
+# _gk_missing_ids = _gk_all_ids - _gk_known_ids
+# _must_missing_ids = _must_all_ids - _must_known_ids
+# _only_in_gk = _gk_all_ids - _must_all_ids
+# _only_in_must = _must_all_ids - _gk_all_ids
+# _in_both = _gk_all_ids & _must_all_ids
+# _newly_covered = _gk_missing_ids & _must_known_ids
+# _coverage_lost = _gk_known_ids & _must_missing_ids
+# _n_gk_total = cond_ids_gk.nunique()
+#
+# #Check auf gründe der differenz zw. OBDS und MUST UICC
+# df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]
+# fehlende_must_ids = list(df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]["condition_id_hash"])
+# fehlende_must_icd_codes_df_tumore = df_tumore[df_tumore["condition_id_hash"].isin(fehlende_must_ids)]["entity_or_parent"].value_counts()
+#
+# fehlende_entitäten_UICC = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_gk["condition_id_hash"])]["entity_or_parent"].value_counts()
+# fehlende_entitäten_MUST = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_must["condition_id_hash"])]["entity_or_parent"].value_counts()
+#
+#
+# print(f"\n  Gesamtkohorte GK aus Tumortabelle              : {_n_gk_total:>8,}  cond_ids")
+# print(
+#     f"\n  OBDS-Table  – cond_ids mit UICC-Einträgen      : {len(_gk_all_ids):>8,}  (≥1 Zeile in df_uicc_gk)"
+# )
+# print(f"  OBDS-Table  – davon mit bekannter UICC          : {len(_gk_known_ids):>8,}")
+# print(f"  OBDS-Table  – davon nur 'missing' UICC          : {len(_gk_missing_ids):>8,}")
+# print(f"  OBDS-Table  – ohne jeden UICC-Eintrag           : {_n_gk_total - len(_gk_all_ids):>8,}")
+# print(f"\n  MUST – cond_ids gesamt (GK-gefiltert)          : {len(_must_all_ids):>8,}")
+# print(f"  MUST – davon mit bekannter UICC                 : {len(_must_known_ids):>8,}")
+# print(f"  MUST – davon ohne UICC (NaN)                    : {len(_must_missing_ids):>8,}")
+# print(
+#     f"  MUST – nicht in MUST enthalten                  : {_n_gk_total - len(_must_all_ids):>8,}  (GK-cond_ids, die im CSV fehlen)"
+# )
+# print(f"\n  Überschneidung GK ∩ MUST inkl. Missings        : {len(_in_both):>8,}  cond_ids")
+# print(f"  Nur in OBDS-Table (nicht in MUST)               : {len(_only_in_gk):>8,}  cond_ids")
+# print(f"  Nur in MUST (nicht in GK)                       : {len(_only_in_must):>8,}  cond_ids")
+# print(f"\n  Neu bedeckt durch MUST                         : {len(_newly_covered):>8,}  cond_ids")
+# print(f"    (in OBDS-Table 'missing', im MUST-Tool bekannt)")
+# print(f"  Coverage verloren durch MUST                    : {len(_coverage_lost):>8,}  cond_ids")
+# print(f"    (in OBDS-Table bekannt, im MUST-Tool missing)")
+# print("━" * 70)
+#
+# df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
+#
+# # Parallel-Quellenliste: über diese wird jede UICC-Analyse doppelt gefahren.
+#
+#
+#
+# print("═" * 70)
+# ══ Quellen: NUR quellenspezifisch (Rename bleibt hier, keine Filter!) ══
 
-# ── UICC  GRUNDKOHORTE oBDS = df_uicc_tnm + weitere_klassifikation ────────────
-print("\n  [LOAD] UICC-Staging oBDS – Quelle 1a: df_uicc_tnm_deidentified.parquet")
-print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
+# ── oBDS-Staging ──────────────────────────────────────────────────────
+df_uicc_raw = df_uicc_tnm[df_uicc_tnm["condition_id_hash"].isin(cond_ids_gk)].copy()
+df_uicc_raw = df_uicc_raw.loc[:, lambda d: ~d.columns.duplicated()]
+df_uicc_raw["source"] = "OBDS"
 
-# print("FIND: CHECK UICC weitere_klassifikation Raw Numbers:")
-# print("Value Counts:")
-# print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["weitere_klassifikation_value_code"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(df_weitere_klassifikation[df_weitere_klassifikation["weitere_klassifikation_name"] == "UICC"]["condition_id_hash"].nunique())
-
+# ── weitere_klassifikation (UICC) ─────────────────────────────────────
 _wk = df_weitere_klassifikation
 _wk = _wk[_wk["condition_id_hash"].isin(cond_ids_gk)]
-# WICHTIG: weitere_klassifikation hat eine EIGENE Zeitspalte
-# (months_between_asserted_weitere_klassifikation_date). Diese muss auf die
-# gemeinsame UICC-Zeitspalte umbenannt werden, sonst fehlt sie nach dem concat
-# und alle wk-UICC-Zeilen fallen bei jedem zeitbasierten dropna heraus.
 _wk_uicc = (
     _wk[_wk["weitere_klassifikation_name"] == "UICC"]
     .rename(
@@ -556,199 +769,20 @@ _wk_uicc = (
     )
     .loc[:, lambda d: ~d.columns.duplicated()]
 )
-_wk_uicc = (
-    _wk_uicc.dropna(
-        subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
-    )
-)
-
-# print("FIND: CHECK UICC weitere_klassifikation Filtered Numbers:")
-# print("Value Counts:")
-# print(_wk_uicc["uicc_tnm"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(_wk_uicc['condition_id_hash'].nunique())
-
-
-print('_wk_uicc = (_wk_uicc.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
-print('Wegen Right Join und sonst nicht nutzbaren Werten')
-_wk_with_time = _wk_uicc["months_between_asserted_uicc_tnm_date"].notna().sum() if "months_between_asserted_uicc_tnm_date" in _wk_uicc.columns else 0
-print(
-    f"    weitere_klassifikation → UICC-Einträge: {len(_wk_uicc):,} Zeilen  |  cond_ids: {_wk_uicc['condition_id_hash'].nunique():,}"
-)
-print(f"      davon mit Zeitstempel (nach Umbenennung): {_wk_with_time:,}")
-
-df_uicc_raw = df_uicc_tnm
-
-# print("FIND: CHECK UICC OBDS RAW Numbers:")
-# print("Value Counts:")
-# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(df_uicc_raw['condition_id_hash'].nunique())
-
-df_uicc_raw = df_uicc_raw[df_uicc_raw["condition_id_hash"].isin(cond_ids_gk)]
-df_uicc_raw["months_between_asserted_uicc_tnm_date"].value_counts(dropna=False)# <-- 83678 times none
-df_uicc_raw["uicc_tnm"].value_counts(dropna=False)# <-- 329797 times none
-
-_n_uicc_before_drop = len(df_uicc_raw)
-df_uicc_raw["uicc_tnm"] = df_uicc_raw["uicc_tnm"].fillna("missing")
-df_uicc_raw = (
-    df_uicc_raw.dropna(
-        subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
-    )
-    .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
-    .loc[:, lambda d: ~d.columns.duplicated()]
-)
-
-# print("FIND: CHECK UICC OBDS Filtered Numbers:")
-# print("Value Counts:")
-# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(df_uicc_raw['condition_id_hash'].nunique())
-
-print('df_uicc_raw.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
-print('Wegen Right Join und sonst nicht nutzbaren Werten')
-print(
-    f"    df_uicc_tnm: {_n_uicc_before_drop:,} Zeilen geladen  →  {len(df_uicc_raw):,} nach dropna  |  cond_ids: {df_uicc_raw['condition_id_hash'].nunique():,}"
-)
-print(f"    NaN-UICC-Werte wurden als 'missing' kodiert.")
-
-
-
-print(f"\n  [MERGE] oBDS-Grundkohorte: df_uicc_tnm + weitere_klassifikation (UICC) → df_uicc_gk")
-df_uicc_raw["source"] = "OBDS"
 _wk_uicc["source"] = "WK"
 
+# ══ concat ════════════════════════════════════════════════════════════
 df_uicc_gk = pd.concat([df_uicc_raw, _wk_uicc], ignore_index=True, sort=False)
+
+# ══ EINHEITLICHE Filteroperationen – nur hier, für beide Quellen gleich ══
 df_uicc_gk["uicc_tnm"] = df_uicc_gk["uicc_tnm"].fillna("missing")
-df_uicc_gk = df_uicc_gk.drop_duplicates(subset=['uicc_tnm', 'condition_id_hash', 'months_between_asserted_uicc_tnm_date'])
-#TODO: Drop Duplicates.
-_uicc_known = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).ne("missing")][
-    "condition_id_hash"
-].nunique()
-_uicc_miss = df_uicc_gk[df_uicc_gk["uicc_tnm"].astype(str).eq("missing")][
-    "condition_id_hash"
-].nunique()
-_uicc_none = _n3_cond - df_uicc_gk["condition_id_hash"].nunique()
-print(
-    f"    df_uicc_gk (oBDS): {len(df_uicc_gk):,} Zeilen  |  cond_ids: {df_uicc_gk['condition_id_hash'].nunique():,}"
+df_uicc_gk = df_uicc_gk.drop_duplicates(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"])
+df_uicc_gk = (
+    df_uicc_gk
+    .dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"])
+    .sort_values(["condition_id_hash", "months_between_asserted_uicc_tnm_date"])
+
 )
-print(
-    f"    Davon bekannte UICC:  {_uicc_known:,} cond_ids  |  'missing': {_uicc_miss:,}  |  kein Eintrag: {_uicc_none:,}"
-)
-
-# print("FIND: CHECK UICC joined OBDS+WK Filtered Numbers:")
-# print("Value Counts:")
-# print(df_uicc_raw["uicc_tnm"].value_counts(dropna=False))
-# print("Cond_Ids:")
-# print(df_uicc_raw['condition_id_hash'].nunique())
-
-# ── UICC  MUST-Tool (Brigitte) – multi-site, MIT Zeitstempel ─────────────────
-print(f"\n  [LOAD] UICC-Staging – Quelle 2 (MUST-Tool, Brigitte): Result1_UICC_full.csv (alle Standorte)")
-print(f"    Master: df_tumore  |  Slave-Filter: condition_id_hash ∈ cond_ids_gk")
-# df_must_uicc_all wurde oben im Multi-Site-Loop konkateniert (inkl. site-Spalte).
-# MUST ist eine EIGENSTÄNDIGE, vollständige UICC-Quelle (Kollegin hat ihre
-# Merge-/1-Wochen-Logik bereits in der CSV umgesetzt). MUST mischt sich NICHT
-# mit oBDS – beide laufen parallel. Zeitspalte wird auf die gemeinsame
-# UICC-Zeitspalte umbenannt.
-df_uicc_must = (
-    df_must_uicc_all[["ID", "RESULTING_UICC", "site", "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE"]]
-    .rename(columns={
-        "ID": "condition_id_hash",
-        "RESULTING_UICC": "uicc_tnm",
-        "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE": "months_between_asserted_uicc_tnm_date",
-    })
-    .pipe(lambda d: d[d["condition_id_hash"].isin(cond_ids_gk)])
-    .reset_index(drop=True)
-)
-df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
-df_uicc_must = df_uicc_must.dropna(
-    subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
-)
-print('df_uicc_must = df_uicc_must.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
-print('Wegen Right Join und sonst nicht nutzbaren Werten')
-
-_must_known = df_uicc_must["uicc_tnm"].notna().sum()
-_must_miss = df_uicc_must["uicc_tnm"].isna().sum()
-print(
-    f"    Zeilen: {len(df_uicc_must):,}  |  cond_ids: {df_uicc_must['condition_id_hash'].nunique():,}"
-)
-print(
-    f"    Bekannte UICC: {_must_known:,}  |  NaN (kein Staging aus TNM ableitbar): {_must_miss:,}"
-)
-print(f"    Pro Standort:")
-for _site, _grp in df_uicc_must.groupby("site"):
-    _k = _grp["uicc_tnm"].notna().sum()
-    print(f"      {_site.upper():<6}: {len(_grp):>8,} Zeilen  |  bekannt: {_k:,}")
-print(f"    MUST ist eigenständige UICC-Quelle (läuft parallel zu oBDS).")
-
-# ── Bestandsvergleich GK-OBDS vs. MUST ────────────────────────────────────────
-print("\n" + "━" * 70)
-print("UICC QUELLENVERGLEICH: OBDS-Tabelle vs. MUST-Tool (Brigitte)")
-print("  Ziel: Quantifizieren wieviele cond_ids durch das MUST-Tool")
-print("  neu erschlossen werden bzw. welche Coverage verloren geht.")
-print("━" * 70)
-
-_gk_all_ids = set(df_uicc_gk["condition_id_hash"].dropna().unique())
-_must_all_ids = set(df_uicc_must["condition_id_hash"].dropna().unique())
-_gk_known_ids = set(
-    df_uicc_gk.loc[
-        df_uicc_gk["uicc_tnm"].astype(str).str.strip().ne("missing"),
-        "condition_id_hash",
-    ]
-    .dropna()
-    .unique()
-)
-_must_known_ids = set(
-    df_uicc_must.loc[df_uicc_must["uicc_tnm"].notna(), "condition_id_hash"].unique()
-)
-_gk_missing_ids = _gk_all_ids - _gk_known_ids
-_must_missing_ids = _must_all_ids - _must_known_ids
-_only_in_gk = _gk_all_ids - _must_all_ids
-_only_in_must = _must_all_ids - _gk_all_ids
-_in_both = _gk_all_ids & _must_all_ids
-_newly_covered = _gk_missing_ids & _must_known_ids
-_coverage_lost = _gk_known_ids & _must_missing_ids
-_n_gk_total = cond_ids_gk.nunique()
-
-#Check auf gründe der differenz zw. OBDS und MUST UICC
-df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]
-fehlende_must_ids = list(df_uicc_gk[~(df_uicc_gk["condition_id_hash"].isin(df_uicc_must["condition_id_hash"]))]["condition_id_hash"])
-fehlende_must_icd_codes_df_tumore = df_tumore[df_tumore["condition_id_hash"].isin(fehlende_must_ids)]["entity_or_parent"].value_counts()
-
-fehlende_entitäten_UICC = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_gk["condition_id_hash"])]["entity_or_parent"].value_counts()
-fehlende_entitäten_MUST = df_tumore[df_tumore["condition_id_hash"].isin(df_uicc_must["condition_id_hash"])]["entity_or_parent"].value_counts()
-
-
-print(f"\n  Gesamtkohorte GK aus Tumortabelle              : {_n_gk_total:>8,}  cond_ids")
-print(
-    f"\n  OBDS-Table  – cond_ids mit UICC-Einträgen      : {len(_gk_all_ids):>8,}  (≥1 Zeile in df_uicc_gk)"
-)
-print(f"  OBDS-Table  – davon mit bekannter UICC          : {len(_gk_known_ids):>8,}")
-print(f"  OBDS-Table  – davon nur 'missing' UICC          : {len(_gk_missing_ids):>8,}")
-print(f"  OBDS-Table  – ohne jeden UICC-Eintrag           : {_n_gk_total - len(_gk_all_ids):>8,}")
-print(f"\n  MUST – cond_ids gesamt (GK-gefiltert)          : {len(_must_all_ids):>8,}")
-print(f"  MUST – davon mit bekannter UICC                 : {len(_must_known_ids):>8,}")
-print(f"  MUST – davon ohne UICC (NaN)                    : {len(_must_missing_ids):>8,}")
-print(
-    f"  MUST – nicht in MUST enthalten                  : {_n_gk_total - len(_must_all_ids):>8,}  (GK-cond_ids, die im CSV fehlen)"
-)
-print(f"\n  Überschneidung GK ∩ MUST inkl. Missings        : {len(_in_both):>8,}  cond_ids")
-print(f"  Nur in OBDS-Table (nicht in MUST)               : {len(_only_in_gk):>8,}  cond_ids")
-print(f"  Nur in MUST (nicht in GK)                       : {len(_only_in_must):>8,}  cond_ids")
-print(f"\n  Neu bedeckt durch MUST                         : {len(_newly_covered):>8,}  cond_ids")
-print(f"    (in OBDS-Table 'missing', im MUST-Tool bekannt)")
-print(f"  Coverage verloren durch MUST                    : {len(_coverage_lost):>8,}  cond_ids")
-print(f"    (in OBDS-Table bekannt, im MUST-Tool missing)")
-print("━" * 70)
-
-df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
-
-# Parallel-Quellenliste: über diese wird jede UICC-Analyse doppelt gefahren.
-
-
-
-print("═" * 70)
-
 #TODO: BRIGITTE HIER! ENDE
 
 

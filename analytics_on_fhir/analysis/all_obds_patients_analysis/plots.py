@@ -223,21 +223,25 @@ def _build_grouped_bar(
 
 
 def plot_age_distribution_grouped_bar(
-    dataframes: dict,
-    age_column: str = "age_at_diagnosis",
-    age_bracket: int = 10,
-    title: str | bool | None = None,
-    colors: dict = None,
-    save_path: str = None,
-    dpi: int = 300,
-    show_bar_numbers: bool = None,
-    bar_label_rotation: int = 90,
-    color_offset: int = 4,
-    color_shade: int = 1,
-    show_total_in_legend: bool = True,
+        dataframes: dict,
+        age_column: str = "age_at_diagnosis",
+        age_bracket: int = 10,
+        title: str | bool | None = None,
+        colors: dict = None,
+        save_path: str = None,
+        dpi: int = 300,
+        show_bar_numbers: bool = None,
+        bar_label_rotation: int = 90,
+        color_offset: int = 4,
+        color_shade: int = 1,
+        show_total_in_legend: bool = True,
+        k_anonymity: int = 3,
 ) -> plt.Figure:
     """
     Altersverteilung der Patienten pro Therapietyp als gruppiertes Balkendiagramm.
+
+    Mit k-Anonymität: Age Brackets mit ≤ k_anonymity Samples werden gefiltert.
+
     Parameters
     ----------
     dataframes  : dict – Therapiename → DataFrame (muss `age_column` enthalten)
@@ -260,6 +264,8 @@ def plot_age_distribution_grouped_bar(
     show_total_in_legend : Wenn True, wird in der Legende hinter jedem Therapienamen
                           die Gesamtanzahl an Condition IDs angezeigt (z.B.
                           "Surgical Procedure (n=12 345)")
+    k_anonymity : Minimum Sample Size pro Age Bracket. Brackets mit ≤ k_anonymity
+                  Samples werden gefiltert (Standard: 3)
     """
     therapies = list(dataframes.keys())
 
@@ -284,7 +290,7 @@ def plot_age_distribution_grouped_bar(
     rows = []
     _say(
         f"[age_dist] Altersverteilung je Therapietyp  |  Bracket={age_bracket}J  "
-        f"|  Bins {bins[0]}–{bins[-1]} (erstes Bracket 18–19)"
+        f"|  Bins {bins[0]}–{bins[-1]} (erstes Bracket 18–19)  |  k-Anonymität={k_anonymity}"
     )
     for therapy, df in dataframes.items():
         if age_column not in df.columns:
@@ -310,7 +316,28 @@ def plot_age_distribution_grouped_bar(
         rows.append(counts)
     agg = pd.concat(rows, ignore_index=True)
 
-    x_positions = np.arange(len(labels))
+    # ─── K-ANONYMITY: Filtere Age Brackets mit ≤ k_anonymity Samples ───────
+    # Bestimme, welche Age Brackets die Schwelle unterschreiten (über alle Therapien)
+    bracket_totals = agg.groupby("age_bracket")["count"].sum()
+    filtered_brackets = bracket_totals[bracket_totals <= k_anonymity].index.tolist()
+
+    if filtered_brackets:
+        _say(f"[age_dist] k-Anonymität: Folgende Brackets werden gefiltert (≤{k_anonymity} Samples):")
+        for bracket in filtered_brackets:
+            total = bracket_totals[bracket]
+            _say(f"[age_dist]   → {bracket}: {int(total)} Samples")
+
+        # Entferne gefilterte Brackets aus dem Aggregat
+        agg = agg[~agg["age_bracket"].isin(filtered_brackets)].reset_index(drop=True)
+
+    # Aktualisiere Labels und Positionen für die Visualisierung
+    remaining_labels = [l for l in labels if l not in filtered_brackets]
+
+    if len(remaining_labels) == 0:
+        _say("[age_dist] ⚠️  WARNUNG: Alle Age Brackets unterschreiten die k-Anonymität-Schwelle!")
+        remaining_labels = labels  # Fallback
+
+    x_positions = np.arange(len(remaining_labels))
     n = len(therapies)
     group_width = 0.8
     width = group_width / max(n, 1)
@@ -326,7 +353,7 @@ def plot_age_distribution_grouped_bar(
         for t in therapies
     }
     for offset, therapy in zip(offsets, therapies):
-        sub = agg[agg["therapy"] == therapy].set_index("age_bracket").reindex(labels).fillna(0)
+        sub = agg[agg["therapy"] == therapy].set_index("age_bracket").reindex(remaining_labels).fillna(0)
         counts = sub["count"].values
         bars = ax.bar(
             x_positions + offset,
@@ -353,11 +380,13 @@ def plot_age_distribution_grouped_bar(
                     )
 
     ax.set_xticks(x_positions)
-    ax.set_xticklabels(labels, rotation=45, ha="right")
+    ax.set_xticklabels(remaining_labels, rotation=45, ha="right")
     ax.set_xlabel("Age Group", fontsize=PLOT_CONFIG["fontsize_axis_label"])
-    ax.set_ylabel("Number of Condition IDs", fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    ax.set_ylabel("Therapy Records", fontsize=PLOT_CONFIG["fontsize_axis_label"])
     if title is not False and PLOT_CONFIG["show_titles"]:
         chart_title = title or f"Age Distribution by Therapy Type ({age_bracket}-Year Groups)"
+        if k_anonymity:
+            chart_title += f" [k-anonymity: k≥{k_anonymity}]"
         ax.set_title(chart_title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15)
     if PLOT_CONFIG["show_legend"]:
         ax.legend(frameon=False)
@@ -365,7 +394,7 @@ def plot_age_distribution_grouped_bar(
     ax.grid(axis="y", linestyle="--", alpha=0.3)
     ax.set_axisbelow(True)
     ax.spines[["top", "right"]].set_visible(False)
-    ax.set_xlim(-0.5, len(labels) - 0.5)
+    ax.set_xlim(-0.5, len(remaining_labels) - 0.5)
 
     # Etwas mehr Platz nach oben, da die Labels jetzt vertikal über den Balken stehen
     if show_bar_numbers and bar_label_rotation in (90, 270):
@@ -382,7 +411,6 @@ def plot_age_distribution_grouped_bar(
         plt.show()
     plt.close()
     return fig
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # B – THERAPIE-ZEITPUNKTE & BIAS

@@ -441,25 +441,28 @@ def sweep_tolerance_fast(
 
 
 def merge_and_plot_ecog_uicc_proximity(
-    df_leistungszustand,
-    df_uicc,
-    id_col: str          = "condition_id_hash",
-    ecog_time_col: str   = "months_between_asserted_effective_dateTime",
-    uicc_time_col: str   = "months_between_asserted_uicc_tnm_date",
-    ecog_cat_col: str    = "ecog_performance_status",
-    uicc_cat_col: str    = "uicc_tnm",
-    max_months: Optional[float] = None,
-    bins: int            = 30,
-    save_path: Optional[str]  = None,
-    file_name_dist: str  = "ecog_uicc_distribution.tiff",
-    file_name_bubble: str = "ecog_uicc_bubble.tiff",
-    dpi: int | None      = None,
-    font_family: str     = "DejaVu Sans",
+        df_leistungszustand,
+        df_uicc,
+        id_col: str = "condition_id_hash",
+        ecog_time_col: str = "months_between_asserted_effective_dateTime",
+        uicc_time_col: str = "months_between_asserted_uicc_tnm_date",
+        ecog_cat_col: str = "ecog_performance_status",
+        uicc_cat_col: str = "uicc_tnm",
+        max_months: Optional[float] = None,
+        bins: int = 30,
+        save_path: Optional[str] = None,
+        file_name_dist: str = "ecog_uicc_distribution.tiff",
+        file_name_bubble: str = "ecog_uicc_bubble.tiff",
+        dpi: int | None = None,
+        font_family: str = "DejaVu Sans",
+        k_anonymity: int = 3,
 ) -> pd.DataFrame:
     """
     Merged ECOG und UICC per nearest-date und erstellt zwei Plots:
       1. Histogramm der Zeitdifferenz + Scatter (ECOG-Zeit vs. UICC-Zeit)
       2. Bubble-Plot der Kategorie-Kookkurrenz (ECOG × UICC)
+
+    Mit k-Anonymität: ECOG × UICC Kombinationen mit ≤ k_anonymity Samples werden gefiltert.
 
     Returns
     -------
@@ -474,27 +477,27 @@ def merge_and_plot_ecog_uicc_proximity(
     # (siehe Modul-Import oben) – kein lokales, unvollständiges Dict mehr.
     # 'missing' ist die Sammelkategorie für unbekannte/nicht zuordenbare UICC.
     UICC_ORDER_MAIN = ["missing", "0", "I", "II", "III", "IV"]
-    ECOG_ORDER      = ["U", "0", "1", "2", "3", "4"]
+    ECOG_ORDER = ["U", "0", "1", "2", "3", "4"]
     UICC_COLORS = {
         "missing": "#b0b0b0", "0": "#555555", "I": "#08519c",
         "II": "#006d2c", "III": "#a63603", "IV": "#54278f",
     }
 
     # ── Daten vorbereiten ─────────────────────────────────────────────────────
-    df_left  = df_leistungszustand.copy()
+    df_left = df_leistungszustand.copy()
     df_right = df_uicc.copy()
 
-    df_left[ecog_time_col]  = pd.to_numeric(df_left[ecog_time_col],  errors="coerce")
+    df_left[ecog_time_col] = pd.to_numeric(df_left[ecog_time_col], errors="coerce")
     df_right[uicc_time_col] = pd.to_numeric(df_right[uicc_time_col], errors="coerce")
 
-    nan_left  = df_left[ecog_time_col].isna().sum()
+    nan_left = df_left[ecog_time_col].isna().sum()
     nan_right = df_right[uicc_time_col].isna().sum()
-    df_left   = df_left.dropna(subset=[ecog_time_col])
-    df_right  = df_right.dropna(subset=[uicc_time_col])
+    df_left = df_left.dropna(subset=[ecog_time_col])
+    df_right = df_right.dropna(subset=[uicc_time_col])
 
-    df_left[ecog_time_col]  = df_left[ecog_time_col].astype("float64")
+    df_left[ecog_time_col] = df_left[ecog_time_col].astype("float64")
     df_right[uicc_time_col] = df_right[uicc_time_col].astype("float64")
-    df_left  = df_left.sort_values(ecog_time_col).reset_index(drop=True)
+    df_left = df_left.sort_values(ecog_time_col).reset_index(drop=True)
     df_right = df_right.sort_values(uicc_time_col).reset_index(drop=True)
 
     n_ecog = len(df_left)
@@ -506,6 +509,7 @@ def merge_and_plot_ecog_uicc_proximity(
     print(f"  [ecog_uicc_prox] ECOG rows    :  {n_ecog:,}  (dropped {nan_left:,} NaN in '{ecog_time_col}')")
     print(f"  [ecog_uicc_prox] UICC rows    :  {n_uicc:,}  (dropped {nan_right:,} NaN in '{uicc_time_col}')")
     print(f"  [ecog_uicc_prox] Max tolerance:  {'kein Limit' if max_months is None else f'{max_months} Monate'}")
+    print(f"  [ecog_uicc_prox] k-Anonymität :  k≥{k_anonymity}")
 
     df_merged = pd.merge_asof(
         df_left, df_right,
@@ -524,11 +528,11 @@ def merge_and_plot_ecog_uicc_proximity(
         .groupby(id_col, as_index=False).first()
     )
 
-    n_matched   = len(df_best)
-    n_cond_ids  = df_best[id_col].nunique()
+    n_matched = len(df_best)
+    n_cond_ids = df_best[id_col].nunique()
     n_unmatched = n_ecog - n_matched
 
-    print(f"  [ecog_uicc_prox] Matched pairs          : {n_matched:,}  ({100*n_matched/n_ecog:.1f}%)")
+    print(f"  [ecog_uicc_prox] Matched pairs          : {n_matched:,}  ({100 * n_matched / n_ecog:.1f}%)")
     print(f"  [ecog_uicc_prox] Unique cond_ids matched: {n_cond_ids:,}")
     print(f"  [ecog_uicc_prox] Unmatched ECOG rows    : {n_unmatched:,}")
     print(f"  [ecog_uicc_prox] Median abs diff        : {df_best['_abs_diff'].median():.2f} Monate")
@@ -613,26 +617,50 @@ def merge_and_plot_ecog_uicc_proximity(
     df_plot[uicc_cat_col] = df_plot[uicc_cat_col].astype(str).str.strip()
     # Zentrale Substage→Hauptstufe-Zuordnung (liefert 'missing' für Unbekanntes,
     # nie NaN → kein fillna nötig). Vorher: lokales, unvollständiges Dict.
-    df_plot["uicc_main"]  = df_plot[uicc_cat_col].map(map_uicc_to_main_stage)
+    df_plot["uicc_main"] = df_plot[uicc_cat_col].map(map_uicc_to_main_stage)
 
     df_plot_filtered = df_plot[
         df_plot[ecog_cat_col].isin(ECOG_ORDER) &
         df_plot["uicc_main"].isin(UICC_ORDER_MAIN)
-    ]
+        ]
 
-    ct           = pd.crosstab(df_plot_filtered[ecog_cat_col], df_plot_filtered["uicc_main"])
-    ecog_present = [e for e in ECOG_ORDER      if e in ct.index]
+    ct = pd.crosstab(df_plot_filtered[ecog_cat_col], df_plot_filtered["uicc_main"])
+    ecog_present = [e for e in ECOG_ORDER if e in ct.index]
     uicc_present = [u for u in UICC_ORDER_MAIN if u in ct.columns]
-    ct           = ct.reindex(index=ecog_present, columns=uicc_present).fillna(0)
+    ct = ct.reindex(index=ecog_present, columns=uicc_present).fillna(0)
+
+    # ─── K-ANONYMITY: Filtere ECOG × UICC Kombinationen mit ≤ k_anonymity Samples ───
+    if k_anonymity > 0:
+        combinations_before = (ct > 0).sum().sum()
+        ct_filtered = ct.copy()
+        ct_filtered[ct_filtered <= k_anonymity] = 0
+        combinations_after = (ct_filtered > 0).sum().sum()
+        combinations_removed = combinations_before - combinations_after
+
+        if combinations_removed > 0:
+            print(f"[ecog_uicc_prox] k-Anonymität: Folgende Kombinationen werden gefiltert (≤{k_anonymity} Samples):")
+            for ecog in ecog_present:
+                for uicc in uicc_present:
+                    val = int(ct.loc[ecog, uicc])
+                    if 0 < val <= k_anonymity:
+                        label_ecog = "Unknown" if ecog == "U" else f"ECOG {ecog}"
+                        label_uicc = "Missing" if uicc == "missing" else f"Stage {uicc}"
+                        print(f"[ecog_uicc_prox]   → {label_ecog} × {label_uicc}: {val} Samples")
+            print(f"[ecog_uicc_prox]   Total kombinationen vor Filterung: {combinations_before}")
+            print(f"[ecog_uicc_prox]   Total kombinationen nach Filterung: {combinations_after}")
+
+        ct = ct_filtered
 
     x_vals, y_vals, counts = [], [], []
     for xi, uicc in enumerate(uicc_present):
         for yi, ecog in enumerate(ecog_present):
             val = int(ct.loc[ecog, uicc])
             if val > 0:
-                x_vals.append(xi); y_vals.append(yi); counts.append(val)
+                x_vals.append(xi);
+                y_vals.append(yi);
+                counts.append(val)
 
-    max_count    = max(counts) if counts else 1
+    max_count = max(counts) if counts else 1
     bubble_sizes = [max(30, (np.sqrt(c) / np.sqrt(max_count)) * 2500) for c in counts]
     bubble_colors = [UICC_COLORS[uicc_present[xi]] for xi in x_vals]
 
@@ -647,7 +675,8 @@ def merge_and_plot_ecog_uicc_proximity(
 
     ax.set_xticks(range(len(uicc_present)))
     ax.set_xticklabels(
-        ["Missing" if u in ("unknown", "missing") else f"Stage {u}" for u in uicc_present], fontsize=PLOT_CONFIG["fontsize_annotation"]
+        ["Missing" if u in ("unknown", "missing") else f"Stage {u}" for u in uicc_present],
+        fontsize=PLOT_CONFIG["fontsize_annotation"]
     )
     ax.set_yticks(range(len(ecog_present)))
     ax.set_yticklabels(
@@ -655,11 +684,14 @@ def merge_and_plot_ecog_uicc_proximity(
     )
     ax.set_xlabel("UICC Stage", fontsize=PLOT_CONFIG["fontsize_annotation"])
     ax.set_ylabel("ECOG Performance Status", fontsize=PLOT_CONFIG["fontsize_annotation"])
-    ax.set_title(
-        f"ECOG × UICC — Category Co-occurrence\n"
-        f"(nearest pair per cond_id, {tol_label}  |  n = {len(df_plot_filtered):,} pairs)",
-        fontsize=PLOT_CONFIG["fontsize_annotation"], fontweight="bold", pad=10,
-    )
+
+    # Titel mit k-Anonymität Info
+    title_text = f"ECOG × UICC — Category Co-occurrence\n(nearest pair per cond_id, {tol_label}  |  n = {len(df_plot_filtered):,} pairs"
+    if k_anonymity > 0:
+        title_text += f"  |  k≥{k_anonymity}"
+    title_text += ")"
+    ax.set_title(title_text, fontsize=PLOT_CONFIG["fontsize_annotation"], fontweight="bold", pad=10)
+
     ax.set_xlim(-0.7, len(uicc_present) - 0.3)
     ax.set_ylim(-0.7, len(ecog_present) - 0.3)
     ax.spines[["top", "right"]].set_visible(False)
@@ -671,8 +703,8 @@ def merge_and_plot_ecog_uicc_proximity(
         if sub in substage_counts.index and substage_counts[sub] > 0:
             substage_map.setdefault(main, []).append(f"{sub}({substage_counts[sub]:,})")
 
-    unknown_count  = int((~df_best[uicc_cat_col].astype(str).str.strip()
-                          .isin(UICC_MAPPING.keys())).sum())
+    unknown_count = int((~df_best[uicc_cat_col].astype(str).str.strip()
+                         .isin(UICC_MAPPING.keys())).sum())
     legend_handles = []
 
     if "missing" in uicc_present:
@@ -680,14 +712,15 @@ def merge_and_plot_ecog_uicc_proximity(
             mpatches.Patch(color=UICC_COLORS["missing"], label=f"missing  ({unknown_count:,})")
         )
     for main in [u for u in uicc_present if u != "missing"]:
-        subs   = substage_map.get(main, [])
+        subs = substage_map.get(main, [])
         chunks = [subs[i:i + 4] for i in range(0, len(subs), 4)]
-        label  = f"Stage {main}:\n" + "\n".join("  " + ",  ".join(c) for c in chunks)
+        label = f"Stage {main}:\n" + "\n".join("  " + ",  ".join(c) for c in chunks)
         legend_handles.append(mpatches.Patch(color=UICC_COLORS[main], label=label))
 
     ax.legend(
         handles=legend_handles,
-        title="Sub-stage  (n)", title_fontsize=PLOT_CONFIG["fontsize_annotation_small"], fontsize=PLOT_CONFIG["fontsize_annotation_tiny"],
+        title="Sub-stage  (n)", title_fontsize=PLOT_CONFIG["fontsize_annotation_small"],
+        fontsize=PLOT_CONFIG["fontsize_annotation_tiny"],
         loc="upper left", bbox_to_anchor=(1.02, 1.0),
         framealpha=0.95, edgecolor="#cccccc",
         handlelength=1.0, labelspacing=0.8,

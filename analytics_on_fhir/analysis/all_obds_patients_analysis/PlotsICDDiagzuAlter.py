@@ -341,6 +341,7 @@ def plot_population_pyramid_topn(
     ax.set_xticks(xticks)
     ax.set_xticklabels([f"{abs(int(x)):,}" for x in xticks])
     ax.set(yticks=y, yticklabels=labels)
+   # ax.set_xlabel("Number of Diagnoses", fontsize=PLOT_CONFIG["fontsize_axis_label"])
     ax.set_xlabel("Number of Diagnoses", fontsize=PLOT_CONFIG["fontsize_axis_label"])
 
     if show_title:
