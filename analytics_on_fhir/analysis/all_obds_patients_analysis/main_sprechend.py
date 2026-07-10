@@ -69,6 +69,7 @@ from plots import (
     plot_age_distribution_grouped_bar,
     plot_dropout_curve,
     plot_ecog_distribution_grouped_bar,
+    plot_entity_distribution_grouped_bar,
     plot_log_histogram,
     plot_lorenz_curve,
     plot_merge_panel,
@@ -451,9 +452,7 @@ plot_population_pyramid_from_raw(
     output_path=DIR_BUTTERFLY / "butterfly_overall.png",
 )
 
-print(
-    f"  [PLOT] butterfly_topn.png  – Alters-/Geschlechtsverteilung, Top-20 Entitäten farbkodiert"
-)
+print(f"  [PLOT] butterfly_topn.png  – Alters-/Geschlechtsverteilung, Top-20 Entitäten farbkodiert")
 plot_population_pyramid_topn(
     df_tumore,
     age_col="age_at_diagnosis",
@@ -471,8 +470,6 @@ plot_population_pyramid_topn(
 )
 
 print(f"  ✓ Abschnitt A abgeschlossen  →  {DIR_BUTTERFLY}")
-
-
 
 
 print("\n" + "━" * 70)
@@ -931,11 +928,11 @@ NEBENDIAG_EXCEL_CSV_Update = os.path.join(DATA, "nebendiagnosen_review_export_v1
 # Pro Standort als (Nebendiag.-Spalte, Tumor-Spalte) konfigurierbar:
 JOIN_COLS_BY_SITE = {
     "uker": ("condition_patient_reference_hash", "patient_resource_id_hash"),
-    "tum":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "uka":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "lmu":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "ukr":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
-    "ukw":  ("patient_mrn_hash",                 "patid_pseudonym_hash"),
+    "tum": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "uka": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "lmu": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "ukr": ("patient_mrn_hash", "patid_pseudonym_hash"),
+    "ukw": ("patient_mrn_hash", "patid_pseudonym_hash"),
 }
 # Fallback für Standorte, die oben nicht gelistet sind:
 JOIN_COLS_DEFAULT = ("patient_mrn_hash", "patid_pseudonym_hash")
@@ -1201,19 +1198,30 @@ for bracket, fname in [(5, "age_dist_5yr.png"), (10, "age_dist_10yr.png")]:
         title=False,
         save_path=str(DIR_GK / fname),
     )
-
-# ── Plot 2: Bias-Analyse  (Diagnosejahr vs. rel. Therapiestart) ──────────────
-print(f"  [PLOT] Bias-Analyse Diagnosejahr vs. rel. Therapiestart → bias_op/system/radio.png")
-print(f"    Zeigt: Zusammenhang zwischen Diagnosejahr und Zeitabstand Diagnose→Therapie")
-print(f"    Detektiert Meldebias (ältere Jahre: lückenhafte Therapiedokumentation)")
-for df_t, name in [(df_ops_gk, "op"), (df_system_gk, "system"), (df_radio_gk, "radio")]:
-    plot_therapy_bias_analysis(
-        df_t,
-        relative_col="months_between_asserted_therapy_start_date",
-        diagnosis_year_col="asserted_year",
-        figsize=(10, 4),
-        save_path=str(DIR_GK / f"bias_{name}.png"),
-    )
+# ── Plot 1b: Entitätenverteilung je Therapietyp ──────────────────────────────
+print(f"\n  [PLOT] Entitätenverteilung je Therapietyp → entity_dist.png")
+plot_entity_distribution_grouped_bar(
+    dataframes={
+        "Surgical Procedure": df_ops_gk,
+        "Systemic Therapy": df_system_gk,
+        "Radiation Therapy": df_radio_gk,
+    },
+    entity_column="entity_or_parent",
+    title=False,
+    save_path=str(DIR_GK / "entity_dist.png"),
+)
+# # ── Plot 2: Bias-Analyse  (Diagnosejahr vs. rel. Therapiestart) ──────────────
+# print(f"  [PLOT] Bias-Analyse Diagnosejahr vs. rel. Therapiestart → bias_op/system/radio.png")
+# print(f"    Zeigt: Zusammenhang zwischen Diagnosejahr und Zeitabstand Diagnose→Therapie")
+# print(f"    Detektiert Meldebias (ältere Jahre: lückenhafte Therapiedokumentation)")
+# for df_t, name in [(df_ops_gk, "op"), (df_system_gk, "system"), (df_radio_gk, "radio")]:
+#     plot_therapy_bias_analysis(
+#         df_t,
+#         relative_col="months_between_asserted_therapy_start_date",
+#         diagnosis_year_col="asserted_year",
+#         figsize=(10, 4),
+#         save_path=str(DIR_GK / f"bias_{name}.png"),
+#     )
 
 # ── Plot 3: UICC/ECOG Inventar  (GK-OBDS + MUST) ─────────────────────────────
 print(f"  [PLOT] UICC/ECOG Inventar → uicc_ecog_inventory.png + uicc_ecog_inventory_must.png")

@@ -2634,11 +2634,15 @@ def keep_only_first_diagnosis(df, columns):
 
 def normalize_array_columns(df: pd.DataFrame) -> pd.DataFrame:
     for colname in df.columns:
-        # detect columns that contain lists/arrays in ANY row
-        if df[colname].apply(lambda x: isinstance(x, (list, tuple))).any():
-            df[colname] = df[colname].apply(
-                lambda x: ",".join(map(str, x)) if isinstance(x, (list, tuple)) else x
+        df[colname] = df[colname].apply(
+            lambda x: (
+                ",".join(map(str, x))
+                if isinstance(x, (list, tuple))
+                else None
+                if isinstance(x, dict)
+                else x
             )
+        )
     return df
 
 

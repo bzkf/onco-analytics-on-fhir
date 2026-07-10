@@ -255,8 +255,17 @@ class StudyProtocolPCa1:
         )
 
         # 4) Labor: extract mii labs for c61 pats
+        df_c61_conditions_patients_death_gleason_met_clean = (
+            df_c61_conditions_patients_death_gleason_met_clean.withColumn(
+                "patid_pseudonym", F.col("patid_pseudonym").cast("string")
+            )
+        )
         pandas_df_pseudonyms_c61 = df_c61_conditions_patients_death_gleason_met_clean.toPandas()
-        df_list_c61 = pandas_df_pseudonyms_c61["patid_pseudonym"].drop_duplicates().dropna()
+        df_list_c61 = (
+            pandas_df_pseudonyms_c61["patid_pseudonym"].dropna().astype(str).drop_duplicates()
+        )
+
+        logger.info("First 10 patids: %s", df_list_c61[:10])
 
         # labs
         mii_labs_pandas = self.extract_mii_labs(df_list_c61, suffix="", crypto_key=crypto_key)
@@ -264,7 +273,14 @@ class StudyProtocolPCa1:
         # debug schema equivalent
         print(mii_labs_pandas.dtypes)
         mii_labs_pandas = mii_labs_pandas.replace(["NaN", "nan"], None)
+        print(mii_labs_pandas["lab_dateTime"].dropna().map(type).value_counts())
+
         mii_labs_pandas = normalize_array_columns(mii_labs_pandas)
+
+        for col in mii_labs_pandas.columns:
+            if mii_labs_pandas[col].apply(lambda x: isinstance(x, dict)).any():
+                print("DICT STILL PRESENT:", col)
+
         mii_labs = self.spark.createDataFrame(mii_labs_pandas)
         for field in mii_labs.schema.fields:
             print(field.name, field.dataType)

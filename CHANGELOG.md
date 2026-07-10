@@ -1,5 +1,109 @@
 # Changelog
 
+## [2.35.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.2...v2.35.3) (2026-07-05)
+
+
+### Miscellaneous Chores
+
+* **deps:** update github-actions ([#551](https://github.com/bzkf/onco-analytics-on-fhir/issues/551)) ([fad9452](https://github.com/bzkf/onco-analytics-on-fhir/commit/fad945236aaeb9ab6d4d59b0ef50a434cbef4021))
+
+## [2.35.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.1...v2.35.2) (2026-07-03)
+
+
+### Bug Fixes
+
+* parse column 'patient_mrn' explicitly as str ([#549](https://github.com/bzkf/onco-analytics-on-fhir/issues/549)) ([d3a58d2](https://github.com/bzkf/onco-analytics-on-fhir/commit/d3a58d295cbe44900ddde6de88e33c48277c828b))
+
+## [2.35.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.0...v2.35.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* include meta.profile in obds export ([#547](https://github.com/bzkf/onco-analytics-on-fhir/issues/547)) ([b00dc6e](https://github.com/bzkf/onco-analytics-on-fhir/commit/b00dc6e02f324c5649e99783f507e84e2ce2a68f))
+
+## [2.35.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.34.1...v2.35.0) (2026-07-01)
+
+
+### Features
+
+* include obds diagnoses ([#545](https://github.com/bzkf/onco-analytics-on-fhir/issues/545)) ([3d47b14](https://github.com/bzkf/onco-analytics-on-fhir/commit/3d47b14fc2ae19fabc6be8b50f2201a02c5e7dff))
+
+## [2.34.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.34.0...v2.34.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* only use result for existing keys ([#543](https://github.com/bzkf/onco-analytics-on-fhir/issues/543)) ([5eedb12](https://github.com/bzkf/onco-analytics-on-fhir/commit/5eedb126d96beb12f1b2958794f421770dc2ce59))
+
+## [2.34.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.3...v2.34.0) (2026-06-24)
+
+
+### Features
+
+* adding FHIR encounters ([#541](https://github.com/bzkf/onco-analytics-on-fhir/issues/541)) ([5467f35](https://github.com/bzkf/onco-analytics-on-fhir/commit/5467f3511bbff68de2788026f6dd02d3e93dc1cb))
+* load OPS display for medication ([#540](https://github.com/bzkf/onco-analytics-on-fhir/issues/540)) ([c18277c](https://github.com/bzkf/onco-analytics-on-fhir/commit/c18277cac135bd8898183da1d143477766dc8fc4))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump jupyter-server from 2.18.0 to 2.20.0 ([#537](https://github.com/bzkf/onco-analytics-on-fhir/issues/537)) ([c62dae4](https://github.com/bzkf/onco-analytics-on-fhir/commit/c62dae45adcfa62d4be2b7467457254ce737163c))
+* **deps:** update dependency jupyterlab to v4.5.9 [security] ([#539](https://github.com/bzkf/onco-analytics-on-fhir/issues/539)) ([fa156b4](https://github.com/bzkf/onco-analytics-on-fhir/commit/fa156b49fe8453a7969af2a090c8953476f2024f))
+
+## [2.33.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.2...v2.33.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* ignore malformed date time ([#535](https://github.com/bzkf/onco-analytics-on-fhir/issues/535)) ([7bb7201](https://github.com/bzkf/onco-analytics-on-fhir/commit/7bb7201f6433a382a1819f7311472de915bc17ea))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump aiohttp from 3.14.0 to 3.14.1 ([#532](https://github.com/bzkf/onco-analytics-on-fhir/issues/532)) ([c96886d](https://github.com/bzkf/onco-analytics-on-fhir/commit/c96886d899b5cd4e4a9359761dc2a5821124dedf))
+* **deps:** bump bleach from 6.3.0 to 6.4.0 ([#530](https://github.com/bzkf/onco-analytics-on-fhir/issues/530)) ([f2f9964](https://github.com/bzkf/onco-analytics-on-fhir/commit/f2f9964f1586854631b9a480e4f91c3aeb2f6818))
+* **deps:** bump pyjwt from 2.12.1 to 2.13.0 ([#527](https://github.com/bzkf/onco-analytics-on-fhir/issues/527)) ([be9eb87](https://github.com/bzkf/onco-analytics-on-fhir/commit/be9eb87268928070d119adbd5848f6a4ba3db2e7))
+* **deps:** bump tornado from 6.5.6 to 6.5.7 ([#531](https://github.com/bzkf/onco-analytics-on-fhir/issues/531)) ([c07fdb3](https://github.com/bzkf/onco-analytics-on-fhir/commit/c07fdb3d0916f10e18752a3ffb58f4e905f3acf3))
+
+## [2.33.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.1...v2.33.2) (2026-06-17)
+
+
+### Bug Fixes
+
+* return successfully if no labs are found ([#533](https://github.com/bzkf/onco-analytics-on-fhir/issues/533)) ([014d000](https://github.com/bzkf/onco-analytics-on-fhir/commit/014d0009ba0a921c157e6c5474d9a2fbf06047db))
+
+## [2.33.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.33.0...v2.33.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* transform ops code + version in json if type is dict ([#528](https://github.com/bzkf/onco-analytics-on-fhir/issues/528)) ([5798a52](https://github.com/bzkf/onco-analytics-on-fhir/commit/5798a5206cf87830aeb5f9006e2731d9863f51b5))
+
+## [2.33.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.3...v2.33.0) (2026-06-15)
+
+
+### Features
+
+* include progress, labs and summary stats in de-id output ([#523](https://github.com/bzkf/onco-analytics-on-fhir/issues/523)) ([cf853ac](https://github.com/bzkf/onco-analytics-on-fhir/commit/cf853ac6e2414830ffa74431c089cea07a89ec3c))
+
+
+### Bug Fixes
+
+* handle mixed timestamps ([#520](https://github.com/bzkf/onco-analytics-on-fhir/issues/520)) ([8835a9b](https://github.com/bzkf/onco-analytics-on-fhir/commit/8835a9b22ba3c08876d046cd58eb182838f394a2))
+* include all procedures in aml ([#524](https://github.com/bzkf/onco-analytics-on-fhir/issues/524)) ([f17c132](https://github.com/bzkf/onco-analytics-on-fhir/commit/f17c132a06dcff039b8cce4aa570580857a023c1))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump tornado from 6.5.5 to 6.5.6 ([#526](https://github.com/bzkf/onco-analytics-on-fhir/issues/526)) ([589c3a1](https://github.com/bzkf/onco-analytics-on-fhir/commit/589c3a1cfae47314cd90fee7609709c54426ac5c))
+
+## [2.32.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.2...v2.32.3) (2026-06-11)
+
+
+### Bug Fixes
+
+* cast and log patient..identifier ([#519](https://github.com/bzkf/onco-analytics-on-fhir/issues/519)) ([babad0f](https://github.com/bzkf/onco-analytics-on-fhir/commit/babad0f1d2720fe33943c684819d85c4257981eb))
+* Fix pca again ([#522](https://github.com/bzkf/onco-analytics-on-fhir/issues/522)) ([44ab36a](https://github.com/bzkf/onco-analytics-on-fhir/commit/44ab36ab7de7bdd15e2b65a313a22888954e0f70))
+
 ## [2.32.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.32.1...v2.32.2) (2026-06-08)
 
 

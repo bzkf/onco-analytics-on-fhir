@@ -40,16 +40,16 @@ import seaborn as sns
 
 # ── Zentrale Konfiguration aus plot_config.py ─────────────────────────────────
 from plot_config import (
+    ECOG_ORDER,
     PLOT_CONFIG,
+    UICC_GROUP_ORDER,
+    UICC_GROUPS,
     UICC_MAPPING,
     UICC_ORDER,
-    ECOG_ORDER,
-    UICC_GROUPS,
-    UICC_GROUP_ORDER,
-    tab20b_colors,
-    map_uicc_to_main_stage,
-    map_ecog_value,
     apply_plot_config,
+    map_ecog_value,
+    map_uicc_to_main_stage,
+    tab20b_colors,
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -67,8 +67,8 @@ from plot_config import (
 # Umschalten von VERBOSE_OTHER_PLOTS=True bei Bedarf wieder einschalten.
 # Jede Diagnostik-Zeile trägt ein [funktionsname]-Präfix, sodass klar ist, AUS
 # WELCHER Plot-Funktion sie stammt. Echte Warnungen/Fehler werden IMMER gedruckt.
-VERBOSE_PAPER_PLOTS = True    # Paper-relevante Plots (Fig 1, 2, 3, 6, 7, 12, …)
-VERBOSE_OTHER_PLOTS = False   # übrige Plots (Violin, Bias, Dropout, Lorenz, Gender, Scatter)
+VERBOSE_PAPER_PLOTS = True  # Paper-relevante Plots (Fig 1, 2, 3, 6, 7, 12, …)
+VERBOSE_OTHER_PLOTS = False  # übrige Plots (Violin, Bias, Dropout, Lorenz, Gender, Scatter)
 
 
 def _say(msg: str, *, paper: bool = True) -> None:
@@ -180,7 +180,8 @@ def _build_grouped_bar(
                         bar.get_x() + bar.get_width() / 2,
                         height,
                         f"{height:.0f}" if not relative else f"{height:.1f}%",
-                        ha="center", va="bottom",
+                        ha="center",
+                        va="bottom",
                         fontsize=PLOT_CONFIG["fontsize_bar_label"],
                     )
     ax.set_xticks(x_positions)
@@ -193,13 +194,15 @@ def _build_grouped_bar(
     ax.set_ylabel(_ylabel, fontsize=PLOT_CONFIG["fontsize_axis_label"])
     # Plottitel nur wenn global erlaubt UND ein Titel übergeben wurde
     if title and PLOT_CONFIG["show_titles"]:
-        ax.set_title(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15)
+        ax.set_title(
+            title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15
+        )
     if PLOT_CONFIG["show_legend"]:
         ax.legend(frameon=False, title="Therapy", title_fontsize=PLOT_CONFIG["fontsize_legend"])
     if not relative:
         ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
-    ax.set_ylim(0,100)
+    ax.set_ylim(0, 100)
     ax.grid(axis="y", linestyle="--", alpha=0.3)
     ax.set_axisbelow(True)
     ax.spines[["top", "right"]].set_visible(False)
@@ -218,7 +221,7 @@ def _build_grouped_bar(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# A – ALTERSVERTEILUNG
+# A – ALTERSVERTEILUNG / ENTITÄTSVERTEILUNG THERAPIETYP
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -281,8 +284,7 @@ def plot_age_distribution_grouped_bar(
     # ── Farben: pro Therapie eine eigene Farbfamilie aus tab20b ─────────────
     tab20b = plt.get_cmap("tab20b").colors  # 20 Farben, 5 Familien à 4 Schattierungen
     color_map = {
-        t: tab20b[(i * color_offset + color_shade) % len(tab20b)]
-        for i, t in enumerate(therapies)
+        t: tab20b[(i * color_offset + color_shade) % len(tab20b)] for i, t in enumerate(therapies)
     }
     if colors:
         color_map.update(colors)
@@ -412,6 +414,158 @@ def plot_age_distribution_grouped_bar(
     plt.close()
     return fig
 
+
+def plot_entity_distribution_grouped_bar(
+    dataframes: dict,
+    entity_column: str = "entity_or_parent",
+    title: str | bool | None = None,
+    colors: dict = None,
+    save_path: str = None,
+    dpi: int = 300,
+    show_bar_numbers: bool = None,
+    bar_label_rotation: int = 90,
+    color_offset: int = 4,
+    color_shade: int = 1,
+    show_total_in_legend: bool = True,
+) -> plt.Figure:
+    """
+    Verteilung der Entitäten (entity_or_parent) pro Therapietyp als gruppiertes Balkendiagramm.
+    """
+    therapies = list(dataframes.keys())
+
+    # ── 1. Alle eindeutigen Entitäten über alle DataFrames hinweg ermitteln ──
+    all_entities = set()
+    for df in dataframes.values():
+        if entity_column in df.columns:
+            all_entities.update(df[entity_column].dropna().unique())
+
+    # Sortieren, damit die Reihenfolge auf der X-Achse stabil und reproduzierbar ist
+    labels = sorted(list(all_entities))
+
+    if not labels:
+        raise ValueError(f"Keine Daten in der Spalte '{entity_column}' gefunden.")
+
+    # ── Farben: pro Therapie eine eigene Farbfamilie aus tab20b ─────────────
+    tab20b = plt.get_cmap("tab20b").colors  # 20 Farben, 5 Familien à 4 Schattierungen
+    color_map = {
+        t: tab20b[(i * color_offset + color_shade) % len(tab20b)] for i, t in enumerate(therapies)
+    }
+    if colors:
+        color_map.update(colors)
+
+    rows = []
+    _say(f"[entity_dist] Verteilung je Therapietyp für {len(labels)} Entitäten")
+
+    for therapy, df in dataframes.items():
+        if entity_column not in df.columns:
+            raise ValueError(f"Spalte '{entity_column}' nicht in Therapiegruppe '{therapy}'.")
+
+        _n_in = len(df)
+        entities_series = df[entity_column].dropna().astype(str)
+        _n_valid = len(entities_series)
+        _n_drop = _n_in - _n_valid
+
+        _say(
+            f"[entity_dist]   {therapy:<22}: {_n_in:>8,} Zeilen rein  →  {_n_valid:>8,} mit gültiger Entität "
+            f"({_n_drop:,} ohne Wert verworfen)"
+        )
+
+        # Häufigkeiten zählen und an die Gesamtliste der Entitäten anpassen (reindex)
+        counts = entities_series.value_counts().reindex(labels, fill_value=0).reset_index()
+        counts.columns = ["entity", "count"]
+        counts["therapy"] = therapy
+        rows.append(counts)
+
+    agg = pd.concat(rows, ignore_index=True)
+
+    # ── Geometrie für gruppierte Balken berechnen ───────────────────────────
+    x_positions = np.arange(len(labels))
+    n = len(therapies)
+    group_width = 0.8
+    width = group_width / max(n, 1)
+    offsets = (np.arange(n) - (n - 1) / 2) * width
+
+    if show_bar_numbers is None:
+        show_bar_numbers = PLOT_CONFIG["show_bar_numbers"]
+
+    fig, ax = plt.subplots(figsize=(16, 8))  # Etwas breiter gewählt für 20 Text-Labels
+
+    totals = agg.groupby("therapy")["count"].sum().to_dict()
+    legend_labels = {
+        t: f"{t} (n={int(totals.get(t, 0)):,})".replace(",", " ") if show_total_in_legend else t
+        for t in therapies
+    }
+
+    for offset, therapy in zip(offsets, therapies):
+        sub = agg[agg["therapy"] == therapy].set_index("entity").reindex(labels).fillna(0)
+        counts = sub["count"].values
+        bars = ax.bar(
+            x_positions + offset,
+            counts,
+            width=width,
+            color=color_map[therapy],
+            alpha=0.9,
+            label=legend_labels[therapy],
+        )
+
+        # Zahlen über den Balken anzeigen
+        if show_bar_numbers:
+            ymax_for_pad = agg["count"].max() if not agg.empty else 0
+            label_pad = ymax_for_pad * 0.015
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        height + label_pad,
+                        f"{int(height)}",
+                        ha="center",
+                        va="bottom",
+                        rotation=bar_label_rotation,
+                        fontsize=PLOT_CONFIG["fontsize_bar_label"],
+                    )
+
+    # ── Achsen-Styling ──────────────────────────────────────────────────────
+    ax.set_xticks(x_positions)
+    # ha="right" und rotation=45 sorgt dafür, dass lange Entitäten-Namen lesbar bleiben
+    ax.set_xticklabels(labels, rotation=45, ha="right")
+
+    ax.set_xlabel("Entity / Parent", fontsize=PLOT_CONFIG["fontsize_axis_label"])
+    ax.set_ylabel("Number of Condition IDs", fontsize=PLOT_CONFIG["fontsize_axis_label"])
+
+    if title is not False and PLOT_CONFIG["show_titles"]:
+        chart_title = title or "Distribution of Therapy Types by Entity"
+        ax.set_title(
+            chart_title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=15
+        )
+
+    if PLOT_CONFIG["show_legend"]:
+        ax.legend(frameon=False)
+
+    ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.set_axisbelow(True)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xlim(-0.5, len(labels) - 0.5)
+
+    # Mehr Platz nach oben für vertikale Balkenbeschriftungen
+    if show_bar_numbers and bar_label_rotation in (90, 270):
+        ymin, ymax = ax.get_ylim()
+        ax.set_ylim(ymin, ymax * 1.18)
+
+    fig.tight_layout()
+
+    if save_path:
+        path = Path(save_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
+        _say(f"[entity_dist] gespeichert: {path.resolve()}")
+    else:
+        plt.show()
+
+    plt.close()
+    return fig
+
 # ══════════════════════════════════════════════════════════════════════════════
 # B – THERAPIE-ZEITPUNKTE & BIAS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -507,7 +661,9 @@ def plot_therapy_bias_analysis(
     )
     fig.subplots_adjust(hspace=0.35)
     if title and PLOT_CONFIG["show_titles"]:
-        fig.suptitle(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01)
+        fig.suptitle(
+            title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01
+        )
     # – Subplot 1: Case Count ─────────────────────────────────────────────────
     axes[0].plot(all_years, cases_all_line, linestyle="-", color="steelblue")
     axes[0].plot(
@@ -559,7 +715,9 @@ def plot_therapy_bias_analysis(
     tick_years = [y for y in all_years if (y - year_min) % tick_step == 0]
     axes[1].set_xlim(year_min - 0.5, year_max + 0.5)
     axes[1].set_xticks(tick_years)
-    axes[1].set_xticklabels([str(y) for y in tick_years], rotation=90, fontsize=PLOT_CONFIG["fontsize_annotation_tiny"])
+    axes[1].set_xticklabels(
+        [str(y) for y in tick_years], rotation=90, fontsize=PLOT_CONFIG["fontsize_annotation_tiny"]
+    )
     fig.tight_layout(pad=0.4, h_pad=0.5)
     if save_path is not None:
         directory = os.path.dirname(save_path)
@@ -600,7 +758,10 @@ def plot_dropout_curve(
         linewidth=1.8,
         zorder=2,
     )
-    ax.set_xlabel("Therapy Start Date - Date of Diagnosis (Month)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_xlabel(
+        "Therapy Start Date - Date of Diagnosis (Month)",
+        fontsize=PLOT_CONFIG["fontsize_annotation"],
+    )
     ax.set_ylabel("Number of cond_ids (%)", fontsize=PLOT_CONFIG["fontsize_annotation"])
     ax.set_xlim(0, result_df["cutoff_month"].max() + 0.5)
     ax.set_ylim(0, 105)
@@ -706,10 +867,18 @@ def plot_lorenz_curve(
         fontweight="bold",
         color=primary_color,
     )
-    ax.set_xlabel("Kumulativer Anteil der cond_id (aufsteigend sortiert)", fontsize=PLOT_CONFIG["fontsize_annotation"])
+    ax.set_xlabel(
+        "Kumulativer Anteil der cond_id (aufsteigend sortiert)",
+        fontsize=PLOT_CONFIG["fontsize_annotation"],
+    )
     ax.set_ylabel("Kumulativer Anteil der Therapien", fontsize=PLOT_CONFIG["fontsize_annotation"])
     if PLOT_CONFIG["show_titles"]:
-        ax.set_title("Lorenz-Kurve – Therapien pro cond_id", fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", pad=14)
+        ax.set_title(
+            "Lorenz-Kurve – Therapien pro cond_id",
+            fontsize=PLOT_CONFIG["fontsize_subplot_title"],
+            fontweight="bold",
+            pad=14,
+        )
     ax.text(
         0.5,
         -0.12,
@@ -830,7 +999,12 @@ def plot_log_histogram(
             )
             ax.set_ylabel("Count cond_id (log scale)", fontsize=PLOT_CONFIG["fontsize_annotation"])
             if use_year_split:
-                ax.set_title(label, fontsize=PLOT_CONFIG["fontsize_annotation_large"], fontweight="bold", pad=8)
+                ax.set_title(
+                    label,
+                    fontsize=PLOT_CONFIG["fontsize_annotation_large"],
+                    fontweight="bold",
+                    pad=8,
+                )
             continue
 
         # Zählungen pro Integer-Wert (statt freiem Histogramm) -> garantiert
@@ -864,7 +1038,9 @@ def plot_log_histogram(
         ax.set_ylim(bottom=0.8)  # etwas Luft unten, damit kleine Balken sichtbar bleiben
         ax.set_ylabel("Count cond_id (log scale)", fontsize=PLOT_CONFIG["fontsize_annotation"])
         if use_year_split:
-            ax.set_title(label, fontsize=PLOT_CONFIG["fontsize_annotation_large"], fontweight="bold", pad=8)
+            ax.set_title(
+                label, fontsize=PLOT_CONFIG["fontsize_annotation_large"], fontweight="bold", pad=8
+            )
         stats = (
             f"Median={subset.median():.0f}  Mean={subset.mean():.1f}  "
             f"P90={subset.quantile(0.90):.0f}  Max={subset.max():.0f}"
@@ -891,8 +1067,16 @@ def plot_log_histogram(
     bottom_ax.set_xlabel("Therapies per cond_id", fontsize=PLOT_CONFIG["fontsize_annotation"])
     bottom_ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
     if title and PLOT_CONFIG["show_titles"]:
-        fig.suptitle(title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01)
-    footer_kwargs = dict(ha="center", va="top", fontsize=PLOT_CONFIG["fontsize_annotation_small"], color="black", style="italic")
+        fig.suptitle(
+            title, fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01
+        )
+    footer_kwargs = dict(
+        ha="center",
+        va="top",
+        fontsize=PLOT_CONFIG["fontsize_annotation_small"],
+        color="black",
+        style="italic",
+    )
     if use_year_split:
         n_with_before = df_before[cond_col].nunique()
         n_with_from = df_from[cond_col].nunique()
@@ -1606,7 +1790,11 @@ def plot_merge_panel(
         stats = entry.get("stats", {})
         staging_label = entry.get("staging_label", "Staging")
         if stats:
-            _pct = 100 * stats.get("n_matched", 0) / stats["n_therapy"] if stats.get("n_therapy") else 0
+            _pct = (
+                100 * stats.get("n_matched", 0) / stats["n_therapy"]
+                if stats.get("n_therapy")
+                else 0
+            )
             _say(
                 f"[merge_panel]   {entry['title']:<30}: "
                 f"{stats.get('n_matched', 0):>7,}/{stats.get('n_therapy', 0):>7,} gematcht "
@@ -1628,7 +1816,9 @@ def plot_merge_panel(
         ax.hist(data, bins=bin_edges, color=hist_color, edgecolor="white", linewidth=0.4)
         if log_y:
             ax.set_yscale("log")
-        ax.set_title(entry["title"], fontsize=PLOT_CONFIG["fontsize_legend"], fontweight="bold", pad=5)
+        ax.set_title(
+            entry["title"], fontsize=PLOT_CONFIG["fontsize_legend"], fontweight="bold", pad=5
+        )
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(axis="y", linestyle="--", alpha=0.35)
@@ -1636,7 +1826,10 @@ def plot_merge_panel(
         if row == 2:
             ax.set_xlabel("Delta (Months)", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
         if col == 0:
-            ax.set_ylabel("Count (log)" if log_y else "Count", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
+            ax.set_ylabel(
+                "Count (log)" if log_y else "Count",
+                fontsize=PLOT_CONFIG["fontsize_annotation_small"],
+            )
         if stats:
             ax.text(
                 0.98,
@@ -1655,7 +1848,9 @@ def plot_merge_panel(
     if PLOT_CONFIG["show_titles"]:
         fig.suptitle(
             "Time Delta: Nearest Staging before Therapy",
-            fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01
+            fontsize=PLOT_CONFIG["fontsize_subplot_title"],
+            fontweight="bold",
+            y=1.01,
         )
     fig.tight_layout()
     if save_path is not None:
@@ -1743,7 +1938,12 @@ def plot_sweep_panel(
                 )
                 ax.scatter(hl, hl_y, color="red", s=50, zorder=5)
         n_str = f"  (n={n_total:,})" if n_total else ""
-        ax.set_title(f"{therapy}  ×  {pair}{n_str}", fontsize=PLOT_CONFIG["fontsize_legend"], fontweight="bold", pad=5)
+        ax.set_title(
+            f"{therapy}  ×  {pair}{n_str}",
+            fontsize=PLOT_CONFIG["fontsize_legend"],
+            fontweight="bold",
+            pad=5,
+        )
         if row == 2:
             ax.set_xlabel("Tolerance (months)", fontsize=PLOT_CONFIG["fontsize_annotation_small"])
         if col == 0:
@@ -1752,7 +1952,9 @@ def plot_sweep_panel(
     if PLOT_CONFIG["show_titles"]:
         fig.suptitle(
             "Tolerance Sweep — Match Rate by Therapy × Staging",
-            fontsize=PLOT_CONFIG["fontsize_subplot_title"], fontweight="bold", y=1.01
+            fontsize=PLOT_CONFIG["fontsize_subplot_title"],
+            fontweight="bold",
+            y=1.01,
         )
     if save_plot:
         save_path = Path(save_dir)
