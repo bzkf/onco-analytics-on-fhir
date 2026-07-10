@@ -650,20 +650,20 @@ else:
 # # Merge-/1-Wochen-Logik bereits in der CSV umgesetzt). MUST mischt sich NICHT
 # # mit oBDS – beide laufen parallel. Zeitspalte wird auf die gemeinsame
 # # UICC-Zeitspalte umbenannt.
-# df_uicc_must = (
-#     df_must_uicc_all[["ID", "RESULTING_UICC", "site", "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE"]]
-#     .rename(columns={
-#         "ID": "condition_id_hash",
-#         "RESULTING_UICC": "uicc_tnm",
-#         "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE": "months_between_asserted_uicc_tnm_date",
-#     })
-#     .pipe(lambda d: d[d["condition_id_hash"].isin(cond_ids_gk)])
-#     .reset_index(drop=True)
-# )
-# df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
-# df_uicc_must = df_uicc_must.dropna(
-#     subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
-# )
+df_uicc_must = (
+    df_must_uicc_all[["ID", "RESULTING_UICC", "site", "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE"]]
+    .rename(columns={
+        "ID": "condition_id_hash",
+        "RESULTING_UICC": "uicc_tnm",
+        "MONTHS_BETWEEN_ASSERTED_PARENT_TNM_DATE": "months_between_asserted_uicc_tnm_date",
+    })
+    .pipe(lambda d: d[d["condition_id_hash"].isin(cond_ids_gk)])
+    .reset_index(drop=True)
+)
+df_uicc_must["uicc_tnm"] = df_uicc_must["uicc_tnm"].fillna("missing")
+df_uicc_must = df_uicc_must.dropna(
+    subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]
+)
 # print('df_uicc_must = df_uicc_must.dropna(subset=["uicc_tnm", "condition_id_hash", "months_between_asserted_uicc_tnm_date"]')
 # print('Wegen Right Join und sonst nicht nutzbaren Werten')
 #
