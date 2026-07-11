@@ -37,7 +37,7 @@ services:
       - hive-metastore-db-data:/var/lib/postgresql:rw
 
   hive-metastore:
-    image: ghcr.io/miracum/util-images/hive-metastore:v1.3.2@sha256:070c65748b0101133344b71a03ef427283c2c20a08783f98bd530ede4053cadf
+    image: ghcr.io/miracum/util-images/hive-metastore:v1.3.3@sha256:14fbdf84706986894a4dafbf4963147bad6bf5f155ce0381c0292424932bdc50
     ipc: none
     security_opt:
       - "no-new-privileges:true"
