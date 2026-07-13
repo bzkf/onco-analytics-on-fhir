@@ -1593,6 +1593,20 @@ class AMLStudy:
             "condition_patient_reference"
         ].apply(lambda x: crypto_hash(x))
 
+        # Build a hash -> original patient_mrn lookup table before the column below gets
+        # hashed in place. This is kept outside de_identified_dir/de_identified_base_dir so
+        # it is never picked up by the zip step and never ships with the de-identified export.
+        patient_mrn_lookup = patients_with_diagnoses[["patient_mrn"]].dropna().drop_duplicates()
+        patient_mrn_lookup["patient_mrn_hash"] = patient_mrn_lookup["patient_mrn"].apply(
+            crypto_hash_nullable
+        )
+        patient_mrn_lookup_dir = Path(self.output_dir) / "patient_mrn_lookup"
+        patient_mrn_lookup_dir.mkdir(parents=True, exist_ok=True)
+        patient_mrn_lookup.to_csv(
+            patient_mrn_lookup_dir / f"{self.settings.location.lower()}_aml_patient_mrn_lookup.csv",
+            index=False,
+        )
+
         patients_with_diagnoses["patient_mrn"] = patients_with_diagnoses["patient_mrn"].apply(
             crypto_hash_nullable
         )
