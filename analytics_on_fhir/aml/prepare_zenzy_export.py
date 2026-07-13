@@ -14,9 +14,9 @@ files = Path("data").rglob("*.xlsx")
 
 df = pd.concat((pd.read_excel(file, dtype=str) for file in files), ignore_index=True)
 
-df["Dosis"] = df["Dosis"].astype(str).str.replace("\n", "|")
-df["Dosierung"] = df["Dosierung"].astype(str).str.replace("\n", "|")
-df["Wirkstoff"] = df["Wirkstoff"].astype(str).str.replace("\n", "|")
+df["Dosis"] = df["Dosis"].fillna("").astype(str).str.replace("\n", "|", regex=False)
+df["Dosierung"] = df["Dosierung"].fillna("").astype(str).str.replace("\n", "|", regex=False)
+df["Wirkstoff"] = df["Wirkstoff"].fillna("").astype(str).str.replace("\n", "|", regex=False)
 
 today = datetime.datetime.now().strftime("%Y-%m-%d")
 
