@@ -198,7 +198,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "delta-spark", specifier = "==4.2.0" },
-    { name = "fhir-pyrate", specifier = "==0.2.4.post1" },
+    { name = "fhir-pyrate", specifier = "==0.2.5" },
     { name = "fsspec", specifier = "==2026.3.0" },
     { name = "graphviz", specifier = "==0.21" },
     { name = "lifelines", specifier = "==0.30.3" },
@@ -848,7 +848,7 @@ wheels = [
 
 [[package]]
 name = "fhir-pyrate"
-version = "0.2.4.post1"
+version = "0.2.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fhirpathpy" },
@@ -859,9 +859,9 @@ dependencies = [
     { name = "requests-cache" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/c2/2a9d9a1fdf9152550c943d64c18b7cc3328cef05cea8955a2aafd1615c3c/fhir_pyrate-0.2.4.post1.tar.gz", hash = "sha256:f2ca0abf56cca567da91108674032e44cfeddc329737c93715b784d261200a6f", size = 55682, upload-time = "2026-02-03T13:07:25.813Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/a8/dcb0bb358b5e4bb534830e93d3bb83a62bb6043975d730345736cf4f0c78/fhir_pyrate-0.2.5.tar.gz", hash = "sha256:5e1c81f19ba264dd8614e6add1562841f3f186cb28be45c5ee737ca1b69bf293", size = 57913, upload-time = "2026-07-09T13:20:23.672Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/6d/5f5cdb36c04bee7690ebb84cecae3abf7c67b568078c62791deab76597cf/fhir_pyrate-0.2.4.post1-py3-none-any.whl", hash = "sha256:5c9616ca0b14c9f46e10fcaff66b4005a292f1e8ac4905f7bf66feaa158c9f73", size = 45451, upload-time = "2026-02-03T13:07:27.19Z" },
+    { url = "https://files.pythonhosted.org/packages/30/e1/fe7bf7248db491acba9d18440719f003ea818f0f24aab9ec192dacd23818/fhir_pyrate-0.2.5-py3-none-any.whl", hash = "sha256:70d958bc3db0161ed0fac2aff5492c0aace0dcb58fbd07be10543bbeea0b9de7", size = 45585, upload-time = "2026-07-09T13:20:22.512Z" },
 ]
 
 [[package]]

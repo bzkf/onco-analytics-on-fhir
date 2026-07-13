@@ -19,7 +19,7 @@ dependencies = [
     "lifelines==0.30.3",
     "openpyxl==3.1.5",
     "xlsxwriter==3.2.9",
-    "fhir-pyrate==0.2.4.post1",
+    "fhir-pyrate==0.2.5",
     "more-itertools==10.8.0",
     "s3fs==2026.3.0",
     "fsspec==2026.3.0",
