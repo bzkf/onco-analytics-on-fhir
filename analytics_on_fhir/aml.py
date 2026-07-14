@@ -1135,13 +1135,10 @@ class AMLStudy:
 
         save_final_df(aml_conditions, self.settings, suffix="obds_conditions")
 
-        aml_patient_references = aml_conditions.select(
-            "condition_patient_reference"
-        ).distinct()
+        aml_patient_references = aml_conditions.select("condition_patient_reference").distinct()
 
         all_conditions = (
-            conditions
-            .join(
+            conditions.join(
                 aml_patient_references,
                 on="condition_patient_reference",
                 how="inner",
@@ -1164,11 +1161,9 @@ class AMLStudy:
             all_conditions.condition_patient_reference == patient_lookup.patient_id,
             "left",
         )
-        logger.info(
-            f"Found {all_conditions.count()} non-AML Conditions for all AML patients"
-        )
+        logger.info(f"Found {all_conditions.count()} non-AML Conditions for all AML patients")
         all_conditions.show()
-        
+
         save_final_df(all_conditions, self.settings, suffix="obds_all_conditions")
 
         deaths = self.data.view(
@@ -2079,7 +2074,9 @@ class AMLStudy:
             obds_all_conditions[column] = pd.to_datetime(
                 obds_all_conditions[column], errors="raise", format="ISO8601"
             )
-            obds_all_conditions[column] = obds_all_conditions[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+            obds_all_conditions[column] = obds_all_conditions[column] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
+            )
 
         obds_conditions.to_csv(de_identified_dir / "aml_obds_diagnoses.csv", index=False)
         obds_all_conditions.to_csv(de_identified_dir / "aml_obds_all_diagnoses.csv", index=False)
