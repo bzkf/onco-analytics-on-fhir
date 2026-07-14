@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.37.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.36.0...v2.37.0) (2026-07-14)
+
+
+### Features
+
+* include all diagnoses from FHIR + obds ([#561](https://github.com/bzkf/onco-analytics-on-fhir/issues/561)) ([550f77d](https://github.com/bzkf/onco-analytics-on-fhir/commit/550f77d18e672d334f57b4ef83e13201ea3f8bbe))
+* write lookup for mrn &lt;-&gt; hash lookup ([#559](https://github.com/bzkf/onco-analytics-on-fhir/issues/559)) ([a28dcf1](https://github.com/bzkf/onco-analytics-on-fhir/commit/a28dcf1eb59a7e4c1281657caad1a8e7fa30ea55))
+
+
+### Bug Fixes
+
+* obsessively cast and clean potentially numeric identifier.value ([#554](https://github.com/bzkf/onco-analytics-on-fhir/issues/554)) ([c15a7ed](https://github.com/bzkf/onco-analytics-on-fhir/commit/c15a7ed8d337c8600e92ecf1cae4a5207eb790ee))
+
 ## [2.36.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.35.3...v2.36.0) (2026-07-06)
 
 
