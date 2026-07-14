@@ -22,6 +22,8 @@ DISABLE_LINTERS:
   - PYTHON_ISORT
   - PYTHON_FLAKE8
   - REPOSITORY_KINGFISHER
+  # disabled in favor of trivy for now
+  - REPOSITORY_OSV_SCANNER
 
 SHOW_ELAPSED_TIME: true
 
