@@ -466,6 +466,7 @@ class AMLStudy:
             )
 
         self.extract_encounters(patient_list=patient_list)
+        self.extract_conditions(patient_list=patient_list)
         self.extract_labs(patient_list=patient_list)
         self.extract_procedures(patient_list=patient_list)
 
@@ -533,6 +534,61 @@ class AMLStudy:
             logger.info(f"all_encs_df size: {enc_df.count()}. {enc_df.dtypes}")
         else:
             logger.info("Found no encounters to given patients.")
+
+    def extract_conditions(self, patient_list):
+        patient_df = pd.read_csv(os.path.join(self.output_dir, "aml_all_patients.csv"))
+        all_conds = []
+
+        for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
+            chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
+
+            cond_df_chunk = self.search.trade_rows_for_dataframe(
+                df=chunk_df,
+                resource_type="Condition",
+                request_params={
+                    "_count": self.settings.fhir.page_count,
+                    "_elements": "subject, code, recordedDate, onset, encounter",
+                },
+                df_constraints={
+                    "subject": "subject_list",
+                },
+                with_ref=False,
+                fhir_paths=[
+                    ("condition_id", "id"),
+                    ("all_condition_patient_reference", "subject.reference"),
+                    (
+                        "icd_code",
+                        f"code.coding.where(system='{FHIR_CODE_SYSTEM_ICD10}')" + ".first().code",
+                    ),
+                    ("diagnosis_recordedDate", "recordedDate[0]"),
+                    ("diagnosis_onsetDateTime", "onsetDateTime"),
+                    ("condition_encounter_reference", "encounter.reference"),
+                ],
+            )
+
+            if len(cond_df_chunk) > 0:
+                all_conds.append(cond_df_chunk)
+
+        if all_conds:
+            con_df = pd.concat(all_conds, ignore_index=True)
+
+            patient_mrn_lookup = (
+                patient_df[["condition_patient_reference", "patient_mrn"]]
+                .assign(patient_mrn=lambda x: x["patient_mrn"].astype(str))
+                .sort_values("patient_mrn")
+                .drop_duplicates(subset=["condition_patient_reference"], keep="first")
+                .set_index("condition_patient_reference")["patient_mrn"]
+            )
+
+            con_df["patient_mrn"] = con_df["all_condition_patient_reference"].map(
+                patient_mrn_lookup
+            )
+
+            con_df.to_csv(os.path.join(self.output_dir, "aml_all_conditions.csv"), index=False)
+
+            logger.info(f"all_conds_df size: {con_df.count()}. {con_df.dtypes}")
+        else:
+            logger.info("Found no conditions to given patients.")
 
     def extract_labs(self, patient_list):
         patient_df = pd.read_csv(
@@ -1101,22 +1157,51 @@ class AMLStudy:
             (HERE / "icd_codes_aml.csv").as_posix(), header=True
         )
 
-        conditions = conditions.join(
+        aml_conditions = conditions.join(
             icd_codes_aml, conditions.icd_code == icd_codes_aml.icd_code, "inner"
         )
 
-        conditions = conditions.join(
+        aml_conditions = aml_conditions.join(
             patients.select("patient_id", "patient_mrn"),
-            conditions.condition_patient_reference == patients.patient_id,
+            aml_conditions.condition_patient_reference == patients.patient_id,
             "left",
         )
 
-        logger.info(f"Found {conditions.count()} Conditions with AML ICD code")
-        conditions.show()
+        logger.info(f"Found {aml_conditions.count()} Conditions with AML ICD code")
+        aml_conditions.show()
 
-        save_final_df(conditions, self.settings, suffix="obds_conditions")
+        save_final_df(aml_conditions, self.settings, suffix="obds_conditions")
 
-        aml_patient_references = conditions.select("condition_patient_reference").distinct()
+        aml_patient_references = aml_conditions.select("condition_patient_reference").distinct()
+
+        all_conditions = (
+            conditions.join(
+                aml_patient_references,
+                on="condition_patient_reference",
+                how="inner",
+            )
+            # AML-Diagnosen entfernen
+            .join(
+                icd_codes_aml.select("icd_code").distinct(),
+                on="icd_code",
+                how="left_anti",
+            )
+        )
+
+        patient_lookup = patients.select(
+            "patient_id",
+            "patient_mrn",
+        )
+
+        all_conditions = all_conditions.join(
+            patient_lookup,
+            all_conditions.condition_patient_reference == patient_lookup.patient_id,
+            "left",
+        )
+        logger.info(f"Found {all_conditions.count()} non-AML Conditions for all AML patients")
+        all_conditions.show()
+
+        save_final_df(all_conditions, self.settings, suffix="obds_all_conditions")
 
         deaths = self.data.view(
             "Observation",
@@ -1662,6 +1747,35 @@ class AMLStudy:
 
         patients_with_diagnoses.to_csv(de_identified_dir / "aml_diagnoses.csv", index=False)
 
+        # FHIR Conditions
+        fhir_conditions = pd.read_csv(
+            os.path.join(self.output_dir, "aml_all_conditions.csv"),
+            sep=",",
+            dtype={"patient_mrn": str},
+        )
+
+        columns_to_hash = [
+            "condition_id",
+            "all_condition_patient_reference",
+            "patient_mrn",
+        ]
+
+        for column in columns_to_hash:
+            fhir_conditions[column] = fhir_conditions[column].apply(crypto_hash_nullable)
+
+        date_cols = [
+            "diagnosis_recordedDate",
+            "diagnosis_onsetDateTime",
+        ]
+        for col in date_cols:
+            if col in fhir_conditions.columns:
+                fhir_conditions[col] = pd.to_datetime(
+                    fhir_conditions[col], errors="coerce", utc=True, format="ISO8601"
+                )
+                fhir_conditions[col] = fhir_conditions[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        fhir_conditions.to_csv(de_identified_dir / "aml_fhir_conditions.csv", index=False)
+
         # FHIR Encounters
         fhir_encounters = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_encounters.csv"),
@@ -1983,6 +2097,12 @@ class AMLStudy:
             dtype={"patient_mrn": "string"},
         )
 
+        obds_all_conditions = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_all_conditions.csv"),
+            sep=";",
+            dtype={"patient_mrn": str},
+        )
+
         columns_to_hash = [
             "condition_id",
             "condition_patient_reference",
@@ -1992,6 +2112,7 @@ class AMLStudy:
 
         for column in columns_to_hash:
             obds_conditions[column] = obds_conditions[column].apply(crypto_hash_nullable)
+            obds_all_conditions[column] = obds_all_conditions[column].apply(crypto_hash_nullable)
 
         columns_to_shift = [
             "diagnosis_recordedDate",
@@ -2004,7 +2125,15 @@ class AMLStudy:
             )
             obds_conditions[column] = obds_conditions[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
+            obds_all_conditions[column] = pd.to_datetime(
+                obds_all_conditions[column], errors="raise", format="ISO8601"
+            )
+            obds_all_conditions[column] = obds_all_conditions[column] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
+            )
+
         obds_conditions.to_csv(de_identified_dir / "aml_obds_diagnoses.csv", index=False)
+        obds_all_conditions.to_csv(de_identified_dir / "aml_obds_all_diagnoses.csv", index=False)
 
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
