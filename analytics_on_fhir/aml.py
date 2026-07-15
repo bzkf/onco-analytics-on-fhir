@@ -144,6 +144,8 @@ DATA_DICTIONARY = {
         "procedure_ops_code": "OPS code of the Procedure",
         "procedure_ops_display": "Display value of the OPS code",
         "procedure_target_bodyregion": "Target body region of the procedure",
+        "procedure_used_code_text": "Free-text description of items/materials used during the "
+        + "procedure (Procedure.usedCode.text)",
     },
     "df_obds_weitere_klassifikationen": {
         "observation_id": "Unique identifier of the additional classification Observation resource",
@@ -1550,6 +1552,10 @@ class AMLStudy:
                             + f".where(system = '{FHIR_CODE_SYSTEM_BODYSITE}')"
                             + ".code",
                             "name": "procedure_target_bodyregion",
+                        },
+                        {
+                            "path": "usedCode.first().text",
+                            "name": "procedure_used_code_text",
                         },
                     ],
                 }
