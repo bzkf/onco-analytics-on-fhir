@@ -1173,6 +1173,9 @@ class AMLStudy:
         save_final_df(aml_conditions, self.settings, suffix="obds_conditions")
 
         aml_patient_references = aml_conditions.select("condition_patient_reference").distinct()
+        aml_condition_ids = [
+            row["condition_id"] for row in aml_conditions.select("condition_id").collect()
+        ]
 
         all_conditions = (
             conditions.join(
@@ -1333,6 +1336,10 @@ class AMLStudy:
                             "name": "observation_patient_reference",
                         },
                         {
+                            "path": "focus.first().getReferenceKey()",
+                            "name": "observation_condition_reference",
+                        },
+                        {
                             "path": "effective.ofType(dateTime)",
                             "name": "effective_dateTime",
                         },
@@ -1356,11 +1363,13 @@ class AMLStudy:
 
         progressions.show()
 
-        progressions = progressions.join(
-            aml_patient_references,
-            progressions.observation_patient_reference == conditions.condition_patient_reference,
-            "inner",
-        ).select(progressions["*"])
+        # Verlauf-Observations reference the Condition they belong to via
+        # Observation.focus. Filter on that directly rather than on the patient
+        # reference, since a patient's progressions otherwise include every tumor
+        # they have, not just the AML diagnosis.
+        progressions = progressions.filter(
+            F.col("observation_condition_reference").isin(aml_condition_ids)
+        )
 
         progressions = progressions.join(
             patients.select("patient_id", "patient_mrn"),
@@ -1489,7 +1498,6 @@ class AMLStudy:
             "left",
         )
 
-        aml_condition_ids = [row["condition_id"] for row in conditions.collect()]
         filtered_medication_statements = medication_statements.filter(
             F.col("condition_id").isin(aml_condition_ids)
         )
