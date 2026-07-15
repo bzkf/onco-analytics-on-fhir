@@ -2155,6 +2155,62 @@ class AMLStudy:
         obds_conditions.to_csv(de_identified_dir / "aml_obds_diagnoses.csv", index=False)
         obds_all_conditions.to_csv(de_identified_dir / "aml_obds_all_diagnoses.csv", index=False)
 
+        # obds systemtherapien
+        obds_systemtherapien = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_systemtherapien.csv"),
+            sep=";",
+            dtype={"patient_mrn": "string"},
+        )
+        obds_systemtherapien["medication_start_date"] = pd.to_datetime(
+            obds_systemtherapien["medication_start_date"], errors="raise", format="ISO8601"
+        )
+
+        columns_to_hash = [
+            "medication_statement_id",
+            "patient_reference",
+            "condition_id",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_systemtherapien[column] = obds_systemtherapien[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["medication_start_date"]
+        for column in columns_to_shift:
+            obds_systemtherapien[column] = obds_systemtherapien[column] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
+            )
+
+        obds_systemtherapien.to_csv(de_identified_dir / "aml_obds_systemtherapien.csv", index=False)
+
+        # obds procedures
+        obds_procedures = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_procedures.csv"),
+            sep=";",
+            dtype={"patient_mrn": "string"},
+        )
+
+        columns_to_hash = [
+            "procedure_id",
+            "procedure_patient_reference",
+            "procedure_condition_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_procedures[column] = obds_procedures[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["performed_period_start", "performed_period_end"]
+        for column in columns_to_shift:
+            obds_procedures[column] = pd.to_datetime(
+                obds_procedures[column], errors="raise", format="ISO8601"
+            )
+            obds_procedures[column] = obds_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        obds_procedures.to_csv(de_identified_dir / "aml_obds_procedures.csv", index=False)
+
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
         if sap_medication_path and (
