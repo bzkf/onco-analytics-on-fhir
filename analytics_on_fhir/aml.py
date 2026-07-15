@@ -1522,6 +1522,10 @@ class AMLStudy:
                             "name": "procedure_patient_reference",
                         },
                         {
+                            "path": "reasonReference.getReferenceKey()",
+                            "name": "procedure_condition_reference",
+                        },
+                        {
                             "path": "performed.ofType(Period).start",
                             "name": "performed_period_start",
                         },
@@ -1560,11 +1564,13 @@ class AMLStudy:
 
         procedures.show()
 
-        procedures = procedures.join(
-            aml_patient_references,
-            procedures.procedure_patient_reference == conditions.condition_patient_reference,
-            "inner",
-        ).select(procedures["*"])
+        # Procedures reference the tumor diagnosis they were performed for via
+        # Procedure.reasonReference. Filter on that directly rather than on the
+        # patient reference, since a patient's procedures otherwise include every
+        # tumor they have, not just the AML diagnosis.
+        procedures = procedures.filter(
+            F.col("procedure_condition_reference").isin(aml_condition_ids)
+        )
 
         procedures = procedures.join(
             patients.select("patient_id", "patient_mrn"),
