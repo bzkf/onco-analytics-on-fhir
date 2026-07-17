@@ -10,9 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-# Cato CSV exports don't always contain the same set of columns, so every
-# source column is looked up defensively instead of assumed to be present.
-DATETIME_FORMAT = "%d %m %Y %H:%M"
+DATETIME_FORMAT = "%d.%m.%Y %H:%M"
 
 
 def column_or_blank(df: pd.DataFrame, name: str) -> pd.Series:
@@ -22,7 +20,7 @@ def column_or_blank(df: pd.DataFrame, name: str) -> pd.Series:
 
 
 def split_datetime(series: pd.Series) -> tuple[pd.Series, pd.Series]:
-    parsed = pd.to_datetime(series, format=DATETIME_FORMAT, errors="coerce")
+    parsed = pd.to_datetime(series, format=DATETIME_FORMAT, errors="raise")
     date = parsed.dt.strftime("%d.%m.%Y").fillna("")
     time = parsed.dt.strftime("%H:%M").fillna("")
     return date, time
@@ -73,6 +71,7 @@ today = datetime.datetime.now().strftime("%Y-%m-%d")
 
 out.to_csv(
     f"data/{today}-cato-export-zenzy-formatted.csv",
+    header=True,
     sep=",",
     index=False,
     quoting=csv.QUOTE_ALL,
