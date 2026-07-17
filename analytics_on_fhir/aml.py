@@ -144,6 +144,8 @@ DATA_DICTIONARY = {
         "procedure_ops_code": "OPS code of the Procedure",
         "procedure_ops_display": "Display value of the OPS code",
         "procedure_target_bodyregion": "Target body region of the procedure",
+        "procedure_used_code_text": "Free-text description of items/materials used during the "
+        + "procedure (Procedure.usedCode.text)",
     },
     "df_obds_weitere_klassifikationen": {
         "observation_id": "Unique identifier of the additional classification Observation resource",
@@ -1173,6 +1175,9 @@ class AMLStudy:
         save_final_df(aml_conditions, self.settings, suffix="obds_conditions")
 
         aml_patient_references = aml_conditions.select("condition_patient_reference").distinct()
+        aml_condition_ids = [
+            row["condition_id"] for row in aml_conditions.select("condition_id").collect()
+        ]
 
         all_conditions = (
             conditions.join(
@@ -1333,6 +1338,10 @@ class AMLStudy:
                             "name": "observation_patient_reference",
                         },
                         {
+                            "path": "focus.first().getReferenceKey()",
+                            "name": "observation_condition_reference",
+                        },
+                        {
                             "path": "effective.ofType(dateTime)",
                             "name": "effective_dateTime",
                         },
@@ -1356,11 +1365,13 @@ class AMLStudy:
 
         progressions.show()
 
-        progressions = progressions.join(
-            aml_patient_references,
-            progressions.observation_patient_reference == conditions.condition_patient_reference,
-            "inner",
-        ).select(progressions["*"])
+        # Verlauf-Observations reference the Condition they belong to via
+        # Observation.focus. Filter on that directly rather than on the patient
+        # reference, since a patient's progressions otherwise include every tumor
+        # they have, not just the AML diagnosis.
+        progressions = progressions.filter(
+            F.col("observation_condition_reference").isin(aml_condition_ids)
+        )
 
         progressions = progressions.join(
             patients.select("patient_id", "patient_mrn"),
@@ -1489,7 +1500,6 @@ class AMLStudy:
             "left",
         )
 
-        aml_condition_ids = [row["condition_id"] for row in conditions.collect()]
         filtered_medication_statements = medication_statements.filter(
             F.col("condition_id").isin(aml_condition_ids)
         )
@@ -1512,6 +1522,10 @@ class AMLStudy:
                         {
                             "path": "subject.getReferenceKey()",
                             "name": "procedure_patient_reference",
+                        },
+                        {
+                            "path": "reasonReference.getReferenceKey()",
+                            "name": "procedure_condition_reference",
                         },
                         {
                             "path": "performed.ofType(Period).start",
@@ -1539,6 +1553,10 @@ class AMLStudy:
                             + ".code",
                             "name": "procedure_target_bodyregion",
                         },
+                        {
+                            "path": "usedCode.first().text",
+                            "name": "procedure_used_code_text",
+                        },
                     ],
                 }
             ],
@@ -1552,11 +1570,13 @@ class AMLStudy:
 
         procedures.show()
 
-        procedures = procedures.join(
-            aml_patient_references,
-            procedures.procedure_patient_reference == conditions.condition_patient_reference,
-            "inner",
-        ).select(procedures["*"])
+        # Procedures reference the tumor diagnosis they were performed for via
+        # Procedure.reasonReference. Filter on that directly rather than on the
+        # patient reference, since a patient's procedures otherwise include every
+        # tumor they have, not just the AML diagnosis.
+        procedures = procedures.filter(
+            F.col("procedure_condition_reference").isin(aml_condition_ids)
+        )
 
         procedures = procedures.join(
             patients.select("patient_id", "patient_mrn"),
@@ -2134,6 +2154,62 @@ class AMLStudy:
 
         obds_conditions.to_csv(de_identified_dir / "aml_obds_diagnoses.csv", index=False)
         obds_all_conditions.to_csv(de_identified_dir / "aml_obds_all_diagnoses.csv", index=False)
+
+        # obds systemtherapien
+        obds_systemtherapien = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_systemtherapien.csv"),
+            sep=";",
+            dtype={"patient_mrn": "string"},
+        )
+        obds_systemtherapien["medication_start_date"] = pd.to_datetime(
+            obds_systemtherapien["medication_start_date"], errors="raise", format="ISO8601"
+        )
+
+        columns_to_hash = [
+            "medication_statement_id",
+            "patient_reference",
+            "condition_id",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_systemtherapien[column] = obds_systemtherapien[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["medication_start_date"]
+        for column in columns_to_shift:
+            obds_systemtherapien[column] = obds_systemtherapien[column] + pd.to_timedelta(
+                DAY_SHIFT, unit="D"
+            )
+
+        obds_systemtherapien.to_csv(de_identified_dir / "aml_obds_systemtherapien.csv", index=False)
+
+        # obds procedures
+        obds_procedures = pd.read_csv(
+            os.path.join(self.output_dir, "df_obds_procedures.csv"),
+            sep=";",
+            dtype={"patient_mrn": "string"},
+        )
+
+        columns_to_hash = [
+            "procedure_id",
+            "procedure_patient_reference",
+            "procedure_condition_reference",
+            "patient_mrn",
+            "patient_id",
+        ]
+
+        for column in columns_to_hash:
+            obds_procedures[column] = obds_procedures[column].apply(crypto_hash_nullable)
+
+        columns_to_shift = ["performed_period_start", "performed_period_end"]
+        for column in columns_to_shift:
+            obds_procedures[column] = pd.to_datetime(
+                obds_procedures[column], errors="raise", format="ISO8601"
+            )
+            obds_procedures[column] = obds_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+        obds_procedures.to_csv(de_identified_dir / "aml_obds_procedures.csv", index=False)
 
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
