@@ -72,7 +72,7 @@ today = datetime.datetime.now().strftime("%Y-%m-%d")
 out.to_csv(
     f"data/{today}-cato-export-zenzy-formatted.csv",
     header=True,
-    sep=",",
+    sep=";",
     index=False,
     quoting=csv.QUOTE_ALL,
     escapechar="\\",
