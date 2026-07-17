@@ -50,7 +50,7 @@ out = pd.DataFrame(
         "Herstellungszeit": herstellungszeit,
         "Privatpatient": "",
         "Patienten-ID": "",
-        "KIS-Patienten-ID": column_or_blank(df, "Pat.Nr."),
+        "KIS-Patienten-ID": column_or_blank(df, "Pat.Nr.").str.replace(r"^0+", "", regex=True),
         "Kostenstellennummer": "",
         "Station": column_or_blank(df, "Station"),
         "Wirkstoff": column_or_blank(df, "Arzneiform"),
