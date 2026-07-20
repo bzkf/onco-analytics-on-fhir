@@ -669,7 +669,9 @@ class AMLStudy:
         ("medication_id", "Medication.id"),
         (
             "medication_atc_code",
-            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".code",
+            "code.coding"
+            + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
+            + ".code",
         ),
         (
             "medication_code_text",
@@ -850,9 +852,9 @@ class AMLStudy:
                 ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
                 (
-                    "medicationrequest_codeableconcept_code",
+                    "medication_codeableconcept_code",
                     "MedicationRequest.medicationCodeableConcept.coding."
-                    + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}')"
+                    + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
                     + ".code",
                 ),
             ],
@@ -870,6 +872,12 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
+                (
+                    "medication_codeableconcept_code",
+                    "MedicationStatement.medicationCodeableConcept.coding."
+                    + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
+                    + ".code",
+                ),
             ],
         )
 
@@ -885,6 +893,12 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
+                (
+                    "medication_codeableconcept_code",
+                    "MedicationAdministration.medicationCodeableConcept.coding."
+                    + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
+                    + ".code",
+                ),
             ],
         )
 
@@ -954,7 +968,7 @@ class AMLStudy:
         if "period_end" not in req_stat_admin_df.columns:
             req_stat_admin_df["period_end"] = pd.NaT
 
-        if "medicationrequest_codeableconcept_code" in req_stat_admin_df.columns:
+        if "medication_codeableconcept_code" in req_stat_admin_df.columns:
             logger.info("Mapping ATC codes to display values using Excel sheet")
             atc_mapping_df = pd.read_excel(
                 HERE / "ATC GKV-AI 2026.xlsx",
@@ -965,11 +979,11 @@ class AMLStudy:
             req_stat_admin_df = req_stat_admin_df.merge(
                 atc_mapping_df.rename(
                     columns={
-                        "ATC-Code": "medicationrequest_codeableconcept_code",
-                        "ATC-Bedeutung": "medicationrequest_codeableconcept_display",
+                        "ATC-Code": "medication_codeableconcept_code",
+                        "ATC-Bedeutung": "medication_codeableconcept_display",
                     }
                 ),
-                on="medicationrequest_codeableconcept_code",
+                on="medication_codeableconcept_code",
                 how="left",
             )
 
