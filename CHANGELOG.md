@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.38.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.37.0...v2.38.0) (2026-07-20)
+
+
+### Features
+
+* added cato export preparation script ([#564](https://github.com/bzkf/onco-analytics-on-fhir/issues/564)) ([9138ac3](https://github.com/bzkf/onco-analytics-on-fhir/commit/9138ac39ee4d9871b221a3e31db899b8073a3509))
+* include ATC code from MedicationRequest ([#563](https://github.com/bzkf/onco-analytics-on-fhir/issues/563)) ([cb47850](https://github.com/bzkf/onco-analytics-on-fhir/commit/cb478500077a774a04f01e219d0601a8427bedcd))
+
+
+### Bug Fixes
+
+* filter all oBDS-sourced data by diagnosis, not patient id ([#562](https://github.com/bzkf/onco-analytics-on-fhir/issues/562)) ([15ceb34](https://github.com/bzkf/onco-analytics-on-fhir/commit/15ceb34b658cd75438c808141b03a316ae00f0a9))
+
 ## [2.37.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.36.0...v2.37.0) (2026-07-14)
 
 
