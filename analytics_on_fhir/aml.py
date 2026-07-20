@@ -10,6 +10,7 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
+from decimal import Decimal
 
 import numpy as np
 import pandas as pd
@@ -40,6 +41,7 @@ FHIR_CODE_SYSTEM_ECOG = "https://www.medizininformatik-initiative.de/fhir/ext/mo
 FHIR_CODE_SYSTEM_VERLAUF_GESAMTBEURTEILUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-verlauf-gesamtbeurteilung"
 FHIR_CODE_SYSTEM_OPS = "http://fhir.de/CodeSystem/bfarm/ops"
 FHIR_CODE_SYSTEM_ATC = "http://fhir.de/CodeSystem/bfarm/atc"
+FHIR_CODE_SYSTEM_ATC_US = "http://www.whocc.no/atc"
 FHIR_CODE_SYSTEM_PZN = "http://fhir.de/CodeSystem/ifa/pzn"
 FHIR_CODE_SYSTEM_BODYSITE = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
 
@@ -669,7 +671,9 @@ class AMLStudy:
         ("medication_id", "Medication.id"),
         (
             "medication_atc_code",
-            "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_ATC}')" + ".code",
+            "code.coding"
+            + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
+            + ".code",
         ),
         (
             "medication_code_text",
@@ -747,7 +751,16 @@ class AMLStudy:
                     for col in resource_chunk.columns:
                         if resource_chunk[col].dtype == "object":
                             resource_chunk[col] = resource_chunk[col].apply(
-                                lambda v: json.dumps(v) if isinstance(v, (dict, list)) else v
+                                lambda v: (
+                                    json.dumps(
+                                        v,
+                                        default=lambda o: (
+                                            float(o) if isinstance(o, Decimal) else str(o)
+                                        ),
+                                    )
+                                    if isinstance(v, (dict, list))
+                                    else v
+                                )
                             )
                     resource_chunk.to_parquet(
                         resource_dir / f"chunk_{chunk_counter}.parquet", index=False
@@ -758,7 +771,16 @@ class AMLStudy:
                     for col in med_chunk.columns:
                         if med_chunk[col].dtype == "object":
                             med_chunk[col] = med_chunk[col].apply(
-                                lambda v: json.dumps(v) if isinstance(v, (dict, list)) else v
+                                lambda v: (
+                                    json.dumps(
+                                        v,
+                                        default=lambda o: (
+                                            float(o) if isinstance(o, Decimal) else str(o)
+                                        ),
+                                    )
+                                    if isinstance(v, (dict, list))
+                                    else v
+                                )
                             )
                     med_chunk.to_parquet(
                         medication_dir / f"chunk_{chunk_counter}.parquet", index=False
@@ -831,6 +853,12 @@ class AMLStudy:
                     + "| MedicationRequest.authoredOn",
                 ),
                 ("dosage", "MedicationRequest.dosageInstruction"),
+                (
+                    "medication_codeableconcept_code",
+                    "MedicationRequest.medicationCodeableConcept.coding."
+                    + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
+                    + ".code",
+                ),
             ],
         )
 
@@ -846,6 +874,12 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationStatement.effectivePeriod.end"),
                 ("dosage", "MedicationStatement.dosage"),
+                (
+                    "medication_codeableconcept_code",
+                    "MedicationStatement.medicationCodeableConcept.coding."
+                    + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
+                    + ".code",
+                ),
             ],
         )
 
@@ -861,6 +895,12 @@ class AMLStudy:
                 ),
                 ("period_end", "MedicationAdministration.effectivePeriod.end"),
                 ("dosage", "MedicationAdministration.dosage"),
+                (
+                    "medication_codeableconcept_code",
+                    "MedicationAdministration.medicationCodeableConcept.coding."
+                    + f".where(system = '{FHIR_CODE_SYSTEM_ATC_US}' or system = '{FHIR_CODE_SYSTEM_ATC}')"
+                    + ".code",
+                ),
             ],
         )
 
@@ -929,6 +969,25 @@ class AMLStudy:
 
         if "period_end" not in req_stat_admin_df.columns:
             req_stat_admin_df["period_end"] = pd.NaT
+
+        if "medication_codeableconcept_code" in req_stat_admin_df.columns:
+            logger.info("Mapping ATC codes to display values using Excel sheet")
+            atc_mapping_df = pd.read_excel(
+                HERE / "ATC GKV-AI 2026.xlsx",
+                sheet_name="WIdO-Index 2026 alphabetisch",
+                usecols=["ATC-Code", "ATC-Bedeutung"],
+            )
+            logger.info("Loaded ATC mapping with {} entries", len(atc_mapping_df))
+            req_stat_admin_df = req_stat_admin_df.merge(
+                atc_mapping_df.rename(
+                    columns={
+                        "ATC-Code": "medication_codeableconcept_code",
+                        "ATC-Bedeutung": "medication_codeableconcept_display",
+                    }
+                ),
+                on="medication_codeableconcept_code",
+                how="left",
+            )
 
         req_stat_admin_df.to_csv(
             os.path.join(self.output_dir, "aml_all_med_reqs_stats_admins.csv"), index=False
