@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.39.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.38.0...v2.39.0) (2026-07-22)
+
+
+### Features
+
+* extract genetic variants ([#566](https://github.com/bzkf/onco-analytics-on-fhir/issues/566)) ([fb82726](https://github.com/bzkf/onco-analytics-on-fhir/commit/fb827266d08ffa7f3d195c976d5435b69f7a5bab))
+
+
+### Bug Fixes
+
+* convert object and Decimal columns correctly ([#567](https://github.com/bzkf/onco-analytics-on-fhir/issues/567)) ([9d0abd6](https://github.com/bzkf/onco-analytics-on-fhir/commit/9d0abd68ce650faf8bf2fb0f1e7ed3121a233a12))
+
 ## [2.38.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.37.0...v2.38.0) (2026-07-20)
 
 
