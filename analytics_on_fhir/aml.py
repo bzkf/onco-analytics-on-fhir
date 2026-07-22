@@ -1793,7 +1793,7 @@ class AMLStudy:
             aml_patient_references,
             genetic_variant.observation_patient_reference == conditions.condition_patient_reference,
             "inner",
-        )
+        ).select(genetic_variant["*"])
 
         genetic_variant = genetic_variant.join(
             patients.select("patient_id", "patient_mrn"),
