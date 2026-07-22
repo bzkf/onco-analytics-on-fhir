@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import requests
 import urllib3
-from fhir_constants import FHIR_SYSTEM_LOINC, FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
+from fhir_constants import FHIR_SYSTEMS_CONDITION_ASSERTED_DATE
 from fhir_pyrate import Ahoy, Pirate
 from loguru import logger
 from more_itertools import chunked
@@ -44,7 +44,6 @@ FHIR_CODE_SYSTEM_ATC = "http://fhir.de/CodeSystem/bfarm/atc"
 FHIR_CODE_SYSTEM_ATC_US = "http://www.whocc.no/atc"
 FHIR_CODE_SYSTEM_PZN = "http://fhir.de/CodeSystem/ifa/pzn"
 FHIR_CODE_SYSTEM_BODYSITE = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
-FHIR_CODE_SYSTEM_GENETISCHE_VARIANTE_AUSPRAEGUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-genetische-variante-auspraegung"
 
 FHIR_PROFILE_WEITERE_KLASSIFIKATIONEN = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/StructureDefinition/mii-pr-onko-weitere-klassifikationen"
 
@@ -1745,74 +1744,6 @@ class AMLStudy:
             suffix="obds_vitalstatus",
         )
 
-        genetic_variant = self.data.view(
-            "Observation",
-            select=[
-                {
-                    "column": [
-                        {
-                            "path": "getResourceKey()",
-                            "name": "observation_id",
-                        },
-                        {
-                            "path": "subject.getReferenceKey()",
-                            "name": "observation_patient_reference",
-                        },
-                        {
-                            "path": "focus.first().getReferenceKey()",
-                            "name": "observation_condition_reference",
-                        },
-                        {
-                            "path": "effective.ofType(dateTime)",
-                            "name": "effective_dateTime",
-                        },
-                        {
-                            "path": "interpretation.coding.where(system = "
-                            + f"'{FHIR_CODE_SYSTEM_GENETISCHE_VARIANTE_AUSPRAEGUNG}').code",
-                            "name": "genetic_variant_trait",
-                        },
-                        {
-                            "path": "note.first().text",
-                            "name": "genetic_variant_name",
-                        },
-                    ],
-                }
-            ],
-            where=[
-                {
-                    "description": "Only genetic variant observations",
-                    "path": f"code.coding.where(system='{FHIR_SYSTEM_LOINC}' and code='69548-6')"
-                    + ".exists()",
-                }
-            ],
-        )
-
-        genetic_variant.show()
-
-        genetic_variant = genetic_variant.join(
-            aml_patient_references,
-            genetic_variant.observation_patient_reference == conditions.condition_patient_reference,
-            "inner",
-        )
-
-        genetic_variant = genetic_variant.join(
-            patients.select("patient_id", "patient_mrn"),
-            genetic_variant.observation_patient_reference == patients.patient_id,
-            "left",
-        )
-
-        logger.info(
-            f"Found {genetic_variant.count()} genetische variante observations with AML patient "
-            + "matches"
-        )
-        genetic_variant.show()
-
-        save_final_df(
-            genetic_variant,
-            self.settings,
-            suffix="obds_genetic_variant",
-        )
-
     def de_identify(self):
         CRYPTO_HASH_KEY = secrets.token_bytes(256)
         DAY_SHIFT = secrets.randbelow(61) - 30
@@ -1820,6 +1751,7 @@ class AMLStudy:
         def crypto_hash(s: str):
             if pd.isna(s):
                 return pd.NA
+
             return hmac.new(CRYPTO_HASH_KEY, s.encode("utf-8"), hashlib.sha256).hexdigest()
 
         def crypto_hash_nullable(value):
@@ -2337,35 +2269,6 @@ class AMLStudy:
             obds_procedures[column] = obds_procedures[column] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
         obds_procedures.to_csv(de_identified_dir / "aml_obds_procedures.csv", index=False)
-
-        # obds genetics
-        obds_genetic_variant = pd.read_csv(
-            os.path.join(self.output_dir, "df_obds_genetic_variant.csv"),
-            sep=";",
-            dtype={"patient_mrn": "string"},
-        )
-
-        columns_to_hash = [
-            "observation_id",
-            "observation_patient_reference",
-            "observation_condition_reference",
-            "patient_mrn",
-            "patient_id",
-        ]
-
-        for column in columns_to_hash:
-            obds_genetic_variant[column] = obds_genetic_variant[column].apply(crypto_hash_nullable)
-
-        columns_to_shift = ["effective_dateTime"]
-        for column in columns_to_shift:
-            obds_genetic_variant[column] = pd.to_datetime(
-                obds_genetic_variant[column], errors="raise", format="ISO8601"
-            )
-            obds_genetic_variant[column] = obds_genetic_variant[column] + pd.to_timedelta(
-                DAY_SHIFT, unit="D"
-            )
-
-        obds_genetic_variant.to_csv(de_identified_dir / "aml_obds_genetic_variant.csv", index=False)
 
         # SAP Medikation
         sap_medication_path = self.settings.aml.extra_medication_file
