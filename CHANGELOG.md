@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.39.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.39.0...v2.39.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* column length mismatch ([#570](https://github.com/bzkf/onco-analytics-on-fhir/issues/570)) ([f6f8732](https://github.com/bzkf/onco-analytics-on-fhir/commit/f6f873204f5c9e2f7665943ba2dd3bc4a4428373))
+
 ## [2.39.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.38.0...v2.39.0) (2026-07-22)
 
 
