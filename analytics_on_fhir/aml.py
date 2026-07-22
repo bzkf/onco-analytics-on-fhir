@@ -1588,14 +1588,6 @@ class AMLStudy:
                             "name": "procedure_condition_reference",
                         },
                         {
-                            "path": "performed.ofType(Period).start",
-                            "name": "performed_period_start",
-                        },
-                        {
-                            "path": "performed.ofType(Period).end",
-                            "name": "performed_period_end",
-                        },
-                        {
                             "path": "code.ofType(CodeableConcept).coding"
                             + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')"
                             + ".code",
@@ -1618,7 +1610,22 @@ class AMLStudy:
                             "name": "procedure_used_code_text",
                         },
                     ],
-                }
+                },
+                {
+                    # Pathling 9.3.1 hits a Spark internal assertion
+                    # ("length of provided names doesn't match the length of
+                    # output attributes") when both .start and .end are
+                    # selected directly from the same performed.ofType(Period)
+                    # expression in one column group. Extracting them via
+                    # forEachOrNull evaluates the shared subexpression once
+                    # and avoids the bug (OrNull keeps procedures that have no
+                    # performedPeriod instead of dropping them).
+                    "forEachOrNull": "performed.ofType(Period)",
+                    "column": [
+                        {"path": "start", "name": "performed_period_start"},
+                        {"path": "end", "name": "performed_period_end"},
+                    ],
+                },
             ],
             where=[
                 {

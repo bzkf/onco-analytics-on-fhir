@@ -1895,16 +1895,6 @@ def extract_systemtherapies(
                         "name": "therapy_type",
                     },
                     {
-                        "description": "Systemische Therapie Beginn",
-                        "path": "performed.ofType(Period).start",
-                        "name": "therapy_start_date",
-                    },
-                    {
-                        "description": "Systemische Therapie Ende",
-                        "path": "performed.ofType(Period).end",
-                        "name": "therapy_end_date",
-                    },
-                    {
                         "description": "Systemische Therapie Ende Grund",
                         "path": "outcome.coding"
                         ".where(system = "
@@ -1918,7 +1908,29 @@ def extract_systemtherapies(
                         "name": "therapy_protocol_text",
                     },
                 ],
-            }
+            },
+            {
+                # Pathling 9.3.1 hits a Spark internal assertion ("length of
+                # provided names doesn't match the length of output
+                # attributes") when both .start and .end are selected
+                # directly from the same performed.ofType(Period) expression
+                # in one column group. forEachOrNull evaluates the shared
+                # subexpression once and keeps procedures without a
+                # performedPeriod instead of dropping them.
+                "forEachOrNull": "performed.ofType(Period)",
+                "column": [
+                    {
+                        "description": "Systemische Therapie Beginn",
+                        "path": "start",
+                        "name": "therapy_start_date",
+                    },
+                    {
+                        "description": "Systemische Therapie Ende",
+                        "path": "end",
+                        "name": "therapy_end_date",
+                    },
+                ],
+            },
         ],
     )
 
@@ -2183,16 +2195,6 @@ def extract_radiotherapies(
                         "name": "stellung_op",  # sieht kaputt aus to do
                     },
                     {
-                        "description": "Radio Therapy Start",
-                        "path": "performed.ofType(Period).start",
-                        "name": "therapy_start_date",
-                    },
-                    {
-                        "description": "Radio Therapy Ende",
-                        "path": "performed.ofType(Period).end",
-                        "name": "therapy_end_date",
-                    },
-                    {
                         "description": "Radio Therapy Ende Grund",
                         "path": "outcome.coding"
                         ".where(system = "
@@ -2210,7 +2212,29 @@ def extract_radiotherapies(
                         "name": "zielgebiet",
                     },
                 ],
-            }
+            },
+            {
+                # Pathling 9.3.1 hits a Spark internal assertion ("length of
+                # provided names doesn't match the length of output
+                # attributes") when both .start and .end are selected
+                # directly from the same performed.ofType(Period) expression
+                # in one column group. forEachOrNull evaluates the shared
+                # subexpression once and keeps procedures without a
+                # performedPeriod instead of dropping them.
+                "forEachOrNull": "performed.ofType(Period)",
+                "column": [
+                    {
+                        "description": "Radio Therapy Start",
+                        "path": "start",
+                        "name": "therapy_start_date",
+                    },
+                    {
+                        "description": "Radio Therapy Ende",
+                        "path": "end",
+                        "name": "therapy_end_date",
+                    },
+                ],
+            },
         ],
     )
 
