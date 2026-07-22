@@ -283,9 +283,7 @@ class StudyProtocolPCa1:
                     lambda v: (
                         json.dumps(
                             v,
-                            default=lambda o: (
-                                float(o) if isinstance(o, Decimal) else str(o)
-                            ),
+                            default=lambda o: float(o) if isinstance(o, Decimal) else str(o),
                         )
                         if isinstance(v, (dict, list))
                         else v
