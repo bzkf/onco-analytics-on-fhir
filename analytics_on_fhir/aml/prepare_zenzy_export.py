@@ -8,6 +8,7 @@
 import csv
 import datetime
 from pathlib import Path
+
 import pandas as pd
 
 files = Path("data").rglob("*.xlsx")

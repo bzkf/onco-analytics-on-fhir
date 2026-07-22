@@ -9,8 +9,8 @@ import secrets
 import shutil
 import tempfile
 import zipfile
-from pathlib import Path
 from decimal import Decimal
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -742,7 +742,7 @@ class AMLStudy:
                     with_ref=False,
                     fhir_paths=fhir_paths,
                 )
-                if resource_type in result.keys():
+                if resource_type in result:
                     resource_chunk = result[resource_type]
                     resource_chunk = resource_chunk.drop_duplicates(subset=["type", "id"])
 

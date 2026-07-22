@@ -1,6 +1,8 @@
+import json
 import os
 import re
 import secrets
+from decimal import Decimal
 
 from fhir_constants import FHIR_SYSTEM_PRIMAERTUMOR
 from loguru import logger
@@ -273,6 +275,21 @@ class StudyProtocolPCa1:
 
         # labs
         mii_labs_pandas = self.extract_mii_labs(df_list_c61, suffix="", crypto_key=crypto_key)
+
+        # Convert object columns to JSON strings
+        # so they can be serialized to Parquet
+        for col in mii_labs_pandas.columns:
+            if mii_labs_pandas[col].dtype == "object":
+                mii_labs_pandas[col] = mii_labs_pandas[col].apply(
+                    lambda v: (
+                        json.dumps(
+                            v,
+                            default=lambda o: float(o) if isinstance(o, Decimal) else str(o),
+                        )
+                        if isinstance(v, (dict, list))
+                        else v
+                    )
+                )
 
         # debug schema equivalent
         print(mii_labs_pandas.dtypes)
