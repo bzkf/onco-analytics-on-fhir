@@ -5,7 +5,7 @@ description = "Analytics on FHIR"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pathling==9.3.1",
+    "pathling==9.8.0",
     "delta-spark==4.3.1",
     "typed-settings[cattrs,dotenv]==25.3.0",
     "loguru==0.7.3",
