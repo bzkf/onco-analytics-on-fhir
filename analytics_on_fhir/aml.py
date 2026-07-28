@@ -33,6 +33,7 @@ pd.options.mode.string_storage = "pyarrow"
 pd.options.future.infer_string = True
 
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
+FHIR_CODE_SYSTEM_VERFICATIONSTATUS = "http://hl7.org/fhir/ValueSet/condition-ver-status"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
 FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-tod"
@@ -568,6 +569,11 @@ class AMLStudy:
                     ("diagnosis_recordedDate", "recordedDate[0]"),
                     ("diagnosis_onsetDateTime", "onsetDateTime"),
                     ("condition_encounter_reference", "encounter.reference"),
+                    (
+                        "condition_verificationStatus",
+                        f"code.coding.where(system='{FHIR_CODE_SYSTEM_VERFICATIONSTATUS}')"
+                        + ".first().code",
+                    ),
                 ],
             )
 
