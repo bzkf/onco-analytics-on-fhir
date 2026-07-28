@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.40.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.39.2...v2.40.0) (2026-07-28)
+
+
+### Features
+
+* include verificationStatus in FHIR conditions ([#579](https://github.com/bzkf/onco-analytics-on-fhir/issues/579)) ([e02358c](https://github.com/bzkf/onco-analytics-on-fhir/commit/e02358c1c1faf2dc59591a68d70fdf00e6405f66))
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([#577](https://github.com/bzkf/onco-analytics-on-fhir/issues/577)) ([66f7fbe](https://github.com/bzkf/onco-analytics-on-fhir/commit/66f7fbeca82ec355617901785d47bf96e1c0cea4))
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency jupyterlab to v4.6.2 [security] ([#575](https://github.com/bzkf/onco-analytics-on-fhir/issues/575)) ([983fe68](https://github.com/bzkf/onco-analytics-on-fhir/commit/983fe686316013effacf8d755ed97b4a5fbce53e))
+* **deps:** upgraded pathling ([#578](https://github.com/bzkf/onco-analytics-on-fhir/issues/578)) ([ac7e9dd](https://github.com/bzkf/onco-analytics-on-fhir/commit/ac7e9dd505f0229bfccb8136e4f49153d0d077d3))
+
 ## [2.39.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.39.1...v2.39.2) (2026-07-23)
 
 
