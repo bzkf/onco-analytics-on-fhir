@@ -1965,6 +1965,70 @@ class AMLStudy:
 
         fhir_encounters.to_csv(de_identified_dir / "aml_fhir_encounters.csv", index=False)
 
+        # genotypes
+        if os.path.exists(self.settings.aml.genes_file) or self.settings.aml.genes_file.startswith(
+            "s3://"
+        ):
+            genes_df = pd.read_csv(
+                self.settings.aml.genes_file,
+                sep=";",
+                dtype={
+                    "patient_mrn": "string",
+                },
+            )
+
+            columns_to_hash = [
+                "patient_mrn",
+            ]
+
+            for column in columns_to_hash:
+                genes_df[column] = genes_df[column].apply(crypto_hash_nullable)
+
+            date_cols = [
+                "document_date",
+                "date",
+            ]
+            for col in date_cols:
+                if col in genes_df.columns:
+                    genes_df[col] = pd.to_datetime(
+                        genes_df[col], errors="coerce", utc=True, format="ISO8601"
+                    )
+                    genes_df[col] = genes_df[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+            genes_df.to_csv(de_identified_dir / "aml_genes.csv", index=False)
+
+        # karyotype
+        if os.path.exists(
+            self.settings.aml.karyotypes_file
+        ) or self.settings.aml.karyotypes_file.startswith("s3://"):
+            karyotypes_df = pd.read_csv(
+                self.settings.aml.karyotypes_file,
+                sep=";",
+                dtype={
+                    "patient_mrn": "string",
+                },
+            )
+
+            columns_to_hash = [
+                "patient_mrn",
+            ]
+
+            for column in columns_to_hash:
+                karyotypes_df[column] = karyotypes_df[column].apply(crypto_hash_nullable)
+
+            date_cols = [
+                "document_date",
+                "date",
+            ]
+            for col in date_cols:
+                if col in karyotypes_df.columns:
+                    karyotypes_df[col] = pd.to_datetime(
+                        karyotypes_df[col], errors="coerce", utc=True, format="ISO8601"
+                    )
+                    karyotypes_df[col] = karyotypes_df[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+            karyotypes_df.to_csv(de_identified_dir / "aml_karyotypes.csv", index=False)
+
         # Zenzy
         if os.path.exists(
             self.settings.aml.csv_input_file

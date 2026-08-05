@@ -59,6 +59,8 @@ class AMLSettings:
     csv_patient_column: str = "KIS-Patienten-ID"
     use_cytostatics_data: bool = False
     extra_medication_file: str = ""
+    genes_file: str = ""
+    karyotypes_file: str = ""
 
 
 @ts.settings
