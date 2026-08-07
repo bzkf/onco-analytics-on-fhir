@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.41.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.40.0...v2.41.0) (2026-08-07)
+
+
+### Features
+
+* integrate genetics data ([#584](https://github.com/bzkf/onco-analytics-on-fhir/issues/584)) ([94dca30](https://github.com/bzkf/onco-analytics-on-fhir/commit/94dca30adeb77cddc8bca217a2cc19821c86b006))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump soupsieve from 2.8.3 to 2.8.4 ([#557](https://github.com/bzkf/onco-analytics-on-fhir/issues/557)) ([b45ba98](https://github.com/bzkf/onco-analytics-on-fhir/commit/b45ba985943e86fe06225f816b7e231bd72b07a5))
+* **deps:** lock file maintenance ([#581](https://github.com/bzkf/onco-analytics-on-fhir/issues/581)) ([9ee31e2](https://github.com/bzkf/onco-analytics-on-fhir/commit/9ee31e20df66627e2106a013c147e211583f2a5d))
+
+
+### CI/CD
+
+* switch to attest action ([#582](https://github.com/bzkf/onco-analytics-on-fhir/issues/582)) ([d6f9a41](https://github.com/bzkf/onco-analytics-on-fhir/commit/d6f9a4109b6506af926cfb6ea6079d20fd3debaf))
+
 ## [2.40.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.39.2...v2.40.0) (2026-07-28)
 
 
