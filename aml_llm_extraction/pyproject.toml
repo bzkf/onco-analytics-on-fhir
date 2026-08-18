@@ -1,0 +1,30 @@
+[project]
+name = "extract-genetics"
+version = "0.1.0"
+description = "Extract gene mutation findings from AML discharge letters using a local LLM"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4==4.15.0",
+    "boto3==1.43.56",
+    "loguru==0.7.3",
+    "markdownify==1.2.3",
+    "mlflow==3.14.0",
+    "openai==2.48.0",
+    "openpyxl==3.1.5",
+    "pandas==2.3.3",
+    "pyarrow==24.0.0",
+    "pydantic==2.13.4",
+    "pyyaml==6.0.3",
+    "ruff==0.16.0",
+]
+
+[project.scripts]
+extract-genetics = "extract_genetics.cli:main"
+prepare-letters = "extract_genetics.prepare_letters_cli:main"
+rebuild-csv = "extract_genetics.rebuild_csv:main"
+pseudonymize-csv = "extract_genetics.pseudonymize_csv:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

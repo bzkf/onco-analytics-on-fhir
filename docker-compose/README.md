@@ -161,6 +161,25 @@ docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.pse
 docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
 ```
 
+## Extract AML genetics findings from discharge letters using a local LLM
+
+Copy the prepared letter YAML files (see the
+[extract-genetics README](../aml_llm_extraction/README.md)) to
+[./input-aml-letters](./input-aml-letters), then run:
+
+```sh
+docker compose -f compose.aml-llm-extraction.yaml up
+```
+
+Results are written as per-letter JSON files and a combined CSV to
+[./output-aml-extraction](./output-aml-extraction).
+
+By default, the job talks to an Ollama instance on the Docker host at
+`http://host.docker.internal:11434` using the `llama3.1` model. Override the
+`AML_LLM_EXTRACTION_*` env vars (see [compose.aml-llm-extraction.yaml](compose.aml-llm-extraction.yaml))
+to point at a different model, Ollama host, or input/output folder, or merge in an override
+file as described below to change any other CLI arg.
+
 ## Customize any compose file
 
 The easiest way to configure any settings or environment variables of the compose files is to merge them with customized ones: <https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/>.
