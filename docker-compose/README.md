@@ -163,9 +163,29 @@ docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhi
 
 ## Extract AML genetics findings from discharge letters using a local LLM
 
-Copy the prepared letter YAML files (see the
-[extract-genetics README](../aml_llm_extraction/README.md)) to
-[./aml-llm-extraction/input](./aml-llm-extraction/input), then run:
+### 1. Prepare the letters
+
+If you already have per-letter YAML files (see the
+[extract-genetics README](../aml_llm_extraction/README.md)), copy them straight to
+[./aml-llm-extraction/input](./aml-llm-extraction/input) and skip to step 2.
+
+Otherwise, convert a tumor documentation Excel export or a parquet export of XML
+clinical documents into letter files first. Copy the export file into
+[./aml-llm-extraction](./aml-llm-extraction) (it's bind-mounted to `/data` in the
+container), then run `prepare-letters` in the container, overriding the service's
+entrypoint and command:
+
+```sh
+docker compose -f compose.aml-llm-extraction.yaml run --rm \
+  --entrypoint prepare-letters aml-llm-extraction \
+  --excel-file /data/export.xlsx --output-dir /data/input
+```
+
+Use `--parquet-file /data/export.parquet` instead of `--excel-file` if your source is a
+parquet export. The letter files land directly in
+[./aml-llm-extraction/input](./aml-llm-extraction/input), ready for step 2.
+
+### 2. Run the extraction
 
 ```sh
 docker compose -f compose.aml-llm-extraction.yaml up

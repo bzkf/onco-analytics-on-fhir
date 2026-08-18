@@ -11,6 +11,7 @@ services:
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    entrypoint: ["extract-genetics"]
     command:
       - "--input-dir=/data/input"
       - "--output-dir=/data/output"
