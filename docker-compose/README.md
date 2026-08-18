@@ -165,19 +165,20 @@ docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhi
 
 Copy the prepared letter YAML files (see the
 [extract-genetics README](../aml_llm_extraction/README.md)) to
-[./input-aml-letters](./input-aml-letters), then run:
+[./aml-llm-extraction/input](./aml-llm-extraction/input), then run:
 
 ```sh
 docker compose -f compose.aml-llm-extraction.yaml up
 ```
 
 Results are written as per-letter JSON files and a combined CSV to
-[./output-aml-extraction](./output-aml-extraction).
+[./aml-llm-extraction/output](./aml-llm-extraction/output). MLflow's tracking db and
+traces (`mlflow.db`, `mlruns/`) also persist in [./aml-llm-extraction](./aml-llm-extraction).
 
 By default, the job talks to an Ollama instance on the Docker host at
-`http://host.docker.internal:11434` using the `llama3.1` model. Override the
+`http://host.docker.internal:11434` using the `medgemma:27b` model. Override the
 `AML_LLM_EXTRACTION_*` env vars (see [compose.aml-llm-extraction.yaml](compose.aml-llm-extraction.yaml))
-to point at a different model, Ollama host, or input/output folder, or merge in an override
+to point at a different model, Ollama host, or data folder, or merge in an override
 file as described below to change any other CLI arg.
 
 ## Customize any compose file
