@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.42.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.41.0...v2.42.0) (2026-08-21)
+
+
+### Features
+
+* added aml genetic extraction via local llm ([#585](https://github.com/bzkf/onco-analytics-on-fhir/issues/585)) ([557171e](https://github.com/bzkf/onco-analytics-on-fhir/commit/557171ed7c365b95adbd58c55b00705a3a9fc745))
+
 ## [2.41.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.40.0...v2.41.0) (2026-08-07)
 
 
