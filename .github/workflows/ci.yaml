@@ -39,6 +39,24 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  build-aml-llm-extraction-image:
+    name: build aml-llm-extraction container image
+    uses: miracum/.github/.github/workflows/standard-build.yaml@6dd82c72c638213b8b8dac2e93fc71e06a7bf349 # v1.22.3
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+      pull-requests: write
+      actions: read
+      security-events: write
+      attestations: write
+    with:
+      image: ghcr.io/${{ github.repository }}/aml-llm-extraction
+      build-context: aml_llm_extraction
+      enable-build-test-layer: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
   test-analytics-on-fhir:
     name: run analytics-on-fhir tests
     runs-on: ubuntu-24.04

@@ -161,6 +161,46 @@ docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.pse
 docker compose -f compose.obds-to-fhir.yaml -f compose.kafka.yaml -f compose.fhir-server.yaml -f compose.pseudonymization.yaml up
 ```
 
+## Extract AML genetics findings from discharge letters using a local LLM
+
+### 1. Prepare the letters
+
+If you already have per-letter YAML files (see the
+[extract-genetics README](../aml_llm_extraction/README.md)), copy them straight to
+[./aml-llm-extraction/input](./aml-llm-extraction/input) and skip to step 2.
+
+Otherwise, convert a tumor documentation Excel export or a parquet export of XML
+clinical documents into letter files first. Copy the export file into
+[./aml-llm-extraction](./aml-llm-extraction) (it's bind-mounted to `/data` in the
+container), then run `prepare-letters` in the container, overriding the service's
+entrypoint and command:
+
+```sh
+docker compose -f compose.aml-llm-extraction.yaml run --rm \
+  --entrypoint prepare-letters aml-llm-extraction \
+  --excel-file /data/export.xlsx --output-dir /data/input
+```
+
+Use `--parquet-file /data/export.parquet` instead of `--excel-file` if your source is a
+parquet export. The letter files land directly in
+[./aml-llm-extraction/input](./aml-llm-extraction/input), ready for step 2.
+
+### 2. Run the extraction
+
+```sh
+docker compose -f compose.aml-llm-extraction.yaml up
+```
+
+Results are written as per-letter JSON files and a combined CSV to
+[./aml-llm-extraction/output](./aml-llm-extraction/output). MLflow's tracking db and
+traces (`mlflow.db`, `mlruns/`) also persist in [./aml-llm-extraction](./aml-llm-extraction).
+
+By default, the job talks to an Ollama instance on the Docker host at
+`http://host.docker.internal:11434` using the `medgemma:27b` model. Override the
+`AML_LLM_EXTRACTION_*` env vars (see [compose.aml-llm-extraction.yaml](compose.aml-llm-extraction.yaml))
+to point at a different model, Ollama host, or data folder, or merge in an override
+file as described below to change any other CLI arg.
+
 ## Customize any compose file
 
 The easiest way to configure any settings or environment variables of the compose files is to merge them with customized ones: <https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/>.

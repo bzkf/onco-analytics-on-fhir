@@ -1,0 +1,28 @@
+services:
+  aml-llm-extraction:
+    image: ${IMAGE_REGISTRY_GHCR_IO:-ghcr.io}/bzkf/onco-analytics-on-fhir/aml-llm-extraction:${AML_LLM_EXTRACTION_IMAGE_TAG:-latest}
+    restart: "no"
+    cap_drop:
+      - ALL
+    privileged: false
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    entrypoint: ["extract-genetics"]
+    command:
+      - "--input-dir=/data/input"
+      - "--output-dir=/data/output"
+      - "--model=${AML_LLM_EXTRACTION_MODEL:-medgemma:27b}"
+      - "--host=${AML_LLM_EXTRACTION_HOST:-http://host.docker.internal:11434}"
+      - "--num-ctx=${AML_LLM_EXTRACTION_NUM_CTX:-32000}"
+      - "--num-predict=${AML_LLM_EXTRACTION_NUM_PREDICT:-16000}"
+      - "--mlflow-experiment=${AML_LLM_EXTRACTION_MLFLOW_EXPERIMENT:-extract-genetics}"
+    volumes:
+      - type: bind
+        source: ${AML_LLM_EXTRACTION_DATA_DIRECTORY:-./aml-llm-extraction}
+        target: /data
+        bind:
+          create_host_path: false
