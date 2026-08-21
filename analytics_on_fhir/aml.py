@@ -1971,7 +1971,7 @@ class AMLStudy:
         ):
             genes_df = pd.read_csv(
                 self.settings.aml.genes_file,
-                sep=";",
+                sep=",",
                 dtype={
                     "patient_mrn": "string",
                 },
@@ -2003,7 +2003,7 @@ class AMLStudy:
         ) or self.settings.aml.karyotypes_file.startswith("s3://"):
             karyotypes_df = pd.read_csv(
                 self.settings.aml.karyotypes_file,
-                sep=";",
+                sep=",",
                 dtype={
                     "patient_mrn": "string",
                 },
