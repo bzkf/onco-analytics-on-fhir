@@ -1965,10 +1965,20 @@ class AMLStudy:
 
         fhir_encounters.to_csv(de_identified_dir / "aml_fhir_encounters.csv", index=False)
 
+        logger.info(
+            "checking for genotypes and karyotypes files to de-identify: "
+            + f"{self.settings.aml.genes_file} and {self.settings.aml.karyotypes_file}"
+        )
+
         # genotypes
         if os.path.exists(self.settings.aml.genes_file) or self.settings.aml.genes_file.startswith(
             "s3://"
         ):
+            logger.info(
+                f"De-identify: {self.settings.aml.genes_file} with "
+                + f"sep={self.settings.aml.gene_karyotype_csv_sep}"
+            )
+
             genes_df = pd.read_csv(
                 self.settings.aml.genes_file,
                 sep=self.settings.aml.gene_karyotype_csv_sep,
@@ -2001,6 +2011,11 @@ class AMLStudy:
         if os.path.exists(
             self.settings.aml.karyotypes_file
         ) or self.settings.aml.karyotypes_file.startswith("s3://"):
+            logger.info(
+                f"De-identify: {self.settings.aml.karyotypes_file} with "
+                + f"sep={self.settings.aml.gene_karyotype_csv_sep}"
+            )
+
             karyotypes_df = pd.read_csv(
                 self.settings.aml.karyotypes_file,
                 sep=self.settings.aml.gene_karyotype_csv_sep,
