@@ -1977,6 +1977,8 @@ class AMLStudy:
                 },
             )
 
+            genes_df["patient_mrn"] = _clean_patient_mrn_series(genes_df["patient_mrn"])
+
             columns_to_hash = [
                 "patient_mrn",
             ]
@@ -1995,6 +1997,8 @@ class AMLStudy:
                     )
                     genes_df[col] = genes_df[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
 
+            genes_df = genes_df.drop(columns=["account_id"], errors="ignore")
+
             genes_df.to_csv(de_identified_dir / "aml_genes.csv", index=False)
 
         # karyotype
@@ -2008,6 +2012,8 @@ class AMLStudy:
                     "patient_mrn": "string",
                 },
             )
+
+            karyotypes_df["patient_mrn"] = _clean_patient_mrn_series(karyotypes_df["patient_mrn"])
 
             columns_to_hash = [
                 "patient_mrn",
@@ -2026,6 +2032,8 @@ class AMLStudy:
                         karyotypes_df[col], errors="coerce", utc=True, format="ISO8601"
                     )
                     karyotypes_df[col] = karyotypes_df[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+            karyotypes_df = karyotypes_df.drop(columns=["account_id"], errors="ignore")
 
             karyotypes_df.to_csv(de_identified_dir / "aml_karyotypes.csv", index=False)
 
