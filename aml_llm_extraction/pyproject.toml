@@ -10,7 +10,7 @@ dependencies = [
     "loguru==0.7.3",
     "markdownify==1.2.3",
     "mlflow==3.15.1",
-    "openai==2.48.0",
+    "openai==3.2.0",
     "openpyxl==3.1.5",
     "pandas==2.3.3",
     "pyarrow==24.0.0",
