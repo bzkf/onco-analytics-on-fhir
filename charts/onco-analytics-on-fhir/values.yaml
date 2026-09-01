@@ -107,7 +107,7 @@ stream-processors:
         image:
           registry: ghcr.io
           repository: miracum/kafka-fhir-to-server
-          tag: v3.1.0@sha256:24a3ae6d9c170cfe5974a256aebda33bf580c3f9f86049029e05f8113dffaa93
+          tag: v3.1.2@sha256:9681053561972d706f195f194288839d0d1bd9dee857e17dbc7dc9467bf79fd0
           pullPolicy: IfNotPresent
         env:
           - name: FHIR_URL
