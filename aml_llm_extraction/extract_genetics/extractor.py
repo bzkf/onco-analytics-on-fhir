@@ -47,6 +47,7 @@ ELN_RISK_CSV_HEADER = [
     "raw_text",
     "date",
     "risk_category",
+    "classification_version",
     "evidence_text",
 ]
 
@@ -112,6 +113,7 @@ def eln_risk_csv_rows(extraction: LetterExtraction) -> list[list]:
             finding.raw_text,
             finding.date or "",
             finding.risk_category,
+            finding.classification_version or "",
             finding.evidence_text or "",
         ]
         for finding in extraction.eln_risk

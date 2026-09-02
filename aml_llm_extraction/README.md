@@ -226,6 +226,7 @@ metadata and the structured extraction result:
       "raw_text": "ELN-Risiko: adverse",
       "date": "2019-12",
       "risk_category": "adverse",
+      "classification_version": "2022",
       "evidence_text": "Risikostratifizierung nach ELN 2022: adverse"
     }
   ],
@@ -241,7 +242,13 @@ at relapse) and the result can genuinely change; each entry has its own `date`.
 `classification` is one of `normal`, `aberrant`, `complex_aberrant`, `not_performed`,
 `unknown`. `eln_risk` is only populated when the letter states the category explicitly (e.g.
 "ELN-Risiko: intermediär") — the model is instructed not to derive it itself from the
-karyotype/gene findings; `risk_category` is one of `favorable`, `intermediate`, `adverse`.
+karyotype/gene findings; `risk_category` is one of `favorable`, `intermediate`,
+`intermediate_1`, `intermediate_2` (the ELN 2010 Intermediate-I/-II subcategories), or
+`adverse`. `classification_version` is the ELN version the classification is based on
+(`2010`, `2017` or `2022`), and is only set when the letter names that version explicitly
+(e.g. "Risikostratifizierung nach ELN 2022") — a risk category stated without a version
+leaves it `null`, since the model is instructed never to guess the version or infer it from
+the letter's date.
 
 A gene's, karyotype's, or ELN risk finding's `date` is normalized to `YYYY`, `YYYY-MM`, or
 `YYYY-MM-DD` from the letter's table date/month column for that finding (e.g. a table entry of
