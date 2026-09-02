@@ -56,13 +56,14 @@ assessment as:
 - "unknown" if cytogenetics is mentioned but the result cannot be determined.
 Leave "karyotypes" as an empty list if the letter does not mention cytogenetics at all.
 
-Also look for an ELN 2022 (European LeukemiaNet) risk classification, if the letter already \
+Also look for an ELN (European LeukemiaNet) risk classification, if the letter already \
 states one — e.g. "ELN-Risiko: intermediär", "ELN 2022: adverse", "günstige Risikogruppe". Only \
 report it if the letter states the category explicitly; do NOT derive or infer the ELN category \
 yourself from the karyotype or gene findings. Map the stated category to one of:
 - "favorable" (German: "günstig").
 - "intermediate" (German: "intermediär").
 - "adverse" (German: "ungünstig", "hoch", "high-risk").
+Add a field for "classification_year" (none, 2010, 2017 or 2022) this ELN classification is based on.\
 Like karyotype, this can be reassessed over time (e.g. at diagnosis vs. at relapse) — report each \
 DISTINCT assessment as a separate entry in "eln_risk", each with its own "date". Leave "eln_risk" \
 as an empty list if the letter never states an ELN risk category.
