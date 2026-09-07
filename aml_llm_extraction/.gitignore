@@ -3,3 +3,4 @@ mlruns/
 mlartifacts/
 *.parquet
 test/
+data/
