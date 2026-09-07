@@ -1,5 +1,6 @@
 import mlflow
 from loguru import logger
+from mlflow.entities import SpanType
 from openai import OpenAI
 
 from .models import ExtractionResult, LetterDocument
@@ -84,7 +85,15 @@ def _call_llm(
     content = response.choices[0].message.content
     if content is None:
         raise ValueError("Ollama returned an empty response")
-    return ExtractionResult.model_validate_json(content)
+
+    # The autologged chat span holds the completion as the raw JSON string the model
+    # emitted, which the MLflow UI renders as plain text (there is no attribute to tell it
+    # the content is JSON). Parsing in its own span gives the UI a structured span output
+    # it renders as a JSON tree, one per attempt including retries.
+    with mlflow.start_span(name="parse_extraction_result", span_type=SpanType.PARSER) as span:
+        result = ExtractionResult.model_validate_json(content)
+        span.set_outputs(result)
+    return result
 
 
 @mlflow.trace
