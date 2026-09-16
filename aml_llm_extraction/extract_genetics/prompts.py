@@ -62,8 +62,16 @@ report it if the letter states the category explicitly; do NOT derive or infer t
 yourself from the karyotype or gene findings. Map the stated category to one of:
 - "favorable" (German: "günstig").
 - "intermediate" (German: "intermediär").
+- "intermediate_1" / "intermediate_2" ONLY for the ELN 2010 subcategories Intermediate-I and \
+  Intermediate-II (German: "Intermediär I"/"Intermediär II", also written "int-1"/"int-2"); for a \
+  plain "intermediär" without a I/II subcategory use "intermediate".
 - "adverse" (German: "ungünstig", "hoch", "high-risk").
-Add a field for "classification_year" (none, 2010, 2017 or 2022) this ELN classification is based on.\
+Also set "classification_version" to the ELN version the classification is based on — "2010", \
+"2017" or "2022" — but ONLY if the letter explicitly names that version alongside the \
+classification (e.g. "ELN 2022: adverse", "Risikostratifizierung nach ELN2017"). If the letter \
+states a risk category without naming a version, leave "classification_version" null. Never guess \
+the version: do not infer it from the letter's date, from the current year, or from which \
+categories the letter uses.
 Like karyotype, this can be reassessed over time (e.g. at diagnosis vs. at relapse) — report each \
 DISTINCT assessment as a separate entry in "eln_risk", each with its own "date". Leave "eln_risk" \
 as an empty list if the letter never states an ELN risk category.

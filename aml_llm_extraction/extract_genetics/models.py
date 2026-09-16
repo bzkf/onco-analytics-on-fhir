@@ -84,14 +84,30 @@ class KaryotypeFinding(BaseModel):
     )
 
 
+ELNCategory = Literal["favorable", "intermediate", "intermediate_1", "intermediate_2", "adverse"]
+ELNVersion = Literal["2010", "2017", "2022"]
+
+
 class ElnRiskFinding(BaseModel):
-    risk_category: Literal["favorable", "intermediate", "adverse"] = Field(
+    risk_category: ELNCategory = Field(
         description=(
-            "The ELN 2022 (European LeukemiaNet) risk category as explicitly stated in the "
-            "letter: 'favorable', 'intermediate', or 'adverse'. German terms map as: "
-            "'günstig' -> favorable, 'intermediär'/'intermediate' -> intermediate, "
-            "'ungünstig'/'hoch'/'high-risk' -> adverse."
+            "The ELN (European LeukemiaNet) risk category as explicitly stated in the "
+            "letter. German terms map as: 'günstig' -> favorable, "
+            "'intermediär'/'intermediate' -> intermediate, 'ungünstig'/'hoch'/'high-risk' "
+            "-> adverse. Use 'intermediate_1'/'intermediate_2' only for the ELN 2010 "
+            "subcategories Intermediate-I/Intermediate-II (German: 'Intermediär I'/"
+            "'Intermediär II'); for a plain 'intermediär' without a subcategory use "
+            "'intermediate'."
         )
+    )
+    classification_version: ELNVersion | None = Field(
+        default=None,
+        description=(
+            "The ELN classification version the category is based on ('2010', '2017' or "
+            "'2022'), but ONLY if the letter explicitly names it (e.g. 'ELN 2022: adverse', "
+            "'nach ELN2017'). Null if the letter states a risk category without naming a "
+            "version — never guess the version or infer it from the letter's date."
+        ),
     )
     raw_text: str = Field(
         max_length=200,
@@ -145,10 +161,11 @@ class ExtractionResult(BaseModel):
         default_factory=list,
         max_length=5,
         description=(
-            "ELN 2022 risk classifications (favorable/intermediate/adverse) already stated "
-            "in the letter, each with its own date. Only include this if the letter states "
-            "the classification explicitly — do not derive it yourself from the karyotype "
-            "or gene findings. Leave empty if the letter never states an ELN risk category."
+            "ELN risk classifications already stated in the letter, each with its own "
+            "date and — only when the letter names one — its own classification version. "
+            "Only include this if the letter states the classification explicitly — do not "
+            "derive it yourself from the karyotype or gene findings. Leave empty if the "
+            "letter never states an ELN risk category."
         ),
     )
     notes: str | None = Field(
