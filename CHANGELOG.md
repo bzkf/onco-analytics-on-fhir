@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.43.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.43.0...v2.43.1) (2026-09-21)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump tornado from 6.5.7 to 6.5.8 ([#590](https://github.com/bzkf/onco-analytics-on-fhir/issues/590)) ([696b60c](https://github.com/bzkf/onco-analytics-on-fhir/commit/696b60cff98f17962c40f614169cee514db51739))
+
 ## [2.43.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.42.0...v2.43.0) (2026-09-16)
 
 
