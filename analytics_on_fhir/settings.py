@@ -61,7 +61,8 @@ class AMLSettings:
     extra_medication_file: str = ""
     genes_file: str = ""
     karyotypes_file: str = ""
-    gene_karyotype_csv_sep: str = ","
+    eln_risk_file: str = ""
+    gene_karyotype_eln_csv_sep: str = ","
 
 
 @ts.settings
