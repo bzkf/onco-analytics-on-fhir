@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.43.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.42.0...v2.43.0) (2026-09-16)
+
+
+### Features
+
+* extract eln classification version ([#592](https://github.com/bzkf/onco-analytics-on-fhir/issues/592)) ([0913543](https://github.com/bzkf/onco-analytics-on-fhir/commit/09135433c6e513295dbd1781481a8ab5146162c2))
+
+
+### Bug Fixes
+
+* clean mrn ([#588](https://github.com/bzkf/onco-analytics-on-fhir/issues/588)) ([c319078](https://github.com/bzkf/onco-analytics-on-fhir/commit/c31907882c9c8d94a374ba92e6e6672a99b5b655))
+* remove fixed ELN classification year from prompt ([#591](https://github.com/bzkf/onco-analytics-on-fhir/issues/591)) ([1657d2b](https://github.com/bzkf/onco-analytics-on-fhir/commit/1657d2b11a258bc7d1c318362ad86b6c4f15e32a))
+* seperator in CSV for gene files ([#587](https://github.com/bzkf/onco-analytics-on-fhir/issues/587)) ([6e2d175](https://github.com/bzkf/onco-analytics-on-fhir/commit/6e2d1751f4fdc6a7a42581fd1421da19c963edc6))
+
 ## [2.42.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.41.0...v2.42.0) (2026-08-21)
 
 
