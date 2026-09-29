@@ -28,7 +28,7 @@ services:
         - CMD-SHELL
         - |
           for bucket in $$(echo "$$S3_BUCKET" | tr "," " "); do
-            curl -sf -o /dev/null -I --aws-sigv4 "aws:amz:us-east-1:s3" --user "$$AWS_ACCESS_KEY_ID:$$AWS_SECRET_ACCESS_KEY" "http://localhost:8333/$$bucket" || exit 1;
+            curl -sf -o /dev/null -I --aws-sigv4 "aws:amz:us-east-1:s3" --user "$$AWS_ACCESS_KEY_ID:$$AWS_SECRET_ACCESS_KEY" "http://localhost:8333/$$bucket" || exit 1; # gitleaks:allow
           done
       interval: 5s
       timeout: 5s
