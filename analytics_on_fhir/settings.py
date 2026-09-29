@@ -25,7 +25,7 @@ class StudyNames(Enum):
 class SparkSettings:
     install_packages_and_exit: bool = False
     master: str = "local[*]"
-    s3_endpoint: str = "localhost:9000"
+    s3_endpoint: str = "localhost:8333"
     s3_connection_ssl_enabled: str = "false"
     warehouse_dir: str = os.path.join(HERE, "warehouse")
     checkpoint_dir: str = os.path.join(HERE, "spark-checkpoints")

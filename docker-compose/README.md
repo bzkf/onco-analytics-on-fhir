@@ -74,13 +74,15 @@ You can then shutdown the job using Ctrl+C.
 > [!IMPORTANT]
 > For more information about this ETL job, see <https://github.com/bzkf/obds-to-fhir>
 
-### 5. Load the FHIR resources as Delta Lake tables in MinIO
+### 5. Load the FHIR resources as Delta Lake tables in SeaweedFS
 
-This assumes that Kafka already contains the `fhir.obds.bundles` topics and starts both MinIO to store the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
+This assumes that Kafka already contains the `fhir.obds.bundles` topics and starts both [SeaweedFS](https://github.com/seaweedfs/seaweedfs) as S3-compatible storage for the Delta tables and [fhir-to-lakehouse](https://github.com/bzkf/fhir-to-lakehouse):
 
 ```sh
 docker compose -f compose.fhir-to-delta.yaml up
 ```
+
+The SeaweedFS admin UI is available at <http://localhost:23646/>. Log in using the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` values.
 
 > [!TIP]
 > You can add `--env-file=.demo.env` after the `docker compose` above to run it using the
