@@ -104,12 +104,13 @@ jobs:
           sha256sum onco-analytics-on-fhir-chart.tgz prerequisites-chart.tgz > checksums.sha256
 
       - name: Generate build provenance attestation
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-checksums: dist/checksums.sha256
 
       - name: upload assets to release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3 # zizmor: ignore[superfluous-actions] upload release assets directly
+        # zizmor: ignore[superfluous-actions] upload release assets directly
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
             dist/*.tgz

@@ -1,0 +1,6 @@
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      # actionlint doesn't yet recognize GitHub's newer self-repository "uses: $/..." syntax
+      # for reusable workflow calls. Remove once actionlint supports it.
+      - 'reusable workflow call ".+" at "uses" is not following the format'
