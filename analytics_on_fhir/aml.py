@@ -1966,7 +1966,7 @@ class AMLStudy:
         fhir_encounters.to_csv(de_identified_dir / "aml_fhir_encounters.csv", index=False)
 
         logger.info(
-            "checking for genotypes and karyotypes files to de-identify: "
+            "checking for genotypes, karyotypes and eln risk files to de-identify: "
             + f"{self.settings.aml.genes_file} and {self.settings.aml.karyotypes_file}"
         )
 
@@ -1976,12 +1976,12 @@ class AMLStudy:
         ):
             logger.info(
                 f"De-identify: {self.settings.aml.genes_file} with "
-                + f"sep={self.settings.aml.gene_karyotype_csv_sep}"
+                + f"sep={self.settings.aml.gene_karyotype_eln_csv_sep}"
             )
 
             genes_df = pd.read_csv(
                 self.settings.aml.genes_file,
-                sep=self.settings.aml.gene_karyotype_csv_sep,
+                sep=self.settings.aml.gene_karyotype_eln_csv_sep,
                 dtype={
                     "patient_mrn": "string",
                 },
@@ -2017,12 +2017,12 @@ class AMLStudy:
         ) or self.settings.aml.karyotypes_file.startswith("s3://"):
             logger.info(
                 f"De-identify: {self.settings.aml.karyotypes_file} with "
-                + f"sep={self.settings.aml.gene_karyotype_csv_sep}"
+                + f"sep={self.settings.aml.gene_karyotype_eln_csv_sep}"
             )
 
             karyotypes_df = pd.read_csv(
                 self.settings.aml.karyotypes_file,
-                sep=self.settings.aml.gene_karyotype_csv_sep,
+                sep=self.settings.aml.gene_karyotype_eln_csv_sep,
                 dtype={
                     "patient_mrn": "string",
                 },
@@ -2051,6 +2051,47 @@ class AMLStudy:
             karyotypes_df = karyotypes_df.drop(columns=["account_id"], errors="ignore")
 
             karyotypes_df.to_csv(de_identified_dir / "aml_karyotypes.csv", index=False)
+
+        # ELN risk
+        if os.path.exists(
+            self.settings.aml.eln_risk_file
+        ) or self.settings.aml.eln_risk_file.startswith("s3://"):
+            logger.info(
+                f"De-identify: {self.settings.aml.eln_risk_file} with "
+                + f"sep={self.settings.aml.gene_karyotype_eln_csv_sep}"
+            )
+
+            eln_risk_df = pd.read_csv(
+                self.settings.aml.eln_risk_file,
+                sep=self.settings.aml.gene_karyotype_eln_csv_sep,
+                dtype={
+                    "patient_mrn": "string",
+                },
+            )
+
+            eln_risk_df["patient_mrn"] = _clean_patient_mrn_series(eln_risk_df["patient_mrn"])
+
+            columns_to_hash = [
+                "patient_mrn",
+            ]
+
+            for column in columns_to_hash:
+                eln_risk_df[column] = eln_risk_df[column].apply(crypto_hash_nullable)
+
+            date_cols = [
+                "document_date",
+                "date",
+            ]
+            for col in date_cols:
+                if col in eln_risk_df.columns:
+                    eln_risk_df[col] = pd.to_datetime(
+                        eln_risk_df[col], errors="coerce", utc=True, format="ISO8601"
+                    )
+                    eln_risk_df[col] = eln_risk_df[col] + pd.to_timedelta(DAY_SHIFT, unit="D")
+
+            eln_risk_df = eln_risk_df.drop(columns=["account_id"], errors="ignore")
+
+            eln_risk_df.to_csv(de_identified_dir / "aml_eln_risk.csv", index=False)
 
         # Zenzy
         if os.path.exists(
