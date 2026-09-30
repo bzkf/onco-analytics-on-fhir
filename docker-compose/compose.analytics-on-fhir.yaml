@@ -12,7 +12,7 @@ services:
     environment:
       SPARK_CHECKPOINT_DIR: "/tmp/spark-checkpoints/analytics-on-fhir"
       STUDY_NAME: "${STUDY_NAME:-all}"
-      SPARK_S3_ENDPOINT: minio:9000
+      SPARK_S3_ENDPOINT: seaweedfs:8333
       DELTA_DATABASE_PATH: "${DELTA_DATABASE_PATH:-s3a://fhir/default/}"
       SPARK_DRIVER_MEMORY: "${SPARK_DRIVER_MEMORY:-8g}"
       SPARK_MASTER: "local[4]"
