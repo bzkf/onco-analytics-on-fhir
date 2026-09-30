@@ -67,7 +67,7 @@ jobs:
           sudo apt install -y graphviz
 
       - name: Install uv
-        # zizmor: ignore[cache-poisoning] false positive due to megalinter's zizmor version mismatch unable to deal with the startsWith heuristic
+        # zizmor: ignore[cache-poisoning] false positive, the cache is disabled for tag (release) builds via the startsWith check below
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           activate-environment: true

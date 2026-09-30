@@ -24,7 +24,10 @@ DISABLE_LINTERS:
   - REPOSITORY_KINGFISHER
   # disabled in favor of trivy for now
   - REPOSITORY_OSV_SCANNER
+  # both already run as separate, more up-to-date jobs in the standard-lint workflow.
+  # MegaLinter's zizmor is too old to parse the self-repository "uses: $/..." syntax.
   - ACTION_ACTIONLINT
+  - ACTION_ZIZMOR
 
 SHOW_ELAPSED_TIME: true
 
@@ -37,6 +40,3 @@ REPOSITORY_KICS_ARGUMENTS:
 
 REPOSITORY_TRIVY_DISABLE_ERRORS: true
 REPOSITORY_GRYPE_DISABLE_ERRORS: true
-
-ACTION_ZIZMOR_UNSECURED_ENV_VARIABLES:
-  - GITHUB_TOKEN
