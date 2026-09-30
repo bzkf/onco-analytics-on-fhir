@@ -67,7 +67,8 @@ jobs:
           sudo apt install -y graphviz
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0 # zizmor: ignore[cache-poisoning] false positive due to megalinter's zizmor version mismatch unable to deal with the startsWith heuristic
+        # zizmor: ignore[cache-poisoning] false positive due to megalinter's zizmor version mismatch unable to deal with the startsWith heuristic
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           activate-environment: true
           working-directory: .
@@ -253,4 +254,4 @@ jobs:
       packages: write
     needs:
       - build-analytics-on-fhir-image
-    uses: ./.github/workflows/release.yaml
+    uses: $/.github/workflows/release.yaml
