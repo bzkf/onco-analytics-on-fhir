@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.44.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.43.0...v2.44.0) (2026-09-30)
+
+
+### Features
+
+* include eln risk file into de-identify ([#593](https://github.com/bzkf/onco-analytics-on-fhir/issues/593)) ([7310d17](https://github.com/bzkf/onco-analytics-on-fhir/commit/7310d17159c895138b4e082e38ce744b8d620084))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump tornado from 6.5.7 to 6.5.8 ([#590](https://github.com/bzkf/onco-analytics-on-fhir/issues/590)) ([696b60c](https://github.com/bzkf/onco-analytics-on-fhir/commit/696b60cff98f17962c40f614169cee514db51739))
+* switch to seaweedfs ([#595](https://github.com/bzkf/onco-analytics-on-fhir/issues/595)) ([b33c641](https://github.com/bzkf/onco-analytics-on-fhir/commit/b33c6418b3f4f12aecdb99d83dea487b663cab79))
+
 ## [2.43.0](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.42.0...v2.43.0) (2026-09-16)
 
 
