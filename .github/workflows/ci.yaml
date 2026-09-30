@@ -59,12 +59,12 @@ jobs:
 
   test-analytics-on-fhir:
     name: run analytics-on-fhir tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -73,13 +73,13 @@ jobs:
           sudo apt install -y graphviz
 
       - name: Install uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0 # zizmor: ignore[cache-poisoning] false positive due to megalinter's zizmor version mismatch unable to deal with the startsWith heuristic
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0 # zizmor: ignore[cache-poisoning] false positive due to megalinter's zizmor version mismatch unable to deal with the startsWith heuristic
         with:
           activate-environment: true
           working-directory: .
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
-      - uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: "temurin"
           java-version-file: ".java-version"
@@ -101,7 +101,7 @@ jobs:
 
   test-compose:
     name: run compose e2e tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - build-analytics-on-fhir-image
     steps:
@@ -123,7 +123,7 @@ jobs:
           docker info -f '{{ .DriverStatus }}'
 
       - name: Free disk space
-        uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1 # v3.2.2
+        uses: endersonmenezes/free-disk-space@2a22f8c59cae9cddae7194b33e6b92d023b2b4b8 # v4.0.0
         with:
           remove_android: true
           remove_dotnet: true
@@ -144,7 +144,7 @@ jobs:
           docker load --input /tmp/image.tar
           docker image ls
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
