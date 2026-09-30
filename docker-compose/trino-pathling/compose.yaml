@@ -18,7 +18,7 @@ services:
       - ./config/catalog:/etc/trino/catalog:ro
     depends_on:
       - hive-metastore
-      - minio
+      - seaweedfs
 
   kafka-fhir-to-delta:
     environment:
