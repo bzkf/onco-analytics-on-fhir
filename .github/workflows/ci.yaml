@@ -23,39 +23,33 @@ env:
 jobs:
   build-analytics-on-fhir-image:
     name: build analytics-on-fhir container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
+    uses: miracum/.github/.github/workflows/standard-build.yaml@074c1a65db6f09850cd80f38efe230036febb44e # v1.29.2
     permissions:
       contents: write
       id-token: write
       packages: write
       pull-requests: write
-      actions: read
-      security-events: write
       attestations: write
+      artifact-metadata: write
     with:
       image: ghcr.io/${{ github.repository }}/analytics-on-fhir
       build-context: .
       enable-build-test-layer: false
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build-aml-llm-extraction-image:
     name: build aml-llm-extraction container image
-    uses: miracum/.github/.github/workflows/standard-build.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
+    uses: miracum/.github/.github/workflows/standard-build.yaml@074c1a65db6f09850cd80f38efe230036febb44e # v1.29.2
     permissions:
       contents: write
       id-token: write
       packages: write
       pull-requests: write
-      actions: read
-      security-events: write
       attestations: write
+      artifact-metadata: write
     with:
       image: ghcr.io/${{ github.repository }}/aml-llm-extraction
       build-context: aml_llm_extraction
       enable-build-test-layer: false
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   test-analytics-on-fhir:
     name: run analytics-on-fhir tests
@@ -73,7 +67,7 @@ jobs:
           sudo apt install -y graphviz
 
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0 # zizmor: ignore[cache-poisoning] false positive due to megalinter's zizmor version mismatch unable to deal with the startsWith heuristic
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0 # zizmor: ignore[cache-poisoning] false positive due to megalinter's zizmor version mismatch unable to deal with the startsWith heuristic
         with:
           activate-environment: true
           working-directory: .
@@ -237,7 +231,7 @@ jobs:
             docker-compose/compose-logs.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@074c1a65db6f09850cd80f38efe230036febb44e # v1.29.2
     permissions:
       contents: read
       pull-requests: write
@@ -248,9 +242,6 @@ jobs:
       enable-validate-gradle-wrapper: false
       codeql-languages: '["python"]'
       enable-codeql: false
-      enable-verify-base-image-signature: false
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
