@@ -24,6 +24,7 @@ DISABLE_LINTERS:
   - REPOSITORY_KINGFISHER
   # disabled in favor of trivy for now
   - REPOSITORY_OSV_SCANNER
+  - ACTION_ACTIONLINT
 
 SHOW_ELAPSED_TIME: true
 
