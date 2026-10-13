@@ -8,9 +8,9 @@ locally hosted LLM, via [Ollama](https://ollama.com).
 
 The pipeline has two steps:
 
-1. `prepare-letters` — turn a parquet export of XML clinical documents, or a tumor
-   documentation Excel export, into one letter file per document/row, ready for
-   extraction.
+1. `prepare-letters` — turn a parquet export of XML clinical documents, a tumor
+   documentation Excel export, or a pathology report CSV export into one letter file per
+   document/row, ready for extraction.
 2. `extract-genetics` — send each letter to a local LLM and extract structured findings.
 
 ## Setup
@@ -29,7 +29,7 @@ uv sync
 
 ## Step 1: prepare letters from a source export
 
-`prepare-letters` takes one of two mutually exclusive source formats and writes one
+`prepare-letters` takes one of three mutually exclusive source formats and writes one
 YAML letter file per row into `--output-dir`, ready for `extract-genetics`.
 
 ### Option A: parquet export of XML clinical documents
@@ -113,6 +113,31 @@ inline markup used by the source system (e.g. `<F>...</>`) is stripped from the 
 A test fixture is available: `test/Test_AML_Projekt.XLSX` is a sample export row for
 trying out `prepare-letters --excel-file` without real patient data.
 
+### Option C: pathology report CSV export
+
+Source documents can also come from a comma-separated, UTF-8 encoded CSV export of
+pathology reports with the columns `Befundtext,PID,DIAGKURZ,SendingApplication`,
+of which two are used:
+
+- `PID` — patient id; it becomes the letter's `patient_id`, and so the `patient_mrn`
+  column of the combined CSVs
+- `Befundtext` — the pathology report, as a direct text export; searched for gene, karyotype, and ELN risk
+  findings
+
+`DIAGKURZ` and `SendingApplication` are currently ignored.
+
+```sh
+uv run prepare-letters --csv-file data/befunde.csv --output-dir data/letters
+```
+
+Each row becomes one letter, so a patient with several reports gets several letters
+(`<PID>_<row>.yaml`). Rows without a `PID` or with an empty `Befundtext` are skipped with a
+warning. All columns are read as text, so patient ids keep any leading zeros. Unlike the
+Excel export, the report text is passed through verbatim — no markup is stripped, so lab
+values such as `VAF <5%` survive. This source has no document date, account id, or
+XML/Excel-specific fields; all of those are `null`, so findings fall back to a `null`
+`date` unless the report text itself dates them.
+
 ## Step 2: extract findings
 
 ```sh
@@ -126,6 +151,8 @@ Options:
 - `--overwrite` — reprocess letters that already have a result file
 - `--num-ctx` — Ollama context window size in tokens (default: `32000`)
 - `--num-predict` — max tokens the model may generate for one response (default: `16000`)
+- `--system-prompt-file` — plain-text (`.txt`, UTF-8) file whose content replaces the
+  built-in system prompt (see [Prompt registry](#prompt-registry))
 - `--mlflow-tracking-uri` — MLflow tracking URI (default: local `sqlite:///mlflow.db`)
 - `--mlflow-experiment` — MLflow experiment name (default: `extract-genetics`)
 
@@ -168,9 +195,20 @@ name `extract-genetics-system-prompt`. On every run, `extract-genetics` register
 version only if the prompt text or schema in `prompts.py` has changed since the last run —
 otherwise it reuses the existing version.
 
+`--system-prompt-file prompt.txt` swaps the built-in prompt for the file's content. It is
+registered under the same name the same way (the version's commit message records the file
+path), so prompt variants show up as versions of one prompt and can be compared side by
+side, and each trace links the exact version it used. Alternating between a file and the
+built-in prompt registers a new version on every switch, since registration only compares
+against the latest version. The response schema is unaffected — it always comes from
+`ExtractionResult` — so a custom prompt should still describe the same output fields, and
+any section labels it refers to (`Document date`, `Pathology report`, …) must match those in
+`_build_user_message()` in `llm.py`.
+
 `extract_genes()` (in `llm.py`) is decorated with `@mlflow.trace` and calls
-`mlflow.genai.load_prompt("prompts:/extract-genetics-system-prompt@latest")` *inside* that
-traced call. Loading a prompt from within an active trace is what makes MLflow record the
+`mlflow.genai.load_prompt(...)` *inside* that traced call, with the exact version resolved
+at startup (e.g. `prompts:/extract-genetics-system-prompt/7`) rather than `@latest`, so a
+concurrent run registering a different prompt can't switch prompts under a running one. Loading a prompt from within an active trace is what makes MLflow record the
 proper `mlflow.linkedPrompts` trace tag automatically — the officially-linked way to see
 which exact prompt version produced a given extraction from the MLflow UI, rather than an
 ad-hoc custom tag. Note that MLflow's `response_format` is stored for documentation/versioning
@@ -260,9 +298,9 @@ confidently normalized. This is enforced at the schema level
 non-conforming date string — note that Ollama's structured-output grammar compiler rejects
 `\d`-style regex shorthand, so the pattern must spell out `[0-9]` explicitly.
 
-`source_type` is `"xml"` or `"excel"` depending on which `prepare-letters` input produced
-the letter (see `Step 1`). Excel-sourced letters have no encounter/account-id concept, so
-`account_id` and `therapie_section` are `null` for them.
+`source_type` is `"xml"`, `"excel"`, or `"csv"` depending on which `prepare-letters` input
+produced the letter (see `Step 1`). Excel- and CSV-sourced letters have no
+encounter/account-id concept, so `account_id` and `therapie_section` are `null` for them.
 
 All findings across letters are also combined for downstream analysis into:
 

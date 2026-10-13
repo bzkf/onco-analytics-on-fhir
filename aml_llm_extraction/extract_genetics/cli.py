@@ -6,7 +6,7 @@ from loguru import logger
 
 from .extractor import process_folder
 from .llm import DEFAULT_NUM_CTX, DEFAULT_NUM_PREDICT
-from .prompts import ensure_system_prompt_registered
+from .prompts import ensure_system_prompt_registered, read_system_prompt_file
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -57,6 +57,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Max tokens the model may generate for one response (default: %(default)s)",
     )
     parser.add_argument(
+        "--system-prompt-file",
+        type=Path,
+        default=None,
+        help=(
+            "Plain-text (.txt, UTF-8) file whose content replaces the built-in system "
+            "prompt. It is registered in the MLflow prompt registry like the built-in one"
+        ),
+    )
+    parser.add_argument(
         "--mlflow-tracking-uri",
         default=None,
         help="MLflow tracking URI (default: local sqlite:///mlflow.db)",
@@ -73,12 +82,24 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
+    # Read before touching MLflow, so a bad path fails without side effects.
+    custom_prompt = None
+    if args.system_prompt_file:
+        try:
+            custom_prompt = read_system_prompt_file(args.system_prompt_file)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            parser.error(f"--system-prompt-file: {exc}")
+
     if args.mlflow_tracking_uri:
         mlflow.set_tracking_uri(args.mlflow_tracking_uri)
     mlflow.set_experiment(args.mlflow_experiment)
     mlflow.openai.autolog()
 
-    prompt = ensure_system_prompt_registered()
+    if custom_prompt is None:
+        prompt = ensure_system_prompt_registered()
+    else:
+        prompt = ensure_system_prompt_registered(custom_prompt, source=str(args.system_prompt_file))
+        logger.info("Using system prompt from {}", args.system_prompt_file)
     logger.info("Using prompt '{}' version {}", prompt.name, prompt.version)
 
     process_folder(
@@ -89,6 +110,9 @@ def main() -> None:
         overwrite=args.overwrite,
         num_ctx=args.num_ctx,
         num_predict=args.num_predict,
+        # Pinned to the exact version rather than @latest, so a concurrent run registering
+        # a different prompt can't change which prompt this run uses mid-way.
+        prompt_uri=f"prompts:/{prompt.name}/{prompt.version}",
     )
 
 
