@@ -22,7 +22,7 @@ services:
         condition: service_completed_successfully
 
   wait-for-kafka:
-    image: ghcr.io/wait4x/wait4x:3.7.2@sha256:2337e64637e1aa9d5d638de6d877914806be6c5156a7221ea40f11911ea4071a
+    image: ghcr.io/wait4x/wait4x:3.7.3@sha256:aae91ea65a38117ac07c84c7e1122691ac91c3b60529edcb8fe62292d105d8ff
     ipc: none
     security_opt:
       - "no-new-privileges:true"
