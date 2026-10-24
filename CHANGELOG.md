@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.44.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.44.2...v2.44.3) (2026-10-24)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump aiohttp from 3.14.3 to 3.14.4 in /aml_llm_extraction ([#619](https://github.com/bzkf/onco-analytics-on-fhir/issues/619)) ([66c8af9](https://github.com/bzkf/onco-analytics-on-fhir/commit/66c8af9796d16df339457ecc40376ef9508d1ab0))
+* **deps:** bump certifi from 2026.7.22 to 2026.10.19 ([#618](https://github.com/bzkf/onco-analytics-on-fhir/issues/618)) ([5a08a3e](https://github.com/bzkf/onco-analytics-on-fhir/commit/5a08a3ef431c07ef92fcc26a9fc6cd24a168efbd))
+* **deps:** bump gitpython from 3.2.0 to 3.2.1 in /aml_llm_extraction ([#617](https://github.com/bzkf/onco-analytics-on-fhir/issues/617)) ([76adf0d](https://github.com/bzkf/onco-analytics-on-fhir/commit/76adf0db923a24224aa325b43a1b08ce31f5d6f5))
+* **deps:** bump opentelemetry-api from 1.45.0 to 1.45.1 in /aml_llm_extraction ([#616](https://github.com/bzkf/onco-analytics-on-fhir/issues/616)) ([bf76b18](https://github.com/bzkf/onco-analytics-on-fhir/commit/bf76b1872f4eff45105367bb0fdb0e4072912bc8))
+* **deps:** bump opentelemetry-api in /aml_llm_extraction ([bf76b18](https://github.com/bzkf/onco-analytics-on-fhir/commit/bf76b1872f4eff45105367bb0fdb0e4072912bc8))
+
 ## [2.44.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.44.1...v2.44.2) (2026-10-24)
 
 
