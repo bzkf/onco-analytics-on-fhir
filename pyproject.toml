@@ -14,7 +14,7 @@ dependencies = [
     "polars==1.44.2",
     "matplotlib==3.11.2",
     "seaborn==0.13.2",
-    "plotly==6.9.0",
+    "plotly==7.1.0",
     "statsmodels==0.15.0",
     "lifelines==0.30.3",
     "openpyxl==3.1.5",
