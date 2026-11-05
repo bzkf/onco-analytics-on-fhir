@@ -12,7 +12,7 @@ dependencies = [
     "mlflow==3.17.2",
     "openai==2.54.0",
     "openpyxl==3.1.5",
-    "pandas==2.3.3",
+    "pandas==3.1.0",
     "pyarrow==24.0.0",
     "pydantic==2.13.5",
     "pyyaml==6.0.3",
