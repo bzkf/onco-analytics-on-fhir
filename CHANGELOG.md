@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.44.3](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.44.2...v2.44.3) (2026-11-09)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump aiohttp from 3.14.3 to 3.14.4 in /aml_llm_extraction ([#619](https://github.com/bzkf/onco-analytics-on-fhir/issues/619)) ([66c8af9](https://github.com/bzkf/onco-analytics-on-fhir/commit/66c8af9796d16df339457ecc40376ef9508d1ab0))
+* **deps:** bump certifi from 2026.7.22 to 2026.10.18 in /aml_llm_extraction ([#622](https://github.com/bzkf/onco-analytics-on-fhir/issues/622)) ([5d9825a](https://github.com/bzkf/onco-analytics-on-fhir/commit/5d9825a7e34f01cb7deebb905cba2a04474b0ef9))
+* **deps:** bump certifi from 2026.7.22 to 2026.10.19 ([#618](https://github.com/bzkf/onco-analytics-on-fhir/issues/618)) ([5a08a3e](https://github.com/bzkf/onco-analytics-on-fhir/commit/5a08a3ef431c07ef92fcc26a9fc6cd24a168efbd))
+* **deps:** bump certifi in /aml_llm_extraction ([5d9825a](https://github.com/bzkf/onco-analytics-on-fhir/commit/5d9825a7e34f01cb7deebb905cba2a04474b0ef9))
+* **deps:** bump gitpython from 3.2.0 to 3.2.1 in /aml_llm_extraction ([#617](https://github.com/bzkf/onco-analytics-on-fhir/issues/617)) ([76adf0d](https://github.com/bzkf/onco-analytics-on-fhir/commit/76adf0db923a24224aa325b43a1b08ce31f5d6f5))
+* **deps:** bump opentelemetry-api from 1.45.0 to 1.45.1 in /aml_llm_extraction ([#616](https://github.com/bzkf/onco-analytics-on-fhir/issues/616)) ([bf76b18](https://github.com/bzkf/onco-analytics-on-fhir/commit/bf76b1872f4eff45105367bb0fdb0e4072912bc8))
+* **deps:** bump opentelemetry-api in /aml_llm_extraction ([bf76b18](https://github.com/bzkf/onco-analytics-on-fhir/commit/bf76b1872f4eff45105367bb0fdb0e4072912bc8))
+* **deps:** update dependency pyasn1 to v0.6.5 [security] ([#626](https://github.com/bzkf/onco-analytics-on-fhir/issues/626)) ([25bce09](https://github.com/bzkf/onco-analytics-on-fhir/commit/25bce094ed460fa343e6ea38f88836fba72c0d05))
+* **deps:** update dependency tornado to v6.6 [security] ([#628](https://github.com/bzkf/onco-analytics-on-fhir/issues/628)) ([8494a01](https://github.com/bzkf/onco-analytics-on-fhir/commit/8494a018c702780fbab0d73fd534393bbaeebed8))
+* **deps:** update github-actions ([#621](https://github.com/bzkf/onco-analytics-on-fhir/issues/621)) ([7469980](https://github.com/bzkf/onco-analytics-on-fhir/commit/7469980211d4e45ea79cd544cf194e68cb744d87))
+
 ## [2.44.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.44.1...v2.44.2) (2026-10-24)
 
 
