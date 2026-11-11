@@ -18,6 +18,8 @@ RETRY_TEMPERATURES = [0.0, 0.1, 0.1, 0.1]
 DEFAULT_NUM_CTX = 32000
 DEFAULT_NUM_PREDICT = 16000
 
+DEFAULT_PROMPT_URI = f"prompts:/{PROMPT_NAME}@latest"
+
 
 def _build_user_message(letter: LetterDocument) -> str:
     parts = []
@@ -35,6 +37,8 @@ def _build_user_message(letter: LetterDocument) -> str:
         parts.append(f"## Immunohistochemistry/immunophenotyping\n{letter.immunhisto_text}")
     if letter.initial_risk_stratification_text:
         parts.append(f"## Initial risk stratification\n{letter.initial_risk_stratification_text}")
+    if letter.befund_text:
+        parts.append(f"## Pathology report\n{letter.befund_text}")
     return "\n\n".join(parts)
 
 
@@ -104,6 +108,7 @@ def extract_genes(
     host: str,
     num_ctx: int = DEFAULT_NUM_CTX,
     num_predict: int = DEFAULT_NUM_PREDICT,
+    prompt_uri: str = DEFAULT_PROMPT_URI,
 ) -> ExtractionResult:
     # Replace the default request preview (a JSON dump of the raw letter, including the
     # full therapy text) with a short, human-readable identifier for the MLflow UI.
@@ -111,7 +116,7 @@ def extract_genes(
 
     # Loading the prompt inside the traced call (rather than passing an already-resolved
     # PromptVersion in) is what makes MLflow auto-link it to this trace (mlflow.linkedPrompts).
-    prompt = mlflow.genai.load_prompt(f"prompts:/{PROMPT_NAME}@latest")
+    prompt = mlflow.genai.load_prompt(prompt_uri)
 
     attempt = 0
     result = _call_llm(

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import mlflow
 from mlflow.entities.model_registry.prompt_version import PromptVersion
 
@@ -33,6 +35,9 @@ The input may contain some or all of these labeled sections, depending on the so
   karyotype findings within them.
 - "Initial risk stratification": if present, this is the single most likely place to find an \
   explicitly stated ELN risk category — check it first for that.
+- "Pathology report": the verbatim text of a single pathology report (Befund, not a discharge \
+  letter). One report may cover cytology, immunophenotyping, cytogenetics, and molecular \
+  genetics together — look for gene, karyotype, and ELN risk findings anywhere within it.
 
 Common German phrasing for results, mapped to "mutated":
 - Mutated/positive (mutated: true): "Mutation nachgewiesen", "nachweisbar", "positiv", \
@@ -106,21 +111,29 @@ Rules:
 """
 
 
-def ensure_system_prompt_registered() -> PromptVersion:
+def read_system_prompt_file(path: Path) -> str:
+    """Read a plain-text system prompt to use instead of SYSTEM_PROMPT_TEMPLATE."""
+    template = path.read_text(encoding="utf-8")
+    if not template.strip():
+        raise ValueError(f"System prompt file {path} is empty")
+    return template
+
+
+def ensure_system_prompt_registered(
+    template: str = SYSTEM_PROMPT_TEMPLATE,
+    source: str = "extract_genetics.prompts.SYSTEM_PROMPT_TEMPLATE",
+) -> PromptVersion:
     """Return the latest registered prompt version, registering a new one if the
-    template or response schema in this file has changed since."""
+    template or response schema has changed since. `source` names where the template
+    came from in the new version's commit message."""
     schema = ExtractionResult.model_json_schema()
     latest = mlflow.genai.load_prompt(f"prompts:/{PROMPT_NAME}@latest", allow_missing=True)
-    if (
-        latest is not None
-        and latest.template == SYSTEM_PROMPT_TEMPLATE
-        and latest.response_format == schema
-    ):
+    if latest is not None and latest.template == template and latest.response_format == schema:
         return latest
 
     return mlflow.genai.register_prompt(
         name=PROMPT_NAME,
-        template=SYSTEM_PROMPT_TEMPLATE,
+        template=template,
         response_format=ExtractionResult,
-        commit_message="Registered from extract_genetics.prompts.SYSTEM_PROMPT_TEMPLATE",
+        commit_message=f"Registered from {source}",
     )

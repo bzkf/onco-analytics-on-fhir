@@ -84,6 +84,7 @@ class KaryotypeFinding(BaseModel):
     )
 
 
+SourceType = Literal["xml", "excel", "csv"]
 ELNCategory = Literal["favorable", "intermediate", "intermediate_1", "intermediate_2", "adverse"]
 ELNVersion = Literal["2010", "2017", "2022"]
 
@@ -176,14 +177,17 @@ class ExtractionResult(BaseModel):
 
 
 class LetterDocument(BaseModel):
-    """A single letter's text, extracted from either a parquet/XML export (source_type
-    'xml') or a tumor documentation Excel export (source_type 'excel')."""
+    """A single letter's text, extracted from a parquet/XML export (source_type 'xml'), a
+    tumor documentation Excel export (source_type 'excel'), or a pathology report CSV
+    export (source_type 'csv')."""
 
-    source_type: Literal["xml", "excel"] = Field(
+    source_type: SourceType = Field(
         description="Which source format this letter's text was extracted from"
     )
     patient_id: str = Field(
-        description="Patient id (parquet column 'patid', or Excel column 'PatID')"
+        description=(
+            "Patient id (parquet column 'patid', Excel column 'PatID', or CSV column 'PID')"
+        )
     )
     account_id: str | None = Field(
         default=None,
@@ -260,11 +264,16 @@ class LetterDocument(BaseModel):
         ),
     )
 
+    befund_text: str | None = Field(
+        default=None,
+        description="CSV column 'Befundtext' — full text of a pathology report, exported verbatim",
+    )
+
 
 class LetterExtraction(BaseModel):
     """LLM extraction result together with the letter metadata it was derived from."""
 
-    source_type: Literal["xml", "excel"]
+    source_type: SourceType
     patient_id: str
     account_id: str | None = None
     document_date: str | None = None
