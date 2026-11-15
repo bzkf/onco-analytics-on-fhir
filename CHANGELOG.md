@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.44.2](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.44.1...v2.44.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* **deps:** update dependency mlflow to v3.17.2 [security] ([#615](https://github.com/bzkf/onco-analytics-on-fhir/issues/615)) ([90e2d30](https://github.com/bzkf/onco-analytics-on-fhir/commit/90e2d309477be3abdb1ad574de045f13415793f1))
+
+
+### Miscellaneous Chores
+
+* **deps-dev:** bump nbconvert from 7.17.1 to 7.17.2 ([#610](https://github.com/bzkf/onco-analytics-on-fhir/issues/610)) ([bf360d9](https://github.com/bzkf/onco-analytics-on-fhir/commit/bf360d991cb7bc61ec23f8a5bd18b34d6261467b))
+* **deps:** bump aiohttp from 3.14.3 to 3.14.4 ([#608](https://github.com/bzkf/onco-analytics-on-fhir/issues/608)) ([5dd111d](https://github.com/bzkf/onco-analytics-on-fhir/commit/5dd111daabad0fe4f5fa3bc6645cfedd4000abc5))
+* **deps:** bump pillow from 12.3.0 to 13.0.0 ([#611](https://github.com/bzkf/onco-analytics-on-fhir/issues/611)) ([0047edb](https://github.com/bzkf/onco-analytics-on-fhir/commit/0047edb3d870e5fc687b2cb9db73e811142a1472))
+* **deps:** bump pillow from 12.3.0 to 13.0.0 in /aml_llm_extraction ([#614](https://github.com/bzkf/onco-analytics-on-fhir/issues/614)) ([d35a4a7](https://github.com/bzkf/onco-analytics-on-fhir/commit/d35a4a761959153910eed96e6b7dd218cec42a61))
+* **deps:** update dependency nbconvert to v7.17.2 [security] ([#612](https://github.com/bzkf/onco-analytics-on-fhir/issues/612)) ([a432a83](https://github.com/bzkf/onco-analytics-on-fhir/commit/a432a8352491f9d2ebde8c9198813cb72308aceb))
+
 ## [2.44.1](https://github.com/bzkf/onco-analytics-on-fhir/compare/v2.44.0...v2.44.1) (2026-10-01)
 
 
