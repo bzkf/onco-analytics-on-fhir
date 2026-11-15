@@ -5,7 +5,7 @@ import pandas as pd
 import yaml
 from loguru import logger
 
-from . import excel_letters
+from . import csv_letters, excel_letters
 from .models import LetterDocument
 from .xml_letters import THERAPIE_SECTION_ID, build_letter
 
@@ -84,6 +84,32 @@ def process_excel(
                 "histology/molecular-patho/immunohisto/risk-stratification columns",
                 idx,
                 row.get(excel_letters.PATIENT_ID_COLUMN),
+            )
+            continue
+
+        _write_letter_file(letter, output_dir, idx)
+        written += 1
+
+    return written
+
+
+def process_csv(
+    csv_path: Path,
+    output_dir: Path,
+) -> int:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    # dtype=str keeps patient ids verbatim (no float cast, no lost leading zeros);
+    # utf-8-sig also accepts files with a byte order mark, as written by Excel.
+    df = pd.read_csv(csv_path, dtype=str, encoding="utf-8-sig")
+
+    written = 0
+    for idx, row in df.iterrows():
+        letter = csv_letters.build_letter(row.to_dict())
+        if letter is None:
+            logger.warning(
+                "[{}] skipping pid={}: no patient id or no report text",
+                idx,
+                row.get(csv_letters.PATIENT_ID_COLUMN),
             )
             continue
 

@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 from loguru import logger
 
-from .llm import DEFAULT_NUM_CTX, DEFAULT_NUM_PREDICT, extract_genes
+from .llm import DEFAULT_NUM_CTX, DEFAULT_NUM_PREDICT, DEFAULT_PROMPT_URI, extract_genes
 from .models import LetterDocument, LetterExtraction
 
 GENES_CSV_HEADER = [
@@ -129,6 +129,7 @@ def process_folder(
     overwrite: bool = False,
     num_ctx: int = DEFAULT_NUM_CTX,
     num_predict: int = DEFAULT_NUM_PREDICT,
+    prompt_uri: str = DEFAULT_PROMPT_URI,
 ) -> list[LetterExtraction]:
     output_dir.mkdir(parents=True, exist_ok=True)
     letters = iter_letters(input_dir)
@@ -179,6 +180,7 @@ def process_folder(
                         host=host,
                         num_ctx=num_ctx,
                         num_predict=num_predict,
+                        prompt_uri=prompt_uri,
                     )
                 except Exception as exc:
                     logger.error("  failed: {}", exc)
