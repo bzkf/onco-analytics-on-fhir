@@ -63,6 +63,10 @@ class AMLSettings:
     karyotypes_file: str = ""
     eln_risk_file: str = ""
     gene_karyotype_eln_csv_sep: str = ","
+    # additional (site-specific) code system for lab Observation.code, e.g.
+    # "http://fhir.example.com/code". Code and system of this coding are
+    # extracted for Observations that don't have a LOINC code.
+    lab_fallback_code_system: str | None = None
 
 
 @ts.settings
