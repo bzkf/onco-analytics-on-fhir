@@ -35,6 +35,15 @@ pd.options.future.infer_string = True
 FHIR_CODE_SYSTEM_ICD10 = "http://fhir.de/CodeSystem/bfarm/icd-10-gm"
 FHIR_CODE_SYSTEM_VERFICATIONSTATUS = "http://hl7.org/fhir/ValueSet/condition-ver-status"
 FHIR_CODE_SYSTEM_SNOMED = "http://snomed.info/sct"
+
+# codes can look numeric (e.g. SNOMED CT or site-specific lab codes), so read them as strings to
+# avoid them turning into floats ("6154" -> "6154.0") when the labs CSV is read back in
+_LAB_CODE_COLUMN_DTYPES = {
+    "loinc_code": "string",
+    "lab_custom_code": "string",
+    "lab_codeableconcept_code": "string",
+}
+
 FHIR_CODE_SYSTEM_TOD_TUMORBEDINGT = (
     "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-tod"
 )
@@ -73,10 +82,18 @@ DATA_DICTIONARY = {
         "observation_patient_reference": "FHIR reference to the patient (Patient/{id})",
         "loinc_code": "LOINC code of the laboratory observation",
         "loinc_display": "Human-readable LOINC description",
+        "lab_custom_code": "Code of the laboratory observation from the configured fallback code "
+        + "system. Only set if the observation has no LOINC code",
+        "lab_custom_system": "The configured fallback code system the lab_custom_code is from. "
+        + "Only set if the observation has no LOINC code",
+        "lab_code_text": "Free-text description of the laboratory observation "
+        + "(Observation.code.text)",
         "lab_dateTime": "Date/time when the laboratory measurement was taken",
         "lab_quantity_value": "Numeric value of the laboratory measurement",
         "lab_quantity_unit": "Unit of the laboratory measurement",
-        "lab_codeableconcept_code": "Code of the lab value result (if applicable)",
+        "lab_codeableconcept_code": "Code of the lab value result (if applicable). The SNOMED CT "
+        + "coding is preferred, otherwise the first coding is used",
+        "lab_codeableconcept_system": "Code system of the lab_codeableconcept_code",
     },
     "aml_all_meds": {
         "medication_id": "Unique identifier of the Medication resource",
@@ -607,6 +624,47 @@ class AMLStudy:
         )
         all_labs = []
 
+        loinc_coding = f"coding.where(system='{FHIR_SYSTEM_LOINC}')"
+
+        # prefer the SNOMED CT coding of the value, fall back to the first coding of any system
+        value_snomed_coding = f"coding.where(system='{FHIR_CODE_SYSTEM_SNOMED}')"
+        value_coding = (
+            f"(Observation.valueCodeableConcept.{value_snomed_coding}.first()"
+            + f" | Observation.valueCodeableConcept.where({value_snomed_coding}.empty())"
+            + ".coding.first())"
+        )
+
+        fhir_paths = [
+            ("observation_id", "Observation.id"),
+            ("observation_patient_reference", "subject.reference"),
+            ("loinc_code", f"code.{loinc_coding}.code"),
+            ("loinc_display", f"code.{loinc_coding}.display"),
+            ("lab_code_text", "code.text"),
+            (
+                "lab_dateTime",
+                "effectiveDateTime[0] | effectivePeriod.start | effectiveInstant | issued",
+            ),
+            ("lab_quantity_value", "valueQuantity.value"),
+            ("lab_quantity_unit", "valueQuantity.code"),
+            ("lab_codeableconcept_code", f"{value_coding}.code"),
+            ("lab_codeableconcept_system", f"{value_coding}.system"),
+        ]
+
+        lab_fallback_code_system = self.settings.aml.lab_fallback_code_system
+        if lab_fallback_code_system:
+            logger.info(
+                f"Using {lab_fallback_code_system} as the lab code system if no LOINC is available"
+            )
+            # only matches if the Observation.code doesn't contain a LOINC code
+            custom_coding = (
+                f"code.where({loinc_coding}.code.empty())"
+                + f".coding.where(system='{lab_fallback_code_system}').first()"
+            )
+            fhir_paths += [
+                ("lab_custom_code", f"{custom_coding}.code"),
+                ("lab_custom_system", f"{custom_coding}.system"),
+            ]
+
         for chunk in chunked(patient_list, self.settings.fhir.chunk_size):
             chunk_df = pd.DataFrame({"subject_list": [",".join(chunk)]})
 
@@ -622,26 +680,7 @@ class AMLStudy:
                     "subject": "subject_list",
                 },
                 with_ref=False,
-                fhir_paths=[
-                    ("observation_id", "Observation.id"),
-                    ("observation_patient_reference", "subject.reference"),
-                    ("loinc_code", "code.coding.where(system='http://loinc.org').code"),
-                    (
-                        "loinc_display",
-                        "code.coding.where(system='http://loinc.org').display",
-                    ),
-                    (
-                        "lab_dateTime",
-                        "effectiveDateTime[0] | effectivePeriod.start | effectiveInstant | issued",
-                    ),
-                    ("lab_quantity_value", "valueQuantity.value"),
-                    ("lab_quantity_unit", "valueQuantity.code"),
-                    (
-                        "lab_codeableconcept_code",
-                        f"Observation.valueCodeableConcept.coding.where(system='{FHIR_CODE_SYSTEM_SNOMED}')"
-                        + ".first().code",
-                    ),
-                ],
+                fhir_paths=fhir_paths,
             )
 
             if len(lab_df_chunk) > 0:
@@ -650,11 +689,19 @@ class AMLStudy:
         if all_labs:
             lab_df = pd.concat(all_labs, ignore_index=True)
 
-            if "lab_codeableconcept_code" not in lab_df.columns:
-                lab_df["lab_codeableconcept_code"] = pd.NA
-
-            if "loinc_display" not in lab_df.columns:
-                lab_df["loinc_display"] = pd.NA
+            # columns are missing entirely if none of the Observations had a value for them
+            for column in [
+                "loinc_code",
+                "loinc_display",
+                "lab_custom_code",
+                "lab_custom_system",
+                "lab_code_text",
+                "lab_quantity_unit",
+                "lab_codeableconcept_code",
+                "lab_codeableconcept_system",
+            ]:
+                if column not in lab_df.columns:
+                    lab_df[column] = pd.NA
 
             patient_mrn_lookup = (
                 patient_df[["condition_patient_reference", "patient_mrn"]]
@@ -1118,7 +1165,7 @@ class AMLStudy:
             lab_df = pd.read_csv(
                 os.path.join(self.output_dir, "aml_all_labs.csv"),
                 sep=",",
-                dtype={"lab_quantity_value": "float"},
+                dtype={"lab_quantity_value": "float", **_LAB_CODE_COLUMN_DTYPES},
                 parse_dates=["lab_dateTime"],
             )
             matched_lab_df = lab_df[lab_df["observation_patient_reference"].isin(filtered_refs)]
@@ -1141,9 +1188,15 @@ class AMLStudy:
                 [
                     "loinc_code",
                     "loinc_display",
+                    "lab_custom_system",
+                    "lab_custom_code",
                     "lab_quantity_unit",
+                    "lab_codeableconcept_system",
                     "lab_codeableconcept_code",
-                ]
+                ],
+                # most rows only have a subset of these columns set, e.g. either a LOINC or
+                # a custom code, either a quantity or a coded value
+                dropna=False,
             )
             .size()
             .reset_index(name="num_labs")
@@ -2566,7 +2619,7 @@ class AMLStudy:
         lab_data = pd.read_csv(
             os.path.join(self.output_dir, "aml_all_labs.csv"),
             sep=",",
-            dtype={"patient_mrn": "string"},
+            dtype={"patient_mrn": "string", **_LAB_CODE_COLUMN_DTYPES},
         )
         lab_data["lab_dateTime"] = pd.to_datetime(
             lab_data["lab_dateTime"], errors="coerce", format="ISO8601"
