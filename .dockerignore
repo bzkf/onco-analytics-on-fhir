@@ -1,5 +1,6 @@
 *
 !uv.lock
 !pyproject.toml
+!version.txt
 !analytics_on_fhir/
 **/__pycache__

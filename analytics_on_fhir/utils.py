@@ -1,6 +1,8 @@
+import datetime
 import glob
 import hashlib
 import hmac
+import json
 import os
 import shutil
 from collections.abc import Iterable
@@ -124,6 +126,31 @@ def save_final_df_parquet(pyspark_df, settings, suffix="", deidentified=False):
     final_path = os.path.join(parquet_dir, f"df_{suffix}.parquet")
 
     pyspark_df.coalesce(1).write.mode("overwrite").parquet(final_path)
+
+
+def get_app_version() -> str:
+    version_file = os.path.join(HERE, "..", "version.txt")
+    try:
+        with open(version_file, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        logger.warning(f"Could not read version from {version_file}")
+        return "unknown"
+
+
+def write_export_metadata(output_dir, settings, export_time: datetime.datetime) -> str:
+    metadata = {
+        "export_timestamp": export_time.isoformat(timespec="seconds"),
+        "location": settings.location,
+        "study_name": settings.study_name.value,
+        "analytics_on_fhir_version": get_app_version(),
+    }
+    metadata_path = os.path.join(output_dir, "export_metadata.json")
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+        f.write("\n")
+    logger.info(f"Export metadata written to: {metadata_path}")
+    return metadata_path
 
 
 def save_plot(plot: Figure, settings, plot_name: str = "") -> None:
