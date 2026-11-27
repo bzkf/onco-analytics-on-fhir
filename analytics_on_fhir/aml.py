@@ -53,6 +53,7 @@ FHIR_CODE_SYSTEM_OPS = "http://fhir.de/CodeSystem/bfarm/ops"
 FHIR_CODE_SYSTEM_ATC = "http://fhir.de/CodeSystem/bfarm/atc"
 FHIR_CODE_SYSTEM_ATC_US = "http://www.whocc.no/atc"
 FHIR_CODE_SYSTEM_PZN = "http://fhir.de/CodeSystem/ifa/pzn"
+FHIR_CODE_SYSTEM_MEDICATION_EDQM = "http://standardterms.edqm.eu"
 FHIR_CODE_SYSTEM_BODYSITE = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-strahlentherapie-zielgebiet"
 FHIR_CODE_SYSTEM_GENETISCHE_VARIANTE_AUSPRAEGUNG = "https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-genetische-variante-auspraegung"
 
@@ -750,6 +751,14 @@ class AMLStudy:
             "code.coding" + f".where(system = '{FHIR_CODE_SYSTEM_OPS}')" + ".version",
         ),
         (
+            "medication_form_code",
+            "form.coding" + f".where(system = '{FHIR_CODE_SYSTEM_MEDICATION_EDQM}')" + ".code",
+        ),
+        (
+            "medication_form_display",
+            "form.coding" + f".where(system = '{FHIR_CODE_SYSTEM_MEDICATION_EDQM}')" + ".display",
+        ),
+        (
             "medication_ingredient_text",
             "Medication.ingredient.itemCodeableConcept.text | "
             + "Medication.ingredient.itemReference.display",
@@ -769,6 +778,30 @@ class AMLStudy:
             ("patient_reference", f"{resource_type}.subject.reference"),
             ("status", f"{resource_type}.status"),
             ("medication_reference", f"{resource_type}.medicationReference.reference"),
+            (
+                "medication_route_snomed_code",
+                f"{resource_type}.dosage.route.coding"
+                + f".where(system = '{FHIR_CODE_SYSTEM_SNOMED}')"
+                + ".code",
+            ),
+            (
+                "medication_route_snomed_display",
+                f"{resource_type}.dosage.route.coding"
+                + f".where(system = '{FHIR_CODE_SYSTEM_SNOMED}')"
+                + ".display",
+            ),
+            (
+                "medication_route_edqm_code",
+                f"{resource_type}.dosage.route.coding"
+                + f".where(system = '{FHIR_CODE_SYSTEM_MEDICATION_EDQM}')"
+                + ".code",
+            ),
+            (
+                "medication_route_edqm_display",
+                f"{resource_type}.dosage.route.coding"
+                + f".where(system = '{FHIR_CODE_SYSTEM_MEDICATION_EDQM}')"
+                + ".display",
+            ),
         ]
 
         fhir_paths = common_fhir_paths + extra_fhir_paths + self._MEDICATION_FHIR_PATHS
