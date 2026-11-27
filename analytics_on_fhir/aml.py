@@ -24,7 +24,7 @@ from pathling.datasource import DataSource
 from pyspark.sql import functions as F
 from settings import Settings
 from urllib3 import Retry
-from utils import save_final_df
+from utils import save_final_df, write_export_metadata
 from views import (
     vitalstatus_view,
 )
@@ -1926,6 +1926,8 @@ class AMLStudy:
                 return pd.NA
             return crypto_hash(str(value))
 
+        export_time = datetime.datetime.now(datetime.UTC)
+
         de_identified_base_dir = Path(self.output_dir) / "de-identified"
         de_identified_dir = de_identified_base_dir / self.settings.location.lower()
         de_identified_dir.mkdir(parents=True, exist_ok=True)
@@ -2669,7 +2671,9 @@ class AMLStudy:
 
         lab_data.to_csv(de_identified_dir / "aml_all_labs.csv", index=False)
 
-        date_prefix = datetime.datetime.now().strftime("%Y-%m-%d")
+        write_export_metadata(de_identified_dir, self.settings, export_time)
+
+        date_prefix = export_time.astimezone().strftime("%Y-%m-%d")
         zip_path = (
             Path(self.output_dir)
             / f"{date_prefix}-{self.settings.location.lower()}-aml-de-identified.zip"
